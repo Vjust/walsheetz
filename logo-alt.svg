@@ -1,0 +1,28 @@
+<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="walGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4285f4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1a73e8;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Modern grid design -->
+  <g transform="translate(4, 4)">
+    <!-- Background shape -->
+    <rect x="0" y="0" width="32" height="32" rx="6" fill="url(#walGradient)" opacity="0.1"/>
+    
+    <!-- Grid pattern -->
+    <g stroke="url(#walGradient)" fill="none" stroke-width="2">
+      <!-- Top row -->
+      <rect x="4" y="4" width="10" height="10" rx="2" fill="url(#walGradient)" opacity="0.8"/>
+      <rect x="16" y="4" width="10" height="10" rx="2" stroke-opacity="0.6"/>
+      
+      <!-- Bottom row -->
+      <rect x="4" y="16" width="10" height="10" rx="2" stroke-opacity="0.6"/>
+      <rect x="16" y="16" width="10" height="10" rx="2" stroke-opacity="0.6"/>
+    </g>
+    
+    <!-- "W" monogram -->
+    <text x="16" y="22" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="bold" fill="white" text-anchor="middle">W</text>
+  </g>
+</svg>
