@@ -1,0 +1,25 @@
+{
+  "name": "walsheetz",
+  "version": "1.0.0",
+  "description": "Arctic Collaborative Spreadsheets - Navigate your data like a walrus on ice",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "bun run dev"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "@vitejs/plugin-legacy": "^5.0.0"
+  },
+  "dependencies": {
+    "@mysten/dapp-kit": "^0.17.3",
+    "@mysten/sui.js": "^0.54.1",
+    "@mysten/wallet-standard": "^0.16.10",
+    "luckysheet": "^2.1.13"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}

@@ -1,155 +1,201 @@
-# WalSheetz 📊
+# 🦭 WalSheetz - Arctic Collaborative Spreadsheets
 
-A powerful web-based spreadsheet application that provides Excel-like functionality with robust save/import capabilities.
+Navigate your data like a walrus on ice! A powerful spreadsheet application with **Sui blockchain integration** and **Walrus permanent storage** built with Vite and Bun.
 
-![WalSheetz Logo](logo.svg)
+## 🌊 Blockchain Features
 
-## 🚀 Features
+- **Sui Wallet Integration**: Connect with Sui Wallet, Suiet, or other compatible wallets
+- **Automatic Saving**: Data saved to Walrus every 5 seconds or after 3+ edits
+- **Version Control**: Cell-level versioning with permanent blockchain storage
+- **Walrus Quilt**: Efficient batch storage for small file optimization
+- **Testnet Ready**: Full support for Sui testnet with easy mainnet migration
 
-### Core Spreadsheet Functionality
-- ✅ **Full spreadsheet editing** - Create, edit, and format cells with Excel-like interface
-- ✅ **Formula support** - Use formulas and functions for calculations
-- ✅ **Multiple sheets** - Work with multiple sheets in a single document
-- ✅ **Rich formatting** - Format cells with fonts, colors, borders, and more
-- ✅ **Cell operations** - Copy, paste, insert/delete rows and columns
+## 🚀 Quick Start
 
-### Save & Import System
-- ✅ **JSON format** - Saves complete spreadsheet data including:
-  - Cell positions and values (preserved exactly)
-  - Formulas and formatting
-  - Document title
-  - All sheets and their configurations
-- ✅ **CSV support** - Import and export CSV files for compatibility
-- ✅ **Title synchronization** - Document title syncs between custom header and spreadsheet
-- ✅ **Complete data persistence** - All cell positions are maintained exactly as entered
+### Prerequisites
+- [Bun](https://bun.sh) v1.0+ 
+- Modern browser with ES2020 support
+- **Sui Wallet** (for blockchain features) - Install from [Chrome Web Store](https://chrome.google.com/webstore/detail/sui-wallet/opcgpfmipidbgpenhmajoajpbobppdil)
+- **Sui testnet tokens** (get from [Sui Faucet](https://faucet.testnet.sui.io/))
 
-### User Interface
-- ✅ **Google Sheets-like design** - Clean, familiar interface
-- ✅ **Custom WalSheetz branding** - Professional logo and consistent design
-- ✅ **Editable document title** - Click the title to rename your spreadsheet
-- ✅ **File menu** - Easy access to New, Import, Save, and Download options
-- ✅ **Toolbar** - Quick access buttons for common operations
-- ✅ **Formula bar** - View and edit cell formulas
-- ✅ **Status bar** - Shows save status and storage information
+### Installation
 
-## 🎨 Logo & Branding
-
-WalSheetz features a custom-designed logo that represents its spreadsheet functionality:
-
-- **Main Logo** (`logo.svg`) - A modern spreadsheet grid icon with the "W" monogram
-- **Alternative Logo** (`logo-alt.svg`) - Gradient design with contemporary styling
-- **Favicon** (`favicon.svg`) - Simplified version for browser tabs
-- **Color Scheme** - Professional blue (#4285f4) inspired by modern productivity tools
-
-## 🛠️ Installation
-
-1. Clone the repository:
 ```bash
-git clone git@github.com:Vjust/walsheetz.git
-cd walsheetz
+# Install Bun (if not already installed)
+curl -fsSL https://bun.sh/install | bash
+
+# Clone the repository
+git clone [your-repo-url]
+cd fortunesheet
+
+# Install dependencies with Bun
+bun install
 ```
 
-2. Open `index.html` in a web browser:
+### Development
+
 ```bash
-# Using Python's built-in server
-python -m http.server 8000
+# Start development server with HMR
+bun run dev
 
-# Or using Node.js http-server
-npx http-server
-
-# Or simply open index.html directly in your browser
-open index.html  # macOS
-start index.html # Windows
-xdg-open index.html # Linux
+# Or use the shorthand
+bun dev
 ```
 
-## 📖 Usage
+The application will open at `http://localhost:3000`
 
-### Creating a Spreadsheet
-1. Open the application in your browser
-2. Click on the document title to rename it
-3. Enter data in cells by clicking and typing
-4. Use formulas by starting with `=` (e.g., `=A1+B1`, `=SUM(A1:A10)`)
+### Build for Production
 
-### Saving Your Work
-1. Click the **💾 Save** button or use **File → Save as JSON**
-2. The file downloads as `[document_name]_[date].json`
-3. All data, formulas, and formatting are preserved
+```bash
+# Create optimized production build
+bun run build
 
-### Importing a Spreadsheet
-1. Click the **📂 Import** button or use **File → Import File**
-2. Select a `.json` or `.csv` file
-3. Data loads with exact cell positions preserved
-
-### Keyboard Shortcuts
-- `Enter` - Confirm cell entry and move down
-- `Tab` - Confirm cell entry and move right
-- `Esc` - Cancel cell editing
-- `Ctrl/Cmd + C` - Copy
-- `Ctrl/Cmd + V` - Paste
-- `Ctrl/Cmd + Z` - Undo
-- `Ctrl/Cmd + Y` - Redo
-
-## 🗂️ File Structure
-
-```
-walsheetz/
-├── index.html          # Main HTML file
-├── app.js             # Core application logic
-├── ui.js              # UI components and file operations
-├── storage.js         # Storage and save/load functionality
-├── styles.css         # Application styling
-├── logo.svg           # Main WalSheetz logo
-├── logo-alt.svg       # Alternative logo design
-├── favicon.svg        # Browser tab icon
-└── README.md          # This file
+# Preview production build
+bun run preview
 ```
 
-## 💻 Developer Tools
+## 🛠️ Tech Stack
 
-Open the browser console and use these commands:
+- **Runtime:** Bun
+- **Build Tool:** Vite
+- **Spreadsheet Engine:** Luckysheet
+- **Styling:** Arctic Theme CSS
+
+## 📝 Scripts
+
+- `bun dev` - Start development server
+- `bun build` - Build for production
+- `bun preview` - Preview production build
+- `bun serve` - Alias for dev server
+
+## 🎨 Features
+
+- ❄️ Arctic-themed UI
+- 🦭 Walrus-strong performance
+- 🌊 Ocean of data handling
+- 🏔️ Tundra-tough reliability
+
+## 🧊 Developer Tools
+
+Open the browser console and use:
 
 ```javascript
-devTools.forceSave()    // Force save current state
-devTools.inspectRAM()   // View memory storage
-devTools.listBlobs()    // List saved files
+// Traditional tools
+devTools.forceSave()    // Force save current edits
+devTools.inspectRAM()   // View RAM storage contents
+devTools.listBlobs()    // List all saved blobs
 devTools.reset()        // Clear all storage
-devTools.getStatus()    // Get system status
+devTools.getStatus()    // Get current system status
+devTools.toggleArctic() // Toggle arctic theme
+
+// Blockchain tools
+devTools.connectWallet()          // Connect Sui wallet
+devTools.getWalletInfo()          // Get wallet connection info
+devTools.forceBlockchainSave()    // Force save to blockchain
+devTools.getVersionStats()        // Get version control stats
+devTools.getBatchStatus()         // Get Walrus batch status
+devTools.inspectVersions(row, col) // Get cell version history
+devTools.simulateEdits(count)     // Simulate edits for testing
+devTools.testWalletConnection()   // Test wallet functionality
 ```
 
-## 🌐 Browser Compatibility
+## 📦 Project Structure
 
-- ✅ Chrome/Edge (recommended)
-- ✅ Firefox
-- ✅ Safari
-- ✅ Any modern browser with JavaScript enabled
+```
+fortunesheet/
+├── blockchain/         # Blockchain integration
+│   ├── config.js       # Network configuration (testnet/mainnet)
+│   ├── wallet-manager.js # Sui wallet connection
+│   ├── sui-service.js  # Sui blockchain operations
+│   ├── walrus-service.js # Walrus storage operations
+│   └── version-control.js # Cell-level versioning
+├── frontend/
+│   ├── app.js          # Main application
+│   ├── storage.js      # Enhanced storage with blockchain
+│   ├── sync-engine.js  # Auto-save and edit tracking
+│   ├── ui-handlers.js  # UI with wallet integration
+│   ├── utils.js        # Utility functions
+│   ├── homepage.html   # Landing page
+│   └── arctic-theme.css # Arctic styling
+├── index.html          # Spreadsheet page
+├── vite.config.js      # Vite configuration
+├── bunfig.toml         # Bun configuration
+└── package.json        # Dependencies
+```
 
-## 🔧 Technologies Used
+## 🏗️ Building with Bun
 
-- **WalSheetz Engine** - Core spreadsheet functionality
-- **Vanilla JavaScript** - No framework dependencies
-- **HTML5/CSS3** - Modern web standards
-- **File API** - Import/export functionality
-- **SVG Graphics** - Scalable logo and icons
+Bun provides ultra-fast installation and execution:
 
-## 📝 License
+```bash
+# Install specific package
+bun add [package-name]
 
-MIT License - This project is open source and available under the MIT License.
+# Install dev dependency
+bun add -d [package-name]
 
-## 🙏 Acknowledgments
+# Update all dependencies
+bun update
+```
 
-- Inspired by Google Sheets UI/UX design
-- Built with modern web technologies
-- Thanks to all contributors and testers
+## 🚢 Deployment
 
-## 🚀 Live Demo
+Build files are output to the `dist/` directory:
 
-You can try WalSheetz directly by opening `index.html` in your browser - no server required!
+```bash
+bun run build
+# Deploy contents of dist/ to your hosting service
+```
 
-## 📧 Support
+## ⚙️ Blockchain Configuration
 
-For issues, questions, or contributions, please visit the [GitHub repository](https://github.com/Vjust/walsheetz).
+### Testnet Setup (Default)
+1. Install Sui Wallet browser extension
+2. Create a new wallet or import existing
+3. Switch to Sui Testnet in wallet settings
+4. Get test tokens from [Sui Faucet](https://faucet.testnet.sui.io/)
+5. Open WalSheetz and click "Connect Wallet"
+
+### Environment Configuration
+Edit `blockchain/config.js` to switch networks:
+
+```javascript
+// Current environment - change to 'mainnet' for production
+environment: 'testnet' // or 'mainnet'
+```
+
+### Auto-Save Settings
+Customize auto-save behavior in `blockchain/config.js`:
+
+```javascript
+storage: {
+  autoSaveInterval: 5000, // 5 seconds
+  editThreshold: 3,       // Save after 3 edits
+  maxVersionHistory: 100, // Keep last 100 versions per cell
+  batchSize: 50          // Max changes per Walrus blob
+}
+```
+
+## 🔧 Troubleshooting
+
+### Wallet Connection Issues
+- Ensure Sui Wallet is installed and unlocked
+- Check network selection (testnet vs mainnet)
+- Verify sufficient SUI tokens for gas fees
+- Refresh page and try reconnecting
+
+### Save Failures
+- Check wallet connection status
+- Verify network connectivity
+- Ensure sufficient SUI balance for transactions
+- Check browser console for detailed error messages
+
+### Development
+- Use `devTools.getStatus()` to check system status
+- Use `devTools.testWalletConnection()` to test wallet
+- Check Network tab for failed API calls
+- Monitor console for blockchain service errors
 
 ---
 
-**WalSheetz** - Powerful spreadsheets in your browser 📊
+Built with ❄️ by the WalSheetz team - Now with permanent blockchain storage! 🦭⛓️

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WalSheetz - Spreadsheet Application</title>
+    <title>WalSheetz - Arctic Spreadsheets</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     
     <!-- WalSheetz Spreadsheet CSS -->
@@ -34,8 +34,9 @@
                 <button id="menu-tools">Tools</button>
             </div>
             <div class="sharing">
-                <div class="active-users" id="active-users"></div>
+            <div class="active-users" id="active-users"></div>
                 <button class="share-btn" id="share-btn">Share</button>
+                <button id="home-btn" title="Go Home">Home</button>
             </div>
         </div>
         
@@ -118,8 +119,8 @@
     <script src="https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/luckysheet.umd.js"></script>
     
     <!-- Application Scripts -->
-    <script src="storage.js"></script>
-    <script src="ui.js"></script>
-    <script src="app.js"></script>
+    <script type="module" src="/frontend/storage.js"></script>
+    <script type="module" src="/frontend/ui-handlers.js"></script>
+    <script type="module" src="/frontend/app.js"></script>
 </body>
 </html>
