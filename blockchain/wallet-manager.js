@@ -1,8 +1,7 @@
 // Wallet connection manager for WalSheetz
 import { 
-  getWallets, 
-  isWalletStandardWallet,
-  WalletStandardAdapterWallet
+  getWallets,
+  isWalletWithRequiredFeatureSet
 } from '@mysten/wallet-standard';
 import { getCurrentConfig } from './config.js';
 
@@ -31,8 +30,14 @@ class WalletManager {
   // Get available wallets
   async getAvailableWallets() {
     try {
-      const wallets = getWallets();
-      return wallets.filter(wallet => isWalletStandardWallet(wallet));
+      // getWallets() returns an object with a get() method, not an array directly
+      const { get } = getWallets();
+      const wallets = get(); // This returns the actual array of wallets
+      
+      // Filter for wallets with required Sui features
+      return wallets.filter(wallet => 
+        isWalletWithRequiredFeatureSet(wallet, ['standard:connect', 'sui:signAndExecuteTransactionBlock'])
+      );
     } catch (error) {
       console.error('Failed to get available wallets:', error);
       return [];
@@ -43,13 +48,26 @@ class WalletManager {
   async connect(walletName = 'Sui Wallet') {
     try {
       const wallets = await this.getAvailableWallets();
-      const targetWallet = wallets.find(wallet => 
-        wallet.name.toLowerCase().includes(walletName.toLowerCase())
-      ) || wallets[0]; // Fallback to first available wallet
+      
+      // Look for specific wallet by name (support both Sui Wallet and Slush Wallet)
+      let targetWallet = wallets.find(wallet => {
+        const name = wallet.name.toLowerCase();
+        const searchName = walletName.toLowerCase();
+        return name.includes(searchName) || 
+               name.includes('slush') || 
+               name.includes('sui');
+      });
+      
+      // Fallback to first available wallet
+      if (!targetWallet && wallets.length > 0) {
+        targetWallet = wallets[0];
+      }
 
       if (!targetWallet) {
-        throw new Error('No compatible wallet found. Please install Sui Wallet or compatible wallet.');
+        throw new Error('No compatible wallet found. Please install Slush Wallet (formerly Sui Wallet) or compatible wallet.');
       }
+
+      console.log('Attempting to connect to wallet:', targetWallet.name);
 
       // Request connection
       const accounts = await targetWallet.features['standard:connect'].connect();

@@ -15,8 +15,6 @@ Navigate your data like a walrus on ice! A powerful spreadsheet application with
 ### Prerequisites
 - [Bun](https://bun.sh) v1.0+ 
 - Modern browser with ES2020 support
-- **Sui Wallet** (for blockchain features) - Install from [Chrome Web Store](https://chrome.google.com/webstore/detail/sui-wallet/opcgpfmipidbgpenhmajoajpbobppdil)
-- **Sui testnet tokens** (get from [Sui Faucet](https://faucet.testnet.sui.io/))
 
 ### Installation
 
@@ -35,14 +33,31 @@ bun install
 ### Development
 
 ```bash
-# Start development server with HMR
+# Start development server
 bun run dev
-
-# Or use the shorthand
-bun dev
 ```
 
 The application will open at `http://localhost:3000`
+
+### Core Functionality
+
+The application provides three main features:
+1. **Spreadsheet Loading**: Luckysheet-powered spreadsheet functionality
+2. **Home Navigation**: Working home button that redirects to homepage
+3. **Wallet Integration**: Connect wallet button with deposit functionality
+
+## 🎯 Current Implementation Status
+
+**WORKING FEATURES:**
+- ✅ Spreadsheet loads and initializes properly
+- ✅ Home button navigates to homepage
+- ✅ Wallet connect button with visual feedback
+- ✅ Deposit button appears after wallet connection
+
+**ARCHITECTURE DECISIONS:**
+- Simple script tag loading instead of ES modules for reliability
+- Minimal implementation following BREVITY principle
+- Structured JSON logging for validation and debugging
 
 ### Build for Production
 

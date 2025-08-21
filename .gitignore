@@ -117,10 +117,6 @@ temp/
 # Local development files
 *.local
 
-# Project-specific ignores
-"Sui Ref/"
-CLAUDE.md
-
 # Blockchain/crypto related
 .env.secrets
 wallets/

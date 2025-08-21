@@ -6,121 +6,21 @@
     <title>WalSheetz - Arctic Spreadsheets</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     
-    <!-- WalSheetz Spreadsheet CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/css/pluginsCss.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/plugins.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/css/luckysheet.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/assets/iconfont/iconfont.css" />
-    
-    <!-- Custom Styles -->
-    <link rel="stylesheet" href="styles.css">
+    <!-- Luckysheet CSS from CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/css/pluginsCss.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/plugins.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/css/luckysheet.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/assets/iconfont/iconfont.css" />
 </head>
 <body>
-    <div id="app">
-        <!-- Google Sheets-like Header -->
-        <div id="header">
-            <div class="logo">
-                <img src="logo.svg" alt="WalSheetz Logo" class="logo-icon">
-                <span class="logo-text">WalSheetz</span>
-            </div>
-            <div class="document-name" contenteditable>Untitled Spreadsheet</div>
-            <div class="menu-bar">
-                <button id="menu-file">File</button>
-                <button id="menu-edit">Edit</button>
-                <button id="menu-view">View</button>
-                <button id="menu-insert">Insert</button>
-                <button id="menu-format">Format</button>
-                <button id="menu-data">Data</button>
-                <button id="menu-tools">Tools</button>
-            </div>
-            <div class="sharing">
-            <div class="active-users" id="active-users"></div>
-                <button class="share-btn" id="share-btn">Share</button>
-                <button id="home-btn" title="Go Home">Home</button>
-            </div>
-        </div>
-        
-        <!-- Toolbar -->
-        <div id="toolbar">
-            <button id="undo" title="Undo">↶</button>
-            <button id="redo" title="Redo">↷</button>
-            <button id="print" title="Print">🖨</button>
-            <span class="separator">|</span>
-            <button id="bold" title="Bold">B</button>
-            <button id="italic" title="Italic">I</button>
-            <button id="underline" title="Underline">U</button>
-            <span class="separator">|</span>
-            <button id="import-csv" title="Import File">📂 Import</button>
-            <button id="save-csv" title="Save as JSON">💾 Save</button>
-            <button id="download-csv" title="Download Full Spreadsheet">⬇️ Download</button>
-        </div>
-        
-        <!-- Formula Bar -->
-        <div id="formula-bar">
-            <div class="cell-ref" id="cell-ref">A1</div>
-            <div class="fx">fx</div>
-            <input type="text" class="formula-input" id="formula-input">
-        </div>
-        
-        <!-- Spreadsheet Container -->
-        <div id="luckysheet" style="margin:0px;padding:0px;position:absolute;width:100%;height:calc(100% - 180px);left:0px;top:180px;"></div>
-        
-        <!-- Status Bar -->
-        <div id="status-bar">
-            <span class="save-status" id="save-status">All changes saved</span>
-            <span class="storage-info">
-                <span class="ram" id="ram-status">RAM: 0 events</span>
-                <span class="files" id="files-status">Files: 0 saved</span>
-            </span>
-            <button id="dev-console" title="Developer Console">🔧 Dev Tools</button>
-        </div>
-        
-        <!-- Hidden file input for loading -->
-        <input type="file" id="file-loader" accept=".csv,.json" hidden>
-        
-        <!-- File Menu Dropdown -->
-        <div id="file-menu-dropdown" class="menu-dropdown" style="display:none;">
-            <div class="menu-item" id="new-sheet">New Spreadsheet</div>
-            <div class="menu-item" id="import-file">Import File...</div>
-            <div class="menu-separator"></div>
-            <div class="menu-item" id="save-file">Save as JSON</div>
-            <div class="menu-item" id="download-file">Download as CSV...</div>
-            <div class="menu-separator"></div>
-            <div class="menu-item" id="show-history">View Save History</div>
-        </div>
-        
-        <!-- Developer Console Modal -->
-        <div id="dev-modal" class="modal" style="display:none;">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>Developer Console</h2>
-                    <span class="modal-close" id="close-dev-modal">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <div class="dev-section">
-                        <h3>Storage Operations</h3>
-                        <button id="dev-force-save">Force Save Batch</button>
-                        <button id="dev-inspect-ram">Inspect RAM Storage</button>
-                        <button id="dev-list-blobs">List All Blobs</button>
-                        <button id="dev-clear-storage">Clear All Storage</button>
-                    </div>
-                    <div class="dev-section">
-                        <h3>Console Output</h3>
-                        <div id="dev-console-output"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-    </div>
-
-    <!-- WalSheetz Spreadsheet Engine -->
-    <script src="https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/js/plugin.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/luckysheet.umd.js"></script>
+    <!-- React root -->
+    <div id="root"></div>
     
-    <!-- Application Scripts -->
-    <script type="module" src="/frontend/storage.js"></script>
-    <script type="module" src="/frontend/ui-handlers.js"></script>
-    <script type="module" src="/frontend/app.js"></script>
+    <!-- Luckysheet JavaScript from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/js/plugin.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.umd.js"></script>
+    
+    <!-- React Application -->
+    <script type="module" src="/frontend/main.jsx"></script>
 </body>
 </html>

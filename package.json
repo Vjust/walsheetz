@@ -4,16 +4,17 @@
   "description": "Arctic Collaborative Spreadsheets - Navigate your data like a walrus on ice",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host --port 3000",
     "build": "vite build",
-    "preview": "vite preview",
-    "serve": "bun run dev"
+    "preview": "vite preview"
   },
   "devDependencies": {
     "vite": "^5.0.0",
-    "@vitejs/plugin-legacy": "^5.0.0"
+    "@vitejs/plugin-react": "^4.2.1"
   },
   "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "@mysten/dapp-kit": "^0.17.3",
     "@mysten/sui.js": "^0.54.1",
     "@mysten/wallet-standard": "^0.16.10",
