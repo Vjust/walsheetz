@@ -1,0 +1,1229 @@
+{
+  "metadata": {
+    "packageId": "0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7",
+    "network": "testnet",
+    "generatedAt": "2025-09-20T16:02:13.094Z",
+    "moduleCount": 1,
+    "functionCount": 9,
+    "critical": {
+      "save_version": {
+        "name": "save_version",
+        "module": "spreadsheet",
+        "fullName": "spreadsheet::save_version",
+        "parameters": [
+          {
+            "MutableReference": {
+              "Struct": {
+                "address": "0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7",
+                "module": "spreadsheet",
+                "name": "Spreadsheet",
+                "typeArguments": []
+              }
+            }
+          },
+          {
+            "Struct": {
+              "address": "0x1",
+              "module": "string",
+              "name": "String",
+              "typeArguments": []
+            }
+          },
+          "U64",
+          {
+            "Struct": {
+              "address": "0x1",
+              "module": "string",
+              "name": "String",
+              "typeArguments": []
+            }
+          },
+          {
+            "MutableReference": {
+              "Struct": {
+                "address": "0x2",
+                "module": "tx_context",
+                "name": "TxContext",
+                "typeArguments": []
+              }
+            }
+          }
+        ],
+        "parameterCount": 5,
+        "returnTypes": [],
+        "visibility": "Public",
+        "typeParameters": [],
+        "analysis": {
+          "stringCount": 0,
+          "u64Count": 0,
+          "objectCount": 2,
+          "referenceCount": 0,
+          "mutableReferenceCount": 2,
+          "clockPosition": -1,
+          "contextPosition": -1,
+          "stringPositions": [],
+          "u64Positions": []
+        },
+        "isMutable": true,
+        "hasContext": false,
+        "hasClock": false,
+        "expectsContentHash": false,
+        "expectedArgCount": 5,
+        "stringPositions": [],
+        "firstU64Position": -1
+      }
+    }
+  },
+  "signatures": {
+    "spreadsheet::create_spreadsheet": {
+      "name": "create_spreadsheet",
+      "module": "spreadsheet",
+      "fullName": "spreadsheet::create_spreadsheet",
+      "parameters": [
+        {
+          "MutableReference": {
+            "Struct": {
+              "address": "0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7",
+              "module": "spreadsheet",
+              "name": "SpreadsheetRegistry",
+              "typeArguments": []
+            }
+          }
+        },
+        {
+          "Struct": {
+            "address": "0x1",
+            "module": "string",
+            "name": "String",
+            "typeArguments": []
+          }
+        },
+        {
+          "MutableReference": {
+            "Struct": {
+              "address": "0x2",
+              "module": "tx_context",
+              "name": "TxContext",
+              "typeArguments": []
+            }
+          }
+        }
+      ],
+      "parameterCount": 3,
+      "returnTypes": [],
+      "visibility": "Public",
+      "typeParameters": [],
+      "analysis": {
+        "stringCount": 0,
+        "u64Count": 0,
+        "objectCount": 2,
+        "referenceCount": 0,
+        "mutableReferenceCount": 2,
+        "clockPosition": -1,
+        "contextPosition": -1,
+        "stringPositions": [],
+        "u64Positions": []
+      },
+      "isMutable": true,
+      "hasContext": false,
+      "hasClock": false
+    },
+    "spreadsheet::get_spreadsheet_info": {
+      "name": "get_spreadsheet_info",
+      "module": "spreadsheet",
+      "fullName": "spreadsheet::get_spreadsheet_info",
+      "parameters": [
+        {
+          "Reference": {
+            "Struct": {
+              "address": "0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7",
+              "module": "spreadsheet",
+              "name": "Spreadsheet",
+              "typeArguments": []
+            }
+          }
+        }
+      ],
+      "parameterCount": 1,
+      "returnTypes": [],
+      "visibility": "Public",
+      "typeParameters": [],
+      "analysis": {
+        "stringCount": 0,
+        "u64Count": 0,
+        "objectCount": 1,
+        "referenceCount": 1,
+        "mutableReferenceCount": 0,
+        "clockPosition": -1,
+        "contextPosition": -1,
+        "stringPositions": [],
+        "u64Positions": []
+      },
+      "isMutable": false,
+      "hasContext": false,
+      "hasClock": false
+    },
+    "spreadsheet::get_version_info": {
+      "name": "get_version_info",
+      "module": "spreadsheet",
+      "fullName": "spreadsheet::get_version_info",
+      "parameters": [
+        {
+          "Reference": {
+            "Struct": {
+              "address": "0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7",
+              "module": "spreadsheet",
+              "name": "Version",
+              "typeArguments": []
+            }
+          }
+        }
+      ],
+      "parameterCount": 1,
+      "returnTypes": [],
+      "visibility": "Public",
+      "typeParameters": [],
+      "analysis": {
+        "stringCount": 0,
+        "u64Count": 0,
+        "objectCount": 1,
+        "referenceCount": 1,
+        "mutableReferenceCount": 0,
+        "clockPosition": -1,
+        "contextPosition": -1,
+        "stringPositions": [],
+        "u64Positions": []
+      },
+      "isMutable": false,
+      "hasContext": false,
+      "hasClock": false
+    },
+    "spreadsheet::lock_cell": {
+      "name": "lock_cell",
+      "module": "spreadsheet",
+      "fullName": "spreadsheet::lock_cell",
+      "parameters": [
+        "Address",
+        {
+          "Struct": {
+            "address": "0x1",
+            "module": "string",
+            "name": "String",
+            "typeArguments": []
+          }
+        },
+        {
+          "MutableReference": {
+            "Struct": {
+              "address": "0x2",
+              "module": "tx_context",
+              "name": "TxContext",
+              "typeArguments": []
+            }
+          }
+        }
+      ],
+      "parameterCount": 3,
+      "returnTypes": [],
+      "visibility": "Public",
+      "typeParameters": [],
+      "analysis": {
+        "stringCount": 0,
+        "u64Count": 0,
+        "objectCount": 1,
+        "referenceCount": 0,
+        "mutableReferenceCount": 1,
+        "clockPosition": -1,
+        "contextPosition": -1,
+        "stringPositions": [],
+        "u64Positions": []
+      },
+      "isMutable": true,
+      "hasContext": false,
+      "hasClock": false
+    },
+    "spreadsheet::make_public": {
+      "name": "make_public",
+      "module": "spreadsheet",
+      "fullName": "spreadsheet::make_public",
+      "parameters": [
+        {
+          "MutableReference": {
+            "Struct": {
+              "address": "0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7",
+              "module": "spreadsheet",
+              "name": "Spreadsheet",
+              "typeArguments": []
+            }
+          }
+        },
+        {
+          "MutableReference": {
+            "Struct": {
+              "address": "0x2",
+              "module": "tx_context",
+              "name": "TxContext",
+              "typeArguments": []
+            }
+          }
+        }
+      ],
+      "parameterCount": 2,
+      "returnTypes": [],
+      "visibility": "Public",
+      "typeParameters": [],
+      "analysis": {
+        "stringCount": 0,
+        "u64Count": 0,
+        "objectCount": 2,
+        "referenceCount": 0,
+        "mutableReferenceCount": 2,
+        "clockPosition": -1,
+        "contextPosition": -1,
+        "stringPositions": [],
+        "u64Positions": []
+      },
+      "isMutable": true,
+      "hasContext": false,
+      "hasClock": false
+    },
+    "spreadsheet::save_version": {
+      "name": "save_version",
+      "module": "spreadsheet",
+      "fullName": "spreadsheet::save_version",
+      "parameters": [
+        {
+          "MutableReference": {
+            "Struct": {
+              "address": "0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7",
+              "module": "spreadsheet",
+              "name": "Spreadsheet",
+              "typeArguments": []
+            }
+          }
+        },
+        {
+          "Struct": {
+            "address": "0x1",
+            "module": "string",
+            "name": "String",
+            "typeArguments": []
+          }
+        },
+        "U64",
+        {
+          "Struct": {
+            "address": "0x1",
+            "module": "string",
+            "name": "String",
+            "typeArguments": []
+          }
+        },
+        {
+          "MutableReference": {
+            "Struct": {
+              "address": "0x2",
+              "module": "tx_context",
+              "name": "TxContext",
+              "typeArguments": []
+            }
+          }
+        }
+      ],
+      "parameterCount": 5,
+      "returnTypes": [],
+      "visibility": "Public",
+      "typeParameters": [],
+      "analysis": {
+        "stringCount": 0,
+        "u64Count": 0,
+        "objectCount": 2,
+        "referenceCount": 0,
+        "mutableReferenceCount": 2,
+        "clockPosition": -1,
+        "contextPosition": -1,
+        "stringPositions": [],
+        "u64Positions": []
+      },
+      "isMutable": true,
+      "hasContext": false,
+      "hasClock": false
+    },
+    "spreadsheet::transfer_ownership": {
+      "name": "transfer_ownership",
+      "module": "spreadsheet",
+      "fullName": "spreadsheet::transfer_ownership",
+      "parameters": [
+        {
+          "MutableReference": {
+            "Struct": {
+              "address": "0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7",
+              "module": "spreadsheet",
+              "name": "Spreadsheet",
+              "typeArguments": []
+            }
+          }
+        },
+        "Address",
+        {
+          "MutableReference": {
+            "Struct": {
+              "address": "0x2",
+              "module": "tx_context",
+              "name": "TxContext",
+              "typeArguments": []
+            }
+          }
+        }
+      ],
+      "parameterCount": 3,
+      "returnTypes": [],
+      "visibility": "Public",
+      "typeParameters": [],
+      "analysis": {
+        "stringCount": 0,
+        "u64Count": 0,
+        "objectCount": 2,
+        "referenceCount": 0,
+        "mutableReferenceCount": 2,
+        "clockPosition": -1,
+        "contextPosition": -1,
+        "stringPositions": [],
+        "u64Positions": []
+      },
+      "isMutable": true,
+      "hasContext": false,
+      "hasClock": false
+    },
+    "spreadsheet::unlock_cell": {
+      "name": "unlock_cell",
+      "module": "spreadsheet",
+      "fullName": "spreadsheet::unlock_cell",
+      "parameters": [
+        {
+          "MutableReference": {
+            "Struct": {
+              "address": "0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7",
+              "module": "spreadsheet",
+              "name": "CellEdit",
+              "typeArguments": []
+            }
+          }
+        },
+        {
+          "MutableReference": {
+            "Struct": {
+              "address": "0x2",
+              "module": "tx_context",
+              "name": "TxContext",
+              "typeArguments": []
+            }
+          }
+        }
+      ],
+      "parameterCount": 2,
+      "returnTypes": [],
+      "visibility": "Public",
+      "typeParameters": [],
+      "analysis": {
+        "stringCount": 0,
+        "u64Count": 0,
+        "objectCount": 2,
+        "referenceCount": 0,
+        "mutableReferenceCount": 2,
+        "clockPosition": -1,
+        "contextPosition": -1,
+        "stringPositions": [],
+        "u64Positions": []
+      },
+      "isMutable": true,
+      "hasContext": false,
+      "hasClock": false
+    },
+    "spreadsheet::update_title": {
+      "name": "update_title",
+      "module": "spreadsheet",
+      "fullName": "spreadsheet::update_title",
+      "parameters": [
+        {
+          "MutableReference": {
+            "Struct": {
+              "address": "0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7",
+              "module": "spreadsheet",
+              "name": "Spreadsheet",
+              "typeArguments": []
+            }
+          }
+        },
+        {
+          "Struct": {
+            "address": "0x1",
+            "module": "string",
+            "name": "String",
+            "typeArguments": []
+          }
+        },
+        {
+          "MutableReference": {
+            "Struct": {
+              "address": "0x2",
+              "module": "tx_context",
+              "name": "TxContext",
+              "typeArguments": []
+            }
+          }
+        }
+      ],
+      "parameterCount": 3,
+      "returnTypes": [],
+      "visibility": "Public",
+      "typeParameters": [],
+      "analysis": {
+        "stringCount": 0,
+        "u64Count": 0,
+        "objectCount": 2,
+        "referenceCount": 0,
+        "mutableReferenceCount": 2,
+        "clockPosition": -1,
+        "contextPosition": -1,
+        "stringPositions": [],
+        "u64Positions": []
+      },
+      "isMutable": true,
+      "hasContext": false,
+      "hasClock": false
+    }
+  },
+  "modules": {
+    "spreadsheet": {
+      "fileFormatVersion": 6,
+      "address": "0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7",
+      "name": "spreadsheet",
+      "friends": [],
+      "structs": {
+        "CellEdit": {
+          "abilities": {
+            "abilities": [
+              "Store",
+              "Key"
+            ]
+          },
+          "typeParameters": [],
+          "fields": [
+            {
+              "name": "id",
+              "type": {
+                "Struct": {
+                  "address": "0x2",
+                  "module": "object",
+                  "name": "UID",
+                  "typeArguments": []
+                }
+              }
+            },
+            {
+              "name": "spreadsheet_id",
+              "type": "Address"
+            },
+            {
+              "name": "version_id",
+              "type": "Address"
+            },
+            {
+              "name": "cell_ref",
+              "type": {
+                "Struct": {
+                  "address": "0x1",
+                  "module": "string",
+                  "name": "String",
+                  "typeArguments": []
+                }
+              }
+            },
+            {
+              "name": "editor",
+              "type": "Address"
+            },
+            {
+              "name": "timestamp",
+              "type": "U64"
+            },
+            {
+              "name": "is_locked",
+              "type": "Bool"
+            }
+          ]
+        },
+        "CellLocked": {
+          "abilities": {
+            "abilities": [
+              "Copy",
+              "Drop"
+            ]
+          },
+          "typeParameters": [],
+          "fields": [
+            {
+              "name": "spreadsheet_id",
+              "type": "Address"
+            },
+            {
+              "name": "cell_ref",
+              "type": {
+                "Struct": {
+                  "address": "0x1",
+                  "module": "string",
+                  "name": "String",
+                  "typeArguments": []
+                }
+              }
+            },
+            {
+              "name": "editor",
+              "type": "Address"
+            },
+            {
+              "name": "timestamp",
+              "type": "U64"
+            }
+          ]
+        },
+        "CellUnlocked": {
+          "abilities": {
+            "abilities": [
+              "Copy",
+              "Drop"
+            ]
+          },
+          "typeParameters": [],
+          "fields": [
+            {
+              "name": "spreadsheet_id",
+              "type": "Address"
+            },
+            {
+              "name": "cell_ref",
+              "type": {
+                "Struct": {
+                  "address": "0x1",
+                  "module": "string",
+                  "name": "String",
+                  "typeArguments": []
+                }
+              }
+            },
+            {
+              "name": "editor",
+              "type": "Address"
+            },
+            {
+              "name": "timestamp",
+              "type": "U64"
+            }
+          ]
+        },
+        "Spreadsheet": {
+          "abilities": {
+            "abilities": [
+              "Key"
+            ]
+          },
+          "typeParameters": [],
+          "fields": [
+            {
+              "name": "id",
+              "type": {
+                "Struct": {
+                  "address": "0x2",
+                  "module": "object",
+                  "name": "UID",
+                  "typeArguments": []
+                }
+              }
+            },
+            {
+              "name": "title",
+              "type": {
+                "Struct": {
+                  "address": "0x1",
+                  "module": "string",
+                  "name": "String",
+                  "typeArguments": []
+                }
+              }
+            },
+            {
+              "name": "owner",
+              "type": "Address"
+            },
+            {
+              "name": "created_at",
+              "type": "U64"
+            },
+            {
+              "name": "last_modified",
+              "type": "U64"
+            },
+            {
+              "name": "version_count",
+              "type": "U64"
+            },
+            {
+              "name": "current_version",
+              "type": "Address"
+            },
+            {
+              "name": "is_public",
+              "type": "Bool"
+            }
+          ]
+        },
+        "SpreadsheetCreated": {
+          "abilities": {
+            "abilities": [
+              "Copy",
+              "Drop"
+            ]
+          },
+          "typeParameters": [],
+          "fields": [
+            {
+              "name": "spreadsheet_id",
+              "type": "Address"
+            },
+            {
+              "name": "owner",
+              "type": "Address"
+            },
+            {
+              "name": "title",
+              "type": {
+                "Struct": {
+                  "address": "0x1",
+                  "module": "string",
+                  "name": "String",
+                  "typeArguments": []
+                }
+              }
+            },
+            {
+              "name": "timestamp",
+              "type": "U64"
+            }
+          ]
+        },
+        "SpreadsheetRegistry": {
+          "abilities": {
+            "abilities": [
+              "Key"
+            ]
+          },
+          "typeParameters": [],
+          "fields": [
+            {
+              "name": "id",
+              "type": {
+                "Struct": {
+                  "address": "0x2",
+                  "module": "object",
+                  "name": "UID",
+                  "typeArguments": []
+                }
+              }
+            },
+            {
+              "name": "spreadsheets",
+              "type": {
+                "Vector": "Address"
+              }
+            }
+          ]
+        },
+        "Version": {
+          "abilities": {
+            "abilities": [
+              "Store",
+              "Key"
+            ]
+          },
+          "typeParameters": [],
+          "fields": [
+            {
+              "name": "id",
+              "type": {
+                "Struct": {
+                  "address": "0x2",
+                  "module": "object",
+                  "name": "UID",
+                  "typeArguments": []
+                }
+              }
+            },
+            {
+              "name": "spreadsheet_id",
+              "type": "Address"
+            },
+            {
+              "name": "version_number",
+              "type": "U64"
+            },
+            {
+              "name": "walrus_blob_id",
+              "type": {
+                "Struct": {
+                  "address": "0x1",
+                  "module": "string",
+                  "name": "String",
+                  "typeArguments": []
+                }
+              }
+            },
+            {
+              "name": "cell_count",
+              "type": "U64"
+            },
+            {
+              "name": "created_at",
+              "type": "U64"
+            },
+            {
+              "name": "created_by",
+              "type": "Address"
+            },
+            {
+              "name": "description",
+              "type": {
+                "Struct": {
+                  "address": "0x1",
+                  "module": "string",
+                  "name": "String",
+                  "typeArguments": []
+                }
+              }
+            }
+          ]
+        },
+        "VersionSaved": {
+          "abilities": {
+            "abilities": [
+              "Copy",
+              "Drop"
+            ]
+          },
+          "typeParameters": [],
+          "fields": [
+            {
+              "name": "spreadsheet_id",
+              "type": "Address"
+            },
+            {
+              "name": "version_id",
+              "type": "Address"
+            },
+            {
+              "name": "version_number",
+              "type": "U64"
+            },
+            {
+              "name": "walrus_blob_id",
+              "type": {
+                "Struct": {
+                  "address": "0x1",
+                  "module": "string",
+                  "name": "String",
+                  "typeArguments": []
+                }
+              }
+            },
+            {
+              "name": "cell_count",
+              "type": "U64"
+            },
+            {
+              "name": "timestamp",
+              "type": "U64"
+            }
+          ]
+        }
+      },
+      "exposedFunctions": {
+        "create_spreadsheet": {
+          "visibility": "Public",
+          "isEntry": false,
+          "typeParameters": [],
+          "parameters": [
+            {
+              "MutableReference": {
+                "Struct": {
+                  "address": "0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7",
+                  "module": "spreadsheet",
+                  "name": "SpreadsheetRegistry",
+                  "typeArguments": []
+                }
+              }
+            },
+            {
+              "Struct": {
+                "address": "0x1",
+                "module": "string",
+                "name": "String",
+                "typeArguments": []
+              }
+            },
+            {
+              "MutableReference": {
+                "Struct": {
+                  "address": "0x2",
+                  "module": "tx_context",
+                  "name": "TxContext",
+                  "typeArguments": []
+                }
+              }
+            }
+          ],
+          "return": [
+            "Address"
+          ]
+        },
+        "get_spreadsheet_info": {
+          "visibility": "Public",
+          "isEntry": false,
+          "typeParameters": [],
+          "parameters": [
+            {
+              "Reference": {
+                "Struct": {
+                  "address": "0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7",
+                  "module": "spreadsheet",
+                  "name": "Spreadsheet",
+                  "typeArguments": []
+                }
+              }
+            }
+          ],
+          "return": [
+            {
+              "Struct": {
+                "address": "0x1",
+                "module": "string",
+                "name": "String",
+                "typeArguments": []
+              }
+            },
+            "Address",
+            "U64",
+            "U64",
+            "U64",
+            "Address",
+            "Bool"
+          ]
+        },
+        "get_version_info": {
+          "visibility": "Public",
+          "isEntry": false,
+          "typeParameters": [],
+          "parameters": [
+            {
+              "Reference": {
+                "Struct": {
+                  "address": "0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7",
+                  "module": "spreadsheet",
+                  "name": "Version",
+                  "typeArguments": []
+                }
+              }
+            }
+          ],
+          "return": [
+            "Address",
+            "U64",
+            {
+              "Struct": {
+                "address": "0x1",
+                "module": "string",
+                "name": "String",
+                "typeArguments": []
+              }
+            },
+            "U64",
+            "U64",
+            "Address",
+            {
+              "Struct": {
+                "address": "0x1",
+                "module": "string",
+                "name": "String",
+                "typeArguments": []
+              }
+            }
+          ]
+        },
+        "lock_cell": {
+          "visibility": "Public",
+          "isEntry": false,
+          "typeParameters": [],
+          "parameters": [
+            "Address",
+            {
+              "Struct": {
+                "address": "0x1",
+                "module": "string",
+                "name": "String",
+                "typeArguments": []
+              }
+            },
+            {
+              "MutableReference": {
+                "Struct": {
+                  "address": "0x2",
+                  "module": "tx_context",
+                  "name": "TxContext",
+                  "typeArguments": []
+                }
+              }
+            }
+          ],
+          "return": [
+            "Address"
+          ]
+        },
+        "make_public": {
+          "visibility": "Public",
+          "isEntry": false,
+          "typeParameters": [],
+          "parameters": [
+            {
+              "MutableReference": {
+                "Struct": {
+                  "address": "0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7",
+                  "module": "spreadsheet",
+                  "name": "Spreadsheet",
+                  "typeArguments": []
+                }
+              }
+            },
+            {
+              "MutableReference": {
+                "Struct": {
+                  "address": "0x2",
+                  "module": "tx_context",
+                  "name": "TxContext",
+                  "typeArguments": []
+                }
+              }
+            }
+          ],
+          "return": []
+        },
+        "save_version": {
+          "visibility": "Public",
+          "isEntry": false,
+          "typeParameters": [],
+          "parameters": [
+            {
+              "MutableReference": {
+                "Struct": {
+                  "address": "0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7",
+                  "module": "spreadsheet",
+                  "name": "Spreadsheet",
+                  "typeArguments": []
+                }
+              }
+            },
+            {
+              "Struct": {
+                "address": "0x1",
+                "module": "string",
+                "name": "String",
+                "typeArguments": []
+              }
+            },
+            "U64",
+            {
+              "Struct": {
+                "address": "0x1",
+                "module": "string",
+                "name": "String",
+                "typeArguments": []
+              }
+            },
+            {
+              "MutableReference": {
+                "Struct": {
+                  "address": "0x2",
+                  "module": "tx_context",
+                  "name": "TxContext",
+                  "typeArguments": []
+                }
+              }
+            }
+          ],
+          "return": [
+            "Address"
+          ]
+        },
+        "transfer_ownership": {
+          "visibility": "Public",
+          "isEntry": false,
+          "typeParameters": [],
+          "parameters": [
+            {
+              "MutableReference": {
+                "Struct": {
+                  "address": "0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7",
+                  "module": "spreadsheet",
+                  "name": "Spreadsheet",
+                  "typeArguments": []
+                }
+              }
+            },
+            "Address",
+            {
+              "MutableReference": {
+                "Struct": {
+                  "address": "0x2",
+                  "module": "tx_context",
+                  "name": "TxContext",
+                  "typeArguments": []
+                }
+              }
+            }
+          ],
+          "return": []
+        },
+        "unlock_cell": {
+          "visibility": "Public",
+          "isEntry": false,
+          "typeParameters": [],
+          "parameters": [
+            {
+              "MutableReference": {
+                "Struct": {
+                  "address": "0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7",
+                  "module": "spreadsheet",
+                  "name": "CellEdit",
+                  "typeArguments": []
+                }
+              }
+            },
+            {
+              "MutableReference": {
+                "Struct": {
+                  "address": "0x2",
+                  "module": "tx_context",
+                  "name": "TxContext",
+                  "typeArguments": []
+                }
+              }
+            }
+          ],
+          "return": []
+        },
+        "update_title": {
+          "visibility": "Public",
+          "isEntry": false,
+          "typeParameters": [],
+          "parameters": [
+            {
+              "MutableReference": {
+                "Struct": {
+                  "address": "0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7",
+                  "module": "spreadsheet",
+                  "name": "Spreadsheet",
+                  "typeArguments": []
+                }
+              }
+            },
+            {
+              "Struct": {
+                "address": "0x1",
+                "module": "string",
+                "name": "String",
+                "typeArguments": []
+              }
+            },
+            {
+              "MutableReference": {
+                "Struct": {
+                  "address": "0x2",
+                  "module": "tx_context",
+                  "name": "TxContext",
+                  "typeArguments": []
+                }
+              }
+            }
+          ],
+          "return": []
+        }
+      }
+    }
+  },
+  "critical": {
+    "save_version": {
+      "name": "save_version",
+      "module": "spreadsheet",
+      "fullName": "spreadsheet::save_version",
+      "parameters": [
+        {
+          "MutableReference": {
+            "Struct": {
+              "address": "0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7",
+              "module": "spreadsheet",
+              "name": "Spreadsheet",
+              "typeArguments": []
+            }
+          }
+        },
+        {
+          "Struct": {
+            "address": "0x1",
+            "module": "string",
+            "name": "String",
+            "typeArguments": []
+          }
+        },
+        "U64",
+        {
+          "Struct": {
+            "address": "0x1",
+            "module": "string",
+            "name": "String",
+            "typeArguments": []
+          }
+        },
+        {
+          "MutableReference": {
+            "Struct": {
+              "address": "0x2",
+              "module": "tx_context",
+              "name": "TxContext",
+              "typeArguments": []
+            }
+          }
+        }
+      ],
+      "parameterCount": 5,
+      "returnTypes": [],
+      "visibility": "Public",
+      "typeParameters": [],
+      "analysis": {
+        "stringCount": 0,
+        "u64Count": 0,
+        "objectCount": 2,
+        "referenceCount": 0,
+        "mutableReferenceCount": 2,
+        "clockPosition": -1,
+        "contextPosition": -1,
+        "stringPositions": [],
+        "u64Positions": []
+      },
+      "isMutable": true,
+      "hasContext": false,
+      "hasClock": false,
+      "expectsContentHash": false,
+      "expectedArgCount": 5,
+      "stringPositions": [],
+      "firstU64Position": -1
+    }
+  }
+}

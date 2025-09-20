@@ -1,0 +1,20 @@
+// Copyright (c) Mysten Labs, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package sui.rpc.v2beta2;
+
+import "sui/rpc/v2beta2/owner.proto";
+
+// Balance change for a transaction
+message BalanceChange {
+  // The owner whose balance changed
+  Owner owner = 1;
+  
+  // The coin type (e.g., "0x2::sui::SUI")
+  string coin_type = 2;
+  
+  // The amount of change (positive for increase, negative for decrease)
+  int64 amount = 3;
+}

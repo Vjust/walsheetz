@@ -1,5 +1,5 @@
 // Sponsored transaction service for WalSheetz
-import { TransactionBlock } from '@mysten/sui.js/transactions';
+import { Transaction } from '@mysten/sui/transactions';
 import { getCurrentConfig } from './config.js';
 import { suiService } from './sui-service.js';
 import { depositManager } from './deposit-manager.js';
@@ -13,6 +13,12 @@ class SponsorService {
     this.sponsorAddress = null; // Will be set when sponsor wallet is configured
     this.gasCoins = new Map(); // Track available gas coins
     this.pendingTransactions = new Map(); // Track pending sponsored transactions
+    // Flag to control demo event emissions
+    this.demoEventsEnabled = process.env.SPONSOR_DEMO_EVENTS === 'true'; // Default false
+    
+    if (this.demoEventsEnabled) {
+      console.warn('[SponsorService] ⚠️ Demo events enabled - using placeholder Move calls');
+    }
   }
 
   // Initialize sponsor service with a dedicated sponsor wallet
@@ -42,7 +48,7 @@ class SponsorService {
       }
 
       // Build the transaction
-      const transaction = new TransactionBlock();
+      const transaction = new Transaction();
       
       // Let the builder add its operations
       if (typeof transactionBuilder === 'function') {
@@ -212,15 +218,17 @@ class SponsorService {
 
       // This is a placeholder - in a real implementation, you'd call
       // a Move smart contract to record the storage metadata
-      tx.moveCall({
-        target: '0x2::event::emit',
-        arguments: [
-          tx.pure({
-            type: 'WalSheetzStorageEvent',
-            data: storageData
-          })
-        ]
-      });
+      if (this.demoEventsEnabled) {
+        tx.moveCall({
+          target: '0x2::event::emit',
+          arguments: [
+            tx.pure({
+              type: 'WalSheetzStorageEvent',
+              data: storageData
+            })
+          ]
+        });
+      }
     });
   }
 
@@ -228,18 +236,20 @@ class SponsorService {
   async sponsorSimpleTransaction(userAddress, operationType, operationData) {
     return this.executeSponsoredTransaction(userAddress, (tx) => {
       // Emit a simple event for tracking
-      tx.moveCall({
-        target: '0x2::event::emit',
-        arguments: [
-          tx.pure({
-            type: 'WalSheetzOperationEvent',
-            operation: operationType,
-            data: operationData,
-            timestamp: Date.now(),
-            user: userAddress
-          })
-        ]
-      });
+      if (this.demoEventsEnabled) {
+        tx.moveCall({
+          target: '0x2::event::emit',
+          arguments: [
+            tx.pure({
+              type: 'WalSheetzOperationEvent',
+              operation: operationType,
+              data: operationData,
+              timestamp: Date.now(),
+              user: userAddress
+            })
+          ]
+        });
+      }
     });
   }
 
@@ -257,32 +267,36 @@ class SponsorService {
   async estimateOperationCost(operationType, data = {}) {
     try {
       // Create a dummy transaction to estimate costs
-      const dummyTx = new TransactionBlock();
+      const dummyTx = new Transaction();
       
       switch (operationType) {
         case 'storage':
-          dummyTx.moveCall({
-            target: '0x2::event::emit',
-            arguments: [
-              dummyTx.pure({
-                type: 'WalSheetzStorageEvent',
-                data: data
-              })
-            ]
-          });
+          if (this.demoEventsEnabled) {
+            dummyTx.moveCall({
+              target: '0x2::event::emit',
+              arguments: [
+                dummyTx.pure({
+                  type: 'WalSheetzStorageEvent',
+                  data: data
+                })
+              ]
+            });
+          }
           break;
         
         case 'simple':
-          dummyTx.moveCall({
-            target: '0x2::event::emit',
-            arguments: [
-              dummyTx.pure({
-                type: 'WalSheetzOperationEvent',
-                operation: data.operation || 'edit',
-                data: data
-              })
-            ]
-          });
+          if (this.demoEventsEnabled) {
+            dummyTx.moveCall({
+              target: '0x2::event::emit',
+              arguments: [
+                dummyTx.pure({
+                  type: 'WalSheetzOperationEvent',
+                  operation: data.operation || 'edit',
+                  data: data
+                })
+              ]
+            });
+          }
           break;
         
         default:
@@ -309,27 +323,31 @@ class SponsorService {
       for (const operation of operations) {
         switch (operation.type) {
           case 'storage':
-            tx.moveCall({
-              target: '0x2::event::emit',
-              arguments: [
-                tx.pure({
-                  type: 'WalSheetzStorageEvent',
-                  data: operation.data
-                })
-              ]
-            });
+            if (this.demoEventsEnabled) {
+              tx.moveCall({
+                target: '0x2::event::emit',
+                arguments: [
+                  tx.pure({
+                    type: 'WalSheetzStorageEvent',
+                    data: operation.data
+                  })
+                ]
+              });
+            }
             break;
           
           case 'edit':
-            tx.moveCall({
-              target: '0x2::event::emit',
-              arguments: [
-                tx.pure({
-                  type: 'WalSheetzEditEvent',
-                  data: operation.data
-                })
-              ]
-            });
+            if (this.demoEventsEnabled) {
+              tx.moveCall({
+                target: '0x2::event::emit',
+                arguments: [
+                  tx.pure({
+                    type: 'WalSheetzEditEvent',
+                    data: operation.data
+                  })
+                ]
+              });
+            }
             break;
         }
       }

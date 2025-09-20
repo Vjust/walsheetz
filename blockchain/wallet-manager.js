@@ -21,6 +21,16 @@ class WalletManager {
     this.eventListeners.get(event).push(callback);
   }
 
+  off(event, callback) {
+    if (this.eventListeners.has(event)) {
+      const callbacks = this.eventListeners.get(event);
+      const index = callbacks.indexOf(callback);
+      if (index > -1) {
+        callbacks.splice(index, 1);
+      }
+    }
+  }
+
   emit(event, data) {
     if (this.eventListeners.has(event)) {
       this.eventListeners.get(event).forEach(callback => callback(data));
@@ -147,30 +157,57 @@ class WalletManager {
       throw new Error('Wallet not connected');
     }
 
-    try {
-      const signAndExecuteFeature = this.currentWallet.features['sui:signAndExecuteTransactionBlock'];
-      
-      if (!signAndExecuteFeature) {
-        throw new Error('Wallet does not support transaction signing');
+    const maxRetries = 2;
+    let lastError;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔐 Attempting transaction signing (attempt ${attempt}/${maxRetries})...`);
+
+        const signAndExecuteFeature = this.currentWallet.features['sui:signAndExecuteTransactionBlock'];
+
+        if (!signAndExecuteFeature) {
+          throw new Error('Wallet does not support transaction signing');
+        }
+
+        const result = await signAndExecuteFeature.signAndExecuteTransactionBlock({
+          transactionBlock: transaction,
+          account: this.currentAccount,
+          chain: getCurrentConfig().sui.rpcUrl.includes('testnet') ? 'sui:testnet' : 'sui:mainnet'
+        });
+
+        this.emit('transactionSigned', {
+          digest: result.digest,
+          effects: result.effects
+        });
+
+        console.log('✅ Transaction executed successfully:', result.digest);
+        return result;
+      } catch (error) {
+        console.error(`❌ Transaction signing attempt ${attempt} failed:`, error);
+        lastError = error;
+
+        // Check if this is a message channel error that might be resolved with retry
+        if (error.message && error.message.includes('message channel closed')) {
+          console.warn(`🔄 Message channel error detected, ${maxRetries - attempt} retries remaining...`);
+
+          // Wait before retrying (exponential backoff)
+          if (attempt < maxRetries) {
+            const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+            console.log(`⏳ Waiting ${delay}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        } else {
+          // If it's not a message channel error, don't retry
+          break;
+        }
       }
-
-      const result = await signAndExecuteFeature.signAndExecuteTransactionBlock({
-        transactionBlock: transaction,
-        account: this.currentAccount,
-        chain: getCurrentConfig().sui.rpcUrl.includes('testnet') ? 'sui:testnet' : 'sui:mainnet'
-      });
-
-      this.emit('transactionSigned', {
-        digest: result.digest,
-        effects: result.effects
-      });
-
-      return result;
-    } catch (error) {
-      console.error('Transaction signing failed:', error);
-      this.emit('error', error.message);
-      throw error;
     }
+
+    // If all retries failed, throw the last error with additional context
+    console.error('Transaction signing failed after all retries:', lastError);
+    this.emit('error', `Transaction failed after ${maxRetries} attempts: ${lastError.message}`);
+    throw lastError;
   }
 
   // Get current wallet info

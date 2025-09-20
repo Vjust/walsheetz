@@ -1,28 +1,156 @@
 // Blockchain configuration for WalSheetz
+
+// Robust dev/prod detection that works in both browser and Node.js environments
+const isBrowser = typeof window !== 'undefined';
+const isDevRuntime = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV) ||
+                     (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'development');
+
+// Force absolute endpoints even in dev (useful for environments without proxy)
+const forceAbsoluteEndpoints = (typeof process !== 'undefined' && process.env && process.env.WALRUS_USE_ABSOLUTE === 'true') || false;
+
+// Cross-platform environment variable access with proper defaults
+const env = (typeof import.meta !== 'undefined' && import.meta.env) ||
+            ((typeof process !== 'undefined' && process.env) || {});
+
 export const config = {
   sui: {
     testnet: {
-      rpcUrl: 'https://fullnode.testnet.sui.io:443',
+      rpcUrl: isDevRuntime ? '/sui-rpc' : 'https://fullnode.testnet.sui.io:443',
+      grpcUrl: isDevRuntime ? 'fullnode.testnet.sui.io:443' : 'fullnode.testnet.sui.io:443',
       graphqlUrl: 'https://sui-testnet.mystenlabs.com/graphql',
       faucetUrl: 'https://faucet.testnet.sui.io/gas',
-      explorerUrl: 'https://testnet.suivision.xyz'
+      explorerUrl: 'https://testnet.suivision.xyz',
+      packageId: '0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7',
+      registryObjectId: '0x9a6b94f79762fa608c5f0938d092744a8e5b69852f860eb17afa4ab11e24fe25',
+      // Feature compatibility for deployed package ABI
+      features: {
+        // The deployed testnet package uses save_version(spreadsheet, walrus_blob_id, content_hash, cell_count, description, clock)
+        // This must be set to true as the on-chain function expects the content_hash argument.
+        contentHashInSave: true,
+        // Rate limiter feature flag
+        rateLimiterEnabled: (env.RATE_LIMITER_ENABLED ?? 'true') !== 'false' // Default true
+      },
+      // Rate limiting configuration
+      rateLimits: {
+        sui: {
+          maxRPS: parseInt(env.SUI_MAX_RPS || '3'),
+          burst: parseInt(env.SUI_BURST || '6'),
+          maxConcurrent: parseInt(env.SUI_MAX_CONCURRENT || '4')
+        }
+      }
     },
     mainnet: {
       rpcUrl: 'https://fullnode.mainnet.sui.io:443',
+      grpcUrl: 'fullnode.mainnet.sui.io:443',
       graphqlUrl: 'https://sui-mainnet.mystenlabs.com/graphql',
-      explorerUrl: 'https://suivision.xyz'
+      explorerUrl: 'https://suivision.xyz',
+      packageId: '0x991454976a4ef8535ed3572bb1c500dcd565855d49a51f1fadc7f70a316c9631',
+      registryObjectId: '0x66f68bfb639dbc7f24519bcdbbfdb376057d87c6d508ea7a8d67746a11721ca5',
+      features: {
+        contentHashInSave: true,
+        rateLimiterEnabled: (env.RATE_LIMITER_ENABLED ?? 'true') !== 'false'
+      },
+      rateLimits: {
+        sui: {
+          maxRPS: parseInt(env.SUI_MAX_RPS || '3'),
+          burst: parseInt(env.SUI_BURST || '6'),
+          maxConcurrent: parseInt(env.SUI_MAX_CONCURRENT || '4')
+        }
+      }
     }
   },
   walrus: {
     testnet: {
-      publisherUrl: 'https://publisher-devnet.walrus.space',
-      aggregatorUrl: 'https://aggregator-devnet.walrus.space',
-      blobUrl: 'https://blobid.walrus.space'
+      // Primary endpoints - use absolute if forced or not in dev runtime
+      publisherUrl: (isDevRuntime && !forceAbsoluteEndpoints) ? '/walrus-publisher' : 'https://publisher.walrus-testnet.walrus.space',
+      aggregatorUrl: (isDevRuntime && !forceAbsoluteEndpoints) ? '/walrus-aggregator' : 'https://aggregator.walrus-testnet.walrus.space',
+      blobUrl: 'https://aggregator.walrus-testnet.walrus.space/v1/blobs',
+
+      // Multiple endpoints for redundancy (arrays)
+      publishers: (isDevRuntime && !forceAbsoluteEndpoints) ?
+        ['/walrus-publisher'] :
+        [
+          'https://publisher.walrus-testnet.walrus.space',
+          // Add more publisher endpoints as they become available
+        ],
+      aggregators: (isDevRuntime && !forceAbsoluteEndpoints) ?
+        ['/walrus-aggregator'] :
+        [
+          'https://aggregator.walrus-testnet.walrus.space',
+          // Add more aggregator endpoints as they become available
+        ],
+      
+      // Redundancy settings
+      redundancy: {
+        enabled: (typeof process !== 'undefined' && process.env && process.env.WALRUS_REDUNDANCY === 'true') || false,
+        maxEndpoints: 3, // Write to up to 3 endpoints
+        minSuccessful: 1, // At least 1 must succeed
+        writeTimeout: 30000, // 30 seconds per write
+        healthCheckInterval: 60000 // 1 minute health checks
+      },
+      
+      // Feature flags
+      features: {
+        rateLimiterEnabled: (env.RATE_LIMITER_ENABLED ?? 'true') !== 'false' // Default true
+      },
+      
+      // Rate limiting configuration
+      rateLimits: {
+        walrusAggregator: {
+          maxRPS: parseInt(env.WALRUS_AGG_MAX_RPS || '3'),
+          burst: parseInt(env.WALRUS_AGG_BURST || '3'),
+          maxConcurrent: parseInt(env.WALRUS_AGG_MAX_CONCURRENT || '2')
+        },
+        walrusPublisher: {
+          maxRPS: parseInt(env.WALRUS_PUB_MAX_RPS || '1'),
+          burst: parseInt(env.WALRUS_PUB_BURST || '1'),
+          maxConcurrent: parseInt(env.WALRUS_PUB_MAX_CONCURRENT || '1')
+        }
+      }
     },
     mainnet: {
+      // Primary endpoints
       publisherUrl: 'https://publisher.walrus.space',
       aggregatorUrl: 'https://aggregator.walrus.space',
-      blobUrl: 'https://blobid.walrus.space'
+      blobUrl: 'https://aggregator.walrus.space/v1/blobs',
+      
+      // Multiple endpoints for redundancy
+      publishers: [
+        'https://publisher.walrus.space',
+        // Add more publisher endpoints as they become available
+      ],
+      aggregators: [
+        'https://aggregator.walrus.space',
+        // Add more aggregator endpoints as they become available
+      ],
+      
+      // Redundancy settings
+      redundancy: {
+        enabled: (typeof process !== 'undefined' && process.env && process.env.WALRUS_REDUNDANCY === 'true') || false,
+        maxEndpoints: 3,
+        minSuccessful: 1,
+        writeTimeout: 30000,
+        healthCheckInterval: 60000
+      },
+      
+      // Feature flags
+      features: {
+        rateLimiterEnabled: process.env.RATE_LIMITER_ENABLED !== 'false'
+      },
+      
+      // Rate limiting configuration
+      rateLimits: {
+        walrusAggregator: {
+          maxRPS: parseInt(env.WALRUS_AGG_MAX_RPS || '3'),
+          burst: parseInt(env.WALRUS_AGG_BURST || '3'),
+          maxConcurrent: parseInt(env.WALRUS_AGG_MAX_CONCURRENT || '2')
+        },
+        walrusPublisher: {
+          maxRPS: parseInt(env.WALRUS_PUB_MAX_RPS || '1'),
+          burst: parseInt(env.WALRUS_PUB_BURST || '1'),
+          maxConcurrent: parseInt(env.WALRUS_PUB_MAX_CONCURRENT || '1')
+        }
+      }
     }
   },
   // Storage settings
@@ -30,7 +158,115 @@ export const config = {
     autoSaveInterval: 5000, // 5 seconds
     editThreshold: 3, // Save after 3 edits
     maxVersionHistory: 100, // Keep last 100 versions per cell
-    batchSize: 50 // Max changes per Walrus blob
+    batchSize: 50, // Max changes per Walrus blob
+    
+    // Feature flags
+    features: {
+      compression: {
+        enabled: (env.WALRUS_COMPRESSION ?? 'true') !== 'false', // Default true
+        threshold: parseInt(env.COMPRESSION_THRESHOLD || '16384'), // 16KB default
+        algorithm: 'gzip'
+      },
+      deltaChain: {
+        enabled: (env.ENABLE_DELTA ?? 'true') !== 'false', // Default true
+        maxChainLength: parseInt(env.DELTA_MAX_CHAIN || '5'), // Max 5 deltas before full snapshot
+        compressionThreshold: 8192 // 8KB for delta compression
+      },
+      batchPersistence: {
+        enabled: (env.BATCH_PERSISTENCE ?? 'true') !== 'false', // Default true
+        storageKey: 'walsheetz_batch_',
+        maxBatchAge: 30000 // 30 seconds max batch age
+      }
+    }
+  },
+
+  // gRPC configuration
+  grpc: {
+    // Connection settings
+    maxReceiveMessageLength: 4 * 1024 * 1024, // 4MB max message size
+    maxSendMessageLength: 4 * 1024 * 1024,    // 4MB max message size
+    keepAliveTimeMs: 30000,                   // 30 second keepalive
+    keepAliveTimeoutMs: 10000,                // 10 second keepalive timeout
+    keepAlivePermitWithoutCalls: true,        // Allow keepalive without active calls
+    
+    // Retry settings
+    enableRetry: true,
+    maxRetryAttempts: 3,
+    initialRetryDelayMs: 1000,               // 1 second initial delay
+    maxRetryDelayMs: 30000,                  // 30 second max delay
+    retryDelayMultiplier: 2.0,               // Exponential backoff multiplier
+    
+    // Streaming settings
+    streamReconnectDelayMs: 1000,            // 1 second reconnect delay
+    maxReconnectDelayMs: 30000,              // 30 second max reconnect delay
+    streamKeepaliveIntervalMs: 20000,        // 20 second stream keepalive
+    
+    // Field masks for optimization
+    defaultFieldMasks: {
+      checkpoint: [
+        'sequence_number',
+        'digest',
+        'transactions.digest',
+        'transactions.events',
+        'transactions.effects.status'
+      ],
+      transaction: [
+        'digest',
+        'effects',
+        'events',
+        'object_changes'
+      ],
+      balance: [
+        'coin_type',
+        'coin_object_count',
+        'total_balance',
+        'locked_balance'
+      ],
+      ownedObjects: [
+        'object_id',
+        'type',
+        'owner',
+        'version'
+      ]
+    }
+  },
+
+  // WebSocket bridge configuration
+  websocket: {
+    port: (typeof process !== 'undefined' && process.env && process.env.BRIDGE_PORT) ? parseInt(process.env.BRIDGE_PORT) : 8081,
+    host: (typeof process !== 'undefined' && process.env && process.env.BRIDGE_HOST) ? process.env.BRIDGE_HOST : 'localhost',
+    maxClients: (typeof process !== 'undefined' && process.env && process.env.BRIDGE_MAX_CLIENTS) ? parseInt(process.env.BRIDGE_MAX_CLIENTS) : 100,
+    pingInterval: 30000,                     // 30 second ping interval
+    logLevel: (typeof process !== 'undefined' && process.env && process.env.BRIDGE_LOG_LEVEL) ? process.env.BRIDGE_LOG_LEVEL : 'INFO',
+    enableMetrics: (typeof process !== 'undefined' && process.env && process.env.ENABLE_METRICS !== 'false') || false,
+    healthCheck: {
+      enabled: true,
+      path: '/health',
+      interval: 10000                        // 10 second health check interval
+    }
+  },
+
+  // UI settings
+  ui: {
+    showRateLimiterStatus: (env.SHOW_RATE_LIMITER_STATUS ?? 'false') === 'true'
+  },
+  
+  // Collaboration settings
+  collaboration: {
+    userTimeoutMs: 300000,                   // 5 minute user timeout
+    cellLockTimeoutMs: 60000,                // 1 minute cell lock timeout
+    maxActiveUsers: 100,                     // Max concurrent users
+    eventHistorySize: 1000,                  // Max events to keep in memory
+    presenceUpdateIntervalMs: 10000,         // 10 second presence updates
+    
+    // Event types to monitor
+    eventTypes: {
+      cellLocked: 'CellLocked',
+      cellUnlocked: 'CellUnlocked', 
+      versionSaved: 'VersionSaved',
+      userJoined: 'UserJoined',
+      userLeft: 'UserLeft'
+    }
   },
   
   // Deposit and gas management settings
@@ -123,7 +359,12 @@ export const getCurrentConfig = () => {
     sui: config.sui[env],
     walrus: config.walrus[env],
     storage: config.storage,
-    deposit: config.deposit
+    deposit: config.deposit,
+    grpc: config.grpc,
+    websocket: config.websocket,
+    ui: config.ui,
+    collaboration: config.collaboration,
+    environment: env
   };
 };
 

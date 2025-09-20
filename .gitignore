@@ -129,3 +129,13 @@ private-keys/
 test-results/
 screenshots/
 videos/
+
+# Test files and directory
+tests/
+
+# Code fetch artifacts
+codefetch/
+
+# HRM reasoning files
+hrm_reasoning.db
+hrm_reasoning.*

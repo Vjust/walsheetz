@@ -1,0 +1,354 @@
+/* Collaboration styles for WalSheetz */
+/* Real-time cell highlighting and user presence indicators */
+
+/* Base cell styles for collaboration */
+.luckysheet-cell-collaboration {
+  position: relative;
+}
+
+/* Cell locked by another user */
+.luckysheet-cell-locked {
+  position: relative;
+  background-color: rgba(255, 107, 107, 0.15) !important;
+  border: 2px solid #FF6B6B !important;
+  animation: pulse-locked 2s ease-in-out infinite;
+}
+
+.luckysheet-cell-locked::after {
+  content: "🔒";
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  font-size: 10px;
+  background: #FF6B6B;
+  color: white;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+/* Different colors for different users */
+.luckysheet-cell-locked.user-1 {
+  background-color: rgba(255, 107, 107, 0.15) !important;
+  border-color: #FF6B6B !important;
+}
+
+.luckysheet-cell-locked.user-1::after {
+  background: #FF6B6B;
+}
+
+.luckysheet-cell-locked.user-2 {
+  background-color: rgba(78, 205, 196, 0.15) !important;
+  border-color: #4ECDC4 !important;
+}
+
+.luckysheet-cell-locked.user-2::after {
+  background: #4ECDC4;
+}
+
+.luckysheet-cell-locked.user-3 {
+  background-color: rgba(255, 206, 84, 0.15) !important;
+  border-color: #FFCE54 !important;
+}
+
+.luckysheet-cell-locked.user-3::after {
+  background: #FFCE54;
+}
+
+.luckysheet-cell-locked.user-4 {
+  background-color: rgba(172, 123, 255, 0.15) !important;
+  border-color: #AC7BFF !important;
+}
+
+.luckysheet-cell-locked.user-4::after {
+  background: #AC7BFF;
+}
+
+.luckysheet-cell-locked.user-5 {
+  background-color: rgba(255, 154, 162, 0.15) !important;
+  border-color: #FF9AA2 !important;
+}
+
+.luckysheet-cell-locked.user-5::after {
+  background: #FF9AA2;
+}
+
+/* Cell currently being edited by current user */
+.luckysheet-cell-editing {
+  background-color: rgba(78, 205, 196, 0.2) !important;
+  border: 2px solid #4ECDC4 !important;
+  box-shadow: 0 0 10px rgba(78, 205, 196, 0.3);
+}
+
+/* Pulse animation for locked cells */
+@keyframes pulse-locked {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 107, 107, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 107, 0);
+  }
+}
+
+/* User presence indicators */
+.collaboration-users {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: white;
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: 200px;
+}
+
+.collaboration-users h4 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: #333;
+  font-weight: 600;
+}
+
+.user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.user-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px;
+  border-radius: 5px;
+  transition: background-color 0.2s;
+}
+
+.user-item:hover {
+  background-color: #f5f5f5;
+}
+
+.user-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.user-info {
+  flex: 1;
+}
+
+.user-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #333;
+  margin: 0;
+}
+
+.user-status {
+  font-size: 10px;
+  color: #666;
+  margin: 0;
+}
+
+.user-active-cell {
+  font-size: 10px;
+  background: #e8f4fd;
+  color: #1976d2;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+/* Connection status indicator */
+.connection-status {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: white;
+  border-radius: 20px;
+  padding: 8px 16px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.connection-status.connected {
+  border-left: 4px solid #4CAF50;
+}
+
+.connection-status.disconnected {
+  border-left: 4px solid #f44336;
+}
+
+.connection-status.connecting {
+  border-left: 4px solid #ff9800;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.connected {
+  background: #4CAF50;
+  animation: blink-green 2s infinite;
+}
+
+.status-dot.disconnected {
+  background: #f44336;
+}
+
+.status-dot.connecting {
+  background: #ff9800;
+  animation: blink-orange 1s infinite;
+}
+
+@keyframes blink-green {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes blink-orange {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0.5;
+  }
+}
+
+/* Cell conflict notification */
+.cell-conflict-notification {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border: 2px solid #ff6b6b;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 2000;
+  max-width: 300px;
+  text-align: center;
+}
+
+.cell-conflict-notification h3 {
+  margin: 0 0 10px 0;
+  color: #ff6b6b;
+  font-size: 16px;
+}
+
+.cell-conflict-notification p {
+  margin: 0 0 15px 0;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.cell-conflict-notification button {
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.2s;
+}
+
+.cell-conflict-notification button:hover {
+  background: #ff5252;
+}
+
+/* Wallet connection prompt */
+.wallet-connection-prompt {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 10px;
+  padding: 15px 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.wallet-connection-prompt button {
+  background: white;
+  color: #667eea;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: transform 0.2s;
+}
+
+.wallet-connection-prompt button:hover {
+  transform: translateY(-1px);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .collaboration-users {
+    top: 10px;
+    right: 10px;
+    min-width: 150px;
+    padding: 8px;
+  }
+  
+  .collaboration-users h4 {
+    font-size: 12px;
+  }
+  
+  .user-name {
+    font-size: 11px;
+  }
+  
+  .user-status {
+    font-size: 9px;
+  }
+  
+  .connection-status {
+    bottom: 10px;
+    right: 10px;
+    font-size: 11px;
+  }
+  
+  .wallet-connection-prompt {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    transform: none;
+    padding: 12px 15px;
+  }
+}

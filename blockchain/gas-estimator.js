@@ -2,7 +2,7 @@
 import { getCurrentConfig } from './config.js';
 import { suiService } from './sui-service.js';
 
-class GasEstimator {
+export class GasEstimator {
   constructor() {
     this.config = getCurrentConfig();
     this.depositConfig = this.config.deposit || {};
@@ -146,32 +146,67 @@ class GasEstimator {
   }
 
   // Estimate transaction cost using dry run
-  async estimateTransactionCost(transaction) {
+  async estimateTransactionGas(transaction, senderAddress) {
     try {
+      // Serialize transaction for dry run
+      const serializedBytes = typeof transaction.serialize === 'function' 
+        ? await transaction.serialize()
+        : transaction;
+      
       // Use Sui's dryRunTransactionBlock for accurate estimation
       const gasEstimate = await suiService.client.dryRunTransactionBlock({
-        transactionBlock: transaction
+        transactionBlock: serializedBytes
       });
 
       const gasUsed = gasEstimate.effects.gasUsed;
-      
+      const computationUnits = parseInt(gasUsed.computationCost) || 0;
+      const storageUnits = parseInt(gasUsed.storageCost) || 0;
+      const rebateUnits = parseInt(gasUsed.storageRebate || 0) || 0;
+      // Use reference gas price if available; fallback to 1000 for tests
+      let gasPrice = 1000;
+      try {
+        const gp = await this.getCurrentGasPrice();
+        gasPrice = gp?.gasPrice || gasPrice;
+      } catch {}
+      // Convert units to MIST values via gas price
+      const computationCost = computationUnits * gasPrice;
+      const storageCost = storageUnits * gasPrice;
+      const storageRebate = rebateUnits * gasPrice;
+      const totalCost = computationCost + storageCost - storageRebate;
       return {
         success: true,
-        computationCost: parseInt(gasUsed.computationCost),
-        storageCost: parseInt(gasUsed.storageCost),
-        storageRebate: parseInt(gasUsed.storageRebate || 0),
-        nonRefundableStorageFee: parseInt(gasUsed.nonRefundableStorageFee || 0),
-        totalCost: parseInt(gasUsed.computationCost) + 
-                  parseInt(gasUsed.storageCost) - 
-                  parseInt(gasUsed.storageRebate || 0),
-        gasBudgetUsed: parseInt(gasEstimate.effects.gasUsed.computationCost),
-        status: gasEstimate.effects.status
+        gasBreakdown: {
+          computationCost: String(computationCost),
+          storageCost: String(storageCost),
+          storageRebate: String(storageRebate),
+          netStorageCost: String(storageCost - storageRebate)
+        },
+        transactionBytes: serializedBytes?.length || 0,
+        warnings: (serializedBytes?.length || 0) > 40000 ? ['Large transaction size may increase gas costs'] : [],
+        totalCost: totalCost,
+        estimatedCostSUI: totalCost / 1_000_000_000
       };
     } catch (error) {
       console.error('Dry run estimation failed:', error);
       // Fallback to manual estimation
       return await this.estimateManually(transaction);
     }
+  }
+
+  // High-level full cost including buffer
+  async estimateFullTransactionCost(transaction, senderAddress) {
+    const gasPriceInfo = await this.getCurrentGasPrice();
+    const res = await this.estimateTransactionGas(transaction, senderAddress);
+    const base = res.totalCost || 0;
+    const bufferMultiplier = this.depositConfig.gasBuffer || 1.2;
+    const buffered = base * bufferMultiplier;
+    return {
+      ...res,
+      estimatedCostSUI: buffered / 1_000_000_000,
+      bufferApplied: true,
+      bufferPercentage: Math.round((bufferMultiplier - 1) * 100),
+      gasPrice: gasPriceInfo.gasPrice
+    };
   }
 
   // Manual estimation based on transaction content
@@ -206,21 +241,28 @@ class GasEstimator {
       const storageUnits = this.calculateStorageUnits(estimatedBytes);
 
       // Calculate costs
-      const computationCost = computationUnits * gasPrice.gasPrice;
-      const storageCost = storageUnits * storagePrice.storagePrice || storagePrice;
+      const gp = gasPrice.gasPrice || 1000;
+      const sp = storagePrice.storagePrice || storagePrice || 75;
+      const computationCost = computationUnits * gp;
+      const storageCost = storageUnits * sp;
       const storageRebate = 0; // No rebate for new data
+      const totalCost = computationCost + storageCost - storageRebate;
 
       return {
         success: true,
-        computationCost,
-        storageCost,
-        storageRebate,
-        totalCost: computationCost + storageCost - storageRebate,
+        gasBreakdown: {
+          computationCost: String(computationCost),
+          storageCost: String(storageCost),
+          storageRebate: String(storageRebate),
+          netStorageCost: String(storageCost - storageRebate)
+        },
+        totalCost,
+        estimatedCostSUI: totalCost / 1_000_000_000,
         computationUnits,
         storageUnits,
         bucket: bucket,
-        gasPrice: gasPrice.gasPrice,
-        storagePrice: storagePrice.storagePrice || storagePrice,
+        gasPrice: gp,
+        storagePrice: sp,
         estimatedBytes
       };
     } catch (error) {

@@ -1,4 +1,7 @@
-/* WalSheetz - React CSS */
+/* WalSheetz - React CSS with Ice Glassmorphism Theme */
+@import url('./glassmorphism.css');
+@import url('./gas-estimator.css');
+@import url('./transaction-modal.css');
 
 * {
   margin: 0;
@@ -8,8 +11,24 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #f9fafb;
+  background: var(--ice-gradient-bg);
+  background-attachment: fixed;
   overflow: hidden;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(0, 172, 193, 0.1) 0%, transparent 50%);
+  z-index: -2;
+  pointer-events: none;
 }
 
 #root {
@@ -22,18 +41,38 @@ body {
   height: 100vh;
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 1;
 }
 
 /* Header */
 .header {
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 8px 16px;
+  background: var(--ice-gradient-header);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--glass-border);
+  border-radius: 0 0 16px 16px;
+  z-index: 1000;
+  box-shadow: var(--glass-shadow);
+  position: relative;
+}
+
+.header-main {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 8px 16px;
   min-height: 60px;
-  z-index: 1000;
+}
+
+.header-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(0, 172, 193, 0.1);
+  min-height: 48px;
 }
 
 .header-left, .header-right {
@@ -51,59 +90,829 @@ body {
 .logo-icon {
   width: 32px;
   height: 32px;
-  background: #1e40af;
-  border-radius: 8px;
+  background: var(--ice-gradient-button);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 4px 15px rgba(0, 172, 193, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: var(--transition-smooth);
+}
+
+.logo-icon:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 172, 193, 0.4);
 }
 
 .app-name {
   font-size: 20px;
   font-weight: bold;
-  color: #111827;
+  color: var(--ice-accent-dark);
+  text-shadow: 0 2px 4px rgba(255, 255, 255, 0.5);
+  transition: var(--transition-smooth);
+}
+
+.app-name:hover {
+  color: var(--ice-accent);
+  text-shadow: 0 0 10px rgba(0, 172, 193, 0.3);
 }
 
 /* Buttons */
 button {
   padding: 8px 16px;
-  border-radius: 6px;
-  border: none;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
+  transition: var(--transition-smooth);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
 }
 
 .save-button {
-  background: #059669;
+  background: linear-gradient(135deg, rgba(5, 150, 105, 0.9) 0%, rgba(4, 120, 87, 0.95) 100%);
   color: white;
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
+}
+
+.save-button:hover {
+  background: linear-gradient(135deg, rgba(5, 150, 105, 1) 0%, rgba(4, 120, 87, 1) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(5, 150, 105, 0.4);
 }
 
 .connect-button {
-  background: #1e40af;
+  background: var(--ice-gradient-button);
   color: white;
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 15px rgba(0, 172, 193, 0.3);
+}
+
+.connect-button:hover {
+  background: var(--ice-gradient-button-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 172, 193, 0.4);
 }
 
 .connected-button {
-  background: #059669;
+  background: linear-gradient(135deg, rgba(5, 150, 105, 0.9) 0%, rgba(4, 120, 87, 0.95) 100%);
   color: white;
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
+}
+
+.connected-button:hover {
+  background: linear-gradient(135deg, rgba(5, 150, 105, 1) 0%, rgba(4, 120, 87, 1) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(5, 150, 105, 0.4);
+}
+
+/* Document Name Input */
+.document-name {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 14px;
+  color: var(--ice-accent-dark);
+  font-weight: 500;
+  margin-left: 16px;
+  min-width: 200px;
+  transition: var(--transition-smooth);
+}
+
+.document-name:focus {
+  outline: none;
+  border-color: var(--ice-accent);
+  box-shadow: 0 0 0 2px rgba(0, 172, 193, 0.2);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.document-name::placeholder {
+  color: rgba(0, 172, 193, 0.6);
+}
+
+/* Menu Bar */
+.menu-bar {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.menu-item {
+  background: transparent;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  color: var(--ice-accent-dark);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.menu-item:hover {
+  background: rgba(0, 172, 193, 0.1);
+  color: var(--ice-accent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.menu-item.active {
+  background: rgba(0, 172, 193, 0.15);
+  color: var(--ice-accent);
+}
+
+/* Dropdown Menu Styles */
+.menu-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 180px;
+  background: var(--ice-glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--ice-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  padding: 8px 0;
+  margin-top: 2px;
+}
+
+.dropdown-item {
+  width: 100%;
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--ice-text-primary);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dropdown-item:hover {
+  background: rgba(0, 172, 193, 0.1);
+  color: var(--ice-accent);
+}
+
+.dropdown-item .shortcut {
+  color: var(--ice-text-secondary);
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* Wallet Connected State */
+.wallet-connected {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(5, 150, 105, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(5, 150, 105, 0.3);
+  border-radius: 8px;
+  padding: 4px 8px;
+  transition: var(--transition-smooth);
+}
+
+.wallet-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  background: linear-gradient(135deg, rgba(5, 150, 105, 1) 0%, rgba(4, 120, 87, 1) 100%);
+  border-radius: 50%;
+  box-shadow: 0 0 6px rgba(5, 150, 105, 0.6);
+  animation: pulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.8; transform: scale(1); }
+  100% { opacity: 1; transform: scale(1.1); }
+}
+
+.wallet-address {
+  font-size: 12px;
+  color: var(--ice-accent-dark);
+  font-weight: 600;
+}
+
+.disconnect-button {
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 6px;
+  transition: var(--transition-smooth);
+}
+
+.disconnect-button:hover {
+  background: rgba(239, 68, 68, 1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* Deposit Button */
+.deposit-button {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.9) 0%, rgba(217, 119, 6, 0.95) 100%);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+}
+
+.deposit-button:hover {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 1) 0%, rgba(217, 119, 6, 1) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+}
+
+/* Toolbar Components (used within header) */
+
+.toolbar-section {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  border-right: 1px solid rgba(0, 172, 193, 0.2);
+}
+
+.toolbar-section:last-child {
+  border-right: none;
+}
+
+.toolbar-button {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: var(--ice-accent-dark);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  min-width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toolbar-button:hover {
+  background: rgba(0, 172, 193, 0.1);
+  border-color: var(--glass-border);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 172, 193, 0.2);
+}
+
+.toolbar-button:active {
+  transform: translateY(0);
+  background: rgba(0, 172, 193, 0.2);
+}
+
+.toolbar-button.active {
+  background: rgba(0, 172, 193, 0.2);
+  border-color: var(--ice-accent);
+  box-shadow: 0 0 8px rgba(0, 172, 193, 0.3);
+  color: var(--ice-accent);
+}
+
+.toolbar-button strong,
+.toolbar-button em,
+.toolbar-button u {
+  display: inline-block;
+  pointer-events: none;
+}
+
+.toolbar-select {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: var(--ice-accent-dark);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.toolbar-select:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: var(--ice-accent);
+}
+
+.toolbar-select:focus {
+  outline: none;
+  border-color: var(--ice-accent);
+  box-shadow: 0 0 0 2px rgba(0, 172, 193, 0.2);
+}
+
+/* Formula Bar */
+.formula-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: var(--ice-gradient-header);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  min-height: 36px;
+}
+
+.cell-reference {
+  display: flex;
+  align-items: center;
+}
+
+.cell-name-input {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--ice-accent-dark);
+  font-weight: 600;
+  width: 60px;
+  text-align: center;
+  transition: var(--transition-smooth);
+}
+
+.cell-name-input:focus {
+  outline: none;
+  border-color: var(--ice-accent);
+  box-shadow: 0 0 0 2px rgba(0, 172, 193, 0.2);
+}
+
+.formula-input-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.formula-prefix {
+  background: rgba(0, 172, 193, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 172, 193, 0.3);
+}
+
+.formula-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 14px;
+  color: var(--ice-accent-dark);
+  transition: var(--transition-smooth);
+}
+
+.formula-input:focus {
+  outline: none;
+  border-color: var(--ice-accent);
+  box-shadow: 0 0 0 2px rgba(0, 172, 193, 0.2);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.formula-input::placeholder {
+  color: rgba(0, 172, 193, 0.6);
+  font-style: italic;
+}
+
+/* Status Bar Sections */
+.status-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-text {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: var(--transition-smooth);
+}
+
+.edit-count {
+  color: var(--ice-accent-dark);
+  background: rgba(0, 172, 193, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 172, 193, 0.3);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.wallet-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 2px 8px;
+  color: var(--ice-accent-dark);
+}
+
+.wallet-status .status-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite alternate;
 }
 
 /* Spreadsheet */
 .spreadsheet-container {
   flex: 1;
-  background: white;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  margin: 8px;
   position: relative;
+  overflow: hidden;
+  box-shadow: var(--glass-shadow);
+}
+
+.spreadsheet-wrapper {
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
+.luckysheet-container {
+  height: 100% !important;
+  width: 100% !important;
+  border-radius: 16px;
   overflow: hidden;
 }
 
 /* Status Bar */
 .status-bar {
-  background: white;
-  border-top: 1px solid #e5e7eb;
-  padding: 4px 16px;
+  background: var(--ice-gradient-header);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--glass-border);
+  border-radius: 16px 16px 0 0;
+  padding: 6px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--ice-accent-dark);
+  font-weight: 500;
+  box-shadow: var(--glass-shadow);
+  min-height: 32px;
+}
+
+/* Luckysheet Ice Theme Overrides */
+#luckysheet-container {
+  background: transparent !important;
+}
+
+/* Ensure Luckysheet elements stay below application dialogs */
+#luckysheet-container {
+  z-index: 9999 !important;
+  max-z-index: 9999 !important;
+}
+
+/* Override any high z-index values that might interfere with dialogs */
+.luckysheet-grid-container,
+.luckysheet-modal,
+.luckysheet-tooltip,
+.luckysheet-contextmenu {
+  z-index: 9999 !important;
+}
+
+/* Luckysheet Grid Styling */
+.luckysheet-grid-container {
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+
+.luckysheet-grid-container canvas {
+  background: transparent !important;
+}
+
+/* Luckysheet Selection Highlight */
+.luckysheet-cell-selected {
+  border: 2px solid var(--ice-accent) !important;
+  background: rgba(0, 172, 193, 0.1) !important;
+  box-shadow: 0 0 10px rgba(0, 172, 193, 0.3) !important;
+}
+
+/* Luckysheet Cell Borders */
+.luckysheet-cell {
+  border-color: rgba(0, 172, 193, 0.2) !important;
+}
+
+/* Luckysheet Header Styling */
+.luckysheet-rows-h-title, .luckysheet-cols-h-title {
+  background: var(--ice-gradient-header) !important;
+  backdrop-filter: blur(15px) !important;
+  -webkit-backdrop-filter: blur(15px) !important;
+  color: var(--ice-accent-dark) !important;
+  font-weight: 600 !important;
+  border-color: var(--glass-border) !important;
+}
+
+/* Luckysheet Scrollbars */
+.luckysheet-scrollbar-x, .luckysheet-scrollbar-y {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border-radius: 8px !important;
+}
+
+.luckysheet-scrollbar-thumb {
+  background: var(--ice-gradient-button) !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+.luckysheet-scrollbar-thumb:hover {
+  background: var(--ice-gradient-button-hover) !important;
+}
+
+/* Luckysheet Built-in Toolbar (Hidden by showstatisticBar: false) */
+.luckysheet-toolbar {
+  display: none !important;
+}
+
+/* Luckysheet Built-in Formula Bar (Hidden by showinfobar: false) */
+.luckysheet-functionbox {
+  display: none !important;
+}
+
+/* Luckysheet Context Menus */
+.luckysheet-menubutton-dropdown {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--glass-shadow-heavy) !important;
+}
+
+.luckysheet-menubutton-dropdown-button {
+  color: var(--ice-accent-dark) !important;
+  transition: var(--transition-smooth) !important;
+}
+
+.luckysheet-menubutton-dropdown-button:hover {
+  background: rgba(0, 172, 193, 0.1) !important;
+  color: var(--ice-accent) !important;
+}
+
+/* Additional Visual Enhancements */
+
+/* Ice Particles Background */
+.ice-background-particles {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.3;
+}
+
+.ice-background-particles::before,
+.ice-background-particles::after {
+  content: '';
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.8) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.ice-background-particles::before {
+  top: 20%;
+  left: 10%;
+  animation: snowfall 15s linear infinite;
+  animation-delay: -2s;
+}
+
+.ice-background-particles::after {
+  top: 40%;
+  right: 15%;
+  animation: snowfall 20s linear infinite;
+  animation-delay: -8s;
+}
+
+/* Frost Overlay Effects */
+.frost-overlay {
+  position: relative;
+}
+
+.frost-overlay::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    linear-gradient(45deg, transparent 40%, rgba(255, 255, 255, 0.1) 50%, transparent 60%),
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 30%),
+    radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 25%);
+  pointer-events: none;
+  border-radius: inherit;
+  mix-blend-mode: overlay;
+}
+
+/* Enhanced Focus States */
+*:focus {
+  outline: none;
+}
+
+input:focus,
+select:focus,
+button:focus {
+  box-shadow: 
+    0 0 0 2px rgba(0, 172, 193, 0.3),
+    0 0 15px rgba(0, 172, 193, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  border-color: var(--ice-accent);
+}
+
+/* Smooth Transitions for All Interactive Elements */
+a, button, input, select, textarea, .toolbar-button, .menu-item {
+  transition: 
+    all 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.2s ease,
+    transform 0.15s ease-out;
+}
+
+/* Enhanced Hover States */
+.header:hover,
+.toolbar:hover,
+.formula-bar:hover,
+.status-bar:hover {
+  box-shadow: 
+    var(--glass-shadow),
+    0 0 25px rgba(0, 172, 193, 0.1);
+}
+
+/* Crystal Shine Effect */
+.crystal-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.crystal-shine::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 70%
+  );
+  transform: rotate(45deg);
+  animation: crystal-shine 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes crystal-shine {
+  0%, 100% { 
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+    opacity: 0;
+  }
+  50% { 
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+    opacity: 0.3;
+  }
+}
+
+/* Ice Glow Animation */
+.ice-glow-animate {
+  animation: ice-glow-pulse 4s ease-in-out infinite alternate;
+}
+
+@keyframes ice-glow-pulse {
+  0% { 
+    box-shadow: 
+      0 0 20px rgba(0, 172, 193, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  100% { 
+    box-shadow: 
+      0 0 40px rgba(0, 172, 193, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+}
+
+/* Responsive Adjustments for Better Performance */
+@media (max-width: 1024px) {
+  .frost-overlay::before {
+    display: none;
+  }
+  
+  .crystal-shine::after {
+    animation: none;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --glass-shadow: 0 4px 20px rgba(0, 172, 193, 0.1);
+    --glass-shadow-heavy: 0 6px 30px rgba(0, 172, 193, 0.2);
+  }
+  
+  .glass-container {
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+  }
+  
+  .glass-heavy {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  
+  .ice-background-particles::before,
+  .ice-background-particles::after {
+    display: none;
+  }
+}
+
+/* Improved Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .crystal-shine::after {
+    display: none;
+  }
+  
+  .ice-background-particles::before,
+  .ice-background-particles::after {
+    display: none;
+  }
+}
+
+/* Notification Container */
+.notification-container {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  z-index: 1000;
+  max-width: 300px;
 }

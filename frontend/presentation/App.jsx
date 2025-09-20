@@ -1,125 +1,43 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React from 'react'
+import { WalletProviders } from '../providers/WalletProviders.jsx'
+import { SpreadsheetProvider } from './components/SpreadsheetProvider.jsx'
+import { MainLayout } from './components/MainLayout.jsx'
+import { ErrorBoundary } from './components/ErrorBoundary.jsx'
+import { LogViewer } from './components/LogViewer.jsx'
+import { WalrusStatus } from './components/WalrusStatus.jsx'
+import RateLimiterStatus from '../components/RateLimiterStatus.jsx'
+import { logger, LogComponent } from '../utils/Logger.js'
+import './styles/collaboration.css'
 
 function App() {
-  const [walletConnected, setWalletConnected] = useState(false)
-  const [editCount, setEditCount] = useState(0)
-  const [saveStatus, setSaveStatus] = useState('Ready')
-  const luckysheetRef = useRef(null)
+  React.useEffect(() => {
+    console.log('🚀 WalSheetz App component mounted');
+    logger.info(LogComponent.UI_COMPONENT, 'app_mount', 'WalSheetz application started');
 
-  const handleConnect = () => {
-    setWalletConnected(!walletConnected)
-    setSaveStatus(walletConnected ? 'Wallet disconnected' : 'Wallet connected')
-  }
-
-  const handleSave = () => {
-    setSaveStatus('Saving...')
-    setTimeout(() => {
-      setSaveStatus('Saved successfully')
-      setEditCount(0)
-    }, 1000)
-  }
-
-  useEffect(() => {
-    // Initialize Luckysheet when available
-    const initLuckysheet = () => {
-      if (typeof window.luckysheet !== 'undefined' && !luckysheetRef.current) {
-        try {
-          window.luckysheet.create({
-            container: 'luckysheet',
-            title: 'WalSheetz',
-            lang: 'en',
-            data: [{
-              name: "Sheet1",
-              color: "",
-              index: 0,
-              status: 1,
-              order: 0,
-              hide: 0,
-              row: 100,
-              column: 26,
-              defaultRowHeight: 25,
-              defaultColWidth: 80,
-              celldata: [],
-              config: {},
-              scrollLeft: 0,
-              scrollTop: 0,
-              luckysheet_select_save: [],
-              calcChain: [],
-              isPivotTable: false,
-              pivotTable: {},
-              filter_select: {},
-              filter: null,
-              luckysheet_alternateformat_save: [],
-              luckysheet_alternateformat_save_modelCustom: [],
-              luckysheet_conditionformat_save: {},
-              frozen: {},
-              chart: [],
-              zoomRatio: 1,
-              image: [],
-              showGridLines: 1,
-              dataVerification: {}
-            }],
-            hook: {
-              workbookCreateAfter: function() {
-                console.log('WalSheetz spreadsheet initialized successfully')
-                luckysheetRef.current = true
-              },
-              cellEditEnd: function(range, value) {
-                setEditCount(prev => prev + 1)
-                setSaveStatus('Modified')
-              }
-            }
-          })
-        } catch (error) {
-          console.error('Failed to initialize Luckysheet:', error)
-        }
-      }
-    }
-
-    // Try to initialize, retry if not ready
-    const timer = setInterval(() => {
-      if (typeof window.luckysheet !== 'undefined') {
-        initLuckysheet()
-        clearInterval(timer)
-      }
-    }, 100)
-
-    return () => clearInterval(timer)
-  }, [])
+    return () => {
+      console.log('👋 WalSheetz App component unmounted');
+      logger.info(LogComponent.UI_COMPONENT, 'app_unmount', 'WalSheetz application unmounted');
+    };
+  }, []);
 
   return (
-    <div className="main-layout">
-      <header className="header">
-        <div className="header-left">
-          <div className="logo-section">
-            <div className="logo-icon">
-              <span>🦭</span>
-            </div>
-            <span className="app-name">WalSheetz</span>
-          </div>
-        </div>
-        <div className="header-right">
-          <button className="save-button" onClick={handleSave}>
-            💾 Save
-          </button>
-          <button 
-            className={walletConnected ? "connected-button" : "connect-button"} 
-            onClick={handleConnect}
-          >
-            {walletConnected ? '✅ Connected' : '🔗 Connect Wallet'}
-          </button>
-        </div>
-      </header>
-      
-      <div className="spreadsheet-container">
-        <div id="luckysheet" style={{ width: '100%', height: '100%' }}></div>
-      </div>
-      
-      <div className="status-bar">
-        <span>Status: {saveStatus}</span>
-        <span>Edits: {editCount}</span>
-        <span>Wallet: {walletConnected ? 'Connected' : 'Disconnected'}</span>
-      </div>
+    <div data-testid="walsheetz-app">
+      <ErrorBoundary>
+        <WalletProviders defaultNetwork="testnet">
+          <ErrorBoundary>
+            <SpreadsheetProvider>
+              <ErrorBoundary>
+                <MainLayout />
+                <LogViewer />
+                <WalrusStatus position="bottom-right" minimized={true} />
+                {(import.meta.env?.DEV || import.meta.env?.VITE_SHOW_RATE_LIMITER_STATUS === 'true') && (
+                  <RateLimiterStatus show={true} position="bottom-right" />
+                )}
+              </ErrorBoundary>
+            </SpreadsheetProvider>
+          </ErrorBoundary>
+        </WalletProviders>
+      </ErrorBoundary>
     </div>
   )
 }

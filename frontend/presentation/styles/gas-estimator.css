@@ -1,0 +1,234 @@
+/* Gas Estimator Component Styles */
+
+.gas-estimator {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 16px 0;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.gas-estimator-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.gas-estimator-header h4 {
+  margin: 0;
+  color: #e8f4f8;
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+.estimate-button {
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  border: none;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.estimate-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #45a049, #3d8b40);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.estimate-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.gas-error {
+  background: linear-gradient(135deg, rgba(244, 67, 54, 0.1), rgba(244, 67, 54, 0.05));
+  border: 1px solid rgba(244, 67, 54, 0.3);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  color: #ffcdd2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.error-icon {
+  font-size: 1.2em;
+}
+
+.gas-details {
+  margin: 16px 0;
+}
+
+.gas-cost-breakdown {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.cost-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.cost-row:last-child {
+  border-bottom: none;
+  font-weight: 600;
+  font-size: 1.1em;
+  color: #e8f4f8;
+}
+
+.cost-row.rebate {
+  color: #81c784;
+}
+
+.cost-row.total {
+  border-top: 2px solid rgba(255, 255, 255, 0.2);
+  margin-top: 8px;
+  padding-top: 12px;
+  color: #4CAF50;
+  font-size: 1.2em;
+}
+
+.high-gas-warning {
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.1), rgba(255, 152, 0, 0.05));
+  border: 1px solid rgba(255, 152, 0, 0.3);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 16px 0;
+  color: #ffcc02;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.warning-icon {
+  font-size: 1.2em;
+}
+
+.gas-budget-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.gas-budget-controls label {
+  color: #e8f4f8;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.gas-budget-input {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: #e8f4f8;
+  font-size: 0.9em;
+  min-width: 120px;
+}
+
+.gas-budget-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+}
+
+.budget-unit {
+  color: #a8b5c4;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+.gas-presets {
+  margin: 20px 0;
+}
+
+.gas-presets h5 {
+  margin: 0 0 12px 0;
+  color: #e8f4f8;
+  font-size: 0.95em;
+  font-weight: 600;
+}
+
+.preset-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.preset-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #e8f4f8;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8em;
+  transition: all 0.3s ease;
+}
+
+.preset-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.preset-button.active {
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  border-color: #4CAF50;
+  color: white;
+}
+
+.gas-info {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.gas-info small {
+  color: #a8b5c4;
+  line-height: 1.4;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .gas-estimator {
+    padding: 16px;
+    margin: 12px 0;
+  }
+
+  .gas-estimator-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .gas-budget-controls {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .gas-budget-input {
+    width: 100%;
+    max-width: 200px;
+  }
+
+  .preset-buttons {
+    justify-content: center;
+  }
+}
+
+

@@ -1,0 +1,38 @@
+{
+  "version": "1.0.1",
+  "timestamp": "2025-09-17T00:00:00.000Z",
+  "networks": {
+    "testnet": {
+      "rpcUrl": "https://fullnode.testnet.sui.io:443",
+      "packageId": "0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7",
+      "registryObjectId": "0x9a6b94f79762fa608c5f0938d092744a8e5b69852f860eb17afa4ab11e24fe25",
+      "walrus": {
+        "aggregatorUrl": "https://aggregator.walrus-testnet.walrus.space",
+        "publisherUrl": "https://publisher.walrus-testnet.walrus.space",
+        "maxRetries": 3,
+        "retryDelay": 1000
+      }
+    },
+    "mainnet": {
+      "rpcUrl": "https://fullnode.mainnet.sui.io:443",
+      "packageId": null,
+      "registryObjectId": null,
+      "walrus": {
+        "aggregatorUrl": "https://aggregator.walrus.space",
+        "publisherUrl": "https://publisher.walrus.space",
+        "maxRetries": 3,
+        "retryDelay": 1000
+      }
+    }
+  },
+  "features": {
+    "contentHashInSave": true,
+    "clockInSave": false,
+    "autoSave": { "enabled": true, "intervalMs": 5000 },
+    "collaboration": { "enabled": true },
+    "gasManagement": { "bufferPercent": 25 },
+    "storage": { "preferWalrus": true, "fallbackToLocal": true }
+  },
+  "ui": { "theme": "light", "debugMode": false },
+  "metadata": { "appName": "WalSheetz", "appVersion": "1.0.1" }
+}

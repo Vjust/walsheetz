@@ -1,0 +1,49 @@
+// Copyright (c) Mysten Labs, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package sui.rpc.v2beta2;
+
+import "sui/rpc/v2beta2/gas_cost_summary.proto";
+import "sui/rpc/v2beta2/object_reference.proto";
+
+// Transaction execution effects
+message TransactionEffects {
+  // Status of the transaction
+  optional ExecutionStatus status = 1;
+  // Gas cost summary
+  optional GasCostSummary gas_used = 2;
+  // Modified objects
+  repeated ObjectChange modified_at_versions = 3;
+  // Shared objects
+  repeated ObjectReference shared_objects = 4;
+  // Transaction digest
+  optional string transaction_digest = 5;
+  // Dependencies
+  repeated string dependencies = 6;
+  // Gas object
+  repeated ObjectReference gas_object = 7;
+  // Events
+  repeated string events_digest = 8;
+}
+
+message ExecutionStatus {
+  oneof status {
+    SuccessStatus success = 1;
+    FailureStatus failure = 2;
+  }
+}
+
+message SuccessStatus {}
+
+message FailureStatus {
+  optional string error = 1;
+  optional string command = 2;
+}
+
+message ObjectChange {
+  optional string object_id = 1;
+  optional uint64 version = 2;
+  optional string digest = 3;
+}

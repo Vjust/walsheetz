@@ -1,0 +1,156 @@
+import { configLoader } from './ConfigLoader.js'
+
+/**
+ * Detect on-chain signature for spreadsheet::save_version and whether it expects content_hash and clock.
+ * Returns { expectsContentHash: boolean, expectsClock: boolean, params: string[], debug: object }
+ */
+export async function detectSaveVersionSignature() {
+  try {
+    const cfg = await configLoader.getConfig()
+    const net = cfg.getCurrentNetwork()
+    const abi = await configLoader.detectABI(net.packageId, cfg.currentNetwork)
+
+    const func = abi?.functions?.['spreadsheet::save_version']
+    if (!func?.parameters) {
+      console.warn('[ABI] Function not found in ABI, using fallback config')
+      return {
+        expectsContentHash: cfg.getFeature('contentHashInSave', true),
+        expectsClock: cfg.getFeature('clockInSave', false),
+        params: [],
+        debug: {
+          reason: 'abi_missing_function',
+          fallbackFeatureContentHash: cfg.getFeature('contentHashInSave', true),
+          fallbackFeatureClock: cfg.getFeature('clockInSave', false),
+          packageId: net.packageId
+        }
+      }
+    }
+
+    const params = func.parameters
+
+    // Improved string type detection that handles various formats
+    const stringTypes = ['String', 'string::String', 'std::string::String', '0x1::string::String']
+    const isStringParam = (p) => {
+      if (typeof p !== 'string') return false
+      return stringTypes.some(t => p.includes(t))
+    }
+
+    // Find the first u64 parameter (cell_count)
+    const firstU64Idx = params.findIndex(p =>
+      typeof p === 'string' && (p.includes('::u64') || p.endsWith('u64'))
+    )
+
+    // Count string parameters before the first u64
+    const beforeU64 = firstU64Idx === -1 ? params : params.slice(0, firstU64Idx)
+    const stringCountBeforeU64 = beforeU64.filter(isStringParam).length
+
+    // With content hash and clock: [&mut Spreadsheet, String, String, u64, String, &Clock, &mut TxContext]
+    // With content hash, no clock:  [&mut Spreadsheet, String, String, u64, String, &mut TxContext]
+    // Without hash, with clock:     [&mut Spreadsheet, String,        u64, String, &Clock, &mut TxContext]
+    // Without hash, no clock:       [&mut Spreadsheet, String,        u64, String, &mut TxContext]
+    // We expect 2 strings before u64 if content_hash is included, 1 if not
+    const expectsContentHash = stringCountBeforeU64 >= 2
+
+    // Detect Clock parameter by checking for clock::Clock type references
+    const clockTypes = ['clock::Clock', '0x6::clock::Clock', '::clock::Clock', 'Clock']
+    const expectsClock = params.some(p =>
+      typeof p === 'string' && clockTypes.some(t => p.includes(t))
+    )
+
+    // Keep feature flags aligned but never flip them off at runtime
+    try {
+      const currentContentHash = cfg.getFeature('contentHashInSave', true)
+      const currentClock = cfg.getFeature('clockInSave', false)
+
+      if (expectsContentHash && currentContentHash !== true) {
+        cfg.setFeature('contentHashInSave', true)
+        console.log('[ABI] contentHashInSave flipped ON to match deployed ABI')
+      } else if (!expectsContentHash && currentContentHash === true) {
+        // Do not flip to false at runtime to avoid client/chain divergence
+        console.warn('[ABI] Deployed ABI indicates no content_hash, but client remains in compatibility mode (true)')
+      }
+
+      if (expectsClock && currentClock !== true) {
+        cfg.setFeature('clockInSave', true)
+        console.log('[ABI] clockInSave flipped ON to match deployed ABI')
+      } else if (!expectsClock && currentClock === true) {
+        // Do not flip to false at runtime to avoid client/chain divergence
+        console.warn('[ABI] Deployed ABI indicates no clock, but client remains in compatibility mode (true)')
+      }
+    } catch (error) {
+      console.warn('[ABI] Could not update feature flags:', error.message)
+    }
+
+    const debug = {
+      packageId: net.packageId,
+      stringCountBeforeU64,
+      firstU64Idx,
+      paramCount: params.length,
+      expectsContentHash,
+      expectsClock,
+      stringParams: beforeU64.filter(isStringParam),
+      clockParams: params.filter(p => typeof p === 'string' && clockTypes.some(t => p.includes(t))),
+      allParams: params
+    }
+
+    console.log('[ABI] save_version signature detected:', debug)
+
+    return {
+      expectsContentHash,
+      expectsClock,
+      params,
+      debug
+    }
+
+  } catch (error) {
+    console.error('[ABI] Detection failed:', error)
+
+    // Fallback to config feature flags
+    const cfg = await configLoader.getConfig()
+    const fallbackContentHash = cfg.getFeature('contentHashInSave', true)
+    const fallbackClock = cfg.getFeature('clockInSave', false)
+
+    return {
+      expectsContentHash: fallbackContentHash,
+      expectsClock: fallbackClock,
+      params: [],
+      debug: {
+        reason: 'detection_error',
+        error: error.message,
+        fallbackFeatureContentHash: fallbackContentHash,
+        fallbackFeatureClock: fallbackClock
+      }
+    }
+  }
+}
+
+/**
+ * Helper to build save_version arguments based on detected ABI
+ */
+export async function buildSaveVersionArgs(tx, data) {
+  const sig = await detectSaveVersionSignature()
+  const includeHash = !!sig.expectsContentHash
+  const includeClock = !!sig.expectsClock
+
+  // Build base arguments
+  const args = [
+    tx.object(data.spreadsheetId || data.spreadsheetObjectId),
+    tx.pure.string(data.walrusBlobId)
+  ]
+
+  // Add content hash if expected by ABI
+  if (includeHash) {
+    args.push(tx.pure.string(data.contentHash || ''))
+  }
+
+  // Add cell count and description
+  args.push(tx.pure.u64(data.cellCount || 0))
+  args.push(tx.pure.string(data.description || `Version ${data.version || 'new'}`))
+
+  // Add clock if expected by ABI
+  if (includeClock) {
+    args.push(tx.object('0x6')) // Clock object
+  }
+
+  return { args, signature: sig }
+}

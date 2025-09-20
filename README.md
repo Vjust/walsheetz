@@ -211,6 +211,87 @@ storage: {
 - Check Network tab for failed API calls
 - Monitor console for blockchain service errors
 
+## Configuration & Environment Variables
+
+### Storage Features
+
+#### Compression
+- `WALRUS_COMPRESSION` (default: `true`) - Enable/disable automatic gzip compression for large payloads
+- `COMPRESSION_THRESHOLD` (default: `16384`) - Minimum size in bytes before compression is applied (16KB)
+  - Large spreadsheets automatically compress when exceeding threshold
+  - Compression ratios typically 1.3x-5x for spreadsheet data
+  - Transparent decompression on retrieval
+
+#### Redundancy
+- `WALRUS_REDUNDANCY` (default: `false`) - Enable redundant storage across multiple Walrus endpoints
+  - When enabled, stores to multiple publishers for fault tolerance
+  - Automatic fallback during retrieval if primary fails
+  - HEAD precheck with 5-second timeout before GET requests
+
+#### Delta Chains
+- `DELTA_MAX_CHAIN` (default: `5`) - Maximum delta chain length before forcing full snapshot
+  - Stores incremental changes instead of full data
+  - Automatically reconstructs from delta chain
+  - Forces full snapshot when chain reaches max length
+  - Fails explicitly on missing base or corrupted chain
+
+#### Batch Persistence  
+- `BATCH_PERSISTENCE` (default: `true`) - Enable localStorage persistence of edit batches
+  - Prevents data loss on browser refresh
+  - Automatically resumes interrupted uploads
+  - Clears persisted batches after successful upload
+
+#### Sponsor Service
+- `SPONSOR_DEMO_EVENTS` (default: `false`) - Enable placeholder Move event emissions
+  - ⚠️ Warning: Only for demo/testing purposes
+  - When disabled, no placeholder `0x2::event::emit` calls are made
+  - Production deployments should keep this disabled
+
+### Testing
+
+Run the test suite:
+
+```bash
+# Unit tests
+bun run test:unit
+
+# Integration tests  
+bun run test:integration
+
+# Coverage report (target: 80%+)
+bun run test:coverage
+```
+
+Key test coverage areas:
+- ✅ Compression/decompression with magic byte detection
+- ✅ HEAD precheck with correlation ID capture
+- ✅ Redundancy fallback across multiple endpoints
+- ✅ Delta chain enforcement and reconstruction
+- ✅ Transaction serialization for gas estimation
+- ✅ Event queries with fully-qualified types
+
+### Troubleshooting
+
+#### Compression Issues
+- Check browser console for compression ratio logs
+- Verify `CompressionStream` API support in browser
+- Large files show `isCompressed: true` in logs
+
+#### Redundancy Failures
+- Check `usedFallback: true` in retrieval logs
+- Verify multiple endpoints configured in `config.walrus.publishers`
+- Monitor correlation IDs for request tracking
+
+#### Delta Chain Errors
+- "Delta chain too long" - Chain exceeded `DELTA_MAX_CHAIN`
+- "Missing base" - Base snapshot not found, data corrupted
+- Check `chainDepth` in storage logs
+
+#### Gas Estimation
+- Ensure wallet has sufficient SUI balance
+- Check `estimatedCostSUI` in transaction logs
+- Monitor `gasPrice` cache (30-second expiry)
+
 ---
 
 Built with ❄️ by the WalSheetz team - Now with permanent blockchain storage! 🦭⛓️
