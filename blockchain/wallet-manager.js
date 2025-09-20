@@ -1,3 +1,4 @@
+// NOTE: Node/server/CLI usage only. The React UI must use frontend/services/* (Browser*Service).
 // Wallet connection manager for WalSheetz
 import { 
   getWallets,

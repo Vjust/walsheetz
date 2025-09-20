@@ -1,3 +1,4 @@
+// NOTE: Node/server/CLI usage only. The React UI must use frontend/services/* (Browser*Service).
 // Sui blockchain service for WalSheetz
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
 import { Transaction } from '@mysten/sui/transactions';

@@ -1,3 +1,4 @@
+// NOTE: Node/server/CLI usage only. The React UI must use frontend/services/* (Browser*Service).
 // Walrus storage service for WalSheetz
 import { getCurrentConfig } from './config.js';
 import { ResilientExecutor } from '../frontend/utils/CircuitBreaker.js';
