@@ -1424,8 +1424,9 @@ class WalrusService {
   // Store data using Walrus API (compatible with batch operations)
   async storeWithQuilt(data) {
     try {
-      const binaryData = this.encodeSpreadsheetData(data);
-      
+      const encoded = await this.encodeSpreadsheetData(data);
+      const binaryData = encoded.data;
+
       // Create blob with raw binary data (no FormData - not supported by Walrus)
       const blob = new Blob([binaryData], { type: 'application/octet-stream' });
       
@@ -2476,7 +2477,7 @@ class WalrusService {
   // DELTA STORAGE OPTIMIZATION SYSTEM
 
   // Create delta between two cell data objects for efficient storage
-  createCellDelta(previousCells, currentCells) {
+  createCellsDelta(previousCells, currentCells) {
     if (!previousCells) {
       // If no previous data, return full snapshot
       return {
@@ -2556,9 +2557,9 @@ class WalrusService {
   }
 
   // Store delta version with fallback to full storage
-  async storeDeltaVersion(currentData, previousData, metadata = {}) {
+  async storeCellsDeltaVersion(currentData, previousData, metadata = {}) {
     try {
-      const delta = this.createCellDelta(
+      const delta = this.createCellsDelta(
         previousData?.cells,
         currentData.cells
       );
