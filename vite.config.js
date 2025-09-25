@@ -7,12 +7,13 @@ import { createRequire } from 'module'
 const require = createRequire(import.meta.url)
 
 export default defineConfig({
+  root: '.',
   plugins: [react()],
   server: {
     port: 3005,
     host: '0.0.0.0',
     watch: {
-      ignored: ['**/Sui Ref/**', '**/Sui Ref/**/*']
+      ignored: ['**/Sui Ref/*', '**/protos/*', '**/tmp-vite/*']
     },
     fs: {
       strict: true,
@@ -124,7 +125,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./frontend', import.meta.url)),
-      '@blockchain': fileURLToPath(new URL('./blockchain', import.meta.url))
+      '@blockchain': fileURLToPath(new URL('./blockchain', import.meta.url)),
+      '@sentry/nextjs': fileURLToPath(new URL('./frontend/services/SentryStub.js', import.meta.url))
     }
   },
   define: {
@@ -133,11 +135,15 @@ export default defineConfig({
     'process.browser': true
   },
   optimizeDeps: {
-    include: []
+    entries: ['./frontend/main.jsx'],
+    exclude: ['@sentry/nextjs']
   },
   build: {
     commonjsOptions: {
       include: [/node_modules/]
     }
+  },
+  ssr: {
+    noExternal: ['@sentry/nextjs']
   }
 })

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useSpreadsheetContext } from './SpreadsheetProvider.jsx'
 import { WalletModal } from './WalletModal.jsx'
-import { SpreadsheetSelector } from './SpreadsheetSelector.jsx'
+import { SaveStatusIndicator } from './SaveStatusIndicator.jsx'
 import { logger, LogComponent } from '../../utils/Logger.js'
+import luckysheetApi from '../../services/luckysheetApi.js'
 import '../styles/wallet-modal.css'
-import '../styles/spreadsheet-selector.css'
 
 export function Header() {
+  const navigate = useNavigate()
   const [documentName, setDocumentName] = useState('Untitled Spreadsheet')
   const [showWalletModal, setShowWalletModal] = useState(false)
   const [activeMenu, setActiveMenu] = useState(null)
@@ -17,6 +19,7 @@ export function Header() {
     fontFamily: 'Arial',
     fontSize: '12'
   })
+  const [smartSaveStatus, setSmartSaveStatus] = useState(null)
 
   const { spreadsheetData } = useSpreadsheetContext()
 
@@ -33,16 +36,14 @@ export function Header() {
     connectWallet,
     disconnectWallet,
     saveToBlockchain,
-    getCurrentSpreadsheetId,
-    getUserSpreadsheets,
-    loadSpreadsheet,
-    createNewSpreadsheet,
+    saveReminder,
+    autoSaveEnabled,
+    dismissSaveReminder,
+    toggleAutoSave,
+    syncToBlockchain,
+    getStatus,
     renameSpreadsheet,
-    makeSpreadsheetPublic,
-    makeSpreadsheetPrivate,
-    transferOwnership,
-    pruneOldVersions,
-    deleteSpreadsheet
+    getCurrentSpreadsheetId
   } = useSpreadsheetContext()
 
   // Debug helper to check available Luckysheet methods
@@ -212,40 +213,53 @@ export function Header() {
     };
   }, [walletConnected, documentName, saveToBlockchain]);
 
+  // Extract formatting state update logic into reusable function
+  const updateFormattingState = () => {
+    if (!luckysheetApi.isReady) return
+    try {
+      const activeCell = luckysheetApi.getActiveCell()
+      if (!activeCell) return
+
+      const cellInfo = luckysheetApi.getCellValue(activeCell.row, activeCell.col, { type: 'object' })
+      if (cellInfo && cellInfo.s) {
+        const s = cellInfo.s
+        setFormatting({
+          bold: Boolean(s.bl), italic: Boolean(s.it), underline: Boolean(s.un),
+          fontFamily: s.ff || 'Arial', fontSize: String(s.fs || 12)
+        })
+      } else {
+        // Reset to default formatting if no cell style exists
+        setFormatting({
+          bold: false, italic: false, underline: false,
+          fontFamily: 'Arial', fontSize: '12'
+        })
+      }
+    } catch (error) {
+      console.warn('Error updating formatting state:', error)
+    }
+  }
+
   // Update formatting state based on current cell
   useEffect(() => {
-    const updateFormattingState = () => {
-      if (!window.luckysheet || typeof window.luckysheet.getCellValue !== 'function') return
-      try {
-        const sel = getSelectedCells()
-        if (!sel) return
-
-        const idx = (arrOrNumA, arrOrNumB) => {
-          if (Array.isArray(arrOrNumA)) return arrOrNumA.length ? arrOrNumA[0] : 0
-          if (typeof arrOrNumA === 'number') return arrOrNumA
-          if (Array.isArray(arrOrNumB)) return arrOrNumB.length ? arrOrNumB[0] : 0
-          if (typeof arrOrNumB === 'number') return arrOrNumB
-          return 0
-        }
-
-        const row = idx(sel.row, sel.r)
-        const col = idx(sel.column, sel.c)
-
-        const cellInfo = window.luckysheet.getCellValue(row, col, { type: 'object' })
-        if (cellInfo && cellInfo.s) {
-          const s = cellInfo.s
-          setFormatting({
-            bold: s.bl === 1, italic: s.it === 1, underline: s.un === 1,
-            fontFamily: s.ff || 'Arial', fontSize: String(s.fs || 12)
-          })
-        } else {
-          setFormatting({ bold: false, italic: false, underline: false, fontFamily: 'Arial', fontSize: '12' })
-        }
-      } catch {}
-    }
     const interval = setInterval(updateFormattingState, 250)
     return () => clearInterval(interval)
   }, [])
+
+  // Poll smart save status
+  useEffect(() => {
+    const pollStatus = () => {
+      if (getStatus) {
+        const status = getStatus();
+        setSmartSaveStatus(status);
+      }
+    };
+
+    // Poll every 2 seconds
+    const interval = setInterval(pollStatus, 2000);
+    pollStatus(); // Initial call
+
+    return () => clearInterval(interval);
+  }, [getStatus])
 
   const formatAddress = (address) => {
     if (!address) return ''
@@ -293,9 +307,9 @@ export function Header() {
 
   const handleUndo = () => {
     logger.logUserAction('undo_button_click');
-    
-    if (window.luckysheet && window.luckysheet.undo) {
-      window.luckysheet.undo()
+
+    if (luckysheetApi.isReady) {
+      luckysheetApi.undo()
       logger.info(LogComponent.UI_COMPONENT, 'undo_executed', 'Undo operation executed');
     } else {
       logger.warn(LogComponent.UI_COMPONENT, 'undo_unavailable', 'Undo function not available');
@@ -304,78 +318,52 @@ export function Header() {
 
   const handleRedo = () => {
     logger.logUserAction('redo_button_click');
-    
-    if (window.luckysheet && window.luckysheet.redo) {
-      window.luckysheet.redo()
+
+    if (luckysheetApi.isReady) {
+      luckysheetApi.redo()
       logger.info(LogComponent.UI_COMPONENT, 'redo_executed', 'Redo operation executed');
     } else {
       logger.warn(LogComponent.UI_COMPONENT, 'redo_unavailable', 'Redo function not available');
     }
   }
 
-  // Helper function to get selected cells
+  // Helper function to get selected cells (using wrapper)
   const getSelectedCells = () => {
-    if (window.luckysheet && window.luckysheet.getRange) {
-      try {
-        const ranges = window.luckysheet.getRange()
-        if (ranges && Array.isArray(ranges) && ranges.length > 0) {
-          return ranges[0]
-        }
-      } catch (error) {
-        logger.warn(LogComponent.UI_COMPONENT, 'get_selection_error', 'Error getting selection range', {
-          error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error'
-        });
-      }
+    if (!luckysheetApi.isReady) return null
+
+    try {
+      return luckysheetApi.getSelection()
+    } catch (error) {
+      logger.warn(LogComponent.UI_COMPONENT, 'get_selection_error', 'Error getting selection range', {
+        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error'
+      });
+      return null
     }
-    
-    // Fallback: try using luckysheet_select_save as backup
-    if (window.luckysheet_select_save && Array.isArray(window.luckysheet_select_save) && window.luckysheet_select_save[0]) {
-      return window.luckysheet_select_save[0]
-    }
-    
-    // Last resort: use current active cell if available
-    if (window.luckysheet && window.luckysheet.getActiveRange) {
-      try {
-        return window.luckysheet.getActiveRange()
-      } catch (error) {
-        logger.debug(LogComponent.UI_COMPONENT, 'fallback_selection', 'Active range not available');
-      }
-    }
-    
-    return null
   }
 
-  // Helper function to get current cell formatting
+  // Helper function to get current cell formatting (using wrapper)
   const getCurrentCellFormat = (row, col) => {
+    if (!luckysheetApi.isReady) return {}
+
     try {
-      if (window.luckysheet && window.luckysheet.getCellValue) {
-        const cellInfo = window.luckysheet.getCellValue(row, col, { type: 'object' })
-        return cellInfo && cellInfo.s ? cellInfo.s : {}
-      }
+      const cellInfo = luckysheetApi.getCellValue(row, col, { type: 'object' })
+      return cellInfo && cellInfo.s ? cellInfo.s : {}
     } catch (error) {
       logger.debug(LogComponent.UI_COMPONENT, 'get_format_error', 'Error getting cell format', { error: error.message })
+      return {}
     }
-    return {}
   }
 
-  // Helper function to apply format to a single cell while preserving existing formatting
+  // Helper function to apply format to a single cell while preserving existing formatting (using wrapper)
   const applyCellFormat = (row, col, attr, value) => {
+    if (!luckysheetApi.isReady) {
+      logger.warn(LogComponent.UI_COMPONENT, 'format_not_ready', 'LuckysheetApi not ready');
+      return false
+    }
+
     try {
-      // Get existing format
-      const existingFormat = getCurrentCellFormat(row, col)
-      
-      // Create new format with the updated attribute
-      const newFormat = { ...existingFormat, [attr]: value }
-      
-      // Apply all format attributes at once to avoid conflicts
-      if (newFormat.bl !== undefined) window.luckysheet.setCellFormat(row, col, 'bl', newFormat.bl)
-      if (newFormat.it !== undefined) window.luckysheet.setCellFormat(row, col, 'it', newFormat.it)
-      if (newFormat.un !== undefined) window.luckysheet.setCellFormat(row, col, 'un', newFormat.un)
-      if (newFormat.ff !== undefined) window.luckysheet.setCellFormat(row, col, 'ff', newFormat.ff)
-      if (newFormat.fs !== undefined) window.luckysheet.setCellFormat(row, col, 'fs', newFormat.fs)
-      if (newFormat.fc !== undefined) window.luckysheet.setCellFormat(row, col, 'fc', newFormat.fc)
-      if (newFormat.bg !== undefined) window.luckysheet.setCellFormat(row, col, 'bg', newFormat.bg)
-      
+      // Apply the specific format attribute using the wrapper
+      luckysheetApi.setCellFormat(row, col, attr, value)
       return true
     } catch (error) {
       logger.error(LogComponent.UI_COMPONENT, 'apply_cell_format_error', 'Error applying cell format', {
@@ -386,34 +374,26 @@ export function Header() {
     }
   }
 
-  // Helper function to apply format to all selected cells while preserving existing formatting
+  // Helper function to apply format to all selected cells while preserving existing formatting (using wrapper)
   const applyFormatToSelection = (attr, value) => {
-    if (!window.luckysheet) {
-      logger.warn(LogComponent.UI_COMPONENT, 'format_no_luckysheet', 'Luckysheet not available');
+    if (!luckysheetApi.isReady) {
+      logger.warn(LogComponent.UI_COMPONENT, 'format_not_ready', 'LuckysheetApi not ready');
       return false
     }
-    
-    if (!window.luckysheet.setCellFormat) {
-      logger.warn(LogComponent.UI_COMPONENT, 'format_no_method', 'setCellFormat method not available');
-      return false
-    }
-    
+
     const selection = getSelectedCells()
-    
+
     if (selection) {
-      // Format selected range
+      // Format selected range using normalized selection
       try {
-        const startRow = selection.row ? selection.row[0] : selection.r || 0
-        const endRow = selection.row ? selection.row[1] : selection.r || 0
-        const startCol = selection.column ? selection.column[0] : selection.c || 0
-        const endCol = selection.column ? selection.column[1] : selection.c || 0
-        
+        const { startRow, endRow, startCol, endCol } = selection
+
         for (let r = startRow; r <= endRow; r++) {
           for (let c = startCol; c <= endCol; c++) {
             applyCellFormat(r, c, attr, value)
           }
         }
-        
+
         logger.debug(LogComponent.UI_COMPONENT, 'format_applied_range', `Applied ${attr}=${value} to range`, {
           startRow, endRow, startCol, endCol
         });
@@ -427,26 +407,17 @@ export function Header() {
     } else {
       // No selection - try to format current active cell
       try {
-        // Try different methods to get current cell
-        let row = 0, col = 0
-        
-        if (window.luckysheetCurrentRow !== undefined && window.luckysheetCurrentCol !== undefined) {
-          row = window.luckysheetCurrentRow
-          col = window.luckysheetCurrentCol
-        } else if (window.luckysheetCurrentCell) {
-          // Parse cell reference like "A1" to row/col
-          const match = window.luckysheetCurrentCell.match(/([A-Z]+)(\d+)/)
-          if (match) {
-            col = match[1].charCodeAt(0) - 65
-            row = parseInt(match[2]) - 1
-          }
+        const activeCell = luckysheetApi.getActiveCell()
+        if (activeCell) {
+          applyCellFormat(activeCell.row, activeCell.col, attr, value)
+
+          logger.debug(LogComponent.UI_COMPONENT, 'format_applied_current', `Applied ${attr}=${value} to current cell`, {
+            row: activeCell.row, col: activeCell.col
+          });
+        } else {
+          logger.warn(LogComponent.UI_COMPONENT, 'no_active_cell', 'No active cell found for formatting');
+          return false
         }
-        
-        applyCellFormat(row, col, attr, value)
-        
-        logger.debug(LogComponent.UI_COMPONENT, 'format_applied_current', `Applied ${attr}=${value} to current cell`, {
-          row, col
-        });
       } catch (error) {
         logger.error(LogComponent.UI_COMPONENT, 'format_current_error', 'Error applying format to current cell', {
           error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
@@ -455,99 +426,131 @@ export function Header() {
         return false
       }
     }
-    
-    // Refresh the display
+
+    // Refresh the display using wrapper
     try {
-      if (window.luckysheet.refresh) {
-        window.luckysheet.refresh()
-      } else if (window.luckysheet.refreshCanvas) {
-        window.luckysheet.refreshCanvas()
-      }
+      luckysheetApi.refresh()
     } catch (error) {
       logger.debug(LogComponent.UI_COMPONENT, 'refresh_error', 'Could not refresh display');
     }
-    
+
     return true
   }
 
   const toggleBold = () => {
-    logger.logUserAction('format_bold_toggle', {
-      currentBold: formatting.bold,
-      newBold: !formatting.bold
-    });
-    
-    if (window.luckysheet) {
-      const newBold = !formatting.bold
-      const success = applyFormatToSelection('bl', newBold ? 1 : 0)
-      
-      if (success) {
-        setFormatting(prev => ({ ...prev, bold: newBold }))
-        
-        logger.info(LogComponent.UI_COMPONENT, 'format_applied', 'Bold formatting applied', {
-          formatType: 'bold',
-          value: newBold
-        });
-      } else {
-        logger.warn(LogComponent.UI_COMPONENT, 'format_failed', 'Failed to apply bold formatting - no cells selected');
-      }
-    } else {
+    if (!window.luckysheet) {
       logger.warn(LogComponent.UI_COMPONENT, 'format_unavailable', 'Format function not available', {
         formatType: 'bold'
       });
+      return;
+    }
+
+    // Get actual cell format from active cell
+    const activeCell = luckysheetApi.getActiveCell();
+    let currentBold = false;
+
+    if (activeCell) {
+      const cellFormat = getCurrentCellFormat(activeCell.row, activeCell.col);
+      currentBold = Boolean(cellFormat.bl);
+    }
+
+    const newBold = !currentBold;
+
+    logger.logUserAction('format_bold_toggle', {
+      currentBold,
+      newBold
+    });
+
+    const success = applyFormatToSelection('bl', newBold ? 1 : 0);
+
+    if (success) {
+      // Trigger immediate formatting state update to sync UI
+      setTimeout(updateFormattingState, 50);
+
+      logger.info(LogComponent.UI_COMPONENT, 'format_applied', 'Bold formatting applied', {
+        formatType: 'bold',
+        value: newBold
+      });
+    } else {
+      logger.warn(LogComponent.UI_COMPONENT, 'format_failed', 'Failed to apply bold formatting - no cells selected');
     }
   }
 
   const toggleItalic = () => {
-    logger.logUserAction('format_italic_toggle', {
-      currentItalic: formatting.italic,
-      newItalic: !formatting.italic
-    });
-    
-    if (window.luckysheet) {
-      const newItalic = !formatting.italic
-      const success = applyFormatToSelection('it', newItalic ? 1 : 0)
-      
-      if (success) {
-        setFormatting(prev => ({ ...prev, italic: newItalic }))
-        
-        logger.info(LogComponent.UI_COMPONENT, 'format_applied', 'Italic formatting applied', {
-          formatType: 'italic',
-          value: newItalic
-        });
-      } else {
-        logger.warn(LogComponent.UI_COMPONENT, 'format_failed', 'Failed to apply italic formatting - no cells selected');
-      }
-    } else {
+    if (!window.luckysheet) {
       logger.warn(LogComponent.UI_COMPONENT, 'format_unavailable', 'Format function not available', {
         formatType: 'italic'
       });
+      return;
+    }
+
+    // Get actual cell format from active cell
+    const activeCell = luckysheetApi.getActiveCell();
+    let currentItalic = false;
+
+    if (activeCell) {
+      const cellFormat = getCurrentCellFormat(activeCell.row, activeCell.col);
+      currentItalic = Boolean(cellFormat.it);
+    }
+
+    const newItalic = !currentItalic;
+
+    logger.logUserAction('format_italic_toggle', {
+      currentItalic,
+      newItalic
+    });
+
+    const success = applyFormatToSelection('it', newItalic ? 1 : 0);
+
+    if (success) {
+      // Trigger immediate formatting state update to sync UI
+      setTimeout(updateFormattingState, 50);
+
+      logger.info(LogComponent.UI_COMPONENT, 'format_applied', 'Italic formatting applied', {
+        formatType: 'italic',
+        value: newItalic
+      });
+    } else {
+      logger.warn(LogComponent.UI_COMPONENT, 'format_failed', 'Failed to apply italic formatting - no cells selected');
     }
   }
 
   const toggleUnderline = () => {
-    logger.logUserAction('format_underline_toggle', {
-      currentUnderline: formatting.underline,
-      newUnderline: !formatting.underline
-    });
-    
-    if (window.luckysheet) {
-      const newUnderline = !formatting.underline
-      const success = applyFormatToSelection('un', newUnderline ? 1 : 0)
-      
-      if (success) {
-        setFormatting(prev => ({ ...prev, underline: newUnderline }))
-        
-        logger.info(LogComponent.UI_COMPONENT, 'format_applied', 'Underline formatting applied', {
-          formatType: 'underline',
-          value: newUnderline
-        });
-      } else {
-        logger.warn(LogComponent.UI_COMPONENT, 'format_failed', 'Failed to apply underline formatting - no cells selected');
-      }
-    } else {
+    if (!window.luckysheet) {
       logger.warn(LogComponent.UI_COMPONENT, 'format_unavailable', 'Format function not available', {
         formatType: 'underline'
       });
+      return;
+    }
+
+    // Get actual cell format from active cell
+    const activeCell = luckysheetApi.getActiveCell();
+    let currentUnderline = false;
+
+    if (activeCell) {
+      const cellFormat = getCurrentCellFormat(activeCell.row, activeCell.col);
+      currentUnderline = Boolean(cellFormat.un);
+    }
+
+    const newUnderline = !currentUnderline;
+
+    logger.logUserAction('format_underline_toggle', {
+      currentUnderline,
+      newUnderline
+    });
+
+    const success = applyFormatToSelection('un', newUnderline ? 1 : 0);
+
+    if (success) {
+      // Trigger immediate formatting state update to sync UI
+      setTimeout(updateFormattingState, 50);
+
+      logger.info(LogComponent.UI_COMPONENT, 'format_applied', 'Underline formatting applied', {
+        formatType: 'underline',
+        value: newUnderline
+      });
+    } else {
+      logger.warn(LogComponent.UI_COMPONENT, 'format_failed', 'Failed to apply underline formatting - no cells selected');
     }
   }
 
@@ -562,8 +565,9 @@ export function Header() {
       const success = applyFormatToSelection('ff', fontFamily)
       
       if (success) {
-        setFormatting(prev => ({ ...prev, fontFamily }))
-        
+        // Trigger immediate formatting state update to sync UI
+        setTimeout(updateFormattingState, 50);
+
         logger.info(LogComponent.UI_COMPONENT, 'format_applied', 'Font family changed', {
           formatType: 'fontFamily',
           value: fontFamily
@@ -589,8 +593,9 @@ export function Header() {
       const success = applyFormatToSelection('fs', fontSize)
       
       if (success) {
-        setFormatting(prev => ({ ...prev, fontSize: fontSize.toString() }))
-        
+        // Trigger immediate formatting state update to sync UI
+        setTimeout(updateFormattingState, 50);
+
         logger.info(LogComponent.UI_COMPONENT, 'format_applied', 'Font size changed', {
           formatType: 'fontSize',
           value: fontSize
@@ -631,124 +636,102 @@ export function Header() {
       // File Menu Actions
       case 'new':
         logger.logUserAction('new_spreadsheet_from_menu');
-        
+
         if (!walletConnected) {
           alert('Please connect your wallet first to create a new spreadsheet');
           return;
         }
 
-        try {
-          // Create a new spreadsheet
-          const result = await createNewSpreadsheet('Untitled Spreadsheet');
-          
-          if (result.success) {
-            setDocumentName('Untitled Spreadsheet');
-            
-            // Clear the current sheet data and reset to empty
-            if (window.luckysheet && window.luckysheet.destroy) {
-              window.luckysheet.destroy();
-              setTimeout(() => {
-                window.location.reload();
-              }, 100);
-            } else {
-              window.location.reload();
-            }
-            
-            logger.info(LogComponent.UI_COMPONENT, 'new_spreadsheet_from_menu_success', 'New spreadsheet created from File menu', {
-              spreadsheetId: result.spreadsheetId,
-              title: 'Untitled Spreadsheet'
-            });
-          } else {
-            logger.error(LogComponent.UI_COMPONENT, 'new_spreadsheet_from_menu_failed', 'Failed to create new spreadsheet from File menu', {
-              error: result.error
-            });
-            alert(`Failed to create new spreadsheet: ${result.error}`);
-          }
-        } catch (error) {
-          logger.error(LogComponent.UI_COMPONENT, 'new_spreadsheet_from_menu_error', 'Error creating new spreadsheet from File menu', {
-            error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error'
-          });
-          alert(`Error creating new spreadsheet: ${error.message}`);
-        }
+        // Navigate to dashboard where user can create new spreadsheet
+        navigate('/');
         break
       
       case 'download':
-        if (window.luckysheet && window.luckysheet.exportLuckyToExcel) {
-          window.luckysheet.exportLuckyToExcel(documentName)
-        } else if (window.luckysheet && window.luckysheet.export) {
-          // Try alternative export method
-          window.luckysheet.export('excel', documentName)
+        if (luckysheetApi.isReady) {
+          const exported = luckysheetApi.exportToExcel(documentName)
+          if (!exported) {
+            logger.warn(LogComponent.UI_COMPONENT, 'download_unavailable', 'Export function not available');
+            alert('Export functionality is not available in this version of Luckysheet')
+          }
         } else {
-          logger.warn(LogComponent.UI_COMPONENT, 'download_unavailable', 'Export function not available');
-          alert('Export functionality is not available in this version of Luckysheet')
+          logger.warn(LogComponent.UI_COMPONENT, 'download_not_ready', 'LuckysheetApi not ready for export');
+          alert('Spreadsheet is not ready for export')
         }
         break
 
       // Edit Menu Actions
       case 'undo':
-        if (window.luckysheet.undo) {
-          window.luckysheet.undo()
+        if (luckysheetApi.isReady) {
+          luckysheetApi.undo()
+        } else {
+          logger.warn(LogComponent.UI_COMPONENT, 'undo_not_ready', 'LuckysheetApi not ready')
         }
         break
-      
+
       case 'redo':
-        if (window.luckysheet.redo) {
-          window.luckysheet.redo()
+        if (luckysheetApi.isReady) {
+          luckysheetApi.redo()
+        } else {
+          logger.warn(LogComponent.UI_COMPONENT, 'redo_not_ready', 'LuckysheetApi not ready')
         }
         break
-        
+
       case 'cut':
-        if (window.luckysheet.cut) {
-          window.luckysheet.cut()
+        if (luckysheetApi.isReady) {
+          luckysheetApi.cut()
+        } else {
+          logger.warn(LogComponent.UI_COMPONENT, 'cut_not_ready', 'LuckysheetApi not ready')
         }
         break
-      
+
       case 'copy':
-        if (window.luckysheet.copy) {
-          window.luckysheet.copy()
+        if (luckysheetApi.isReady) {
+          luckysheetApi.copy()
+        } else {
+          logger.warn(LogComponent.UI_COMPONENT, 'copy_not_ready', 'LuckysheetApi not ready')
         }
         break
       
       case 'paste':
-        if (window.luckysheet.paste) {
-          window.luckysheet.paste()
+        if (luckysheetApi.isReady) {
+          luckysheetApi.paste()
+        } else {
+          logger.warn(LogComponent.UI_COMPONENT, 'paste_not_ready', 'LuckysheetApi not ready')
         }
         break
 
       // Insert Menu Actions
       case 'insertRow':
-        if (window.luckysheet && window.luckysheet.insertRow && selection) {
-          const row = selection.row ? selection.row[0] : selection.r || 0
-          window.luckysheet.insertRow(row)
+        if (luckysheetApi.isReady && selection) {
+          const row = selection.startRow || 0
+          luckysheetApi.insertRow(row)
         } else {
           logger.warn(LogComponent.UI_COMPONENT, 'insertRow_unavailable', 'Insert row function not available or no selection');
         }
         break
-      
+
       case 'insertColumn':
-        if (window.luckysheet && window.luckysheet.insertColumn && selection) {
-          const col = selection.column ? selection.column[0] : selection.c || 0
-          window.luckysheet.insertColumn(col)
+        if (luckysheetApi.isReady && selection) {
+          const col = selection.startCol || 0
+          luckysheetApi.insertColumn(col)
         } else {
           logger.warn(LogComponent.UI_COMPONENT, 'insertColumn_unavailable', 'Insert column function not available or no selection');
         }
         break
-      
+
       case 'deleteRow':
-        if (window.luckysheet && window.luckysheet.deleteRow && selection) {
-          const startRow = selection.row ? selection.row[0] : selection.r || 0
-          const endRow = selection.row ? selection.row[1] : selection.r || 0
-          window.luckysheet.deleteRow(startRow, endRow)
+        if (luckysheetApi.isReady && selection) {
+          const row = selection.startRow || 0
+          luckysheetApi.deleteRow(row)
         } else {
           logger.warn(LogComponent.UI_COMPONENT, 'deleteRow_unavailable', 'Delete row function not available or no selection');
         }
         break
       
       case 'deleteColumn':
-        if (window.luckysheet && window.luckysheet.deleteColumn && selection) {
-          const startCol = selection.column ? selection.column[0] : selection.c || 0
-          const endCol = selection.column ? selection.column[1] : selection.c || 0
-          window.luckysheet.deleteColumn(startCol, endCol)
+        if (luckysheetApi.isReady && selection) {
+          const col = selection.startCol || 0
+          luckysheetApi.deleteColumn(col)
         } else {
           logger.warn(LogComponent.UI_COMPONENT, 'deleteColumn_unavailable', 'Delete column function not available or no selection');
         }
@@ -769,30 +752,26 @@ export function Header() {
         
       case 'clearFormat':
         if (selection) {
-          for (let r = selection.row[0]; r <= selection.row[1]; r++) {
-            for (let c = selection.column[0]; c <= selection.column[1]; c++) {
-              // Clear common formatting
-              window.luckysheet.setCellFormat(r, c, 'bl', 0) // Bold
-              window.luckysheet.setCellFormat(r, c, 'it', 0) // Italic  
-              window.luckysheet.setCellFormat(r, c, 'un', 0) // Underline
-              window.luckysheet.setCellFormat(r, c, 'bg', null) // Background
-              window.luckysheet.setCellFormat(r, c, 'fc', '#000000') // Font color
+          const { startRow, endRow, startCol, endCol } = selection;
+          for (let r = startRow; r <= endRow; r++) {
+            for (let c = startCol; c <= endCol; c++) {
+              // Clear common formatting using wrapper
+              applyCellFormat(r, c, 'bl', 0); // Bold
+              applyCellFormat(r, c, 'it', 0); // Italic
+              applyCellFormat(r, c, 'un', 0); // Underline
+              applyCellFormat(r, c, 'bg', null); // Background
+              applyCellFormat(r, c, 'fc', '#000000'); // Font color
             }
           }
-          // Update formatting state
-          setFormatting(prev => ({
-            ...prev,
-            bold: false,
-            italic: false,
-            underline: false
-          }))
+          // Trigger immediate formatting state update to sync UI
+          setTimeout(updateFormattingState, 50);
         }
         break
 
       // Data Menu Actions
       case 'sort':
-        if (window.luckysheet.sortSelection) {
-          window.luckysheet.sortSelection(true) // Ascending
+        if (luckysheetApi.isReady) {
+          luckysheetApi.sortSelection(true) // Ascending
         } else {
           logger.warn(LogComponent.UI_COMPONENT, 'sort_unavailable', 'Sort function not available');
         }
@@ -800,16 +779,16 @@ export function Header() {
 
       // View Menu Actions
       case 'zoomIn':
-        if (window.luckysheet.zoom) {
-          window.luckysheet.zoom(1.2) // Zoom in 20%
+        if (luckysheetApi.isReady) {
+          luckysheetApi.zoom(1.2) // Zoom in 20%
         } else {
           logger.warn(LogComponent.UI_COMPONENT, 'zoom_unavailable', 'Zoom function not available');
         }
         break
-        
+
       case 'zoomOut':
-        if (window.luckysheet.zoom) {
-          window.luckysheet.zoom(0.8) // Zoom out 20%
+        if (luckysheetApi.isReady) {
+          luckysheetApi.zoom(0.8) // Zoom out 20%
         } else {
           logger.warn(LogComponent.UI_COMPONENT, 'zoom_unavailable', 'Zoom function not available');
         }
@@ -839,7 +818,7 @@ export function Header() {
       default:
         logger.warn(LogComponent.UI_COMPONENT, 'menu_action_unknown', `Unknown menu action: ${action}`);
     }
-  }
+  } // handleMenuAction ends here
 
   // Menu configurations
   const menuItems = {
@@ -876,10 +855,36 @@ export function Header() {
     Tools: [
       { label: 'Function List', action: 'functions' }
     ]
-  }
+  } // End of menuItems object
 
   return (
     <header className="header frost-overlay">
+      {/* Save Reminder Banner */}
+      {saveReminder.visible && (
+        <div className="save-reminder-banner">
+          <div className="save-reminder-content">
+            <span className="save-reminder-text">
+              💾 You have unsaved changes. Consider saving your work.
+            </span>
+            <div className="save-reminder-actions">
+              <button
+                onClick={handleSave}
+                className="save-reminder-save-btn"
+                disabled={!walletConnected}
+              >
+                Save Now
+              </button>
+              <button
+                onClick={dismissSaveReminder}
+                className="save-reminder-dismiss-btn"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Header Row */}
       <div className="header-main">
         {/* Logo and Document Name */}
@@ -965,108 +970,48 @@ export function Header() {
 
         {/* Wallet and Actions */}
         <div className="header-right">
-          {/* Save Button */}
-          <button onClick={handleSave} className="save-button">
-            💾 Save
+          {/* Save Button and Smart Save Status */}
+          <div className="save-section">
+            <button onClick={handleSave} className="save-button">
+              💾 Save
+            </button>
+
+            {/* Smart Save Status Indicator */}
+            {smartSaveStatus && (
+              <SaveStatusIndicator
+                saveStatus={smartSaveStatus.saveStatus}
+                lastWalrusSave={smartSaveStatus.timeSinceLastWalrusSave}
+                lastBlockchainSync={smartSaveStatus.timeSinceLastBlockchainSync}
+                pendingWalrusSaves={smartSaveStatus.pendingWalrusSaves}
+                onSyncNow={syncToBlockchain}
+                walletConnected={walletConnected}
+              />
+            )}
+
+            <div className="auto-save-controls">
+              <label className="auto-save-toggle">
+                <input
+                  type="checkbox"
+                  checked={autoSaveEnabled}
+                  onChange={(e) => toggleAutoSave(e.target.checked)}
+                  disabled={!walletConnected}
+                />
+                <span className="auto-save-label">Smart Auto-save</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Dashboard Navigation */}
+          <button
+            onClick={() => {
+              logger.logUserAction('header_navigate_to_dashboard');
+              navigate('/');
+            }}
+            className="dashboard-button"
+            title="Go to Dashboard"
+          >
+            📊 Dashboard
           </button>
-
-          {/* Spreadsheet Selector */}
-          <SpreadsheetSelector
-            onLoadSpreadsheet={async (spreadsheetId) => {
-              logger.logUserAction('spreadsheet_load_from_selector', { spreadsheetId });
-              const result = await loadSpreadsheet(spreadsheetId);
-              if (result.success) {
-                setDocumentName(result.title);
-              }
-              return result;
-            }}
-            onCreateNew={async () => {
-              logger.logUserAction('create_new_spreadsheet_from_selector');
-              
-              if (!walletConnected) {
-                alert('Please connect your wallet first to create a new spreadsheet');
-                return;
-              }
-
-              try {
-                // Show loading state
-                setDocumentName('Creating new spreadsheet...');
-                
-                const result = await createNewSpreadsheet('Untitled Spreadsheet');
-                
-                if (result.success) {
-                  setDocumentName(result.title);
-                  
-                  // Refresh Luckysheet with empty data if available
-                  if (window.luckysheet && window.luckysheet.refreshAll) {
-                    setTimeout(() => {
-                      window.luckysheet.refreshAll();
-                    }, 100);
-                  }
-                  
-                  logger.info(LogComponent.UI_COMPONENT, 'new_spreadsheet_created', 'New spreadsheet created successfully', {
-                    spreadsheetId: result.spreadsheetId,
-                    title: result.title
-                  });
-                } else {
-                  setDocumentName('Untitled Spreadsheet');
-                  logger.error(LogComponent.UI_COMPONENT, 'new_spreadsheet_failed', 'Failed to create new spreadsheet', {
-                    error: result.error
-                  });
-                  alert(`Failed to create new spreadsheet: ${result.error}`);
-                }
-              } catch (error) {
-                setDocumentName('Untitled Spreadsheet');
-                logger.error(LogComponent.UI_COMPONENT, 'new_spreadsheet_error', 'Error creating new spreadsheet', {
-                  error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error'
-                });
-                alert(`Error creating new spreadsheet: ${error.message}`);
-              }
-            }}
-            getUserSpreadsheets={getUserSpreadsheets}
-            walletConnected={walletConnected}
-            onRenameSpreadsheet={async (spreadsheetId, newTitle) => {
-              logger.logUserAction('rename_spreadsheet', { spreadsheetId, newTitle });
-              const result = await renameSpreadsheet(spreadsheetId, newTitle);
-              if (result.success) {
-                logger.logEvent(LogComponent.UI_COMPONENT, 'spreadsheet_renamed', 'Spreadsheet renamed successfully', {
-                  spreadsheetId,
-                  newTitle
-                });
-              }
-              return result;
-            }}
-            onMakePublic={async (spreadsheetId) => {
-              logger.logUserAction('make_spreadsheet_public', { spreadsheetId });
-              return await makeSpreadsheetPublic(spreadsheetId);
-            }}
-            onMakePrivate={async (spreadsheetId) => {
-              logger.logUserAction('make_spreadsheet_private', { spreadsheetId });
-              return await makeSpreadsheetPrivate(spreadsheetId);
-            }}
-            onTransferOwnership={async (spreadsheetId, newOwnerAddress) => {
-              logger.logUserAction('transfer_spreadsheet_ownership', { spreadsheetId, newOwnerAddress });
-              return await transferOwnership(spreadsheetId, newOwnerAddress);
-            }}
-            onPruneVersions={async (spreadsheetId) => {
-              logger.logUserAction('prune_spreadsheet_versions', { spreadsheetId });
-              return await pruneOldVersions(spreadsheetId);
-            }}
-            onDeleteSpreadsheet={async (spreadsheetId, title) => {
-              logger.logUserAction('delete_spreadsheet', { spreadsheetId, title });
-              const result = await deleteSpreadsheet(spreadsheetId, title);
-              if (result.success) {
-                // Reset document name if the deleted spreadsheet was currently loaded
-                setDocumentName('Untitled Spreadsheet');
-                logger.logEvent(LogComponent.UI_COMPONENT, 'spreadsheet_deleted', 'Spreadsheet deleted successfully', {
-                  spreadsheetId,
-                  title,
-                  versionsDeleted: result.deletedVersionCount
-                });
-              }
-              return result;
-            }}
-          />
 
           {/* Wallet Connection */}
           {walletConnected ? (

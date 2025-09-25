@@ -523,6 +523,173 @@ class BrowserWalletManager {
     return this.walletConnection.availableWallets;
   }
 
+  // Build unsigned transaction for WalSheetz DeFi operations
+  async buildUnsignedTransaction(request) {
+    console.log('[BrowserWalletManager] 🔨 Building unsigned transaction:', {
+      adapterId: request.adapterId,
+      method: request.method,
+      hasArgs: !!request.args
+    });
+
+    try {
+      // Run preflight checks
+      await this.preflightCheck();
+
+      // Import transaction runner dynamically to avoid circular dependencies
+      const { transactionRunner } = await import('../../blockchain/sui-transaction-runner.js');
+
+      // Prepare the transaction
+      const txPreparation = await transactionRunner.prepareTransaction({
+        adapterId: request.adapterId,
+        method: request.method,
+        args: request.args || [],
+        modifiers: {
+          sender: this.walletConnection.address,
+          gasCoins: request.gasCoins || null,
+          gasBudget: request.gasBudget || null,
+          ...request.modifiers
+        }
+      });
+
+      console.log('[BrowserWalletManager] ✅ Transaction prepared:', {
+        method: txPreparation.method,
+        hasEstimatedGas: !!txPreparation.estimatedGas,
+        description: txPreparation.description
+      });
+
+      return {
+        success: true,
+        transaction: txPreparation.transaction,
+        metadata: {
+          adapterId: request.adapterId,
+          method: txPreparation.method,
+          args: txPreparation.args,
+          description: txPreparation.description,
+          estimatedGas: txPreparation.estimatedGas
+        }
+      };
+
+    } catch (error) {
+      console.error('[BrowserWalletManager] ❌ Failed to build unsigned transaction:', error.message);
+      return {
+        success: false,
+        error: error.message,
+        details: error.stack
+      };
+    }
+  }
+
+  // Execute a WalSheetz contract method (combines building and signing)
+  async executeContractMethod(adapterId, method, args, options = {}) {
+    console.log(`[BrowserWalletManager] 🚀 Executing contract method: ${adapterId}.${method}`);
+
+    try {
+      // Build unsigned transaction
+      const buildResult = await this.buildUnsignedTransaction({
+        adapterId,
+        method,
+        args,
+        modifiers: options.modifiers || {}
+      });
+
+      if (!buildResult.success) {
+        throw new Error(`Failed to build transaction: ${buildResult.error}`);
+      }
+
+      // Sign and execute the transaction
+      const executeOptions = {
+        showEffects: true,
+        showEvents: true,
+        showObjectChanges: true,
+        ...options.executeOptions
+      };
+
+      const result = await this.signAndExecuteTransaction({
+        transaction: buildResult.transaction,
+        options: executeOptions
+      });
+
+      console.log('[BrowserWalletManager] ✅ Contract method executed successfully:', {
+        digest: result.digest,
+        adapterId,
+        method
+      });
+
+      return {
+        success: true,
+        result,
+        metadata: buildResult.metadata,
+        transactionDigest: result.digest,
+        effects: result.effects,
+        objectChanges: result.objectChanges
+      };
+
+    } catch (error) {
+      console.error(`[BrowserWalletManager] ❌ Contract method execution failed:`, error.message);
+      return {
+        success: false,
+        error: error.message,
+        adapterId,
+        method,
+        args
+      };
+    }
+  }
+
+  // Get gas coins for transaction execution
+  async getGasCoinsForTransaction(requiredAmount = null) {
+    if (!this.walletConnection || !this.walletConnection.address) {
+      throw new Error('Wallet not connected - cannot get gas coins');
+    }
+
+    try {
+      // Import SUI client dynamically
+      const { SuiClient } = await import('@mysten/sui/client');
+      const { getCurrentConfig } = await import('../../blockchain/config.js');
+
+      const config = getCurrentConfig();
+      const client = new SuiClient({ url: config.sui.rpcUrl });
+
+      const gasCoins = await client.getCoins({
+        owner: this.walletConnection.address,
+        coinType: '0x2::sui::SUI',
+        limit: 10
+      });
+
+      if (gasCoins.data.length === 0) {
+        throw new Error('No SUI coins found for gas payment');
+      }
+
+      // If amount specified, find sufficient coins
+      if (requiredAmount) {
+        let totalAmount = 0n;
+        const sufficientCoins = [];
+
+        for (const coin of gasCoins.data) {
+          sufficientCoins.push(coin.coinObjectId);
+          totalAmount += BigInt(coin.balance);
+
+          if (totalAmount >= BigInt(requiredAmount)) {
+            break;
+          }
+        }
+
+        if (totalAmount < BigInt(requiredAmount)) {
+          throw new Error(`Insufficient SUI balance. Need ${requiredAmount}, have ${totalAmount}`);
+        }
+
+        return sufficientCoins;
+      }
+
+      // Return all coins
+      return gasCoins.data.map(coin => coin.coinObjectId);
+
+    } catch (error) {
+      console.error('[BrowserWalletManager] ❌ Failed to get gas coins:', error.message);
+      throw error;
+    }
+  }
+
   /**
    * Clear invalid objects cached in wallet manager
    */
@@ -618,7 +785,7 @@ class BrowserWalletManager {
       console.log(`[HealthMonitor] ✅ Heartbeat successful (${Date.now() - heartbeatStart}ms) - Status: ${this.healthMonitor.healthStatus}`);
 
       // Emit health event
-      this._emitEvent('healthUpdate', {
+      this.emit('healthUpdate', {
         status: this.healthMonitor.healthStatus,
         lastHeartbeat: this.healthMonitor.lastHeartbeat,
         consecutiveFailures: this.healthMonitor.consecutiveFailures,
@@ -652,7 +819,7 @@ class BrowserWalletManager {
       }
 
       // Emit health event
-      this._emitEvent('healthUpdate', {
+      this.emit('healthUpdate', {
         status: this.healthMonitor.healthStatus,
         lastHeartbeat: this.healthMonitor.lastHeartbeat,
         consecutiveFailures: this.healthMonitor.consecutiveFailures,

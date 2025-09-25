@@ -3,7 +3,7 @@ import { SpreadsheetEngine } from '../core/SpreadsheetEngine.js';
 import { BlockchainAdapter } from '../adapters/BlockchainAdapter.js';
 import { StorageAdapter } from '../adapters/StorageAdapter.js';
 import { webSocketService } from '../services/WebSocketService.js';
-import { useWalletConnection } from '../hooks/useWalletConnection.js';
+import { useWalletConnection } from '../hooks/useWalletConnection.ts';
 import { browserWalletManager } from '../services/BrowserWalletManager.js';
 
 /**
@@ -27,7 +27,13 @@ export function useSpreadsheet() {
   });
   const [spreadsheetCount, setSpreadsheetCount] = useState(0);
   const [spreadsheetData, setSpreadsheetData] = useState(null);
-  
+  const [saveReminder, setSaveReminder] = useState({
+    visible: false,
+    lastChecked: Date.now()
+  });
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
+  const [walSheetzPanelOpen, setWalSheetzPanelOpen] = useState(false);
+
   // Use the wallet connection hook
   const walletConnection = useWalletConnection();
   
@@ -38,6 +44,9 @@ export function useSpreadsheet() {
   const servicesInitializedRef = useRef(false);
   const sessionRestorationAttemptedRef = useRef(false);
   const autoDiscoveryAttemptedRef = useRef(false);
+  const saveReminderIntervalRef = useRef(null);
+  const autoSaveIntervalRef = useRef(null);
+  const saveToBlockchainRef = useRef(null);
   
   // Auto-discover user's spreadsheets when wallet connects
   const autoDiscoverSpreadsheets = useCallback(async () => {
@@ -273,28 +282,123 @@ export function useSpreadsheet() {
     }
   }, []);
 
+  // Start save reminder monitoring
+  const startSaveReminderMonitoring = useCallback(() => {
+    if (saveReminderIntervalRef.current) {
+      clearInterval(saveReminderIntervalRef.current);
+    }
+
+    saveReminderIntervalRef.current = setInterval(() => {
+      if (!engineRef.current) return;
+
+      const timeSinceLastEdit = engineRef.current.getTimeSinceLastEdit();
+      const timeSinceLastSave = engineRef.current.getTimeSinceLastSave();
+
+      // Show reminder if:
+      // 1. User has made edits (timeSinceLastEdit exists)
+      // 2. More than 60 seconds since last edit
+      // 3. Either never saved or last save was before the edits
+      if (timeSinceLastEdit !== null &&
+          timeSinceLastEdit > 60000 && // 60 seconds
+          (timeSinceLastSave === null || timeSinceLastSave > timeSinceLastEdit)) {
+        setSaveReminder(prev => ({ ...prev, visible: true }));
+      }
+    }, 5000); // Check every 5 seconds
+  }, []);
+
+  // Dismiss save reminder
+  const dismissSaveReminder = useCallback(() => {
+    setSaveReminder(prev => ({ ...prev, visible: false }));
+  }, []);
+
+  // Toggle auto-save preference
+  const toggleAutoSave = useCallback((enabled) => {
+    setAutoSaveEnabled(enabled);
+    if (storageRef.current) {
+      storageRef.current.setAutoSaveEnabled(enabled);
+    }
+
+    // Update the engine's auto-save state
+    if (engineRef.current && engineRef.current.setAutoSaveEnabled) {
+      engineRef.current.setAutoSaveEnabled(enabled);
+    }
+
+    // Start/stop auto-save interval based on preference
+    if (enabled && walletConnection.isConnected) {
+      startAutoSaveLoop();
+    } else {
+      stopAutoSaveLoop();
+    }
+  }, [walletConnection.isConnected]);
+
+  // Start auto-save loop when enabled
+  const startAutoSaveLoop = useCallback(() => {
+    if (autoSaveIntervalRef.current) {
+      clearInterval(autoSaveIntervalRef.current);
+    }
+
+    autoSaveIntervalRef.current = setInterval(async () => {
+      if (!engineRef.current || !walletConnection.isConnected || !autoSaveEnabled) {
+        return;
+      }
+
+      // Check if there are changes worth saving
+      const timeSinceLastEdit = engineRef.current.getTimeSinceLastEdit();
+      const timeSinceLastSave = engineRef.current.getTimeSinceLastSave();
+
+      // Auto-save if there are recent edits and we haven't saved since then
+      if (timeSinceLastEdit !== null &&
+          timeSinceLastEdit < 30000 && // Recent edits (within 30 seconds)
+          (timeSinceLastSave === null || timeSinceLastSave > timeSinceLastEdit)) {
+        try {
+          if (saveToBlockchainRef.current) {
+            await saveToBlockchainRef.current();
+          }
+        } catch (error) {
+          console.warn('Auto-save failed:', error.message);
+        }
+      }
+    }, 10000); // Auto-save check every 10 seconds
+  }, [walletConnection.isConnected, autoSaveEnabled]);
+
+  // Stop auto-save loop
+  const stopAutoSaveLoop = useCallback(() => {
+    if (autoSaveIntervalRef.current) {
+      clearInterval(autoSaveIntervalRef.current);
+      autoSaveIntervalRef.current = null;
+    }
+  }, []);
+
   // Sync wallet connection with browserWalletManager and handle session restoration
   useEffect(() => {
     browserWalletManager.setWalletConnection(walletConnection);
-    
+
     if (walletConnection.isConnected && walletConnection.address) {
       // Update session with current wallet address
       if (storageRef.current) {
         storageRef.current.setWalletAddress(walletConnection.address);
       }
-      
+
+      // Start auto-save if enabled
+      if (autoSaveEnabled) {
+        startAutoSaveLoop();
+      }
+
       // Auto-discover spreadsheets only once per session
       if (!autoDiscoveryAttemptedRef.current) {
         autoDiscoveryAttemptedRef.current = true;
         autoDiscoverSpreadsheets();
       }
-      
+
       // Check for session restoration only once after initialization
       if (engineRef.current && blockchainRef.current && !sessionRestorationAttemptedRef.current) {
         sessionRestorationAttemptedRef.current = true;
         checkSessionRestoration();
       }
     } else if (!walletConnection.isConnected) {
+      // Stop auto-save when wallet disconnects
+      stopAutoSaveLoop();
+
       // Clear session if wallet disconnected
       if (storageRef.current) {
         storageRef.current.clearSession();
@@ -303,7 +407,7 @@ export function useSpreadsheet() {
       sessionRestorationAttemptedRef.current = false;
       autoDiscoveryAttemptedRef.current = false;
     }
-  }, [walletConnection.isConnected, walletConnection.address, autoDiscoverSpreadsheets, checkSessionRestoration]);
+  }, [walletConnection.isConnected, walletConnection.address, autoSaveEnabled, autoDiscoverSpreadsheets, checkSessionRestoration, startAutoSaveLoop, stopAutoSaveLoop]);
 
   // Initialize services
   useEffect(() => {
@@ -337,7 +441,8 @@ export function useSpreadsheet() {
         console.log('🧮 Creating SpreadsheetEngine...');
         engineRef.current = new SpreadsheetEngine(
           storageRef.current,
-          blockchainRef.current
+          blockchainRef.current,
+          autoSaveEnabled
         );
 
         // Initialize engine
@@ -372,6 +477,15 @@ export function useSpreadsheet() {
         console.log('📡 Updating sync status...');
         updateSyncStatus();
 
+        // Load auto-save preference from storage
+        if (storageRef.current) {
+          const autoSavePref = storageRef.current.getAutoSaveEnabled();
+          setAutoSaveEnabled(autoSavePref);
+        }
+
+        // Start save reminder checking
+        startSaveReminderMonitoring();
+
         // Clear timeout on successful initialization
         clearTimeout(initializationTimeout);
         console.log('🎉 Service initialization completed successfully!');
@@ -393,6 +507,12 @@ export function useSpreadsheet() {
     return () => {
       if (engineRef.current) {
         engineRef.current.cleanup();
+      }
+      if (saveReminderIntervalRef.current) {
+        clearInterval(saveReminderIntervalRef.current);
+      }
+      if (autoSaveIntervalRef.current) {
+        clearInterval(autoSaveIntervalRef.current);
       }
       // Don't reset servicesInitializedRef here as we want to keep services alive
     };
@@ -501,52 +621,30 @@ export function useSpreadsheet() {
       
       console.log('[useSpreadsheet] Connecting to Slush wallet:', slushWallet.name);
       
-      // Connect to Slush wallet
-      await walletConnection.connectWallet(slushWallet);
-      
       console.log('[useSpreadsheet] Slush wallet connection initiated, waiting for approval...');
-      
-      // Wait for connection with longer timeout
-      return new Promise((resolve) => {
-        let attempts = 0;
-        const maxAttempts = 150; // 15 seconds timeout (increased from 5 seconds)
 
-        const checkConnection = setInterval(() => {
-          attempts++;
-
-          if (walletConnection.isConnected && walletConnection.address) {
-            clearInterval(checkConnection);
-            console.log('[useSpreadsheet] ✅ Slush wallet connected successfully!');
-            updateSyncStatus();
-            resolve({
-              success: true,
-              wallet: {
-                address: walletConnection.address,
-                balance: walletConnection.balance,
-                name: 'Slush'
-              }
-            });
-          } else if (walletConnection.connectionError) {
-            clearInterval(checkConnection);
-            console.error('[useSpreadsheet] ❌ Slush wallet connection error:', walletConnection.connectionError);
-            resolve({
-              success: false,
-              error: walletConnection.connectionError
-            });
-          } else if (attempts >= maxAttempts) {
-            clearInterval(checkConnection);
-            console.error('[useSpreadsheet] ❌ Slush wallet connection timeout');
-            resolve({
-              success: false,
-              error: 'Connection timeout - please approve the connection in your Slush wallet. Try refreshing the page and connecting again.' +
-                     '\n\nIf the issue persists:\n' +
-                     '1. Make sure Slush wallet extension is installed\n' +
-                     '2. Check if you have SUI testnet tokens\n' +
-                     '3. Try using a different wallet (like Suiet or Martian)'
-            });
-          }
-        }, 100);
-      });
+      // FIXED: Use the Promise returned by walletConnection.connectWallet directly
+      // instead of polling in a closure that captures stale values
+      return walletConnection.connectWallet(slushWallet)
+        .then(() => {
+          console.log('[useSpreadsheet] ✅ Slush wallet connected successfully!');
+          updateSyncStatus();
+          return {
+            success: true,
+            wallet: {
+              address: walletConnection.currentAccount?.address,
+              balance: walletConnection.balance,
+              name: 'Slush'
+            }
+          };
+        })
+        .catch((error) => {
+          console.error('[useSpreadsheet] ❌ Slush wallet connection failed:', error);
+          return {
+            success: false,
+            error: error.message || 'Failed to connect wallet'
+          };
+        });
     } catch (error) {
       console.error('[useSpreadsheet] Failed to connect Slush wallet:', error);
       return { success: false, error: typeof error === 'string' ? error : error.message || 'Unknown error' };
@@ -623,45 +721,73 @@ export function useSpreadsheet() {
       }, 300);
 
       const result = await engineRef.current.save(title);
-      
-      if (result.success) {
-        // Update loading state for blockchain update
-        setLoadingState(prev => ({
-          ...prev,
-          currentStep: 2,
-          message: 'Updating blockchain...',
-          details: 'Updating blockchain record...',
-          type: 'blockchain'
-        }));
 
-        // Simulate blockchain confirmation step
-        setTimeout(() => {
+      if (result.success) {
+        // Check if wallet was disconnected (localStorage-only save)
+        if (result.walletDisconnected) {
+          // Show warning for localStorage-only save
           setLoadingState(prev => ({
             ...prev,
-            currentStep: 3,
-            details: 'Confirming transaction...'
+            currentStep: 2,
+            message: 'Wallet not connected',
+            details: 'Data saved locally only - connect wallet for blockchain storage',
+            type: 'warning'
           }));
-        }, 500);
 
-        setSaveStatus('saved');
-        setEditCount(0);
-        updateSyncStatus();
-        
-        // Complete final step and clear loading state
-        setLoadingState(prev => ({
-          ...prev,
-          currentStep: 4,
-          message: 'Save complete!',
-          details: 'Spreadsheet saved successfully'
-        }));
+          setSaveStatus('saved');
+          setEditCount(0);
+          updateSyncStatus();
 
-        // Clear loading state after brief success message
-        setTimeout(() => {
-          setLoadingState({ isLoading: false, message: '', details: '' });
-        }, 1000);
+          // Show warning message longer than success
+          setTimeout(() => {
+            setLoadingState({ isLoading: false, message: '', details: '' });
+          }, 2500);
 
-        // Reset status after a delay
-        setTimeout(() => setSaveStatus('ready'), 2000);
+          // Reset status after a delay
+          setTimeout(() => setSaveStatus('ready'), 3000);
+        } else {
+          // Normal blockchain save path
+          // Update loading state for blockchain update
+          setLoadingState(prev => ({
+            ...prev,
+            currentStep: 2,
+            message: 'Updating blockchain...',
+            details: 'Updating blockchain record...',
+            type: 'blockchain'
+          }));
+
+          // Simulate blockchain confirmation step
+          setTimeout(() => {
+            setLoadingState(prev => ({
+              ...prev,
+              currentStep: 3,
+              details: 'Confirming transaction...'
+            }));
+          }, 500);
+
+          setSaveStatus('saved');
+          setEditCount(0);
+          updateSyncStatus();
+
+          // Dismiss save reminder on successful save
+          setSaveReminder(prev => ({ ...prev, visible: false }));
+
+          // Complete final step and clear loading state
+          setLoadingState(prev => ({
+            ...prev,
+            currentStep: 4,
+            message: 'Save complete!',
+            details: 'Spreadsheet saved successfully'
+          }));
+
+          // Clear loading state after brief success message
+          setTimeout(() => {
+            setLoadingState({ isLoading: false, message: '', details: '' });
+          }, 1000);
+
+          // Reset status after a delay
+          setTimeout(() => setSaveStatus('ready'), 2000);
+        }
       } else {
         setSaveStatus('error');
         setLoadingState({ isLoading: false, message: '', details: '' });
@@ -701,10 +827,60 @@ export function useSpreadsheet() {
     }
   }, [updateSyncStatus]);
 
+  // Store saveToBlockchain function in ref for use in auto-save
+  useEffect(() => {
+    saveToBlockchainRef.current = saveToBlockchain;
+  }, [saveToBlockchain]);
+
   // Force save
   const forceSave = useCallback(async () => {
     return await saveToBlockchain();
   }, [saveToBlockchain]);
+
+  // Save to Walrus only (no wallet prompts)
+  const saveToWalrusOnly = useCallback(async (title = null) => {
+    if (!engineRef.current) {
+      return { success: false, error: 'Engine not initialized' };
+    }
+
+    return await engineRef.current.saveToWalrusOnly(title);
+  }, []);
+
+  // Force blockchain sync
+  const syncToBlockchain = useCallback(async () => {
+    if (!engineRef.current) {
+      return { success: false, error: 'Engine not initialized' };
+    }
+
+    setLoadingState({
+      isLoading: true,
+      message: 'Syncing to blockchain...',
+      details: 'Creating blockchain transaction for pending saves...',
+      type: 'blockchain'
+    });
+
+    try {
+      const result = await engineRef.current.forceSyncToBlockchain();
+
+      setLoadingState({ isLoading: false, message: '', details: '' });
+
+      if (result && result.success !== false) {
+        setSaveStatus('synced');
+        setTimeout(() => setSaveStatus('ready'), 3000);
+      } else {
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('ready'), 3000);
+      }
+
+      return result;
+    } catch (error) {
+      setLoadingState({ isLoading: false, message: '', details: '' });
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('ready'), 3000);
+
+      return { success: false, error: typeof error === 'string' ? error : error.message || 'Unknown error' };
+    }
+  }, []);
 
   // Get current status
   const getStatus = useCallback(() => {
@@ -812,9 +988,9 @@ export function useSpreadsheet() {
         // Default title from walrus payload if present
         let uiTitle = result.data?.data?.metadata?.title || result.data?.title || null;
 
-        // If chain has no versions, keep current data and fetch title from wallet list
+        // Always load data to replace current grid, even for empty spreadsheets
         if (result.metadata?.isEmpty) {
-          console.warn('[useSpreadsheet] Chain returned empty spreadsheet (no versions); keeping current data');
+          console.warn('[useSpreadsheet] Chain returned empty spreadsheet (no versions); clearing grid and loading empty data');
 
           try {
             const list = await blockchainRef.current.getUserSpreadsheets();
@@ -824,7 +1000,17 @@ export function useSpreadsheet() {
             }
           } catch {}
 
-          // Do NOT call engine.loadData; keep current Luckysheet state
+          // Clear the grid and load empty data to replace stale content
+          await engineRef.current.clearGrid();
+
+          // Create empty data structure for consistency
+          const emptyData = {
+            data: {
+              cells: {},
+              metadata: { title: uiTitle || 'Sheet1' }
+            }
+          };
+          setSpreadsheetData(emptyData);
         } else {
           // Normal path with versioned data
           await engineRef.current.loadData(result.data);
@@ -855,14 +1041,56 @@ export function useSpreadsheet() {
           metadata: result.metadata
         };
       } else {
-        setLoadingState({ isLoading: false, message: '', details: '' });
+        // Handle specific error types for better user feedback
+        let errorMessage = result.error || 'Failed to load spreadsheet';
+        let errorType = 'error';
+
+        if (result.error === 'Wallet not connected') {
+          errorMessage = 'Please connect your wallet to load spreadsheets from the blockchain';
+          errorType = 'wallet_required';
+        }
+
+        setLoadingState({
+          isLoading: false,
+          message: '',
+          details: '',
+          error: errorMessage,
+          errorType
+        });
         setSaveStatus('error');
+
+        console.error('[useSpreadsheet] Load failed:', {
+          error: result.error,
+          errorType,
+          spreadsheetId
+        });
+
         return result;
       }
     } catch (error) {
-      setLoadingState({ isLoading: false, message: '', details: '' });
+      const errorMessage = typeof error === 'string' ? error : error.message || 'Unknown error';
+      let errorType = 'error';
+
+      if (errorMessage.includes('Wallet not connected') || errorMessage.includes('wallet')) {
+        errorType = 'wallet_required';
+      }
+
+      setLoadingState({
+        isLoading: false,
+        message: '',
+        details: '',
+        error: errorMessage,
+        errorType
+      });
       setSaveStatus('error');
-      return { success: false, error: typeof error === 'string' ? error : error.message || 'Unknown error' };
+
+      console.error('[useSpreadsheet] Load exception:', {
+        error: errorMessage,
+        errorType,
+        spreadsheetId
+      });
+
+      return { success: false, error: errorMessage, errorType };
     }
   }, [updateSyncStatus]);
 
@@ -1150,7 +1378,10 @@ export function useSpreadsheet() {
     syncStatus,
     collaborationStatus,
     spreadsheetData,
-    
+    saveReminder,
+    autoSaveEnabled,
+    walSheetzPanelOpen,
+
     // Actions
     handleCellEdit,
     handleCellSelect,
@@ -1160,8 +1391,14 @@ export function useSpreadsheet() {
     disconnectWallet,
     saveToBlockchain,
     forceSave,
+    saveToWalrusOnly,
+    syncToBlockchain,
     clearData,
-    
+    dismissSaveReminder,
+    toggleAutoSave,
+    openWalSheetzPanel: () => setWalSheetzPanelOpen(true),
+    closeWalSheetzPanel: () => setWalSheetzPanelOpen(false),
+
     // Utilities
     getStatus,
     getStorageInfo,

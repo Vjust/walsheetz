@@ -9,6 +9,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: none;
 }
 
 .loading-backdrop {
@@ -19,6 +20,7 @@
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(2px);
+  pointer-events: auto;
 }
 
 .loading-card {
@@ -32,6 +34,7 @@
   width: 90%;
   text-align: center;
   animation: slideIn 0.3s ease-out;
+  pointer-events: auto;
 }
 
 @keyframes slideIn {

@@ -2,6 +2,7 @@
 @import url('./glassmorphism.css');
 @import url('./gas-estimator.css');
 @import url('./transaction-modal.css');
+@import url('./blizzard-effects.css');
 
 * {
   margin: 0;
@@ -39,10 +40,12 @@ body::before {
 /* Layout */
 .main-layout {
   height: 100vh;
+  width: 100vw;
   display: flex;
   flex-direction: column;
   position: relative;
   z-index: 1;
+  overflow: hidden;
 }
 
 /* Header */
@@ -158,6 +161,28 @@ button {
   background: var(--ice-gradient-button-hover);
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0, 172, 193, 0.4);
+}
+
+.dashboard-button {
+  background: var(--ice-glassmorphism);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dashboard-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
 }
 
 .connected-button {
@@ -570,6 +595,7 @@ button {
 /* Spreadsheet */
 .spreadsheet-container {
   flex: 1;
+  min-height: 0;
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -579,6 +605,8 @@ button {
   position: relative;
   overflow: hidden;
   box-shadow: var(--glass-shadow);
+  display: flex;
+  flex-direction: column;
 }
 
 .spreadsheet-wrapper {
@@ -614,21 +642,21 @@ button {
 
 /* Luckysheet Ice Theme Overrides */
 #luckysheet-container {
-  background: transparent !important;
+  background: rgba(255, 255, 255, 0.02) !important;
 }
 
-/* Ensure Luckysheet elements stay below application dialogs */
+/* Ensure Luckysheet elements have proper z-index layering */
 #luckysheet-container {
-  z-index: 9999 !important;
-  max-z-index: 9999 !important;
+  z-index: 100 !important;
+  max-z-index: 500 !important;
 }
 
-/* Override any high z-index values that might interfere with dialogs */
+/* Set reasonable z-index values that don't interfere with dialogs */
 .luckysheet-grid-container,
 .luckysheet-modal,
 .luckysheet-tooltip,
 .luckysheet-contextmenu {
-  z-index: 9999 !important;
+  z-index: 200 !important;
 }
 
 /* Luckysheet Grid Styling */
@@ -915,4 +943,428 @@ a, button, input, select, textarea, .toolbar-button, .menu-item {
   right: 20px;
   z-index: 1000;
   max-width: 300px;
+}
+
+/* Save Reminder Banner */
+.save-reminder-banner {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.95) 0%, rgba(217, 119, 6, 0.95) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+
+.save-reminder-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  gap: 16px;
+}
+
+.save-reminder-text {
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  flex: 1;
+}
+
+.save-reminder-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.save-reminder-save-btn {
+  background: rgba(255, 255, 255, 0.9);
+  color: #d97706;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.save-reminder-save-btn:hover:not(:disabled) {
+  background: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.save-reminder-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.save-reminder-dismiss-btn {
+  background: transparent;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 4px 8px;
+  font-size: 16px;
+  line-height: 1;
+  border-radius: 4px;
+  min-width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.save-reminder-dismiss-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.1);
+}
+
+/* Save Section and Auto-save Toggle */
+.save-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.auto-save-controls {
+  display: flex;
+  align-items: center;
+}
+
+.auto-save-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.2s ease;
+}
+
+.auto-save-toggle input[type="checkbox"]:disabled {
+  opacity: 0.5;
+}
+
+.auto-save-toggle:has(input:disabled) {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auto-save-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ice-accent-dark);
+  white-space: nowrap;
+}
+
+.auto-save-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--ice-accent);
+  cursor: pointer;
+}
+
+.auto-save-toggle input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+}
+
+/* Animation for save reminder */
+@keyframes save-reminder-slide-down {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.save-reminder-banner {
+  animation: save-reminder-slide-down 0.3s ease-out;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .save-reminder-content {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+
+  .save-reminder-text {
+    font-size: 13px;
+  }
+
+  .save-section {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .auto-save-controls {
+    justify-content: center;
+  }
+}
+
+/* ===== WalSheetz Autocomplete & Quick Access Styles ===== */
+
+/* Quick Access Button */
+.wz-quick-access-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.wz-quick-access-btn:hover {
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+  transform: translateY(-50%) scale(1.05);
+}
+
+/* Autocomplete Dropdown */
+.wz-autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--ice-gradient-soft);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  box-shadow:
+    var(--glass-shadow),
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  z-index: 1000;
+  max-height: 400px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.autocomplete-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--glass-border);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+}
+
+.autocomplete-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ice-primary);
+}
+
+.autocomplete-hint {
+  display: block;
+  font-size: 11px;
+  color: var(--ice-text-muted);
+  margin-top: 2px;
+}
+
+.autocomplete-list {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.autocomplete-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.selected {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+  border-left-color: var(--ice-accent);
+}
+
+.func-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.func-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.func-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ice-primary);
+}
+
+.func-category {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  margin-left: auto;
+}
+
+.category-discovery {
+  background: rgba(59, 130, 246, 0.1);
+  color: rgb(59, 130, 246);
+}
+
+.category-read {
+  background: rgba(16, 185, 129, 0.1);
+  color: rgb(16, 185, 129);
+}
+
+.category-write {
+  background: rgba(245, 101, 101, 0.1);
+  color: rgb(245, 101, 101);
+}
+
+.category-live {
+  background: rgba(139, 92, 246, 0.1);
+  color: rgb(139, 92, 246);
+}
+
+.func-signature {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 11px;
+  color: var(--ice-text-muted);
+  margin-bottom: 4px;
+  background: rgba(0, 0, 0, 0.02);
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.func-description {
+  font-size: 12px;
+  color: var(--ice-text);
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.func-example {
+  font-size: 11px;
+  color: var(--ice-text-muted);
+}
+
+.func-example code {
+  background: rgba(102, 126, 234, 0.05);
+  padding: 1px 3px;
+  border-radius: 2px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+/* Scrollbar styling for autocomplete */
+.autocomplete-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.autocomplete-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+.autocomplete-list::-webkit-scrollbar-thumb {
+  background: var(--ice-accent);
+  border-radius: 3px;
+}
+
+.autocomplete-list::-webkit-scrollbar-thumb:hover {
+  background: var(--ice-primary);
+}
+
+/* Animation for dropdown appearance */
+.wz-autocomplete-dropdown {
+  animation: dropdown-fade-in 0.2s ease-out;
+}
+
+@keyframes dropdown-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== WalSheetz Cell Status Indicators ===== */
+
+/* Status classes for cells with WalSheetz formulas */
+.luckysheet-cell-main.wz-loading {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(147, 197, 253, 0.05) 100%);
+  border-left: 2px solid rgba(59, 130, 246, 0.3);
+  animation: wz-pulse 2s infinite;
+}
+
+.luckysheet-cell-main.wz-success {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(110, 231, 183, 0.05) 100%);
+  border-left: 2px solid rgba(16, 185, 129, 0.3);
+}
+
+.luckysheet-cell-main.wz-error {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(252, 165, 165, 0.05) 100%);
+  border-left: 2px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Pulse animation for loading cells */
+@keyframes wz-pulse {
+  0%, 100% {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(147, 197, 253, 0.05) 100%);
+  }
+  50% {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 197, 253, 0.1) 100%);
+  }
+}
+
+/* Status tooltip styling */
+.wz-cell-tooltip {
+  position: absolute;
+  background: var(--ice-gradient-soft);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 11px;
+  box-shadow: var(--glass-shadow);
+  z-index: 1000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.wz-cell-tooltip.visible {
+  opacity: 1;
+}
+
+/* Enhanced cell content for WalSheetz formulas */
+.luckysheet-cell-main[data-wz-status] {
+  position: relative;
+}
+
+.luckysheet-cell-main[data-wz-status]::before {
+  content: attr(data-wz-status-icon);
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 8px;
+  opacity: 0.7;
 }

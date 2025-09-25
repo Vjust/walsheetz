@@ -5,9 +5,14 @@ import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Google proto files support
+const require = createRequire(import.meta.url);
+const googleProtosRoot = path.dirname(require.resolve('google-proto-files/package.json'));
 
 async function testSuiGrpcConnection() {
   console.log('🧪 Testing Sui gRPC Connection');
@@ -32,7 +37,8 @@ async function testSuiGrpcConnection() {
       oneofs: true,
       includeDirs: [
         path.join(__dirname, '..', 'protos', 'sui', 'rpc', 'v2beta2'),
-        path.join(__dirname, '..', 'protos')
+        path.join(__dirname, '..', 'protos'),
+        googleProtosRoot
       ]
     });
     

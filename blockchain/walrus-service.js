@@ -4,6 +4,17 @@ import { getCurrentConfig } from './config.js';
 import { ResilientExecutor } from '../frontend/utils/CircuitBreaker.js';
 import { indexedDBCache } from '../frontend/services/IndexedDBCache.js';
 
+// SDK support for Node.js (if available)
+let WalrusClient, SuiClient;
+try {
+  const walrusModule = await import('@mysten/walrus');
+  const suiModule = await import('@mysten/sui/client');
+  WalrusClient = walrusModule.WalrusClient;
+  SuiClient = suiModule.SuiClient;
+} catch (error) {
+  console.warn('[WalrusService] SDK not available in Node.js environment:', error.message);
+}
+
 class WalrusService {
   constructor() {
     this.config = getCurrentConfig().walrus;
@@ -48,6 +59,30 @@ class WalrusService {
         maxDelay: 8000, // 8 seconds
       }
     });
+
+    // Initialize SDK client if available in Node.js environment
+    this.sdkClient = null;
+    this.suiClient = null;
+    if (WalrusClient && SuiClient && this.config?.features?.useSdk) {
+      try {
+        const fullConfig = getCurrentConfig();
+        this.suiClient = new SuiClient({ url: fullConfig.sui.rpcUrl });
+
+        const sdkNetwork = this.config.features.sdkNetwork ||
+                         (fullConfig.environment === 'mainnet' ? 'mainnet' : 'testnet');
+
+        this.sdkClient = new WalrusClient({
+          network: sdkNetwork,
+          suiClient: this.suiClient
+        });
+
+        console.log('[WalrusService] SDK initialized for Node.js environment');
+      } catch (sdkError) {
+        console.warn('[WalrusService] Failed to initialize SDK, will use HTTP fallback:', sdkError.message);
+        this.sdkClient = null;
+        this.suiClient = null;
+      }
+    }
   }
 
   // Convert spreadsheet data to binary JSON for efficient storage with optional compression
@@ -394,6 +429,10 @@ class WalrusService {
 
   // Store blob to Walrus with integrity verification, compression, and resilient execution
   async storeBlob(data, metadata = {}) {
+    // Note: SDK path in Node.js environment requires server-side keypair or transaction proxy
+    // For now, server-side continues to use HTTP API. SDK path would require additional setup.
+    // Client-side (BrowserWalrusService) uses SDK with wallet integration.
+
     // Step 1: Encode data with optional compression
     const encodedResult = await this.encodeSpreadsheetData(data, {
       compressionThreshold: metadata.compressionThreshold || 16384

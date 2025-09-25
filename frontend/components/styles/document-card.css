@@ -1,0 +1,385 @@
+/* Document Card Styles */
+.document-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.document-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 1);
+}
+
+.document-card.loading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.document-card.compact {
+  padding: 1rem;
+}
+
+/* Card Header */
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.document-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+  width: 3rem;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 12px;
+  color: white;
+}
+
+.compact .document-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: 1.5rem;
+}
+
+.document-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.document-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #2d3748;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.compact .document-title {
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.document-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  color: #718096;
+}
+
+.version-count {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.public-badge {
+  background: linear-gradient(135deg, #48bb78, #38a169);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.public-badge-compact {
+  font-size: 0.875rem;
+}
+
+.manage-button {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.manage-button:hover {
+  background: rgba(0, 0, 0, 0.1);
+  opacity: 1;
+}
+
+/* Card Footer */
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+  color: #718096;
+}
+
+.last-modified {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Manage Menu */
+.manage-menu {
+  position: absolute;
+  top: 3rem;
+  right: 1rem;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  min-width: 180px;
+  padding: 0.5rem;
+}
+
+.manage-menu button {
+  display: block;
+  width: 100%;
+  padding: 0.75rem;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+  font-size: 0.875rem;
+  color: #2d3748;
+}
+
+.manage-menu button:hover {
+  background: #f7fafc;
+}
+
+.manage-menu button.delete-button {
+  color: #e53e3e;
+}
+
+.manage-menu button.delete-button:hover {
+  background: #fed7d7;
+}
+
+/* Loading Overlay */
+.card-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.card-loading-overlay .spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #e2e8f0;
+  border-top: 2px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Dialog Styles */
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.dialog {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.dialog h3 {
+  margin: 0 0 1.5rem 0;
+  color: #2d3748;
+  font-size: 1.25rem;
+}
+
+.dialog-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  transition: border-color 0.3s ease;
+}
+
+.dialog-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.cancel-button,
+.confirm-button,
+.danger-button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cancel-button {
+  background: #f7fafc;
+  color: #4a5568;
+}
+
+.cancel-button:hover {
+  background: #edf2f7;
+}
+
+.confirm-button {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+}
+
+.confirm-button:hover {
+  background: linear-gradient(135deg, #5a67d8, #6b46c1);
+}
+
+.confirm-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.danger-button {
+  background: linear-gradient(135deg, #e53e3e, #c53030);
+  color: white;
+}
+
+.danger-button:hover {
+  background: linear-gradient(135deg, #c53030, #9c2626);
+}
+
+.danger-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Delete Dialog Specific */
+.delete-dialog {
+  max-width: 600px;
+}
+
+.delete-warning {
+  background: #fed7d7;
+  border: 1px solid #feb2b2;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  color: #742a2a;
+}
+
+.delete-warning p {
+  margin: 0 0 0.75rem 0;
+}
+
+.delete-warning p:last-child {
+  margin-bottom: 0;
+}
+
+.title-to-confirm {
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.5rem;
+  margin: 0.75rem 0;
+  font-family: monospace;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.delete-confirmation-input {
+  border-color: #e53e3e !important;
+}
+
+.delete-confirmation-input:focus {
+  border-color: #c53030 !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .document-card {
+    padding: 1rem;
+  }
+
+  .card-header {
+    gap: 0.75rem;
+  }
+
+  .document-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1.5rem;
+  }
+
+  .document-title {
+    font-size: 1rem;
+  }
+
+  .manage-menu {
+    right: 0.5rem;
+    min-width: 160px;
+  }
+
+  .dialog {
+    padding: 1.5rem;
+    margin: 1rem;
+  }
+
+  .dialog-actions {
+    flex-direction: column;
+  }
+
+  .cancel-button,
+  .confirm-button,
+  .danger-button {
+    width: 100%;
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

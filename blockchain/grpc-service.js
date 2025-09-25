@@ -3,6 +3,7 @@ import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 import { getCurrentConfig } from './config.js';
 
 // Enhanced gRPC logging utility
@@ -106,6 +107,8 @@ const grpcLogger = new GrpcLogger();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const require = createRequire(import.meta.url);
+const googleProtosRoot = path.dirname(require.resolve('google-proto-files/package.json'));
 
 class SuiGrpcService {
   constructor() {
@@ -117,6 +120,7 @@ class SuiGrpcService {
     this.reconnectDelay = 1000; // Start with 1 second
     this.maxReconnectDelay = 30000; // Max 30 seconds
     this.initTime = Date.now();
+    this.unimplementedStreams = new Set(); // Track streams that returned UNIMPLEMENTED
     
     grpcLogger.info('GRPC_SERVICE', 'constructor', 'Initializing Sui gRPC service', {
       reconnectDelay: this.reconnectDelay,
@@ -229,7 +233,8 @@ class SuiGrpcService {
         oneofs: true,
         includeDirs: [
           protoPath,
-          path.join(__dirname, '..', 'protos')
+          path.join(__dirname, '..', 'protos'),
+          googleProtosRoot
         ]
       });
 
@@ -265,7 +270,7 @@ class SuiGrpcService {
           enums: String,
           defaults: true,
           oneofs: true,
-          includeDirs: [protoPath, path.join(__dirname, '..', 'protos')]
+          includeDirs: [protoPath, path.join(__dirname, '..', 'protos'), googleProtosRoot]
         });
         
         const liveDataProto = grpc.loadPackageDefinition(liveDataDef);
@@ -278,6 +283,66 @@ class SuiGrpcService {
         }
       } catch (error) {
         grpcLogger.warn('GRPC_SERVICE', 'live_data_service_unavailable', 'Live data service not available', {
+          error: error.message
+        });
+      }
+
+      // Try to load transaction execution service
+      try {
+        grpcLogger.debug('GRPC_SERVICE', 'transaction_execution_loading', 'Attempting to load TransactionExecutionService');
+        const txExecProtoPath = path.join(protoPath, 'transaction_execution_service.proto');
+        const txExecDef = protoLoader.loadSync([txExecProtoPath], {
+          keepCase: true,
+          longs: String,
+          enums: String,
+          defaults: true,
+          oneofs: true,
+          includeDirs: [protoPath, path.join(__dirname, '..', 'protos'), googleProtosRoot]
+        });
+
+        const txExecProto = grpc.loadPackageDefinition(txExecDef);
+        if (txExecProto.sui?.rpc?.v2beta2?.TransactionExecutionService) {
+          this.clients.transactionExecution = new txExecProto.sui.rpc.v2beta2.TransactionExecutionService(
+            grpcUrl,
+            credentials
+          );
+          grpcLogger.info('GRPC_SERVICE', 'client_created', 'Transaction execution service client created', {
+            service: 'TransactionExecutionService',
+            grpcUrl
+          });
+        }
+      } catch (error) {
+        grpcLogger.warn('GRPC_SERVICE', 'transaction_execution_service_unavailable', 'Transaction execution service not available', {
+          error: error.message
+        });
+      }
+
+      // Try to load ledger service
+      try {
+        grpcLogger.debug('GRPC_SERVICE', 'ledger_loading', 'Attempting to load LedgerService');
+        const ledgerProtoPath = path.join(protoPath, 'ledger_service.proto');
+        const ledgerDef = protoLoader.loadSync([ledgerProtoPath], {
+          keepCase: true,
+          longs: String,
+          enums: String,
+          defaults: true,
+          oneofs: true,
+          includeDirs: [protoPath, path.join(__dirname, '..', 'protos'), googleProtosRoot]
+        });
+
+        const ledgerProto = grpc.loadPackageDefinition(ledgerDef);
+        if (ledgerProto.sui?.rpc?.v2beta2?.LedgerService) {
+          this.clients.ledger = new ledgerProto.sui.rpc.v2beta2.LedgerService(
+            grpcUrl,
+            credentials
+          );
+          grpcLogger.info('GRPC_SERVICE', 'client_created', 'Ledger service client created', {
+            service: 'LedgerService',
+            grpcUrl
+          });
+        }
+      } catch (error) {
+        grpcLogger.warn('GRPC_SERVICE', 'ledger_service_unavailable', 'Ledger service not available', {
           error: error.message
         });
       }
@@ -313,26 +378,22 @@ class SuiGrpcService {
     }
 
     const request = {
-      read_mask: {
-        paths: options.fieldMask || [
-          'sequence_number',
-          'digest', 
-          'transactions',
-          'transactions.events',
-          'transactions.effects'
-        ]
-      }
+      start_sequence: this.lastCheckpointCursor ?? options.startSequence ?? 0,
+      include_full_transactions: options.includeFullTransactions ?? true
     };
 
     console.log('Starting checkpoint subscription...');
     
-    const stream = this.clients.subscription.subscribeCheckpoints(request);
+    const stream = this.clients.subscription.subscribeToCheckpoints(request);
     this.streams.set('checkpoints', stream);
 
     stream.on('data', (response) => {
       try {
         this.handleCheckpointData(response);
-        this.lastCheckpointCursor = response.cursor;
+        const nextCursor = this.extractCheckpointCursor(response);
+        if (typeof nextCursor === 'number') {
+          this.lastCheckpointCursor = nextCursor;
+        }
         this.reconnectDelay = 1000; // Reset delay on successful data
       } catch (error) {
         console.error('Error processing checkpoint data:', error);
@@ -353,10 +414,13 @@ class SuiGrpcService {
   }
 
   handleCheckpointData(response) {
-    const checkpoint = response.checkpoint;
+    const checkpoint = response.checkpoint ?? response;
     if (!checkpoint) return;
 
-    console.log(`Received checkpoint ${checkpoint.sequence_number}`);
+    const sequenceNumber = checkpoint.sequence_number ?? checkpoint.summary?.sequence_number;
+    if (sequenceNumber !== undefined) {
+      console.log(`Received checkpoint ${sequenceNumber}`);
+    }
 
     // Process transactions for spreadsheet events
     if (checkpoint.transactions) {
@@ -367,11 +431,33 @@ class SuiGrpcService {
 
     // Emit checkpoint event for collaboration features
     this.emit('checkpoint', {
-      sequenceNumber: checkpoint.sequence_number,
-      digest: checkpoint.digest,
-      timestamp: checkpoint.summary?.timestamp,
+      sequenceNumber: sequenceNumber,
+      digest: checkpoint.digest ?? checkpoint.summary?.digest,
+      timestamp: checkpoint.timestamp ?? checkpoint.summary?.timestamp_ms ?? checkpoint.summary?.timestamp,
       transactionCount: checkpoint.transactions?.length || 0
     });
+  }
+
+  extractCheckpointCursor(response) {
+    if (!response) return undefined;
+
+    if (typeof response.sequence_number === 'number') {
+      return response.sequence_number;
+    }
+
+    if (typeof response.cursor === 'number') {
+      return response.cursor;
+    }
+
+    if (response.checkpoint?.summary?.sequence_number !== undefined) {
+      return response.checkpoint.summary.sequence_number;
+    }
+
+    if (response.checkpoint?.sequence_number !== undefined) {
+      return response.checkpoint.sequence_number;
+    }
+
+    return undefined;
   }
 
   processTransactionEvents(transaction) {
@@ -468,18 +554,37 @@ class SuiGrpcService {
 
   handleStreamError(streamName, error) {
     console.error(`Stream ${streamName} error:`, error);
-    
+
     // Remove the failed stream
     this.streams.delete(streamName);
-    
+
+    // Check if this is an UNIMPLEMENTED error (gRPC status code 12)
+    const isUnimplemented = error.code === 12 || error.message?.includes('12 UNIMPLEMENTED');
+
+    if (isUnimplemented) {
+      grpcLogger.error('GRPC_SERVICE', 'unimplemented_error', `Stream ${streamName} not supported by server`, {
+        streamName,
+        errorCode: error.code,
+        errorMessage: error.message,
+        metadata: error.metadata ? Object.keys(error.metadata.internalRepr || {}) : []
+      });
+
+      // Mark stream as permanently UNIMPLEMENTED
+      this.unimplementedStreams.add(streamName);
+
+      // Emit special event for UNIMPLEMENTED errors - don't retry
+      this.emit('streamUnimplemented', { streamName, error: error.message, code: error.code });
+      return; // Don't attempt reconnection for UNIMPLEMENTED errors
+    }
+
     // Emit error for listeners
     this.emit('streamError', { streamName, error: error.message });
-    
+
     // Attempt reconnection with exponential backoff
     setTimeout(() => {
       this.reconnectStream(streamName);
     }, this.reconnectDelay);
-    
+
     this.reconnectDelay = Math.min(this.reconnectDelay * 2, this.maxReconnectDelay);
   }
 
@@ -494,8 +599,17 @@ class SuiGrpcService {
   }
 
   reconnectStream(streamName) {
+    // Don't attempt to reconnect streams that are UNIMPLEMENTED
+    if (this.unimplementedStreams.has(streamName)) {
+      grpcLogger.debug('GRPC_SERVICE', 'reconnect_skipped', `Skipping reconnection for UNIMPLEMENTED stream: ${streamName}`, {
+        streamName,
+        unimplementedStreams: Array.from(this.unimplementedStreams)
+      });
+      return;
+    }
+
     console.log(`Reconnecting ${streamName} stream...`);
-    
+
     if (streamName === 'checkpoints') {
       try {
         this.subscribeToCheckpoints();

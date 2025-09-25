@@ -31,7 +31,28 @@
     "autoSave": { "enabled": true, "intervalMs": 5000 },
     "collaboration": { "enabled": true },
     "gasManagement": { "bufferPercent": 25 },
-    "storage": { "preferWalrus": true, "fallbackToLocal": true }
+    "storage": { "preferWalrus": true, "fallbackToLocal": true },
+    "walSheetz": {
+      "enabled": true,
+      "defi": {
+        "enabled": true,
+        "defaultProtocol": "suilend",
+        "maxTransactionValue": 1000,
+        "confirmationRequired": true,
+        "riskWarnings": true
+      },
+      "formulas": {
+        "enabled": true,
+        "cacheTimeout": 30000,
+        "maxConcurrentCalls": 10,
+        "rateLimiting": true
+      },
+      "ui": {
+        "showPanel": true,
+        "showInFormulaBar": true,
+        "enableTemplates": true
+      }
+    }
   },
   "ui": { "theme": "light", "debugMode": false },
   "metadata": { "appName": "WalSheetz", "appVersion": "1.0.1" }

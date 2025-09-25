@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useWalletConnection } from '../../hooks/useWalletConnection.js';
+import { useWalletConnection } from '../../hooks/useWalletConnection.ts';
 
 export function WalletModal({ isOpen, onClose }) {
   const walletConnection = useWalletConnection();

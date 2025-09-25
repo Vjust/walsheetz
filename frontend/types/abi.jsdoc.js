@@ -1,12 +1,7 @@
 /**
  * JSDoc Type Definitions for WalSheetz ABI
  *
- * Use these JSDoc comments in JavaScript files for better IDE support:
- * @example
- * /**
- *  * @type {import('./abi.d.ts').FunctionSignature}
- *  */
- * const saveVersionSig = abi.signatures['spreadsheet::save_version'];
+ * Use these JSDoc comments in JavaScript files for better IDE support.
  */
 
 

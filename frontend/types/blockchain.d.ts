@@ -1,33 +1,36 @@
 declare module '@grpc/grpc-js' {
   export interface GrpcObject {
-    [key: string]: any;
+    [key: string]: unknown;
   }
   
   export interface ProtobufTypeDefinition {
-    [key: string]: any;
+    [key: string]: unknown;
   }
   
   export interface ServiceClientConstructor {
-    new (...args: any[]): any;
-    [key: string]: any;
+    new (...args: unknown[]): unknown;
+    [key: string]: unknown;
   }
   
-  export function loadPackageDefinition(definition: any): GrpcObject;
+  export function loadPackageDefinition(definition: unknown): GrpcObject;
 }
 
 declare module '@grpc/proto-loader' {
-  export function loadSync(filename: string, options?: any): any;
+  export function loadSync(filename: string, options?: Record<string, unknown>): unknown;
 }
 
 // Sui blockchain types
 declare module '@mysten/sui.js/client' {
   export interface SuiEvent {
-    id: any;
+    id: {
+      txDigest: string;
+      eventSeq: string;
+    };
     packageId: string;
     transactionModule: string;
     sender: string;
     type: string;
-    parsedJson: any;
+    parsedJson: Record<string, unknown>;
     bcs: string;
     timestampMs?: string;
     digest?: string;
@@ -39,7 +42,7 @@ declare global {
   interface GasEstimatorConfig {
     gasQueries?: {
       endpoint: string;
-      [key: string]: any;
+      [key: string]: unknown;
     };
     computationBuckets?: number[];
     storageUnitsPerByte?: number;

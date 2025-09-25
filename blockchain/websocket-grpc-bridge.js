@@ -10,6 +10,7 @@ import { getCurrentConfig } from './config.js';
 import { EventEmitter } from 'events';
 import http from 'http';
 import RateLimiter from './utils/rateLimiter.js';
+import { GraphQLEventSubscriber } from './graphql-event-subscriber.js';
 
 // Enhanced logging utility for the bridge
 class BridgeLogger {
@@ -117,15 +118,14 @@ export class WebSocketGrpcBridge extends EventEmitter {
     
     if (this.rateLimiterEnabled) {
       const rateLimits = this.config.sui?.rateLimits || {};
-      
-      // Sui transaction limiter
+
+      // Sui transaction limiter - use config values with fallbacks
+      const suiLimits = rateLimits.sui || {};
       this.limiters.sui = new RateLimiter({
         name: 'bridge-sui-tx',
-        ...(rateLimits.sui || {
-          maxRPS: 3,
-          burst: 6,
-          maxConcurrent: 4
-        })
+        maxRPS: suiLimits.maxRPS || 3,
+        burst: suiLimits.burst || 6,
+        maxConcurrent: suiLimits.maxConcurrent || 4
       });
       
       // Per-client burst limiter
@@ -153,13 +153,54 @@ export class WebSocketGrpcBridge extends EventEmitter {
       spreadsheets: new Map()
     };
 
+    // Initialize GraphQL fallback subscriber
+    this.graphqlSubscriber = new GraphQLEventSubscriber();
+    this.streamState = {
+      active: 'none', // 'grpc', 'graphql', or 'none'
+      lastActivity: null,
+      grpcFailures: 0,
+      graphqlFailures: 0
+    };
+
+    // Setup GraphQL event handlers
+    this.graphqlSubscriber.on('VersionSaved', (event) => {
+      this.broadcastToClients({
+        type: 'blockchain_event',
+        eventType: 'VersionSaved',
+        data: event.data,
+        source: 'graphql'
+      });
+    });
+
+    this.graphqlSubscriber.on('SpreadsheetCreated', (event) => {
+      this.broadcastToClients({
+        type: 'blockchain_event',
+        eventType: 'SpreadsheetCreated',
+        data: event.data,
+        source: 'graphql'
+      });
+    });
+
+    this.graphqlSubscriber.on('checkpoint', (event) => {
+      // Emit checkpoint event similar to gRPC service
+      this.broadcastToClients({
+        type: 'checkpoint',
+        data: event.data,
+        source: 'graphql'
+      });
+
+      // Also update stream state to show activity
+      this.streamState.lastActivity = Date.now();
+    });
+
     logger.info('BRIDGE', 'constructor', 'WebSocket-gRPC bridge initializing', {
       port: this.port,
       config: {
-        sui: { grpcUrl: this.config.sui?.grpcUrl },
+        sui: { grpcUrl: this.config.sui?.grpcUrl, graphqlUrl: this.config.sui?.graphqlUrl },
         environment: process.env.NODE_ENV
       },
-      startupTime: this.startupTime
+      startupTime: this.startupTime,
+      graphqlFallbackEnabled: true
     });
   }
 
@@ -231,6 +272,9 @@ export class WebSocketGrpcBridge extends EventEmitter {
       // Subscribe to gRPC events
       this.setupGrpcListeners();
 
+      // Start checkpoint subscription with GraphQL fallback
+      this.startCheckpointStreams();
+
       // Start metrics collection
       this.startMetricsCollection();
 
@@ -301,14 +345,32 @@ export class WebSocketGrpcBridge extends EventEmitter {
 
   // Readiness check endpoint
   handleReadinessCheck(res) {
-    const isReady = this.wss && this.httpServer;
+    const grpcStatus = grpcService.getStatus();
+    const grpcHealthy = grpcService.isConnected && grpcStatus.activeStreams.length > 0;
+    const graphqlStatus = this.graphqlSubscriber.getStatus();
+    const graphqlHealthy = graphqlStatus.isActive;
+
+    // Ready if either gRPC or GraphQL is healthy
+    const streamHealthy = grpcHealthy || graphqlHealthy;
+    const isReady = this.wss && this.httpServer && streamHealthy;
+
     const ready = {
       status: isReady ? 'ready' : 'not_ready',
       timestamp: new Date().toISOString(),
+      active_stream: this.streamState.active,
       checks: {
         websocket_server: !!this.wss,
         http_server: !!this.httpServer,
-        grpc_service: true // TODO: Add actual gRPC health check
+        stream_available: streamHealthy,
+        grpc_service: grpcHealthy,
+        graphql_fallback: graphqlHealthy,
+        grpc_details: {
+          connected: grpcService.isConnected,
+          active_streams: grpcStatus.activeStreams,
+          last_checkpoint: grpcStatus.lastCheckpointCursor
+        },
+        graphql_details: graphqlStatus,
+        stream_state: this.streamState
       }
     };
 
@@ -393,6 +455,19 @@ export class WebSocketGrpcBridge extends EventEmitter {
   // Handle new WebSocket connection
   handleConnection(ws, req) {
     logger.startTimer(`connection_${ws}`);
+
+    // Enforce client limits
+    const maxClients = parseInt(process.env.BRIDGE_MAX_CLIENTS || '100');
+    if (this.clients.size >= maxClients) {
+      logger.warn('CONNECTION', 'max_clients_reached', 'Rejecting connection due to client limit', {
+        currentClients: this.clients.size,
+        maxClients: maxClients,
+        address: req.socket.remoteAddress
+      });
+      ws.close(1008, 'Max clients reached');
+      return;
+    }
+
     const clientId = this.generateClientId();
     const clientInfo = {
       id: clientId,
@@ -608,12 +683,20 @@ export class WebSocketGrpcBridge extends EventEmitter {
           await this.handleQuery(clientId, message);
           break;
 
+        case 'ping':
+          logger.debug('MESSAGE', 'ping_handler', 'Handling ping message', {
+            clientId: clientId,
+            timestamp: message.data?.timestamp
+          });
+          this.handlePing(clientId, message);
+          break;
+
         default:
           logger.warn('MESSAGE', 'unknown_type', 'Unknown message type received', {
             clientId: clientId,
             type: message.type,
             requestId: message.requestId,
-            availableTypes: ['subscribe', 'unsubscribe', 'transaction', 'lockCell', 'unlockCell', 'presence', 'query']
+            availableTypes: ['subscribe', 'unsubscribe', 'transaction', 'lockCell', 'unlockCell', 'presence', 'query', 'ping']
           });
           
           this.sendToClient(client.ws, {
@@ -721,7 +804,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
           maxLength: this.maxQueueLength
         });
         
-        this.sendToClient(clientId, {
+        this.sendToClient(client.ws, {
           type: 'transaction_error',
           requestId,
           error: 'Service temporarily unavailable - too many pending requests'
@@ -965,7 +1048,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
           break;
 
         case 'estimateGas':
-          result = await this.estimateGas(data.transaction);
+          result = await this.estimateGas(params.transaction);
           break;
 
         default:
@@ -986,6 +1069,32 @@ export class WebSocketGrpcBridge extends EventEmitter {
         error: typeof error === 'string' ? error : error.message || 'Unknown error'
       });
     }
+  }
+
+  // Handle ping messages from clients
+  handlePing(clientId, message) {
+    const client = this.clients.get(clientId);
+    if (!client) {
+      logger.warn('MESSAGE', 'ping_client_not_found', 'Ping received from unknown client', {
+        clientId: clientId
+      });
+      return;
+    }
+
+    // Send pong response with original timestamp for latency calculation
+    const pongResponse = {
+      type: 'pong',
+      data: message.data, // Echo back the original data including timestamp
+      timestamp: Date.now()
+    };
+
+    this.sendToClient(client.ws, pongResponse);
+
+    logger.debug('MESSAGE', 'pong_sent', 'Pong response sent to client', {
+      clientId: clientId,
+      originalTimestamp: message.data?.timestamp,
+      responseTimestamp: pongResponse.timestamp
+    });
   }
 
   // Setup gRPC event listeners
@@ -1021,6 +1130,29 @@ export class WebSocketGrpcBridge extends EventEmitter {
         eventType: 'spreadsheetCreated',
         data: event
       });
+    });
+
+    // Listen for stream errors and UNIMPLEMENTED errors
+    grpcService.on('streamError', (event) => {
+      logger.warn('BRIDGE', 'grpc_stream_error', 'gRPC stream error occurred', {
+        streamName: event.streamName,
+        error: event.error,
+        failures: this.streamState.grpcFailures
+      });
+      this.streamState.grpcFailures++;
+    });
+
+    grpcService.on('streamUnimplemented', (event) => {
+      logger.error('BRIDGE', 'grpc_unimplemented', 'gRPC endpoint not implemented, switching to GraphQL fallback', {
+        streamName: event.streamName,
+        errorCode: event.code,
+        error: event.error
+      });
+
+      // Immediately switch to GraphQL fallback for UNIMPLEMENTED endpoints
+      if (event.streamName === 'checkpoints') {
+        this.startGraphQLFallback();
+      }
     });
   }
 
@@ -1211,16 +1343,134 @@ export class WebSocketGrpcBridge extends EventEmitter {
     }, 10000); // Check every 10 seconds
   }
 
+  // Start checkpoint streams with fallback logic
+  startCheckpointStreams() {
+    logger.info('BRIDGE', 'stream_start', 'Starting checkpoint streams');
+
+    // Try gRPC first
+    try {
+      grpcService.subscribeToCheckpoints();
+      this.streamState.active = 'grpc';
+      this.streamState.lastActivity = Date.now();
+      this.streamState.grpcFailures = 0;
+      logger.info('BRIDGE', 'grpc_subscription', 'gRPC checkpoint subscription started successfully');
+    } catch (error) {
+      this.streamState.grpcFailures++;
+      logger.error('BRIDGE', 'grpc_subscription_failed', 'Failed to start gRPC checkpoint subscription', {
+        error: error.message,
+        failures: this.streamState.grpcFailures
+      });
+
+      // Start GraphQL fallback
+      this.startGraphQLFallback();
+    }
+
+    // Setup gRPC disconnect handler for fallback
+    grpcService.on('disconnect', () => {
+      logger.warn('BRIDGE', 'grpc_disconnected', 'gRPC disconnected, starting GraphQL fallback');
+      this.startGraphQLFallback();
+    });
+
+    // Setup gRPC reconnect handler
+    grpcService.on('reconnect', () => {
+      logger.info('BRIDGE', 'grpc_reconnected', 'gRPC reconnected, stopping GraphQL fallback');
+      this.stopGraphQLFallback();
+      this.streamState.active = 'grpc';
+      this.streamState.lastActivity = Date.now();
+    });
+  }
+
+  // Start GraphQL fallback
+  startGraphQLFallback() {
+    if (this.streamState.active === 'graphql') {
+      logger.debug('BRIDGE', 'graphql_already_active', 'GraphQL fallback already active');
+      return;
+    }
+
+    logger.info('BRIDGE', 'graphql_fallback_start', 'Starting GraphQL fallback');
+
+    try {
+      this.graphqlSubscriber.start();
+      this.streamState.active = 'graphql';
+      this.streamState.lastActivity = Date.now();
+      this.streamState.graphqlFailures = 0;
+
+      logger.info('BRIDGE', 'graphql_fallback_active', 'GraphQL fallback started successfully');
+    } catch (error) {
+      this.streamState.graphqlFailures++;
+      this.streamState.active = 'none';
+
+      logger.error('BRIDGE', 'graphql_fallback_failed', 'Failed to start GraphQL fallback', {
+        error: error.message,
+        failures: this.streamState.graphqlFailures
+      });
+    }
+  }
+
+  // Stop GraphQL fallback
+  stopGraphQLFallback() {
+    if (this.streamState.active !== 'graphql') {
+      return;
+    }
+
+    logger.info('BRIDGE', 'graphql_fallback_stop', 'Stopping GraphQL fallback');
+
+    try {
+      this.graphqlSubscriber.stop();
+      logger.info('BRIDGE', 'graphql_fallback_stopped', 'GraphQL fallback stopped successfully');
+    } catch (error) {
+      logger.error('BRIDGE', 'graphql_fallback_stop_failed', 'Failed to stop GraphQL fallback', {
+        error: error.message
+      });
+    }
+  }
+
+  // Broadcast message to all connected clients
+  broadcastToClients(message) {
+    const messageStr = JSON.stringify(message);
+    let successCount = 0;
+    let failureCount = 0;
+
+    for (const client of this.clients.values()) {
+      try {
+        if (client.ws.readyState === 1) { // WebSocket.OPEN
+          client.ws.send(messageStr);
+          successCount++;
+        }
+      } catch (error) {
+        failureCount++;
+        logger.warn('BRIDGE', 'broadcast_failed', 'Failed to send message to client', {
+          clientId: client.id,
+          error: error.message
+        });
+      }
+    }
+
+    if (successCount > 0) {
+      logger.debug('BRIDGE', 'broadcast_success', 'Message broadcasted to clients', {
+        messageType: message.type,
+        successCount,
+        failureCount,
+        totalClients: this.clients.size
+      });
+    }
+  }
+
   // Stop the bridge
   stop() {
+    logger.info('BRIDGE', 'stop', 'Stopping WebSocket-gRPC bridge');
+
+    // Stop GraphQL fallback
+    this.stopGraphQLFallback();
+
     if (this.wss) {
       // Close all client connections
       for (const client of this.clients.values()) {
         client.ws.close();
       }
-      
+
       this.wss.close();
-      console.log('WebSocket-gRPC bridge stopped');
+      logger.info('BRIDGE', 'stopped', 'WebSocket-gRPC bridge stopped');
     }
   }
 }

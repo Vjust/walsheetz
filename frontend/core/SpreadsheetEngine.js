@@ -1,26 +1,35 @@
 import { webSocketService } from '../services/WebSocketService.js';
 import { logger, LogComponent } from '../utils/Logger.js';
 import { CircuitBreaker } from '../utils/CircuitBreaker.js';
+import luckysheetApi from '../services/luckysheetApi.js';
+import { getSuiBalance, getSuiGasPrice, getSuiEpoch } from '../services/formulas/SuiFunctions.js';
+import {
+  WZ_CONTRACT_LIST,
+  WZ_CONTRACT_CALL,
+  WZ_CONTRACT_EXEC,
+  WZ_BALANCE,
+  WZ_APY
+} from '../services/formulas/WalSheetzFunctions.js';
 
 /**
  * Core spreadsheet business logic
  */
 export class SpreadsheetEngine {
-  constructor(storageService, blockchainService) {
+  constructor(storageService, blockchainService, autoSaveEnabled = false) {
     this.storageService = storageService
     this.blockchainService = blockchainService
     this.webSocketService = webSocketService
     this.editCount = 0
     this.pendingEdits = new Map()
-    this.autoSaveInterval = 5000
-    this.editThreshold = 3
-    this.autoSaveTimer = null
+    this.lastManualSaveTimestamp = null
+    this.lastEditTimestamp = null // Will be set only when actual edits occur
     this.currentEditingCell = null
     this.lastSavedDataHash = null // For dirty checking
     this.luckysheetReady = false // Flag to track if Luckysheet is ready
     this.userId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     this.spreadsheetId = `sheet-${Date.now()}`
     this.lastSaveTimestamp = null // Track when last successful save occurred
+    this.autoSaveEnabled = autoSaveEnabled // Track auto-save state
 
     // Circuit breaker for auto-save using shared utility
     this.autoSaveCircuitBreaker = new CircuitBreaker({
@@ -35,12 +44,27 @@ export class SpreadsheetEngine {
 
     // Track if a save is currently in progress (separate from circuit breaker state)
     this.isSaveInProgress = false;
+
+    // Smart auto-save configuration
+    this.walrusAutoSaveInterval = 30000; // 30 seconds for Walrus-only saves
+    this.blockchainSyncInterval = 300000; // 5 minutes for blockchain sync
+    this.walrusAutoSaveTimer = null;
+    this.blockchainSyncTimer = null;
+    this.lastWalrusSaveTimestamp = null;
+    this.lastBlockchainSyncTimestamp = null;
+    this.pendingWalrusSaves = [];
+    this.saveStatus = 'ready'; // 'ready', 'saving_walrus', 'saving_blockchain', 'synced'
+
+    // Offline queue for disconnected saves
+    this.offlineQueue = [];
+    this.isOnline = navigator.onLine;
+    this.offlineQueueProcessingTimer = null;
+    this.maxOfflineQueueSize = 50; // Maximum items in offline queue
+    this.offlineRetryInterval = 30000; // 30 seconds retry interval
     
     logger.info(LogComponent.SPREADSHEET_ENGINE, 'constructor', 'SpreadsheetEngine initialized', {
       userId: this.userId,
-      spreadsheetId: this.spreadsheetId,
-      autoSaveInterval: this.autoSaveInterval,
-      editThreshold: this.editThreshold
+      spreadsheetId: this.spreadsheetId
     });
     
     logger.setContext(this.userId, this.spreadsheetId);
@@ -101,8 +125,8 @@ export class SpreadsheetEngine {
         source: sessionInfo.hasWalrusBlobId ? 'walrus' : 'localStorage'
       });
       
-      // Setup auto-save
-      this.setupAutoSave()
+      // Initialize last edit timestamp as null - will be set only when actual edits occur
+      // this.lastEditTimestamp remains null until first edit
       
       // Initialize WebSocket connection for real-time collaboration
       try {
@@ -124,12 +148,17 @@ export class SpreadsheetEngine {
         });
       }
       
+      // Setup smart auto-save after successful initialization (only if enabled)
+      if (this.autoSaveEnabled) {
+        this.setupSmartAutoSave();
+      }
+
       const duration = logger.endTimer('spreadsheet_initialize');
       logger.info(LogComponent.SPREADSHEET_ENGINE, 'initialize', 'Spreadsheet initialization completed', {
         initializationTime: duration,
         success: true
       });
-      
+
       return { success: true, data }
     } catch (error) {
       logger.endTimer('spreadsheet_initialize');
@@ -138,6 +167,449 @@ export class SpreadsheetEngine {
         stack: error.stack
       });
       return { success: false, error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error' }
+    }
+  }
+
+  /**
+   * Setup smart auto-save functionality
+   */
+  setupSmartAutoSave() {
+    logger.info(LogComponent.SPREADSHEET_ENGINE, 'smart_autosave_setup', 'Setting up smart auto-save functionality', {
+      walrusInterval: this.walrusAutoSaveInterval,
+      blockchainInterval: this.blockchainSyncInterval,
+      autoSaveEnabled: this.autoSaveEnabled
+    });
+
+    // Setup offline/online event listeners (always needed for offline queue)
+    this.setupOfflineQueueManagement();
+
+    // Only start timers if auto-save is enabled
+    if (this.autoSaveEnabled) {
+      this.startAutoSaveTimers();
+    }
+
+    logger.info(LogComponent.SPREADSHEET_ENGINE, 'smart_autosave_setup', 'Smart auto-save configured', {
+      timersStarted: this.autoSaveEnabled
+    });
+  }
+
+  /**
+   * Start auto-save timers
+   */
+  startAutoSaveTimers() {
+    // Clear existing timers first
+    this.stopAutoSaveTimers();
+
+    logger.info(LogComponent.SPREADSHEET_ENGINE, 'start_autosave_timers', 'Starting auto-save timers');
+
+    // Setup Walrus auto-save (no wallet prompts)
+    this.walrusAutoSaveTimer = setInterval(() => {
+      this.performWalrusAutoSave();
+    }, this.walrusAutoSaveInterval);
+
+    // Setup periodic blockchain sync (with wallet prompts)
+    this.blockchainSyncTimer = setInterval(() => {
+      this.performBlockchainSync();
+    }, this.blockchainSyncInterval);
+
+    logger.info(LogComponent.SPREADSHEET_ENGINE, 'start_autosave_timers', 'Auto-save timers started');
+  }
+
+  /**
+   * Stop auto-save timers
+   */
+  stopAutoSaveTimers() {
+    logger.info(LogComponent.SPREADSHEET_ENGINE, 'stop_autosave_timers', 'Stopping auto-save timers');
+
+    if (this.walrusAutoSaveTimer) {
+      clearInterval(this.walrusAutoSaveTimer);
+      this.walrusAutoSaveTimer = null;
+    }
+    if (this.blockchainSyncTimer) {
+      clearInterval(this.blockchainSyncTimer);
+      this.blockchainSyncTimer = null;
+    }
+
+    logger.info(LogComponent.SPREADSHEET_ENGINE, 'stop_autosave_timers', 'Auto-save timers stopped');
+  }
+
+  /**
+   * Set auto-save enabled state and start/stop timers accordingly
+   */
+  setAutoSaveEnabled(enabled) {
+    logger.info(LogComponent.SPREADSHEET_ENGINE, 'set_autosave_enabled', 'Auto-save state changed', {
+      previousState: this.autoSaveEnabled,
+      newState: enabled
+    });
+
+    this.autoSaveEnabled = enabled;
+
+    if (enabled) {
+      this.startAutoSaveTimers();
+    } else {
+      this.stopAutoSaveTimers();
+    }
+  }
+
+  /**
+   * Perform Walrus-only auto-save (no wallet prompts)
+   */
+  async performWalrusAutoSave() {
+    if (this.isSaveInProgress) {
+      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'walrus_autosave_skipped', 'Walrus auto-save skipped - save in progress');
+      return;
+    }
+
+    if (this.editCount === 0 && !this.hasDataChanged()) {
+      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'walrus_autosave_skipped', 'Walrus auto-save skipped - no changes');
+      return;
+    }
+
+    if (!this.blockchainService?.walrusService) {
+      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'walrus_autosave_skipped', 'Walrus service not available');
+      return;
+    }
+
+    logger.debug(LogComponent.SPREADSHEET_ENGINE, 'walrus_autosave_start', 'Starting Walrus auto-save');
+    this.saveStatus = 'saving_walrus';
+
+    try {
+      const data = this.collectSpreadsheetData();
+
+      // Save to localStorage first (always works offline)
+      await this.storageService.saveData(data);
+
+      // Check if we're online for Walrus save
+      if (!this.isOnline) {
+        logger.info(LogComponent.SPREADSHEET_ENGINE, 'walrus_autosave_offline', 'Adding Walrus save to offline queue');
+        this.addToOfflineQueue({
+          type: 'walrus_save',
+          data: data,
+          title: this.getSpreadsheetTitle?.() || 'Auto-save'
+        });
+        this.saveStatus = 'ready'; // Reset status since we queued the operation
+        return;
+      }
+
+      // Save to Walrus only (no blockchain transaction)
+      const walrusResult = await this.blockchainService.walrusService.storeBlob(data, {
+        autoSave: true,
+        spreadsheetId: this.spreadsheetId
+      });
+
+      if (walrusResult.success) {
+        this.lastWalrusSaveTimestamp = Date.now();
+        this.pendingWalrusSaves.push({
+          blobId: walrusResult.blobId,
+          timestamp: Date.now(),
+          data: data
+        });
+
+        // Keep only last 10 pending saves
+        if (this.pendingWalrusSaves.length > 10) {
+          this.pendingWalrusSaves.shift();
+        }
+
+        this.saveStatus = 'saved_walrus';
+        logger.info(LogComponent.SPREADSHEET_ENGINE, 'walrus_autosave_success', 'Walrus auto-save completed', {
+          blobId: walrusResult.blobId,
+          editCount: this.editCount
+        });
+
+        // Reset edit tracking after successful Walrus save
+        this.editCount = 0;
+        this.pendingEdits.clear();
+      } else {
+        throw new Error(walrusResult.error || 'Walrus save failed');
+      }
+    } catch (error) {
+      logger.warn(LogComponent.SPREADSHEET_ENGINE, 'walrus_autosave_error', 'Walrus auto-save failed', {
+        error: typeof error === 'string' ? error : error.message || 'Unknown error'
+      });
+      this.saveStatus = 'error';
+    }
+  }
+
+  /**
+   * Perform periodic blockchain sync (batches pending Walrus saves)
+   */
+  async performBlockchainSync() {
+    if (!this.blockchainService?.isWalletConnected()) {
+      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'blockchain_sync_skipped', 'Blockchain sync skipped - wallet not connected');
+      return;
+    }
+
+    if (this.pendingWalrusSaves.length === 0) {
+      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'blockchain_sync_skipped', 'Blockchain sync skipped - no pending saves');
+      return;
+    }
+
+    if (this.isSaveInProgress) {
+      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'blockchain_sync_skipped', 'Blockchain sync skipped - save in progress');
+      return;
+    }
+
+    // Check if we're online for blockchain sync
+    if (!this.isOnline) {
+      logger.info(LogComponent.SPREADSHEET_ENGINE, 'blockchain_sync_offline', 'Adding blockchain sync to offline queue');
+      const blobIds = this.pendingWalrusSaves.map(save => save.blobId);
+      this.addToOfflineQueue({
+        type: 'blockchain_sync',
+        blobIds: blobIds
+      });
+      return;
+    }
+
+    logger.info(LogComponent.SPREADSHEET_ENGINE, 'blockchain_sync_start', 'Starting blockchain sync', {
+      pendingSaves: this.pendingWalrusSaves.length
+    });
+
+    this.saveStatus = 'saving_blockchain';
+    this.isSaveInProgress = true;
+
+    try {
+      // Get the latest Walrus save for blockchain sync
+      const latestSave = this.pendingWalrusSaves[this.pendingWalrusSaves.length - 1];
+
+      // Create blockchain transaction for the latest Walrus blob
+      const blockchainResult = await this.blockchainService.saveToBlockchain(latestSave.data, {
+        walrusBlobId: latestSave.blobId,
+        skipWalrusUpload: true // Use existing Walrus blob
+      });
+
+      if (blockchainResult.success) {
+        this.lastBlockchainSyncTimestamp = Date.now();
+        this.lastManualSaveTimestamp = Date.now();
+        this.saveStatus = 'synced';
+
+        // Clear pending saves after successful blockchain sync
+        this.pendingWalrusSaves = [];
+
+        logger.info(LogComponent.SPREADSHEET_ENGINE, 'blockchain_sync_success', 'Blockchain sync completed', {
+          transactionId: blockchainResult.transactionId,
+          blobId: latestSave.blobId
+        });
+      } else {
+        throw new Error(blockchainResult.error || 'Blockchain sync failed');
+      }
+    } catch (error) {
+      logger.warn(LogComponent.SPREADSHEET_ENGINE, 'blockchain_sync_error', 'Blockchain sync failed', {
+        error: typeof error === 'string' ? error : error.message || 'Unknown error'
+      });
+      this.saveStatus = 'error';
+    } finally {
+      this.isSaveInProgress = false;
+    }
+  }
+
+  /**
+   * Setup offline queue management and event listeners
+   */
+  setupOfflineQueueManagement() {
+    // Listen for online/offline events
+    const handleOnline = () => {
+      logger.info(LogComponent.SPREADSHEET_ENGINE, 'network_online', 'Network connection restored');
+      this.isOnline = true;
+      this.processOfflineQueue();
+    };
+
+    const handleOffline = () => {
+      logger.info(LogComponent.SPREADSHEET_ENGINE, 'network_offline', 'Network connection lost');
+      this.isOnline = false;
+      // Clear any existing queue processing timer
+      if (this.offlineQueueProcessingTimer) {
+        clearInterval(this.offlineQueueProcessingTimer);
+        this.offlineQueueProcessingTimer = null;
+      }
+    };
+
+    // Add event listeners
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Store references for cleanup
+    this.onlineHandler = handleOnline;
+    this.offlineHandler = handleOffline;
+
+    // Setup periodic queue processing
+    if (this.isOnline) {
+      this.startOfflineQueueProcessing();
+    }
+  }
+
+  /**
+   * Add a save operation to the offline queue
+   */
+  addToOfflineQueue(operation) {
+    // Prevent queue from growing too large
+    if (this.offlineQueue.length >= this.maxOfflineQueueSize) {
+      // Remove oldest items to make room
+      const toRemove = this.offlineQueue.length - this.maxOfflineQueueSize + 1;
+      this.offlineQueue.splice(0, toRemove);
+      logger.warn(LogComponent.SPREADSHEET_ENGINE, 'offline_queue_trimmed',
+        `Offline queue trimmed, removed ${toRemove} oldest items`);
+    }
+
+    const queueItem = {
+      id: `queue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      operation,
+      timestamp: Date.now(),
+      retryCount: 0,
+      maxRetries: 3
+    };
+
+    this.offlineQueue.push(queueItem);
+
+    logger.info(LogComponent.SPREADSHEET_ENGINE, 'offline_queue_add', 'Operation added to offline queue', {
+      queueId: queueItem.id,
+      operation: operation.type,
+      queueSize: this.offlineQueue.length
+    });
+
+    // Start processing if we're online
+    if (this.isOnline && !this.offlineQueueProcessingTimer) {
+      this.startOfflineQueueProcessing();
+    }
+  }
+
+  /**
+   * Start processing the offline queue
+   */
+  startOfflineQueueProcessing() {
+    if (this.offlineQueueProcessingTimer) {
+      return; // Already processing
+    }
+
+    this.offlineQueueProcessingTimer = setInterval(() => {
+      this.processOfflineQueue();
+    }, this.offlineRetryInterval);
+
+    // Process immediately
+    this.processOfflineQueue();
+  }
+
+  /**
+   * Process items in the offline queue
+   */
+  async processOfflineQueue() {
+    if (!this.isOnline || this.offlineQueue.length === 0) {
+      return;
+    }
+
+    logger.debug(LogComponent.SPREADSHEET_ENGINE, 'offline_queue_processing',
+      `Processing offline queue with ${this.offlineQueue.length} items`);
+
+    // Process items one by one
+    const itemsToProcess = [...this.offlineQueue];
+
+    for (let i = 0; i < itemsToProcess.length; i++) {
+      const item = itemsToProcess[i];
+
+      try {
+        await this.processOfflineQueueItem(item);
+
+        // Remove successfully processed item from queue
+        const index = this.offlineQueue.findIndex(q => q.id === item.id);
+        if (index !== -1) {
+          this.offlineQueue.splice(index, 1);
+          logger.info(LogComponent.SPREADSHEET_ENGINE, 'offline_queue_success',
+            'Offline queue item processed successfully', { queueId: item.id });
+        }
+      } catch (error) {
+        // Increment retry count
+        item.retryCount++;
+
+        if (item.retryCount >= item.maxRetries) {
+          // Remove item that has exceeded retry limit
+          const index = this.offlineQueue.findIndex(q => q.id === item.id);
+          if (index !== -1) {
+            this.offlineQueue.splice(index, 1);
+            logger.error(LogComponent.SPREADSHEET_ENGINE, 'offline_queue_failed',
+              'Offline queue item failed permanently', {
+                queueId: item.id,
+                retryCount: item.retryCount,
+                error: typeof error === 'string' ? error : error.message || 'Unknown error'
+              });
+          }
+        } else {
+          logger.warn(LogComponent.SPREADSHEET_ENGINE, 'offline_queue_retry',
+            'Offline queue item failed, will retry', {
+              queueId: item.id,
+              retryCount: item.retryCount,
+              error: typeof error === 'string' ? error : error.message || 'Unknown error'
+            });
+        }
+      }
+    }
+
+    // Stop processing if queue is empty
+    if (this.offlineQueue.length === 0 && this.offlineQueueProcessingTimer) {
+      clearInterval(this.offlineQueueProcessingTimer);
+      this.offlineQueueProcessingTimer = null;
+      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'offline_queue_empty', 'Offline queue processing stopped - queue empty');
+    }
+  }
+
+  /**
+   * Process a single offline queue item
+   */
+  async processOfflineQueueItem(item) {
+    const { operation } = item;
+
+    switch (operation.type) {
+      case 'walrus_save':
+        logger.debug(LogComponent.SPREADSHEET_ENGINE, 'offline_queue_walrus', 'Processing offline Walrus save', {
+          queueId: item.id
+        });
+        return await this.executeWalrusSave(operation.data, operation.title);
+
+      case 'blockchain_sync':
+        logger.debug(LogComponent.SPREADSHEET_ENGINE, 'offline_queue_blockchain', 'Processing offline blockchain sync', {
+          queueId: item.id
+        });
+        return await this.executeBlockchainSync(operation.blobIds);
+
+      default:
+        throw new Error(`Unknown offline operation type: ${operation.type}`);
+    }
+  }
+
+  /**
+   * Execute a Walrus save operation
+   */
+  async executeWalrusSave(data, title) {
+    if (!this.blockchainService?.walrusService) {
+      throw new Error('Walrus service not available');
+    }
+
+    const result = await this.blockchainService.walrusService.storeData(data, title);
+    if (result.success) {
+      this.lastWalrusSaveTimestamp = Date.now();
+      this.pendingWalrusSaves.push({
+        blobId: result.blobId,
+        timestamp: this.lastWalrusSaveTimestamp,
+        title: title
+      });
+      return result;
+    } else {
+      throw new Error(result.error || 'Walrus save failed');
+    }
+  }
+
+  /**
+   * Execute a blockchain sync operation
+   */
+  async executeBlockchainSync(blobIds) {
+    if (!this.blockchainService?.isWalletConnected()) {
+      throw new Error('Wallet not connected');
+    }
+
+    const result = await this.blockchainService.syncToBlockchain(blobIds);
+    if (result.success) {
+      this.lastBlockchainSyncTimestamp = Date.now();
+      return result;
+    } else {
+      throw new Error(result.error || 'Blockchain sync failed');
     }
   }
 
@@ -323,14 +795,14 @@ export class SpreadsheetEngine {
     })
 
     this.editCount++
-    
+    this.lastEditTimestamp = Date.now()
+
     console.error('🚀 DEBUG: Edit tracked and count incremented', {
       cellRef,
       oldValue,
       newValue,
       editCount: this.editCount,
-      pendingEditsCount: this.pendingEdits.size,
-      editThreshold: this.editThreshold
+      pendingEditsCount: this.pendingEdits.size
     });
     
     logger.info(LogComponent.SPREADSHEET_ENGINE, 'cell_edit_pending', `Cell edit added to pending queue`, {
@@ -366,15 +838,7 @@ export class SpreadsheetEngine {
       }
     }
 
-    // Trigger auto-save if threshold reached
-    if (this.editCount >= this.editThreshold) {
-      logger.info(LogComponent.SPREADSHEET_ENGINE, 'autosave_triggered', `Edit threshold reached, triggering auto-save`, {
-        editCount: this.editCount,
-        editThreshold: this.editThreshold,
-        pendingEdits: this.pendingEdits.size
-      });
-      this.triggerSave()
-    }
+    // Auto-save removed - manual save only
 
     const editDuration = logger.endTimer(`cell_edit_${cellRef}`);
     logger.info(LogComponent.SPREADSHEET_ENGINE, 'cell_edit_completed', `Cell edit completed successfully`, {
@@ -641,13 +1105,14 @@ export class SpreadsheetEngine {
       this.editCount = 0
       this.pendingEdits.clear()
 
-      // Update last save timestamp to prevent immediate redundant saves
+      // Update last manual save timestamp
+      this.lastManualSaveTimestamp = Date.now()
       this.lastSaveTimestamp = Date.now()
 
       // Update saved data hash for dirty checking
       try {
-        if (window.luckysheet && window.luckysheet.getAllSheets) {
-          const currentData = window.luckysheet.getAllSheets()
+        if (luckysheetApi.isReady) {
+          const currentData = luckysheetApi.getAllSheets()
           const currentDataString = JSON.stringify(currentData)
           this.lastSavedDataHash = this.hashString(currentDataString)
           logger.debug(LogComponent.SPREADSHEET_ENGINE, 'hash_updated', 'Updated data hash after successful save', {
@@ -659,16 +1124,27 @@ export class SpreadsheetEngine {
           error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error'
         })
       }
-      
+
       const saveDuration = logger.endTimer('spreadsheet_save');
+
+      // Determine save method and wallet status for return value
+      const walletConnected = this.blockchainService?.isWalletConnected();
+      const saveResult = {
+        success: true,
+        method: walletConnected ? 'blockchain' : 'localStorage',
+        walletDisconnected: !walletConnected
+      };
+
       logger.info(LogComponent.SPREADSHEET_ENGINE, 'save_completed', `Spreadsheet save completed successfully`, {
         previousEditCount,
         previousPendingEdits,
         saveDuration,
-        success: true
+        success: true,
+        method: saveResult.method,
+        walletDisconnected: saveResult.walletDisconnected
       });
 
-      return { success: true }
+      return saveResult
     }, async (error) => {
       // Circuit breaker fallback function
       logger.warn(LogComponent.SPREADSHEET_ENGINE, 'save_circuit_breaker_fallback',
@@ -683,137 +1159,7 @@ export class SpreadsheetEngine {
     });
   }
 
-  /**
-   * Setup automatic saving
-   */
-  setupAutoSave() {
-    logger.info(LogComponent.SPREADSHEET_ENGINE, 'autosave_setup', `Setting up auto-save functionality`, {
-      autoSaveInterval: this.autoSaveInterval,
-      editThreshold: this.editThreshold
-    });
-    
-    if (this.autoSaveTimer) {
-      clearInterval(this.autoSaveTimer)
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'autosave_setup', `Cleared existing auto-save timer`);
-    }
 
-    // Delay auto-save start to allow initial data loading and hash initialization to complete
-    setTimeout(() => {
-      this.autoSaveTimer = setInterval(() => {
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'autosave_timer', 'Auto-save timer fired', {
-        editCount: this.editCount,
-        pendingEdits: this.pendingEdits.size,
-        walletConnected: this.blockchainService?.isWalletConnected(),
-        hasBlockchainService: !!this.blockchainService
-      });
-
-      // Check circuit breaker first
-      if (this.shouldSkipAutoSave()) {
-        return;
-      }
-
-      const hasEdits = this.editCount > 0
-      const hasDataChanged = this.hasDataChanged()
-
-      // Calculate current hash for debugging (same logic as hasDataChanged)
-      let currentHash = 'unknown';
-      try {
-        if (window.luckysheet && window.luckysheet.getAllSheets) {
-          const currentData = window.luckysheet.getAllSheets();
-          const currentDataString = JSON.stringify(currentData);
-          currentHash = this.hashString(currentDataString);
-        }
-      } catch (error) {
-        currentHash = 'error';
-      }
-
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'data_change_check', 'Checking for data changes', {
-        currentHash,
-        lastSavedDataHash: this.lastSavedDataHash,
-        hasChanged: hasDataChanged
-      });
-
-      if (hasEdits || hasDataChanged) {
-        logger.debug(LogComponent.SPREADSHEET_ENGINE, 'autosave_interval', `Auto-save interval triggered`, {
-          editCount: this.editCount,
-          pendingEdits: this.pendingEdits.size,
-          hasEdits,
-          hasDataChanged
-        });
-        logger.debug(LogComponent.SPREADSHEET_ENGINE, 'autosave_triggered', 'Auto-save threshold met, triggering save', {
-          hasEdits,
-          hasDataChanged
-        });
-        // Get current title from luckysheet or use default
-        const currentTitle = this.getCurrentTitle();
-        this.triggerSave(currentTitle)
-      } else {
-        logger.debug(LogComponent.SPREADSHEET_ENGINE, 'autosave_skipped', 'Auto-save skipped - no changes detected', {
-          editCount: this.editCount,
-          hasDataChanged
-        });
-      }
-    }, this.autoSaveInterval)
-
-    logger.info(LogComponent.SPREADSHEET_ENGINE, 'autosave_setup', `Auto-save timer configured and started`);
-  }, 3000); // 3 second delay to allow initial loading to complete
-  }
-
-  /**
-   * Check if auto-save should be skipped due to circuit breaker
-   */
-  shouldSkipAutoSave() {
-
-    // Skip if currently saving
-    if (this.isSaveInProgress) {
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'autosave_skipped', 'Auto-save skipped - save in progress');
-      return true;
-    }
-
-    // Skip if circuit breaker is open
-    const circuitState = this.autoSaveCircuitBreaker.getState();
-    if (circuitState === 'OPEN') {
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'autosave_skipped', 'Auto-save skipped - circuit breaker open', {
-        state: circuitState,
-        stats: this.autoSaveCircuitBreaker.getStats()
-      });
-      return true;
-    }
-
-    // Skip if Luckysheet is not ready
-    if (!this.luckysheetReady) {
-      console.error('🚀 DEBUG: Auto-save skipped - Luckysheet not ready');
-      return true;
-    }
-
-    // Skip if blockchain service is unavailable
-    if (!this.blockchainService?.isWalletConnected()) {
-      console.error('🚀 DEBUG: Auto-save skipped - blockchain service unavailable');
-      return true;
-    }
-
-    // Skip if a blockchain transaction is currently processing to avoid overlap
-    if (this.blockchainService?.getTransactionState && this.blockchainService.getTransactionState().isProcessing) {
-      console.debug('🚀 DEBUG: Auto-save skipped - blockchain transaction in progress')
-      return true;
-    }
-
-    // Skip if recent save completed successfully (prevent immediate redundant saves)
-    const now = Date.now();
-    const timeSinceLastSave = now - (this.lastSaveTimestamp || 0);
-    const minIntervalBetweenSaves = 8000; // 8 seconds minimum between saves
-
-    if (this.lastSaveTimestamp && timeSinceLastSave < minIntervalBetweenSaves) {
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'autosave_skipped', 'Auto-save skipped - too soon after last save', {
-        timeSinceLastSave,
-        minInterval: minIntervalBetweenSaves,
-        lastSaveTimestamp: this.lastSaveTimestamp
-      });
-      return true;
-    }
-
-    return false;
-  }
 
 
   /**
@@ -821,11 +1167,11 @@ export class SpreadsheetEngine {
    */
   hasDataChanged() {
     try {
-      if (!window.luckysheet || !window.luckysheet.getAllSheets) {
+      if (!luckysheetApi.isReady) {
         return false
       }
 
-      const currentData = window.luckysheet.getAllSheets()
+      const currentData = luckysheetApi.getAllSheets()
       const currentDataString = JSON.stringify(currentData)
       const currentHash = this.hashString(currentDataString)
 
@@ -883,6 +1229,85 @@ export class SpreadsheetEngine {
   }
 
   /**
+   * Force blockchain sync of pending Walrus saves
+   */
+  async forceSyncToBlockchain() {
+    logger.info(LogComponent.SPREADSHEET_ENGINE, 'force_sync_triggered', `Manual blockchain sync triggered`);
+    return await this.performBlockchainSync();
+  }
+
+  /**
+   * Save to Walrus only (for auto-save without wallet prompts)
+   */
+  async saveToWalrusOnly(title = null) {
+    logger.info(LogComponent.SPREADSHEET_ENGINE, 'walrus_save_triggered', `Walrus-only save triggered`);
+
+    if (this.isSaveInProgress) {
+      return { success: false, error: 'Save already in progress' };
+    }
+
+    this.saveStatus = 'saving_walrus';
+
+    try {
+      const data = this.collectSpreadsheetData(title);
+
+      // Save to localStorage first
+      await this.storageService.saveData(data);
+
+      // Save to Walrus only
+      if (this.blockchainService?.walrusService) {
+        const walrusResult = await this.blockchainService.walrusService.storeBlob(data, {
+          manualSave: true,
+          spreadsheetId: this.spreadsheetId
+        });
+
+        if (walrusResult.success) {
+          this.lastWalrusSaveTimestamp = Date.now();
+          this.pendingWalrusSaves.push({
+            blobId: walrusResult.blobId,
+            timestamp: Date.now(),
+            data: data
+          });
+
+          // Keep only last 10 pending saves
+          if (this.pendingWalrusSaves.length > 10) {
+            this.pendingWalrusSaves.shift();
+          }
+
+          this.saveStatus = 'saved_walrus';
+          this.editCount = 0;
+          this.pendingEdits.clear();
+
+          return {
+            success: true,
+            method: 'walrus',
+            blobId: walrusResult.blobId,
+            needsBlockchainSync: true
+          };
+        } else {
+          throw new Error(walrusResult.error || 'Walrus save failed');
+        }
+      } else {
+        this.saveStatus = 'ready';
+        return {
+          success: true,
+          method: 'localStorage',
+          message: 'Saved locally - Walrus not available'
+        };
+      }
+    } catch (error) {
+      this.saveStatus = 'error';
+      logger.error(LogComponent.SPREADSHEET_ENGINE, 'walrus_save_error', 'Walrus-only save failed', {
+        error: typeof error === 'string' ? error : error.message || 'Unknown error'
+      });
+      return {
+        success: false,
+        error: typeof error === 'string' ? error : error.message || 'Unknown error'
+      };
+    }
+  }
+
+  /**
    * Collect current spreadsheet data
    */
   collectSpreadsheetData(title = null) {
@@ -900,8 +1325,8 @@ export class SpreadsheetEngine {
     };
     
     try {
-      if (this.luckysheetReady && window.luckysheet && window.luckysheet.getAllSheets) {
-        const allSheets = window.luckysheet.getAllSheets();
+      if (this.luckysheetReady && luckysheetApi.isReady) {
+        const allSheets = luckysheetApi.getAllSheets();
 
         if (allSheets && allSheets.length > 0) {
           const sheetData = allSheets[0];
@@ -911,12 +1336,17 @@ export class SpreadsheetEngine {
           celldata.forEach(cell => {
             if (cell && cell.r !== undefined && cell.c !== undefined && cell.v) {
               const cellRef = this.columnNumberToLetters(cell.c) + (cell.r + 1); // Convert to A1, B2, etc.
-              cells[cellRef] = {
+              const cellData = {
                 value: cell.v.v,
                 displayValue: cell.v.m || cell.v.v,
                 type: cell.v.ct ? cell.v.ct.fa : 'General',
                 formula: cell.v.f || null
               };
+
+              // Evaluate custom formulas if present
+              this.evaluateCustomFormulasForCell(cellRef, cellData);
+
+              cells[cellRef] = cellData;
             }
           });
 
@@ -990,6 +1420,661 @@ export class SpreadsheetEngine {
   }
 
   /**
+   * Evaluate custom formulas if needed (e.g., =SUI_BALANCE, =SUI_GAS_PRICE, =SUI_EPOCH)
+   * @param {string} cellRef - Cell reference (e.g., A1, B2)
+   * @param {Object} cellData - Cell data object with value, formula, etc.
+   */
+  async evaluateCustomFormulaIfNeeded(cellRef, cellData) {
+    const formula = cellData.formula;
+    if (!formula || typeof formula !== 'string' || !formula.startsWith('=')) {
+      return; // Not a formula
+    }
+
+    const formulaUpper = formula.toUpperCase();
+
+    try {
+      // Check for SUI_BALANCE formula
+      const balanceMatch = formulaUpper.match(/^=SUI_BALANCE\s*\(\s*["']?([^"')]+)["']?\s*\)$/);
+      if (balanceMatch) {
+        const address = balanceMatch[1].trim();
+        logger.info(LogComponent.SPREADSHEET_ENGINE, 'custom_formula_eval', `Evaluating SUI_BALANCE for ${cellRef}`, {
+          cellRef,
+          address: address.substring(0, 10) + '...'
+        });
+
+        try {
+          const balance = await getSuiBalance(address);
+          cellData.value = parseFloat(balance);
+          cellData.displayValue = `${balance} SUI`;
+          logger.info(LogComponent.SPREADSHEET_ENGINE, 'custom_formula_success', `SUI_BALANCE evaluated for ${cellRef}`, {
+            cellRef,
+            balance
+          });
+
+          // Refresh Luckysheet display if available
+          this.refreshLuckysheetCell(cellRef, cellData);
+        } catch (error) {
+          logger.error(LogComponent.SPREADSHEET_ENGINE, 'custom_formula_error', `Failed to evaluate SUI_BALANCE for ${cellRef}`, {
+            cellRef,
+            error: error.message
+          });
+          cellData.value = '#ERROR';
+          cellData.displayValue = `#ERROR: ${error.message}`;
+        }
+        return;
+      }
+
+      // Check for SUI_GAS_PRICE formula
+      if (formulaUpper.match(/^=SUI_GAS_PRICE\s*\(\s*\)$/)) {
+        logger.info(LogComponent.SPREADSHEET_ENGINE, 'custom_formula_eval', `Evaluating SUI_GAS_PRICE for ${cellRef}`, { cellRef });
+
+        try {
+          const gasPrice = await getSuiGasPrice();
+          cellData.value = parseInt(gasPrice);
+          cellData.displayValue = `${gasPrice} MIST`;
+          logger.info(LogComponent.SPREADSHEET_ENGINE, 'custom_formula_success', `SUI_GAS_PRICE evaluated for ${cellRef}`, {
+            cellRef,
+            gasPrice
+          });
+
+          this.refreshLuckysheetCell(cellRef, cellData);
+        } catch (error) {
+          logger.error(LogComponent.SPREADSHEET_ENGINE, 'custom_formula_error', `Failed to evaluate SUI_GAS_PRICE for ${cellRef}`, {
+            cellRef,
+            error: error.message
+          });
+          cellData.value = '#ERROR';
+          cellData.displayValue = `#ERROR: ${error.message}`;
+        }
+        return;
+      }
+
+      // Check for SUI_EPOCH formula
+      if (formulaUpper.match(/^=SUI_EPOCH\s*\(\s*\)$/)) {
+        logger.info(LogComponent.SPREADSHEET_ENGINE, 'custom_formula_eval', `Evaluating SUI_EPOCH for ${cellRef}`, { cellRef });
+
+        try {
+          const epoch = await getSuiEpoch();
+          cellData.value = parseInt(epoch);
+          cellData.displayValue = `Epoch ${epoch}`;
+          logger.info(LogComponent.SPREADSHEET_ENGINE, 'custom_formula_success', `SUI_EPOCH evaluated for ${cellRef}`, {
+            cellRef,
+            epoch
+          });
+
+          this.refreshLuckysheetCell(cellRef, cellData);
+        } catch (error) {
+          logger.error(LogComponent.SPREADSHEET_ENGINE, 'custom_formula_error', `Failed to evaluate SUI_EPOCH for ${cellRef}`, {
+            cellRef,
+            error: error.message
+          });
+          cellData.value = '#ERROR';
+          cellData.displayValue = `#ERROR: ${error.message}`;
+        }
+        return;
+      }
+
+    } catch (error) {
+      logger.error(LogComponent.SPREADSHEET_ENGINE, 'custom_formula_parse_error', `Error parsing custom formula for ${cellRef}`, {
+        cellRef,
+        formula,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Refresh a specific cell in Luckysheet if it's available and ready
+   * @param {string|number} cellRefOrRow - Cell reference (e.g., A1, B2) or row number
+   * @param {Object|number} cellDataOrCol - Updated cell data or column number
+   * @param {*} value - Value to set (if using row/col parameters)
+   */
+  refreshLuckysheetCell(cellRefOrRow, cellDataOrCol, value) {
+    try {
+      let row, col, cellValue;
+
+      // Handle both cellRef/cellData and row/col/value parameter patterns
+      if (typeof cellRefOrRow === 'string') {
+        // cellRef, cellData pattern
+        const cellRef = cellRefOrRow;
+        const cellData = cellDataOrCol;
+        const parsed = this.parseCellRef(cellRef);
+        if (!parsed) return;
+
+        row = parsed.row;
+        col = parsed.col;
+        cellValue = cellData.value;
+      } else {
+        // row, col, value pattern
+        row = cellRefOrRow;
+        col = cellDataOrCol;
+        cellValue = value;
+      }
+
+      // Update the cell in the global luckysheet mock (for testing)
+      if (typeof global !== 'undefined' && global.luckysheet && global.luckysheet.flowdata) {
+        if (global.luckysheet.flowdata[row] && global.luckysheet.flowdata[row][col]) {
+          global.luckysheet.flowdata[row][col].v = cellValue;
+        }
+        if (global.luckysheet.refreshFormula) {
+          global.luckysheet.refreshFormula();
+        }
+      }
+
+      // Update the cell in Luckysheet if available
+      if (this.luckysheetReady && luckysheetApi.isReady) {
+        if (luckysheetApi.setCellValue) {
+          luckysheetApi.setCellValue(row, col, cellValue);
+        }
+
+        // Refresh formulas
+        if (luckysheetApi.refreshFormula) {
+          luckysheetApi.refreshFormula();
+        }
+
+        logger.debug(LogComponent.SPREADSHEET_ENGINE, 'luckysheet_cell_refresh', `Cell refreshed in Luckysheet`, {
+          row,
+          col,
+          value: cellValue
+        });
+      }
+    } catch (error) {
+      logger.warn(LogComponent.SPREADSHEET_ENGINE, 'luckysheet_refresh_error', `Failed to refresh cell in Luckysheet`, {
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Parse cell reference like A1, B2 to {row, col}
+   * @param {string} cellRef - Cell reference
+   * @returns {Object} - {row, col} (0-indexed)
+   */
+  parseCellRef(cellRef) {
+    const match = cellRef.match(/^([A-Z]+)(\d+)$/);
+    if (!match) {
+      return null; // Return null for invalid references instead of throwing
+    }
+
+    const letters = match[1];
+    const number = parseInt(match[2]);
+
+    // Row numbers must be >= 1 (A0, B0, etc. are invalid)
+    if (number < 1) {
+      return null;
+    }
+
+    // Convert letters to column number (A=0, B=1, ..., Z=25, AA=26, etc.)
+    let col = 0;
+    for (let i = 0; i < letters.length; i++) {
+      col = col * 26 + (letters.charCodeAt(i) - 'A'.charCodeAt(0) + 1);
+    }
+    col -= 1; // Convert to 0-indexed
+
+    const row = number - 1; // Convert to 0-indexed
+
+    return { row, col };
+  }
+
+  /**
+   * Evaluate a custom formula and return the result (for testing and direct evaluation)
+   * @param {string} formula - Formula string (e.g., =SUI_BALANCE("0x123..."))
+   * @returns {Promise<string|null>} - Result value or null if not a custom formula
+   */
+  async evaluateFormulaDirectly(formula) {
+    if (!formula || typeof formula !== 'string' || !formula.startsWith('=')) {
+      return null; // Not a formula
+    }
+
+    const formulaUpper = formula.toUpperCase();
+
+    try {
+      // Check if it's a SUI formula (regardless of validity)
+      const isSuiFormula = formulaUpper.startsWith('=SUI_BALANCE') ||
+                          formulaUpper.startsWith('=SUI_GAS_PRICE') ||
+                          formulaUpper.startsWith('=SUI_EPOCH');
+
+      if (!isSuiFormula) {
+        return null; // Not a SUI formula
+      }
+
+      // Check for valid SUI_BALANCE formula
+      const balanceMatch = formulaUpper.match(/^=SUI_BALANCE\s*\(\s*["']?([^"')]+)["']?\s*\)$/);
+      if (balanceMatch) {
+        const address = balanceMatch[1].trim();
+        try {
+          const balance = await getSuiBalance(address);
+          return balance;
+        } catch (error) {
+          return '#ERROR';
+        }
+      }
+
+      // Check for valid SUI_GAS_PRICE formula
+      if (formulaUpper.match(/^=SUI_GAS_PRICE\s*\(\s*\)$/)) {
+        try {
+          const gasPrice = await getSuiGasPrice();
+          return gasPrice;
+        } catch (error) {
+          return '#ERROR';
+        }
+      }
+
+      // Check for valid SUI_EPOCH formula
+      if (formulaUpper.match(/^=SUI_EPOCH\s*\(\s*\)$/)) {
+        try {
+          const epoch = await getSuiEpoch();
+          return epoch;
+        } catch (error) {
+          return '#ERROR';
+        }
+      }
+
+      // It's a SUI formula but invalid syntax
+      return '#ERROR';
+
+    } catch (error) {
+      return '#ERROR';
+    }
+  }
+
+  /**
+   * Evaluate custom formulas for a cell (internal method used during data collection)
+   * @param {string} cellRef - Cell reference (e.g., A1, B2)
+   * @param {Object} cellData - Cell data object with value, formula, etc.
+   */
+  async evaluateCustomFormulasForCell(cellRef, cellData) {
+    const formula = cellData.formula;
+    if (!formula || typeof formula !== 'string' || !formula.startsWith('=')) {
+      return; // Not a formula
+    }
+
+    const formulaUpper = formula.toUpperCase();
+
+    try {
+      // Check for SUI_BALANCE formula
+      const balanceMatch = formulaUpper.match(/^=SUI_BALANCE\s*\(\s*["']?([^"')]+)["']?\s*\)$/);
+      if (balanceMatch) {
+        const address = balanceMatch[1].trim();
+        logger.info(LogComponent.SPREADSHEET_ENGINE, 'custom_formula_eval', `Evaluating SUI_BALANCE for ${cellRef}`, {
+          cellRef,
+          address: address.substring(0, 10) + '...'
+        });
+
+        try {
+          const balance = await getSuiBalance(address);
+          cellData.value = parseFloat(balance);
+          cellData.displayValue = `${balance} SUI`;
+          logger.info(LogComponent.SPREADSHEET_ENGINE, 'custom_formula_success', `SUI_BALANCE evaluated for ${cellRef}`, {
+            cellRef,
+            balance
+          });
+
+          // Refresh Luckysheet display if available
+          this.refreshLuckysheetCell(cellRef, cellData);
+        } catch (error) {
+          logger.error(LogComponent.SPREADSHEET_ENGINE, 'custom_formula_error', `Failed to evaluate SUI_BALANCE for ${cellRef}`, {
+            cellRef,
+            error: error.message
+          });
+          cellData.value = '#ERROR';
+          cellData.displayValue = `#ERROR: ${error.message}`;
+        }
+        return;
+      }
+
+      // Check for SUI_GAS_PRICE formula
+      if (formulaUpper.match(/^=SUI_GAS_PRICE\s*\(\s*\)$/)) {
+        logger.info(LogComponent.SPREADSHEET_ENGINE, 'custom_formula_eval', `Evaluating SUI_GAS_PRICE for ${cellRef}`, { cellRef });
+
+        try {
+          const gasPrice = await getSuiGasPrice();
+          cellData.value = parseInt(gasPrice);
+          cellData.displayValue = `${gasPrice} MIST`;
+          logger.info(LogComponent.SPREADSHEET_ENGINE, 'custom_formula_success', `SUI_GAS_PRICE evaluated for ${cellRef}`, {
+            cellRef,
+            gasPrice
+          });
+
+          this.refreshLuckysheetCell(cellRef, cellData);
+        } catch (error) {
+          logger.error(LogComponent.SPREADSHEET_ENGINE, 'custom_formula_error', `Failed to evaluate SUI_GAS_PRICE for ${cellRef}`, {
+            cellRef,
+            error: error.message
+          });
+          cellData.value = '#ERROR';
+          cellData.displayValue = `#ERROR: ${error.message}`;
+        }
+        return;
+      }
+
+      // Check for SUI_EPOCH formula
+      if (formulaUpper.match(/^=SUI_EPOCH\s*\(\s*\)$/)) {
+        logger.info(LogComponent.SPREADSHEET_ENGINE, 'custom_formula_eval', `Evaluating SUI_EPOCH for ${cellRef}`, { cellRef });
+
+        try {
+          const epoch = await getSuiEpoch();
+          cellData.value = parseInt(epoch);
+          cellData.displayValue = `Epoch ${epoch}`;
+          logger.info(LogComponent.SPREADSHEET_ENGINE, 'custom_formula_success', `SUI_EPOCH evaluated for ${cellRef}`, {
+            cellRef,
+            epoch
+          });
+
+          this.refreshLuckysheetCell(cellRef, cellData);
+        } catch (error) {
+          logger.error(LogComponent.SPREADSHEET_ENGINE, 'custom_formula_error', `Failed to evaluate SUI_EPOCH for ${cellRef}`, {
+            cellRef,
+            error: error.message
+          });
+          cellData.value = '#ERROR';
+          cellData.displayValue = `#ERROR: ${error.message}`;
+        }
+        return;
+      }
+
+      // Check for WalSheetz DeFi formulas
+      await this.evaluateWalSheetzFormulas(cellRef, cellData, formulaUpper, formula);
+
+    } catch (error) {
+      logger.error(LogComponent.SPREADSHEET_ENGINE, 'custom_formula_parse_error', `Error parsing custom formula for ${cellRef}`, {
+        cellRef,
+        formula,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Evaluate WalSheetz DeFi formulas
+   * @param {string} cellRef - Cell reference (e.g., A1, B2)
+   * @param {Object} cellData - Cell data object with value, formula, etc.
+   * @param {string} formulaUpper - Uppercase formula string
+   * @param {string} formula - Original formula string
+   */
+  async evaluateWalSheetzFormulas(cellRef, cellData, formulaUpper, formula) {
+    try {
+      // Import DeFiStateManager to check for loading states
+      let defiStateManager;
+      try {
+        const module = await import('../services/DeFiStateManager.js');
+        defiStateManager = module.defiStateManager;
+      } catch (error) {
+        console.warn('[SpreadsheetEngine] Could not import defiStateManager:', error);
+      }
+
+      // Check for loading state and add visual indicator
+      const addStatusIndicator = (cellData, adapterId = 'registry', method = 'unknown', args = [], status = 'ready') => {
+        let statusIcon = '';
+        let statusClass = '';
+
+        if (defiStateManager) {
+          // Use the same key generation method as DeFiStateManager
+          const cacheKey = `${cellRef}:${adapterId}:${method}:${JSON.stringify(args)}`;
+
+          if (defiStateManager.loadingStates?.has(cacheKey)) {
+            statusIcon = '⏳';
+            statusClass = 'wz-loading';
+            status = 'loading';
+          } else if (defiStateManager.errorStates?.has(cacheKey)) {
+            statusIcon = '❌';
+            statusClass = 'wz-error';
+            status = 'error';
+          } else if (status === 'ready' && cellData.value !== '#ERROR') {
+            statusIcon = '✅';
+            statusClass = 'wz-success';
+          }
+        }
+
+        // Add status indicator to cell display
+        if (statusIcon && cellData.displayValue && !cellData.displayValue.startsWith(statusIcon)) {
+          cellData.displayValue = `${statusIcon} ${cellData.displayValue}`;
+          cellData.wzStatus = status;
+          cellData.wzStatusClass = statusClass;
+        }
+
+        return { statusIcon, statusClass, status };
+      };
+
+      // Check for WZ.CONTRACT.LIST() formula
+      if (formulaUpper.match(/^=WZ\.CONTRACT\.LIST\s*\(\s*\)$/)) {
+        logger.info(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_eval', `Evaluating WZ.CONTRACT.LIST for ${cellRef}`, { cellRef });
+
+        try {
+          // Set loading state first
+          if (defiStateManager) {
+            defiStateManager.setLoading(cellRef, 'registry', 'listAdapters', []);
+          }
+
+          const result = await WZ_CONTRACT_LIST(cellRef);
+
+          // Clear loading state
+          if (defiStateManager) {
+            defiStateManager.clearLoading(cellRef, 'registry', 'listAdapters', []);
+          }
+
+          if (result.status === 'error') {
+            cellData.value = '#ERROR';
+            cellData.displayValue = `#ERROR: ${result.message}`;
+            if (defiStateManager) {
+              defiStateManager.setError(cellRef, 'registry', 'listAdapters', [], new Error(result.message));
+            }
+          } else {
+            cellData.value = JSON.stringify(result);
+            cellData.displayValue = `${Array.isArray(result) ? result.length : 0} contracts`;
+          }
+
+          addStatusIndicator(cellData, 'registry', 'listAdapters', []);
+
+          logger.info(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_success', `WZ.CONTRACT.LIST evaluated for ${cellRef}`, { cellRef });
+          this.refreshLuckysheetCell(cellRef, cellData);
+        } catch (error) {
+          // Clear loading and set error state
+          if (defiStateManager) {
+            defiStateManager.clearLoading(cellRef, 'registry', 'listAdapters', []);
+            defiStateManager.setError(cellRef, 'registry', 'listAdapters', [], error);
+          }
+
+          logger.error(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_error', `Failed to evaluate WZ.CONTRACT.LIST for ${cellRef}`, {
+            cellRef,
+            error: error.message
+          });
+          cellData.value = '#ERROR';
+          cellData.displayValue = `#ERROR: ${error.message}`;
+          addStatusIndicator(cellData, 'registry', 'listAdapters', [], 'error');
+        }
+        return;
+      }
+
+      // Check for WZ.CONTRACT.CALL formula
+      const contractCallMatch = formulaUpper.match(/^=WZ\.CONTRACT\.CALL\s*\(\s*["']([^"']+)["']\s*,\s*["']([^"']+)["']\s*((?:\s*,\s*["']?[^"')]*["']?)*)\s*\)$/);
+      if (contractCallMatch) {
+        const adapterId = contractCallMatch[1].trim();
+        const method = contractCallMatch[2].trim();
+        const argsStr = contractCallMatch[3].trim();
+
+        // Parse additional arguments
+        const args = [];
+        if (argsStr) {
+          const argMatches = argsStr.split(',');
+          for (const arg of argMatches) {
+            const cleanArg = arg.trim().replace(/^["']|["']$/g, '');
+            if (cleanArg) args.push(cleanArg);
+          }
+        }
+
+        logger.info(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_eval', `Evaluating WZ.CONTRACT.CALL for ${cellRef}`, {
+          cellRef,
+          adapterId,
+          method,
+          args
+        });
+
+        try {
+          // Set loading state
+          if (defiStateManager) {
+            defiStateManager.setLoading(cellRef, adapterId, method, args);
+          }
+
+          const result = await WZ_CONTRACT_CALL.call({ cellRef }, adapterId, method, ...args);
+
+          // Clear loading state
+          if (defiStateManager) {
+            defiStateManager.clearLoading(cellRef, adapterId, method, args);
+          }
+
+          if (result.status === 'error') {
+            cellData.value = '#ERROR';
+            cellData.displayValue = `#ERROR: ${result.message}`;
+            if (defiStateManager) {
+              defiStateManager.setError(cellRef, adapterId, method, args, new Error(result.message));
+            }
+          } else if (result.status === 'loading') {
+            cellData.value = 'Loading...';
+            cellData.displayValue = 'Loading...';
+          } else {
+            cellData.value = typeof result === 'object' ? JSON.stringify(result) : result;
+            cellData.displayValue = this.formatWalSheetzResult(result);
+          }
+
+          addStatusIndicator(cellData, adapterId, method, args);
+
+          logger.info(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_success', `WZ.CONTRACT.CALL evaluated for ${cellRef}`, { cellRef });
+          this.refreshLuckysheetCell(cellRef, cellData);
+        } catch (error) {
+          // Clear loading and set error state
+          if (defiStateManager) {
+            defiStateManager.clearLoading(cellRef, adapterId, method, args);
+            defiStateManager.setError(cellRef, adapterId, method, args, error);
+          }
+          logger.error(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_error', `Failed to evaluate WZ.CONTRACT.CALL for ${cellRef}`, {
+            cellRef,
+            error: error.message
+          });
+          cellData.value = '#ERROR';
+          cellData.displayValue = `#ERROR: ${error.message}`;
+          addStatusIndicator(cellData, adapterId, method, args, 'error');
+        }
+        return;
+      }
+
+      // Check for WZ.BALANCE formula
+      const balanceMatch = formulaUpper.match(/^=WZ\.BALANCE\s*\(\s*["']?([^"')]+)["']?\s*(?:\s*,\s*["']?([^"')]+)["']?\s*)?\)$/);
+      if (balanceMatch) {
+        const address = balanceMatch[1].trim();
+        const tokenType = balanceMatch[2] ? balanceMatch[2].trim() : 'SUI';
+
+        logger.info(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_eval', `Evaluating WZ.BALANCE for ${cellRef}`, {
+          cellRef,
+          address: address.substring(0, 10) + '...',
+          tokenType
+        });
+
+        try {
+          const result = await WZ_BALANCE.call({ cellRef }, address, tokenType);
+          if (result.status === 'error') {
+            cellData.value = '#ERROR';
+            cellData.displayValue = `#ERROR: ${result.message}`;
+          } else {
+            const balance = result.balance || '0';
+            cellData.value = parseFloat(balance);
+            cellData.displayValue = `${balance} ${tokenType}`;
+          }
+
+          logger.info(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_success', `WZ.BALANCE evaluated for ${cellRef}`, { cellRef });
+          this.refreshLuckysheetCell(cellRef, cellData);
+        } catch (error) {
+          logger.error(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_error', `Failed to evaluate WZ.BALANCE for ${cellRef}`, {
+            cellRef,
+            error: error.message
+          });
+          cellData.value = '#ERROR';
+          cellData.displayValue = `#ERROR: ${error.message}`;
+        }
+        return;
+      }
+
+      // Check for WZ.APY formula
+      const apyMatch = formulaUpper.match(/^=WZ\.APY\s*\(\s*["']([^"']+)["']\s*,\s*["']([^"']+)["']\s*,\s*["']([^"']+)["']\s*\)$/);
+      if (apyMatch) {
+        const protocol = apyMatch[1].trim();
+        const type = apyMatch[2].trim();
+        const asset = apyMatch[3].trim();
+
+        logger.info(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_eval', `Evaluating WZ.APY for ${cellRef}`, {
+          cellRef,
+          protocol,
+          type,
+          asset
+        });
+
+        try {
+          const result = await WZ_APY.call({ cellRef }, protocol, type, asset);
+          if (result.status === 'error') {
+            cellData.value = '#ERROR';
+            cellData.displayValue = `#ERROR: ${result.message}`;
+          } else {
+            const apy = typeof result === 'number' ? result : parseFloat(result) || 0;
+            cellData.value = apy;
+            cellData.displayValue = `${(apy * 100).toFixed(2)}%`;
+          }
+
+          logger.info(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_success', `WZ.APY evaluated for ${cellRef}`, { cellRef });
+          this.refreshLuckysheetCell(cellRef, cellData);
+        } catch (error) {
+          logger.error(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_error', `Failed to evaluate WZ.APY for ${cellRef}`, {
+            cellRef,
+            error: error.message
+          });
+          cellData.value = '#ERROR';
+          cellData.displayValue = `#ERROR: ${error.message}`;
+        }
+        return;
+      }
+
+    } catch (error) {
+      logger.error(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_parse_error', `Error parsing WalSheetz formula for ${cellRef}`, {
+        cellRef,
+        formula,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Format WalSheetz result for display in spreadsheet cell
+   * @param {*} result - Result from WalSheetz function
+   * @returns {string} - Formatted display value
+   */
+  formatWalSheetzResult(result) {
+    if (result === null || result === undefined) {
+      return 'N/A';
+    }
+
+    if (typeof result === 'object') {
+      if (Array.isArray(result)) {
+        return `${result.length} items`;
+      }
+      if (result.status === 'loading') {
+        return 'Loading...';
+      }
+      if (result.status === 'error') {
+        return `Error: ${result.message}`;
+      }
+      // Try to extract meaningful display value
+      if (result.supplyApy !== undefined) {
+        return `${(result.supplyApy * 100).toFixed(2)}% APY`;
+      }
+      if (result.totalSupply !== undefined) {
+        return `Supply: ${result.totalSupply}`;
+      }
+      return JSON.stringify(result).substring(0, 50) + '...';
+    }
+
+    return result.toString();
+  }
+
+  /**
    * Get current status
    */
   getStatus() {
@@ -997,12 +2082,57 @@ export class SpreadsheetEngine {
       editCount: this.editCount,
       pendingEdits: this.pendingEdits.size,
       walletConnected: this.blockchainService?.isWalletConnected() || false,
-      autoSaveEnabled: !!this.autoSaveTimer
+      lastManualSaveTimestamp: this.lastManualSaveTimestamp,
+      lastEditTimestamp: this.lastEditTimestamp,
+
+      // Smart auto-save status
+      saveStatus: this.saveStatus,
+      lastWalrusSaveTimestamp: this.lastWalrusSaveTimestamp,
+      lastBlockchainSyncTimestamp: this.lastBlockchainSyncTimestamp,
+      pendingWalrusSaves: this.pendingWalrusSaves.length,
+      walrusAutoSaveEnabled: !!this.walrusAutoSaveTimer,
+      blockchainSyncEnabled: !!this.blockchainSyncTimer,
+
+      // Time since saves for UI display
+      timeSinceLastWalrusSave: this.lastWalrusSaveTimestamp ? Date.now() - this.lastWalrusSaveTimestamp : null,
+      timeSinceLastBlockchainSync: this.lastBlockchainSyncTimestamp ? Date.now() - this.lastBlockchainSyncTimestamp : null,
+
+      // Offline queue status
+      isOnline: this.isOnline,
+      offlineQueueSize: this.offlineQueue.length,
+      offlineQueueProcessing: !!this.offlineQueueProcessingTimer
     };
-    
+
     logger.debug(LogComponent.SPREADSHEET_ENGINE, 'status_check', `Status requested`, status);
-    
+
     return status;
+  }
+
+  /**
+   * Get time since last manual save in milliseconds
+   */
+  getTimeSinceLastSave() {
+    if (!this.lastManualSaveTimestamp) {
+      return null; // Never saved
+    }
+    return Date.now() - this.lastManualSaveTimestamp;
+  }
+
+  /**
+   * Get time since last edit in milliseconds
+   */
+  getTimeSinceLastEdit() {
+    if (!this.lastEditTimestamp) {
+      return null; // Never edited
+    }
+    return Date.now() - this.lastEditTimestamp;
+  }
+
+  /**
+   * Get the age of the last save for UI display
+   */
+  getLastSaveAge() {
+    return this.getTimeSinceLastSave();
   }
 
   /**
@@ -1034,17 +2164,32 @@ export class SpreadsheetEngine {
 
   cleanup() {
     logger.info(LogComponent.SPREADSHEET_ENGINE, 'cleanup', `Starting cleanup process`, {
-      autoSaveActive: !!this.autoSaveTimer,
       currentEditingCell: this.currentEditingCell,
-      pendingEdits: this.pendingEdits.size
+      pendingEdits: this.pendingEdits.size,
+      walrusAutoSaveActive: !!this.walrusAutoSaveTimer,
+      blockchainSyncActive: !!this.blockchainSyncTimer
     });
-    
-    if (this.autoSaveTimer) {
-      clearInterval(this.autoSaveTimer)
-      this.autoSaveTimer = null
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'cleanup', `Auto-save timer cleared`);
+
+    // Clear smart auto-save timers
+    this.stopAutoSaveTimers();
+
+    // Clean up offline queue timer
+    if (this.offlineQueueProcessingTimer) {
+      clearInterval(this.offlineQueueProcessingTimer);
+      this.offlineQueueProcessingTimer = null;
+      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'cleanup', `Offline queue processing timer cleared`);
     }
-    
+
+    // Remove online/offline event listeners
+    if (this.onlineHandler) {
+      window.removeEventListener('online', this.onlineHandler);
+      this.onlineHandler = null;
+    }
+    if (this.offlineHandler) {
+      window.removeEventListener('offline', this.offlineHandler);
+      this.offlineHandler = null;
+    }
+
     // Save any pending edits before cleanup
     if (this.editCount > 0) {
       logger.warn(LogComponent.SPREADSHEET_ENGINE, 'cleanup', `Pending edits found during cleanup`, {
@@ -1067,6 +2212,54 @@ export class SpreadsheetEngine {
     }
     
     logger.info(LogComponent.SPREADSHEET_ENGINE, 'cleanup', `Cleanup process completed`);
+  }
+
+  /**
+   * Clear the spreadsheet grid completely
+   */
+  async clearGrid() {
+    logger.info(LogComponent.SPREADSHEET_ENGINE, 'clear_grid', 'Clearing spreadsheet grid');
+
+    try {
+      if (luckysheetApi.isReady) {
+        // Clear the actual sheet data that Luckysheet uses
+        if (window.luckysheetfile && window.luckysheetfile[0]) {
+          window.luckysheetfile[0].celldata = [];
+          window.luckysheetfile[0].name = 'Sheet1';
+
+          // Trigger a full refresh to display the cleared grid
+          luckysheetApi.refresh('all');
+
+          logger.info(LogComponent.SPREADSHEET_ENGINE, 'grid_cleared', 'Grid cleared successfully using direct update');
+        } else {
+          // Fallback: try to clear via getAllSheets if luckysheetfile is not available
+          const allSheets = luckysheetApi.getAllSheets();
+          if (allSheets && allSheets[0]) {
+            allSheets[0].celldata = [];
+            allSheets[0].name = 'Sheet1';
+            luckysheetApi.refreshFormula();
+
+            logger.warn(LogComponent.SPREADSHEET_ENGINE, 'grid_cleared_fallback', 'Used fallback getAllSheets method for grid clearing');
+          }
+        }
+      }
+
+      // Clear local storage to match the empty grid
+      const emptyData = {
+        data: {
+          cells: {},
+          metadata: { title: 'Sheet1' }
+        }
+      };
+      await this.storageService.saveData(emptyData);
+
+      logger.info(LogComponent.SPREADSHEET_ENGINE, 'clear_grid_complete', 'Grid clearing completed');
+    } catch (error) {
+      logger.error(LogComponent.SPREADSHEET_ENGINE, 'clear_grid_error', 'Error clearing grid', {
+        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error'
+      });
+      throw error;
+    }
   }
 
   /**
@@ -1095,7 +2288,7 @@ export class SpreadsheetEngine {
         (data?.cells) ||
         null
 
-      if (window.luckysheet && window.luckysheet.getAllSheets && cellsSource) {
+      if (luckysheetApi.isReady && cellsSource) {
         try {
           // Convert data to Luckysheet format and update the sheet
           const celldata = [];
@@ -1121,22 +2314,31 @@ export class SpreadsheetEngine {
             }
           });
 
-          // Update the Luckysheet data using getAllSheets API
-          const allSheets = window.luckysheet.getAllSheets();
-          if (allSheets && allSheets[0]) {
-            allSheets[0].celldata = celldata;
+          // Update the actual Luckysheet instance data
+          const sheetTitle = data?.data?.metadata?.title || data?.title || 'Sheet1';
 
-            // NEW: set sheet name from metadata so Header can sync it
-            const sheetTitle = data?.data?.metadata?.title || data?.title || 'Sheet1';
-            try { allSheets[0].name = sheetTitle; } catch {}
-            try { if (window.luckysheetfile?.[0]) window.luckysheetfile[0].name = sheetTitle; } catch {}
+          if (window.luckysheetfile && window.luckysheetfile[0]) {
+            // Update the actual sheet data that Luckysheet uses
+            window.luckysheetfile[0].celldata = celldata;
+            window.luckysheetfile[0].name = sheetTitle;
 
-            if (window.luckysheet.refreshFormula) {
-              window.luckysheet.refreshFormula();
-            }
-            logger.info(LogComponent.SPREADSHEET_ENGINE, 'luckysheet_refresh', `Luckysheet refreshed with new data using getAllSheets()`, {
-              cellCount: celldata.length
+            // Trigger a full refresh to display the new data
+            luckysheetApi.refresh('all');
+
+            logger.info(LogComponent.SPREADSHEET_ENGINE, 'luckysheet_refresh', `Luckysheet refreshed with new data using direct update`, {
+              cellCount: celldata.length,
+              sheetTitle
             });
+          } else {
+            // Fallback: try to update via getAllSheets if luckysheetfile is not available
+            const allSheets = luckysheetApi.getAllSheets();
+            if (allSheets && allSheets[0]) {
+              allSheets[0].celldata = celldata;
+              allSheets[0].name = sheetTitle;
+              luckysheetApi.refreshFormula();
+
+              logger.warn(LogComponent.SPREADSHEET_ENGINE, 'luckysheet_fallback', `Used fallback getAllSheets method for data update`);
+            }
           }
         } catch (refreshError) {
           logger.warn(LogComponent.SPREADSHEET_ENGINE, 'luckysheet_refresh_failed', `Failed to refresh Luckysheet directly`, {
@@ -1149,8 +2351,8 @@ export class SpreadsheetEngine {
 
       // Initialize lastSavedDataHash to prevent unnecessary auto-saves after data load
       try {
-        if (window.luckysheet && window.luckysheet.getAllSheets) {
-          const currentData = window.luckysheet.getAllSheets();
+        if (luckysheetApi.isReady) {
+          const currentData = luckysheetApi.getAllSheets();
           const currentDataString = JSON.stringify(currentData);
           this.lastSavedDataHash = this.hashString(currentDataString);
           logger.debug(LogComponent.SPREADSHEET_ENGINE, 'hash_initialized', 'Initialized data hash after load', {

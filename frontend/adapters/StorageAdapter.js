@@ -310,6 +310,28 @@ export class StorageAdapter extends IStorageService {
     }
   }
 
+  setAutoSaveEnabled(enabled) {
+    try {
+      const session = this.getSession();
+      session.autoSaveEnabled = !!enabled;
+      session.lastUpdated = Date.now();
+      localStorage.setItem(this.sessionKey, JSON.stringify(session));
+      console.log('Auto-save preference saved to session:', enabled);
+    } catch (error) {
+      console.error('Failed to save auto-save preference:', error);
+    }
+  }
+
+  getAutoSaveEnabled() {
+    try {
+      const session = this.getSession();
+      return session.autoSaveEnabled || false; // Default to disabled
+    } catch (error) {
+      console.error('Failed to get auto-save preference:', error);
+      return false; // Default to disabled on error
+    }
+  }
+
   getSession() {
     try {
       const stored = localStorage.getItem(this.sessionKey);
@@ -330,6 +352,7 @@ export class StorageAdapter extends IStorageService {
       lastSaveTimestamp: null,
       walletAddress: null,
       spreadsheetTitle: null,
+      autoSaveEnabled: false, // Auto-save is disabled by default
       lastUpdated: Date.now(),
       version: '1.0'
     };

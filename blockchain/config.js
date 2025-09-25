@@ -91,7 +91,10 @@ export const config = {
       
       // Feature flags
       features: {
-        rateLimiterEnabled: (env.RATE_LIMITER_ENABLED ?? 'true') !== 'false' // Default true
+        rateLimiterEnabled: (env.RATE_LIMITER_ENABLED ?? 'true') !== 'false', // Default true
+        useSdk: (env.WALRUS_USE_SDK ?? 'false') === 'true', // Default false for safe rollout
+        epochsDefault: parseInt(env.WALRUS_EPOCHS_DEFAULT || '50'),
+        sdkNetwork: 'testnet'
       },
       
       // Rate limiting configuration
@@ -135,7 +138,10 @@ export const config = {
       
       // Feature flags
       features: {
-        rateLimiterEnabled: process.env.RATE_LIMITER_ENABLED !== 'false'
+        rateLimiterEnabled: process.env.RATE_LIMITER_ENABLED !== 'false',
+        useSdk: (env.WALRUS_USE_SDK ?? 'false') === 'true', // Default false for safe rollout
+        epochsDefault: parseInt(env.WALRUS_EPOCHS_DEFAULT || '50'),
+        sdkNetwork: 'mainnet'
       },
       
       // Rate limiting configuration
@@ -348,6 +354,42 @@ export const config = {
       `
     }
   },
+  // WalSheetz DeFi configuration
+  walSheetz: {
+    testnet: {
+      suilend: {
+        enabled: true,
+        defaultLendingMarket: 'main',
+        maxSlippage: 0.005, // 0.5%
+        transactionLimits: {
+          maxSingleTransaction: 1000, // USD
+          dailyLimit: 5000, // USD
+          requireConfirmationAbove: 100 // USD
+        },
+        rateLimit: {
+          maxCallsPerMinute: 60,
+          burstLimit: 10
+        }
+      }
+    },
+    mainnet: {
+      suilend: {
+        enabled: false, // Disabled on mainnet initially
+        defaultLendingMarket: 'main',
+        maxSlippage: 0.003, // 0.3%
+        transactionLimits: {
+          maxSingleTransaction: 10000, // USD
+          dailyLimit: 50000, // USD
+          requireConfirmationAbove: 500 // USD
+        },
+        rateLimit: {
+          maxCallsPerMinute: 30,
+          burstLimit: 5
+        }
+      }
+    }
+  },
+
   // Current environment
   environment: 'testnet' // Change to 'mainnet' for production
 };
@@ -358,6 +400,7 @@ export const getCurrentConfig = () => {
   return {
     sui: config.sui[env],
     walrus: config.walrus[env],
+    walSheetz: config.walSheetz[env],
     storage: config.storage,
     deposit: config.deposit,
     grpc: config.grpc,
@@ -366,6 +409,10 @@ export const getCurrentConfig = () => {
     collaboration: config.collaboration,
     environment: env
   };
+};
+
+export const getSuiContractConfig = (network) => {
+  return config.walSheetz[network] || config.walSheetz.testnet;
 };
 
 export const isTestnet = () => config.environment === 'testnet';

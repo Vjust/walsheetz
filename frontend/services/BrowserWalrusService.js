@@ -3,6 +3,7 @@ import { getCurrentConfig } from '../../blockchain/config.js';
 import { configLoader } from '../utils/ConfigLoader.js';
 import RateLimiter from '../utils/RateLimiter.js';
 import { encryptionUtility } from '../utils/Encryption.js';
+import { WalrusSdkClient } from './WalrusSdkClient.js';
 
 class BrowserWalrusService {
   constructor() {
@@ -81,14 +82,27 @@ class BrowserWalrusService {
       this.isConnected = true;
       this.rateLimiterEnabled = false;
     }
-    
+
+    // Initialize SDK client if SDK features are enabled
+    this.sdkClient = null;
+    try {
+      if (config.walrus?.features?.useSdk) {
+        this.sdkClient = new WalrusSdkClient();
+        console.log('[BrowserWalrusService] Walrus SDK client initialized');
+      }
+    } catch (sdkError) {
+      console.warn('[BrowserWalrusService] Failed to initialize SDK client, will use HTTP fallback:', sdkError.message);
+      this.sdkClient = null;
+    }
+
     console.log('[BrowserWalrusService] Initialized with testnet endpoints:', {
       publisherUrl: this.publisherUrl,
       aggregatorUrl: this.aggregatorUrl,
       batchingEnabled: true,
       healthCheckEnabled: true,
       retryQueueEnabled: true,
-      maxRetryQueueSize: this.maxRetryQueueSize
+      maxRetryQueueSize: this.maxRetryQueueSize,
+      sdkEnabled: !!this.sdkClient
     });
   }
 
@@ -509,6 +523,11 @@ class BrowserWalrusService {
       const connectResult = await this.connect();
       console.log(`[BrowserWalrusService:${requestId}] Connection attempt result:`, { connected: connectResult });
     }
+
+    // Branch to SDK path if enabled and available
+    if (this.sdkClient) {
+      return await this.storeBlobWithSDK(dataToStore, options, requestId, encryptionMetadata);
+    }
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -795,6 +814,149 @@ class BrowserWalrusService {
         }
       }
     }
+  }
+
+  // Store blob using Walrus SDK with register → upload → certify flow
+  async storeBlobWithSDK(dataToStore, options = {}, requestId, encryptionMetadata) {
+    console.log(`[BrowserWalrusService:${requestId}] Using Walrus SDK path`);
+
+    try {
+      // Prepare enhanced data (same as HTTP path)
+      const enhancedData = {
+        ...dataToStore,
+        metadata: {
+          ...dataToStore.metadata,
+          client: 'walsheetz-browser-sdk',
+          encryptionMetadata
+        }
+      };
+
+      // Use consistent encoding method (same as backend service)
+      const encoded = await this.encodeSpreadsheetData(enhancedData);
+
+      // Calculate content hash for integrity verification
+      const contentHash = await this.calculateHashFromBinary(encoded.data);
+      console.log(`[BrowserWalrusService:${requestId}] Content hash calculated: ${contentHash.hash.substring(0, 16)}...`);
+
+      // Create blob for SDK
+      const { encodedBlob, registerTx } = await this.sdkClient.writeJsonBlob({
+        json: enhancedData,
+        identifier: options.identifier || 'walsheetz-v1.json',
+        tags: {
+          app: 'walsheetz',
+          version: '1.0',
+          requestId,
+          ...options.tags
+        },
+        epochs: options.epochs
+      });
+
+      console.log(`[BrowserWalrusService:${requestId}] SDK encoded blob created, register transaction ready`);
+
+      // We need a wallet manager to sign transactions - this should be injected or available globally
+      const walletManager = this.getWalletManager();
+      if (!walletManager) {
+        throw new Error('Wallet manager not available for SDK transaction signing');
+      }
+
+      // Sign and execute register transaction
+      console.log(`[BrowserWalrusService:${requestId}] Signing register transaction`);
+      const registerResult = await walletManager.signAndExecuteTransaction(registerTx);
+
+      console.log(`[BrowserWalrusService:${requestId}] Register transaction successful:`, {
+        digest: registerResult.digest
+      });
+
+      // Complete upload and certification
+      console.log(`[BrowserWalrusService:${requestId}] Starting upload and certification`);
+      const { blobId, certifyResult } = await this.sdkClient.completeUploadAndCertify(
+        encodedBlob,
+        (tx) => walletManager.signAndExecuteTransaction(tx.transactionBlock)
+      );
+
+      console.log(`[BrowserWalrusService:${requestId}] SDK upload and certification complete:`, {
+        blobId,
+        certifyDigest: certifyResult.digest
+      });
+
+      // Record successful operation for health tracking
+      this.recordSuccessfulOperation();
+
+      // Create result in same format as HTTP path
+      const operationResult = {
+        success: true,
+        blobId,
+        size: encoded.data.length,
+        suiObjectId: registerResult.objectChanges?.find(c => c.type === 'created')?.objectId,
+        status: 'newly_created',
+        url: `${this.aggregatorUrl}/v1/blobs/${blobId}`,
+        contentHash,
+        metadata: {
+          originalSize: encoded.originalSize,
+          compression: 'binary-json',
+          uploadedAt: Date.now(),
+          contentHash: contentHash.hash,
+          hashAlgorithm: contentHash.algorithm,
+          method: 'sdk',
+          registerDigest: registerResult.digest,
+          certifyDigest: certifyResult.digest
+        },
+        timestamp: Date.now(),
+        requestId
+      };
+
+      // Emit operation event for UI
+      this.emitOperationEvent({
+        type: 'storage_success',
+        message: 'Blob stored successfully via SDK',
+        success: true,
+        details: {
+          blobId: operationResult.blobId,
+          size: operationResult.size,
+          method: 'sdk'
+        }
+      });
+
+      return operationResult;
+
+    } catch (error) {
+      console.error(`[BrowserWalrusService:${requestId}] SDK storage failed:`, error);
+
+      // Emit failure event for UI
+      this.emitOperationEvent({
+        type: 'storage_failed',
+        message: `SDK storage failed: ${error.message}`,
+        success: false,
+        details: {
+          error: error.message,
+          requestId,
+          method: 'sdk'
+        }
+      });
+
+      return {
+        success: false,
+        error: `SDK storage failed: ${error.message}`,
+        requestId,
+        timestamp: Date.now()
+      };
+    }
+  }
+
+  // Get wallet manager instance (should be injected or available globally)
+  getWalletManager() {
+    // Check if wallet manager is available globally
+    if (typeof window !== 'undefined' && window.walletManager) {
+      return window.walletManager;
+    }
+
+    // Or check for it in the app context
+    if (typeof window !== 'undefined' && window.appContext?.walletManager) {
+      return window.appContext.walletManager;
+    }
+
+    console.warn('[BrowserWalrusService] No wallet manager found - SDK path will fail');
+    return null;
   }
 
   // Helper method to determine if an error is retryable

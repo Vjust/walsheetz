@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react'
 import { useSpreadsheetContext } from './SpreadsheetProvider.jsx'
+import luckysheetApi from '../../services/luckysheetApi.js'
 
 // Helper function to convert column letters to numbers (A=0, B=1, ..., AA=26, AB=27, etc.)
 function columnLettersToNumber(letters) {
@@ -311,39 +312,41 @@ export function Spreadsheet() {
       }
     }
 
-    const initLuckysheet = () => {
-      const container = document.getElementById('luckysheet-container');
-      
+    const initLuckysheet = async () => {
+      const container = document.getElementById('luckysheet-container')
+
       if (typeof window.luckysheet === 'undefined') {
         console.log('WalSheetz spreadsheet engine not loaded yet, retrying...')
         return false
       }
 
-      if (container && !luckysheetRef.current) {
-        try {
-          if (window.luckysheet.destroy) {
-            window.luckysheet.destroy();
-          }
-        } catch (e) {
-          // Ignore destroy errors
+      if (!container) {
+        console.warn('Luckysheet container not found, retrying...')
+        return false
+      }
+
+      try {
+        if (window.luckysheet && typeof window.luckysheet.destroy === 'function') {
+          window.luckysheet.destroy()
         }
+      } catch (e) {
+        // Ignore destroy errors
+      }
 
-        container.innerHTML = '';
+      luckysheetRef.current = false
+      luckysheetReadyRef.current = false
+      container.innerHTML = ''
 
-        try {
-          console.log('Initializing WalSheetz spreadsheet...');
-          
+      try {
+        console.log('Initializing WalSheetz spreadsheet...')
+
           // Convert loaded data to Luckysheet format
           const celldata = convertToLuckysheetData(spreadsheetData);
           console.log('Converted celldata for Luckysheet:', celldata);
-          
-          window.luckysheet.create({
-            container: 'luckysheet-container',
-            title: 'WalSheetz',
-            lang: 'en',
-            showinfobar: false,
-            showstatisticBar: false,
-            data: [{
+
+          await luckysheetApi.init({
+            containerId: 'luckysheet-container',
+            sheet: {
               name: (spreadsheetData?.data?.metadata?.title || spreadsheetData?.title || "Sheet1"),
               color: "",
               index: 0,
@@ -373,7 +376,11 @@ export function Spreadsheet() {
               image: [],
               showGridLines: 1,
               dataVerification: {}
-            }],
+            },
+            title: 'WalSheetz',
+            lang: 'en',
+            showinfobar: false,
+            showstatisticBar: false,
             hook: {
               workbookCreateAfter: function() {
                 console.log('WalSheetz spreadsheet initialized successfully')
@@ -406,15 +413,14 @@ export function Spreadsheet() {
                         if (e.target && (e.target.className === 'luckysheet-cell-input' ||
                                        e.target.id === 'luckysheet-rich-text-editor')) {
                           console.log('🔧 Input event detected on cell editor')
-                          // Get current cell position
+                          // Get current cell position using wrapper
                           try {
-                            const selection = window.luckysheet.getSelection()
-                            if (selection && selection.length > 0) {
-                              const range = selection[0]
-                              const row = range.row[0]
-                              const col = range.column[0]
+                            const selection = luckysheetApi.getSelection()
+                            if (selection) {
+                              const row = selection.startRow
+                              const col = selection.startCol
                               if (handleCellEdit && typeof row === 'number' && typeof col === 'number') {
-                                const oldValue = window.luckysheet.getCellValue(row, col) || ''
+                                const oldValue = luckysheetApi.getCellValue(row, col) || ''
                                 const newValue = e.target.textContent || e.target.value || ''
                                 if (oldValue !== newValue) {
                                   console.log('🔧 DOM input fallback triggered cell edit', { row, col, oldValue, newValue })
@@ -433,12 +439,11 @@ export function Spreadsheet() {
                         console.log('🔧 Paste event detected')
                         setTimeout(() => {
                           try {
-                            const selection = window.luckysheet.getSelection()
-                            if (selection && selection.length > 0 && handleCellEdit) {
-                              const range = selection[0]
-                              const row = range.row[0]
-                              const col = range.column[0]
-                              const newValue = window.luckysheet.getCellValue(row, col) || ''
+                            const selection = luckysheetApi.getSelection()
+                            if (selection && handleCellEdit) {
+                              const row = selection.startRow
+                              const col = selection.startCol
+                              const newValue = luckysheetApi.getCellValue(row, col) || ''
                               console.log('🔧 Paste fallback triggered cell edit', { row, col, newValue })
                               handleCellEdit(row, col, '', newValue) // Don't know old value for paste
                             }
@@ -643,6 +648,14 @@ export function Spreadsheet() {
               },
               cellMousedown: function(cell, postion, sheetFile, ctx) {
                 try {
+                  // Guard: Don't process clicks until Luckysheet is fully ready
+                  if (!luckysheetReadyRef.current) {
+                    console.debug('cellMousedown: Luckysheet not ready yet, ignoring click', {
+                      luckysheetReady: luckysheetReadyRef.current
+                    })
+                    return
+                  }
+
                   if (!cell) {
                     console.debug('cellMousedown: No cell provided', { cell })
                     return
@@ -712,56 +725,103 @@ export function Spreadsheet() {
                   console.warn('Error in cellMousedown:', error)
                 }
               }
+            },
+            onReady: () => {
+              console.log('luckysheetApi marked as ready');
             }
-          })
-          return true
+          });
+        return true;
+      } catch (error) {
+        console.error('Failed to initialize WalSheetz spreadsheet:', error);
+        return false;
+      }
+    }
+
+    let initializeRetryInterval = null
+    let initializeTimeout = null
+
+    const scheduleRetry = () => {
+      initializeRetryInterval = setInterval(async () => {
+        try {
+          if (await initLuckysheet()) {
+            clearInterval(initializeRetryInterval)
+            initializeRetryInterval = null
+            if (initializeTimeout) {
+              clearTimeout(initializeTimeout)
+              initializeTimeout = null
+            }
+          }
         } catch (error) {
-          console.error('Failed to initialize WalSheetz spreadsheet:', error)
-          return false
+          console.warn('Error in retry initialization:', error)
         }
-      }
-      return false
+      }, 100)
+
+      initializeTimeout = setTimeout(() => {
+        if (initializeRetryInterval) {
+          clearInterval(initializeRetryInterval)
+          initializeRetryInterval = null
+        }
+        console.warn('WalSheetz spreadsheet initialization timeout')
+      }, 10000)
     }
 
-    if (initLuckysheet()) {
-      return
+    const initializeAsync = async () => {
+      try {
+        const initResult = await initLuckysheet();
+        if (!initResult) {
+          scheduleRetry();
+        }
+      } catch (error) {
+        console.error('Error initializing spreadsheet:', error);
+        scheduleRetry();
+      }
     }
 
-    let timeout
-    const checkLuckysheet = setInterval(() => {
-      if (initLuckysheet()) {
-        clearInterval(checkLuckysheet)
-        if (timeout) clearTimeout(timeout)
-      }
-    }, 100)
-
-    timeout = setTimeout(() => {
-      clearInterval(checkLuckysheet)
-      console.warn('WalSheetz spreadsheet initialization timeout')
-    }, 10000)
+    initializeAsync();
 
     return () => {
-      clearInterval(checkLuckysheet)
-      clearTimeout(timeout)
-      document.removeEventListener('keydown', handleKeyDown)
+      if (initializeRetryInterval) {
+        clearInterval(initializeRetryInterval);
+        initializeRetryInterval = null;
+      }
+      if (initializeTimeout) {
+        clearTimeout(initializeTimeout);
+        initializeTimeout = null;
+      }
+      document.removeEventListener('keydown', handleKeyDown);
 
       // Clean up DOM event listeners
       domEventListenersRef.current.forEach(({ element, event, handler }) => {
         try {
-          element.removeEventListener(event, handler)
-          console.debug('🔧 Removed DOM event listener', { event })
+          element.removeEventListener(event, handler);
+          console.debug('🔧 Removed DOM event listener', { event });
         } catch (error) {
-          console.warn('🔧 Error removing DOM event listener', { event, error })
+          console.warn('🔧 Error removing DOM event listener', { event, error });
         }
       })
-      domEventListenersRef.current = []
+      domEventListenersRef.current = [];
 
       if (luckysheetRef.current && window.luckysheet) {
-        try {
-          window.luckysheet.destroy()
-        } catch (error) {
-          console.error('Error destroying WalSheetz spreadsheet:', error)
+        const destroyLuckysheet = () => {
+          return Promise.resolve()
+            .then(() => luckysheetApi.destroy?.())
+            .catch((error) => {
+              console.error('Error destroying WalSheetz spreadsheet via API wrapper:', error)
+            })
+            .then(() => {
+              const destroyFn = window.luckysheet && window.luckysheet.destroy
+              if (typeof destroyFn === 'function') destroyFn()
+            })
+            .catch((error) => {
+              console.error('Error destroying WalSheetz spreadsheet via global instance:', error)
+            })
+            .finally(() => {
+              luckysheetRef.current = false
+              luckysheetReadyRef.current = false
+            })
         }
+
+        destroyLuckysheet()
       }
     }
   }, [handleCellEdit, setCurrentCell, handleFormulaChange, saveToBlockchain, spreadsheetData])

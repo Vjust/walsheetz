@@ -9,9 +9,11 @@ export function LoadingOverlay({
   progress,
   steps,
   currentStep,
-  type = 'default', // default, blockchain, wallet, storage
+  type = 'default', // default, blockchain, wallet, storage, warning, error
   showProgress = false,
-  autoProgress = false
+  autoProgress = false,
+  error = null,
+  errorType = null
 }) {
   const [animatedProgress, setAnimatedProgress] = useState(0);
 
@@ -38,6 +40,14 @@ export function LoadingOverlay({
   if (!isVisible) return null;
 
   const getSpinnerIcon = () => {
+    // Show error states first
+    if (error || type === 'error') {
+      return '❌';
+    }
+    if (type === 'warning') {
+      return '⚠️';
+    }
+
     switch (type) {
       case 'blockchain':
         return '⛓️';
@@ -53,6 +63,14 @@ export function LoadingOverlay({
   };
 
   const getTypeColor = () => {
+    // Error states take precedence
+    if (error || type === 'error') {
+      return '#F44336';
+    }
+    if (type === 'warning') {
+      return '#FF9800';
+    }
+
     switch (type) {
       case 'blockchain':
         return '#4CAF50';
@@ -67,8 +85,14 @@ export function LoadingOverlay({
     }
   };
 
+  const handleBackdropClick = (event) => {
+    if (event.target.classList.contains('loading-overlay') && !onCancel) {
+      event.stopPropagation();
+    }
+  };
+
   return (
-    <div className="loading-overlay">
+    <div className="loading-overlay" onMouseDown={handleBackdropClick}>
       <div className="loading-backdrop" onClick={onCancel} />
       <div className="loading-card" style={{ '--type-color': getTypeColor() }}>
         <div className="loading-content">
@@ -80,8 +104,11 @@ export function LoadingOverlay({
           </div>
 
           <div className="loading-text">
-            <h3 className="loading-message">{message || 'Loading...'}</h3>
-            {details && <p className="loading-details">{details}</p>}
+            <h3 className="loading-message">
+              {error ? 'Error' : message || 'Loading...'}
+            </h3>
+            {error && <p className="loading-error" style={{ color: getTypeColor() }}>{error}</p>}
+            {details && !error && <p className="loading-details">{details}</p>}
           </div>
 
           {onCancel && (
@@ -132,22 +159,37 @@ export function LoadingOverlay({
 
         {/* Type-specific messages */}
         <div className="loading-type-info">
-          {type === 'blockchain' && (
+          {error && errorType === 'wallet_required' && (
+            <div className="type-info error-info">
+              <small>💡 Connect your wallet to access blockchain features and save data permanently</small>
+            </div>
+          )}
+          {error && errorType === 'error' && errorType !== 'wallet_required' && (
+            <div className="type-info error-info">
+              <small>⚠️ An unexpected error occurred. Please try again.</small>
+            </div>
+          )}
+          {type === 'warning' && !error && (
+            <div className="type-info warning-info">
+              <small>⚠️ {details || 'Please review the warning message above'}</small>
+            </div>
+          )}
+          {!error && type === 'blockchain' && (
             <div className="type-info">
               <small>⚠️ This operation requires blockchain confirmation and may take 10-30 seconds</small>
             </div>
           )}
-          {type === 'wallet' && (
+          {!error && type === 'wallet' && (
             <div className="type-info">
               <small>👛 Please approve the transaction in your wallet</small>
             </div>
           )}
-          {type === 'storage' && (
+          {!error && type === 'storage' && (
             <div className="type-info">
               <small>💾 Uploading data to decentralized storage...</small>
             </div>
           )}
-          {type === 'network' && (
+          {!error && type === 'network' && (
             <div className="type-info">
               <small>🌐 Connecting to blockchain network...</small>
             </div>

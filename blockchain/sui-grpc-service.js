@@ -167,9 +167,9 @@ export class SuiGrpcService {
       const balance = await this.grpcService.getBalance(address, coinType);
       return {
         success: true,
-        totalBalance: balance.total_balance,
-        coinObjectCount: balance.coin_object_count,
-        lockedBalance: balance.locked_balance || '0'
+        totalBalance: balance.balance?.balance || '0',
+        coinObjectCount: 1, // gRPC v2beta2 doesn't provide this field
+        lockedBalance: '0' // gRPC v2beta2 doesn't provide this field
       };
     } catch (error) {
       console.error('Failed to get balance:', error);
