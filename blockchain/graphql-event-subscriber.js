@@ -26,8 +26,13 @@ export class GraphQLEventSubscriber {
     }
 
     this.isActive = true;
-    this.backoffMultiplier = 1;
-    console.log('[GraphQLEventSubscriber] Starting GraphQL event polling');
+
+    // Only reset backoff on first start - preserve backoff multiplier during restarts
+    if (!this.hasOwnProperty('backoffMultiplier') || this.backoffMultiplier === undefined) {
+      this.backoffMultiplier = 1;
+    }
+
+    console.log(`[GraphQLEventSubscriber] Starting GraphQL event polling with ${this.pollIntervalMs * this.backoffMultiplier}ms interval`);
 
     this.pollInterval = setInterval(() => {
       this.pullRecentEvents().catch(error => {
@@ -41,11 +46,12 @@ export class GraphQLEventSubscriber {
    * Stop polling for events
    */
   stop() {
-    if (!this.isActive) {
+    if (!this.isActive && !this.shouldRestart) {
       return;
     }
 
     this.isActive = false;
+    this.shouldRestart = false; // Cancel any pending restarts
 
     if (this.pollInterval) {
       clearInterval(this.pollInterval);
@@ -99,7 +105,7 @@ export class GraphQLEventSubscriber {
         this.processCheckpoints(checkpointsResult.data.checkpoints.nodes);
       }
 
-      this.resetBackoff(); // Reset backoff on successful poll
+      this.resetBackoffMultiplier(); // Reset backoff multiplier on successful poll
 
     } catch (error) {
       console.error('[GraphQLEventSubscriber] Failed to pull events:', error.message);
@@ -375,14 +381,21 @@ export class GraphQLEventSubscriber {
 
     console.warn(`[GraphQLEventSubscriber] Error handled, backing off to ${this.pollIntervalMs * this.backoffMultiplier}ms`);
 
-    // Restart with new interval
+    // Restart with new interval - preserve active state across stop/start
     if (this.isActive) {
       this.stop();
+
+      // Set a flag to indicate we should restart
+      this.shouldRestart = true;
+      const delay = this.pollIntervalMs * this.backoffMultiplier;
+
       setTimeout(() => {
-        if (this.isActive) { // Check if still should be active
+        if (this.shouldRestart) {
+          this.shouldRestart = false;
+          this.isActive = true;
           this.start();
         }
-      }, this.pollIntervalMs * this.backoffMultiplier);
+      }, delay);
     }
   }
 
@@ -397,8 +410,26 @@ export class GraphQLEventSubscriber {
       // Restart with normal interval if needed
       if (this.isActive) {
         this.stop();
-        this.start();
+        this.shouldRestart = true;
+
+        setTimeout(() => {
+          if (this.shouldRestart) {
+            this.shouldRestart = false;
+            this.isActive = true;
+            this.start();
+          }
+        }, 0); // Restart immediately with normal interval
       }
+    }
+  }
+
+  /**
+   * Reset backoff multiplier without restarting the poller
+   */
+  resetBackoffMultiplier() {
+    if (this.backoffMultiplier > 1) {
+      console.log('[GraphQLEventSubscriber] Resetting backoff multiplier to normal');
+      this.backoffMultiplier = 1;
     }
   }
 
