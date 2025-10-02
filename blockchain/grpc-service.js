@@ -121,6 +121,7 @@ class SuiGrpcService {
     this.maxReconnectDelay = 30000; // Max 30 seconds
     this.initTime = Date.now();
     this.unimplementedStreams = new Set(); // Track streams that returned UNIMPLEMENTED
+    this.disabledStreams = new Set(); // Track streams permanently disabled this session
     
     grpcLogger.info('GRPC_SERVICE', 'constructor', 'Initializing Sui gRPC service', {
       reconnectDelay: this.reconnectDelay,
@@ -382,8 +383,8 @@ class SuiGrpcService {
       include_full_transactions: options.includeFullTransactions ?? true
     };
 
-    console.log('Starting checkpoint subscription...');
-    
+    grpcLogger.debug('GRPC_SERVICE', 'checkpoint_subscribe', 'Starting checkpoint subscription');
+
     const stream = this.clients.subscription.subscribeToCheckpoints(request);
     this.streams.set('checkpoints', stream);
 
@@ -396,17 +397,17 @@ class SuiGrpcService {
         }
         this.reconnectDelay = 1000; // Reset delay on successful data
       } catch (error) {
-        console.error('Error processing checkpoint data:', error);
+        grpcLogger.error('GRPC_SERVICE', 'checkpoint_data_error', 'Error processing checkpoint data', { error: error.message });
       }
     });
 
     stream.on('error', (error) => {
-      console.error('Checkpoint stream error:', error);
+      // Error is already logged in handleStreamError
       this.handleStreamError('checkpoints', error);
     });
 
     stream.on('end', () => {
-      console.log('Checkpoint stream ended');
+      // Stream end is already logged in handleStreamEnd
       this.handleStreamEnd('checkpoints');
     });
 
@@ -419,7 +420,7 @@ class SuiGrpcService {
 
     const sequenceNumber = checkpoint.sequence_number ?? checkpoint.summary?.sequence_number;
     if (sequenceNumber !== undefined) {
-      console.log(`Received checkpoint ${sequenceNumber}`);
+      grpcLogger.debug('GRPC_SERVICE', 'checkpoint_received', `Received checkpoint ${sequenceNumber}`);
     }
 
     // Process transactions for spreadsheet events
@@ -553,8 +554,6 @@ class SuiGrpcService {
   }
 
   handleStreamError(streamName, error) {
-    console.error(`Stream ${streamName} error:`, error);
-
     // Remove the failed stream
     this.streams.delete(streamName);
 
@@ -562,20 +561,35 @@ class SuiGrpcService {
     const isUnimplemented = error.code === 12 || error.message?.includes('12 UNIMPLEMENTED');
 
     if (isUnimplemented) {
-      grpcLogger.error('GRPC_SERVICE', 'unimplemented_error', `Stream ${streamName} not supported by server`, {
-        streamName,
-        errorCode: error.code,
-        errorMessage: error.message,
-        metadata: error.metadata ? Object.keys(error.metadata.internalRepr || {}) : []
-      });
+      // Only log once per stream to prevent spam
+      if (!this.disabledStreams.has(streamName)) {
+        grpcLogger.error('GRPC_SERVICE', 'unimplemented_error', `Stream ${streamName} not supported by server`, {
+          streamName,
+          errorCode: error.code,
+          errorMessage: error.message,
+          metadata: error.metadata ? Object.keys(error.metadata.internalRepr || {}) : []
+        });
+      }
 
-      // Mark stream as permanently UNIMPLEMENTED
+      // Mark stream as permanently UNIMPLEMENTED and disabled
       this.unimplementedStreams.add(streamName);
+      this.disabledStreams.add(streamName);
 
-      // Emit special event for UNIMPLEMENTED errors - don't retry
+      // Emit dedicated event for checkpoint stream disable
+      if (streamName === 'checkpoints') {
+        this.emit('checkpointStreamDisabled', { streamName, error: error.message, code: error.code });
+      }
+
+      // Emit general event for UNIMPLEMENTED errors - don't retry
       this.emit('streamUnimplemented', { streamName, error: error.message, code: error.code });
       return; // Don't attempt reconnection for UNIMPLEMENTED errors
     }
+
+    // For other errors, log and emit
+    grpcLogger.error('GRPC_SERVICE', 'stream_error', `Stream ${streamName} error`, {
+      streamName,
+      error: error.message
+    });
 
     // Emit error for listeners
     this.emit('streamError', { streamName, error: error.message });
@@ -589,7 +603,7 @@ class SuiGrpcService {
   }
 
   handleStreamEnd(streamName) {
-    console.log(`Stream ${streamName} ended, attempting reconnection...`);
+    grpcLogger.info('GRPC_SERVICE', 'stream_ended', `Stream ${streamName} ended, attempting reconnection`);
     this.streams.delete(streamName);
     
     // Attempt immediate reconnection
@@ -608,14 +622,14 @@ class SuiGrpcService {
       return;
     }
 
-    console.log(`Reconnecting ${streamName} stream...`);
+    grpcLogger.info('GRPC_SERVICE', 'stream_reconnecting', `Reconnecting ${streamName} stream`);
 
     if (streamName === 'checkpoints') {
       try {
         this.subscribeToCheckpoints();
         this.emit('streamReconnected', { streamName });
       } catch (error) {
-        console.error('Failed to reconnect checkpoint stream:', error);
+        grpcLogger.error('GRPC_SERVICE', 'reconnect_failed', 'Failed to reconnect checkpoint stream', { error: error.message });
         // Try again after delay
         setTimeout(() => {
           this.reconnectStream(streamName);

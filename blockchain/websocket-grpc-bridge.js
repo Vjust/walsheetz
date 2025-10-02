@@ -165,7 +165,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
     // Setup GraphQL event handlers
     this.graphqlSubscriber.on('VersionSaved', (event) => {
       this.broadcastToClients({
-        type: 'blockchain_event',
+        type: 'blockchainEvent',
         eventType: 'VersionSaved',
         data: event.data,
         source: 'graphql'
@@ -174,7 +174,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
 
     this.graphqlSubscriber.on('SpreadsheetCreated', (event) => {
       this.broadcastToClients({
-        type: 'blockchain_event',
+        type: 'blockchainEvent',
         eventType: 'SpreadsheetCreated',
         data: event.data,
         source: 'graphql'
@@ -1142,16 +1142,26 @@ export class WebSocketGrpcBridge extends EventEmitter {
       this.streamState.grpcFailures++;
     });
 
-    grpcService.on('streamUnimplemented', (event) => {
-      logger.error('BRIDGE', 'grpc_unimplemented', 'gRPC endpoint not implemented, switching to GraphQL fallback', {
+    // Listen for checkpoint stream being permanently disabled
+    grpcService.on('checkpointStreamDisabled', (event) => {
+      logger.warn('BRIDGE', 'checkpoint_stream_disabled', 'Checkpoint stream not supported, using GraphQL fallback', {
         streamName: event.streamName,
-        errorCode: event.code,
-        error: event.error
+        errorCode: event.code
       });
 
-      // Immediately switch to GraphQL fallback for UNIMPLEMENTED endpoints
-      if (event.streamName === 'checkpoints') {
-        this.startGraphQLFallback();
+      // Immediately switch to GraphQL fallback
+      this.startGraphQLFallback();
+    });
+
+    grpcService.on('streamUnimplemented', (event) => {
+      logger.debug('BRIDGE', 'grpc_unimplemented', 'gRPC endpoint not implemented', {
+        streamName: event.streamName,
+        errorCode: event.code
+      });
+
+      // For non-checkpoint streams, just log at debug level
+      if (event.streamName !== 'checkpoints') {
+        logger.info('BRIDGE', 'stream_fallback', `Stream ${event.streamName} not supported via gRPC`);
       }
     });
   }
@@ -1161,7 +1171,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
     const client = this.clients.get(clientId);
     if (!client) return;
 
-    console.log(`Client ${clientId} disconnected`);
+    logger.debug('CONNECTION', 'client_disconnect_cleanup', 'Cleaning up client resources', { clientId });
 
     // Release all locks held by this client
     for (const [lockKey, lock] of this.collaborationState.lockedCells) {
@@ -1347,7 +1357,16 @@ export class WebSocketGrpcBridge extends EventEmitter {
   startCheckpointStreams() {
     logger.info('BRIDGE', 'stream_start', 'Starting checkpoint streams');
 
-    // Try gRPC first
+    // Check if gRPC checkpoint streaming is supported on this network
+    const supportsGrpcCheckpoints = this.config.sui.features?.supportsCheckpointStream ?? true;
+
+    if (!supportsGrpcCheckpoints) {
+      logger.info('BRIDGE', 'grpc_checkpoint_disabled', 'gRPC checkpoint streaming disabled for this network, using GraphQL fallback');
+      this.startGraphQLFallback();
+      return;
+    }
+
+    // Try gRPC first (only if supported)
     try {
       grpcService.subscribeToCheckpoints();
       this.streamState.active = 'grpc';
@@ -1390,7 +1409,16 @@ export class WebSocketGrpcBridge extends EventEmitter {
     logger.info('BRIDGE', 'graphql_fallback_start', 'Starting GraphQL fallback');
 
     try {
-      this.graphqlSubscriber.start();
+      // Pass last checkpoint from gRPC to prevent replay burst
+      const lastCheckpoint = grpcService.lastCheckpointCursor;
+
+      if (lastCheckpoint) {
+        logger.debug('BRIDGE', 'checkpoint_handoff', 'Passing checkpoint state to GraphQL fallback', {
+          lastCheckpoint
+        });
+      }
+
+      this.graphqlSubscriber.start(lastCheckpoint);
       this.streamState.active = 'graphql';
       this.streamState.lastActivity = Date.now();
       this.streamState.graphqlFailures = 0;

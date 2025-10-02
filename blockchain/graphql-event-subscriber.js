@@ -1,6 +1,44 @@
 // GraphQL event subscriber for checkpoint event fallback
 import { getCurrentConfig } from './config.js';
 
+// Simple logger for GraphQL subscriber
+class GraphQLLogger {
+  constructor() {
+    this.logLevel = process.env.BRIDGE_LOG_LEVEL || 'INFO';
+    this.logLevels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
+  }
+
+  shouldLog(level) {
+    return this.logLevels[level] >= this.logLevels[this.logLevel];
+  }
+
+  debug(message) {
+    if (this.shouldLog('DEBUG')) {
+      console.debug(`🔍 [GraphQLEventSubscriber] ${message}`);
+    }
+  }
+
+  info(message) {
+    if (this.shouldLog('INFO')) {
+      console.info(`ℹ️ [GraphQLEventSubscriber] ${message}`);
+    }
+  }
+
+  warn(message) {
+    if (this.shouldLog('WARN')) {
+      console.warn(`⚠️ [GraphQLEventSubscriber] ${message}`);
+    }
+  }
+
+  error(message) {
+    if (this.shouldLog('ERROR')) {
+      console.error(`❌ [GraphQLEventSubscriber] ${message}`);
+    }
+  }
+}
+
+const gqlLogger = new GraphQLLogger();
+
 export class GraphQLEventSubscriber {
   constructor() {
     this.config = getCurrentConfig();
@@ -13,30 +51,42 @@ export class GraphQLEventSubscriber {
     this.maxBackoffMultiplier = 8;
     this.eventCallbacks = new Map();
 
-    console.log('[GraphQLEventSubscriber] Initialized with GraphQL URL:', this.graphqlUrl);
+    // Deduplication caches to prevent replay
+    this.seenEventDigests = new Set();
+    this.seenCheckpoints = new Set();
+    this.maxCacheSize = 1000; // Prevent memory leak
+
+    gqlLogger.debug(`Initialized with GraphQL URL: ${this.graphqlUrl}`);
   }
 
   /**
    * Start polling for recent events via GraphQL
+   * @param {number} fromCheckpoint - Optional starting checkpoint to seed lastCheckpoint
    */
-  start() {
+  start(fromCheckpoint = null) {
     if (this.isActive) {
-      console.warn('[GraphQLEventSubscriber] Already active, ignoring start request');
+      gqlLogger.warn('Already active, ignoring start request');
       return;
     }
 
     this.isActive = true;
+
+    // Seed lastCheckpoint from gRPC cursor if provided
+    if (fromCheckpoint !== null && fromCheckpoint !== undefined) {
+      this.lastCheckpoint = fromCheckpoint;
+      gqlLogger.info(`Starting from checkpoint ${fromCheckpoint}`);
+    }
 
     // Only reset backoff on first start - preserve backoff multiplier during restarts
     if (!this.hasOwnProperty('backoffMultiplier') || this.backoffMultiplier === undefined) {
       this.backoffMultiplier = 1;
     }
 
-    console.log(`[GraphQLEventSubscriber] Starting GraphQL event polling with ${this.pollIntervalMs * this.backoffMultiplier}ms interval`);
+    gqlLogger.info(`GraphQL event polling active (${this.pollIntervalMs * this.backoffMultiplier}ms interval)`);
 
     this.pollInterval = setInterval(() => {
       this.pullRecentEvents().catch(error => {
-        console.error('[GraphQLEventSubscriber] Error during event polling:', error.message);
+        gqlLogger.error(`Error during event polling: ${error.message}`);
         this.handleError(error);
       });
     }, this.pollIntervalMs * this.backoffMultiplier);
@@ -58,7 +108,7 @@ export class GraphQLEventSubscriber {
       this.pollInterval = null;
     }
 
-    console.log('[GraphQLEventSubscriber] Stopped GraphQL event polling');
+    gqlLogger.info('Stopped GraphQL event polling');
   }
 
   /**
@@ -171,12 +221,17 @@ export class GraphQLEventSubscriber {
   buildEventQuery() {
     const packageId = this.config.sui.packageId;
 
+    // Build incremental filter to only fetch events after lastCheckpoint
+    const checkpointFilter = this.lastCheckpoint
+      ? `, checkpoint: { sequenceNumber: { greaterThan: "${this.lastCheckpoint}" } }`
+      : '';
+
     return `
       query RecentEvents {
         events(
           first: 20
           filter: {
-            emittingModule: "${packageId}::spreadsheet"
+            emittingModule: "${packageId}::spreadsheet"${checkpointFilter}
           }
         ) {
           nodes {
@@ -206,12 +261,16 @@ export class GraphQLEventSubscriber {
    * Build GraphQL query for recent checkpoints
    */
   buildCheckpointQuery() {
-    const afterSequence = this.lastCheckpoint || 0;
+    // Build incremental filter to only fetch checkpoints after lastCheckpoint
+    const checkpointFilter = this.lastCheckpoint
+      ? `filter: { sequenceNumber: { greaterThan: "${this.lastCheckpoint}" } }`
+      : '';
 
     return `
       query RecentCheckpoints {
         checkpoints(
           first: 10
+          ${checkpointFilter}
         ) {
           nodes {
             sequenceNumber
@@ -241,15 +300,35 @@ export class GraphQLEventSubscriber {
       return;
     }
 
+    let newEventCount = 0;
+
     for (const event of events) {
       try {
+        const checkpoint = event.transactionBlock?.effects?.checkpoint?.sequenceNumber;
+        const digest = event.transactionBlock?.digest;
+
+        // Skip events at or before lastCheckpoint
+        if (checkpoint && this.lastCheckpoint && checkpoint <= this.lastCheckpoint) {
+          continue;
+        }
+
+        // Skip duplicate events by digest
+        if (digest && this.seenEventDigests.has(digest)) {
+          continue;
+        }
+
         const eventType = this.extractEventType(event);
 
         if (eventType) {
           // Update last checkpoint if available
-          const checkpoint = event.transactionBlock?.effects?.checkpoint?.sequenceNumber;
           if (checkpoint && (!this.lastCheckpoint || checkpoint > this.lastCheckpoint)) {
             this.lastCheckpoint = checkpoint;
+          }
+
+          // Mark digest as seen
+          if (digest) {
+            this.seenEventDigests.add(digest);
+            this.trimCache(this.seenEventDigests);
           }
 
           // Emit to registered callbacks
@@ -258,16 +337,21 @@ export class GraphQLEventSubscriber {
             data: this.parseEventContents(event.contents?.json),
             bcs: event.bcs,
             timestamp: event.timestamp,
-            transactionDigest: event.transactionBlock?.digest,
+            transactionDigest: digest,
             checkpoint: checkpoint
           });
+
+          newEventCount++;
         }
       } catch (error) {
-        console.warn('[GraphQLEventSubscriber] Failed to process event:', error.message);
+        gqlLogger.warn(`Failed to process event: ${error.message}`);
       }
     }
 
-    console.log(`[GraphQLEventSubscriber] Processed ${events.length} events, last checkpoint: ${this.lastCheckpoint}`);
+    // Only log if we actually processed new events
+    if (newEventCount > 0) {
+      gqlLogger.info(`Processed ${newEventCount} new events, checkpoint: ${this.lastCheckpoint}`);
+    }
   }
 
   /**
@@ -279,13 +363,29 @@ export class GraphQLEventSubscriber {
       return;
     }
 
+    let newCheckpointCount = 0;
+
     for (const checkpoint of checkpoints) {
       try {
         const sequenceNumber = parseInt(checkpoint.sequenceNumber);
 
+        // Skip checkpoints at or before lastCheckpoint
+        if (this.lastCheckpoint && sequenceNumber <= this.lastCheckpoint) {
+          continue;
+        }
+
+        // Skip duplicate checkpoints
+        if (this.seenCheckpoints.has(sequenceNumber)) {
+          continue;
+        }
+
         // Update last checkpoint if this is newer
         if (!this.lastCheckpoint || sequenceNumber > this.lastCheckpoint) {
           this.lastCheckpoint = sequenceNumber;
+
+          // Mark checkpoint as seen
+          this.seenCheckpoints.add(sequenceNumber);
+          this.trimCache(this.seenCheckpoints);
 
           // Emit checkpoint event similar to gRPC stream format
           this.emitEvent('checkpoint', {
@@ -301,13 +401,18 @@ export class GraphQLEventSubscriber {
             checkpoint: sequenceNumber,
             timestamp: checkpoint.timestamp || Date.now()
           });
+
+          newCheckpointCount++;
         }
       } catch (error) {
-        console.warn('[GraphQLEventSubscriber] Failed to process checkpoint:', error.message);
+        gqlLogger.warn(`Failed to process checkpoint: ${error.message}`);
       }
     }
 
-    console.log(`[GraphQLEventSubscriber] Processed ${checkpoints.length} checkpoints, current: ${this.lastCheckpoint}`);
+    // Only log if we actually processed new checkpoints
+    if (newCheckpointCount > 0) {
+      gqlLogger.debug(`Processed ${newCheckpointCount} new checkpoints, current: ${this.lastCheckpoint}`);
+    }
   }
 
   /**
@@ -372,6 +477,19 @@ export class GraphQLEventSubscriber {
   }
 
   /**
+   * Trim cache to prevent memory leak
+   * @param {Set} cache - Cache to trim
+   */
+  trimCache(cache) {
+    if (cache.size > this.maxCacheSize) {
+      // Convert to array, remove oldest items, convert back
+      const items = Array.from(cache);
+      const toRemove = items.slice(0, items.length - this.maxCacheSize);
+      toRemove.forEach(item => cache.delete(item));
+    }
+  }
+
+  /**
    * Handle errors and implement backoff
    * @param {Error} error - Error that occurred
    */
@@ -379,7 +497,7 @@ export class GraphQLEventSubscriber {
     // Increase backoff multiplier
     this.backoffMultiplier = Math.min(this.backoffMultiplier * 2, this.maxBackoffMultiplier);
 
-    console.warn(`[GraphQLEventSubscriber] Error handled, backing off to ${this.pollIntervalMs * this.backoffMultiplier}ms`);
+    gqlLogger.warn(`Error handled, backing off to ${this.pollIntervalMs * this.backoffMultiplier}ms`);
 
     // Restart with new interval - preserve active state across stop/start
     if (this.isActive) {

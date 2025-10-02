@@ -121,7 +121,10 @@ export class SuilendAdapter {
   async validateArgs(method, args) {
     switch (method) {
       case 'getReserves':
-        if (!args[0]) throw new Error('Market ID required');
+        // Market ID is optional - when not provided, returns all reserves from all markets
+        if (args[0] && typeof args[0] !== 'string') {
+          throw new Error('Market ID must be a string');
+        }
         break;
       case 'getReserve':
       case 'getSupplyApy':

@@ -28,7 +28,10 @@ export const config = {
         // This must be set to true as the on-chain function expects the content_hash argument.
         contentHashInSave: true,
         // Rate limiter feature flag
-        rateLimiterEnabled: (env.RATE_LIMITER_ENABLED ?? 'true') !== 'false' // Default true
+        rateLimiterEnabled: (env.RATE_LIMITER_ENABLED ?? 'true') !== 'false', // Default true
+        // gRPC checkpoint streaming support - Testnet currently returns UNIMPLEMENTED (code 12)
+        // Setting to false prevents startup error spam and uses GraphQL fallback immediately
+        supportsCheckpointStream: false
       },
       // Rate limiting configuration
       rateLimits: {
@@ -48,7 +51,9 @@ export const config = {
       registryObjectId: '0x66f68bfb639dbc7f24519bcdbbfdb376057d87c6d508ea7a8d67746a11721ca5',
       features: {
         contentHashInSave: true,
-        rateLimiterEnabled: (env.RATE_LIMITER_ENABLED ?? 'true') !== 'false'
+        rateLimiterEnabled: (env.RATE_LIMITER_ENABLED ?? 'true') !== 'false',
+        // gRPC checkpoint streaming support - enabled for mainnet (may need verification)
+        supportsCheckpointStream: true
       },
       rateLimits: {
         sui: {

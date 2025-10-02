@@ -6,6 +6,9 @@ import { fileURLToPath, URL } from 'url'
 import { createRequire } from 'module'
 const require = createRequire(import.meta.url)
 
+// Conditional proxy logging - set VITE_VERBOSE_PROXY=true for detailed logs
+const VERBOSE_PROXY = process.env.VITE_VERBOSE_PROXY === 'true'
+
 export default defineConfig({
   root: '.',
   plugins: [react()],
@@ -35,9 +38,11 @@ export default defineConfig({
           proxy.on('error', (err, req, res) => {
             console.error('[Vite Proxy] Sui RPC error:', typeof err === 'string' ? err : (err && err.message) || 'Unknown error');
           });
-          proxy.on('proxyReq', (proxyReq, req) => {
-            console.log(`[Vite Proxy] Sui RPC: ${req.method} ${req.url}`);
-          });
+          if (VERBOSE_PROXY) {
+            proxy.on('proxyReq', (proxyReq, req) => {
+              console.log(`[Vite Proxy] Sui RPC: ${req.method} ${req.url}`);
+            });
+          }
         }
       },
       
@@ -58,11 +63,14 @@ export default defineConfig({
         configure: (proxy) => {
           proxy.on('error', (err, req, res) => {
             console.error('[Vite Proxy] Walrus Publisher error:', typeof err === 'string' ? err : (err && err.message) || 'Unknown error');
-            // Try fallback endpoint
-            console.log('[Vite Proxy] Attempting fallback for Walrus Publisher...');
+            if (VERBOSE_PROXY) {
+              console.log('[Vite Proxy] Attempting fallback for Walrus Publisher...');
+            }
           });
           proxy.on('proxyReq', (proxyReq, req) => {
-            console.log(`[Vite Proxy] Walrus Publisher: ${req.method} ${req.url}`);
+            if (VERBOSE_PROXY) {
+              console.log(`[Vite Proxy] Walrus Publisher: ${req.method} ${req.url}`);
+            }
             // Set proper headers for Walrus
             proxyReq.setHeader('Accept', 'application/json');
             proxyReq.setHeader('User-Agent', 'WalSheetz/1.0.0');
@@ -93,13 +101,17 @@ export default defineConfig({
             console.error('[Vite Proxy] Walrus Aggregator error:', typeof err === 'string' ? err : (err && err.message) || 'Unknown error');
           });
           proxy.on('proxyReq', (proxyReq, req) => {
-            console.log(`[Vite Proxy] Walrus Aggregator: ${req.method} ${req.url}`);
+            if (VERBOSE_PROXY) {
+              console.log(`[Vite Proxy] Walrus Aggregator: ${req.method} ${req.url}`);
+            }
             proxyReq.setHeader('Accept', 'application/json');
             proxyReq.setHeader('User-Agent', 'WalSheetz/1.0.0');
           });
-          proxy.on('proxyRes', (proxyRes, req) => {
-            console.log(`[Vite Proxy] Walrus Aggregator response: ${proxyRes.statusCode} for ${req.url}`);
-          });
+          if (VERBOSE_PROXY) {
+            proxy.on('proxyRes', (proxyRes, req) => {
+              console.log(`[Vite Proxy] Walrus Aggregator response: ${proxyRes.statusCode} for ${req.url}`);
+            });
+          }
         }
       },
 
@@ -112,12 +124,14 @@ export default defineConfig({
           proxy.on('error', (err) => {
             console.error('[Vite Proxy] WebSocket error:', typeof err === 'string' ? err : (err && err.message) || 'Unknown error');
           });
-          proxy.on('open', () => {
-            console.log('[Vite Proxy] WebSocket connection opened');
-          });
-          proxy.on('close', () => {
-            console.log('[Vite Proxy] WebSocket connection closed');
-          });
+          if (VERBOSE_PROXY) {
+            proxy.on('open', () => {
+              console.log('[Vite Proxy] WebSocket connection opened');
+            });
+            proxy.on('close', () => {
+              console.log('[Vite Proxy] WebSocket connection closed');
+            });
+          }
         }
       }
     }

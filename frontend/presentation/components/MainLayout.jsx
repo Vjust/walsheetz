@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { Header } from './Header.jsx'
-import { FormulaBar } from './FormulaBar.jsx'
 import { Spreadsheet } from './Spreadsheet.jsx'
 import { StatusBar } from './StatusBar.jsx'
 import { NotificationContainer } from './NotificationContainer.jsx'
 import { Collaboration } from './Collaboration.jsx'
 import { LoadingOverlay } from './LoadingOverlay.jsx'
-import WalSheetzContractPanel from './WalSheetzContractPanel.jsx'
 import { useSpreadsheetContext } from './SpreadsheetProvider.jsx'
 import { configLoader } from '../../utils/ConfigLoader.js'
 
@@ -21,9 +19,7 @@ export function MainLayout() {
     walletNetwork,
     webSocketService,
     blockchainService,
-    connectWallet,
-    walSheetzPanelOpen,
-    closeWalSheetzPanel
+    connectWallet
   } = useSpreadsheetContext()
 
   const [config, setConfig] = useState(null)
@@ -43,10 +39,9 @@ export function MainLayout() {
   return (
     <div className="main-layout">
       <div className="ice-background-particles"></div>
-      
+
       <Header />
-      <FormulaBar />
-      
+
       <div className="spreadsheet-container crystal-shine">
         <Spreadsheet />
       </div>
@@ -80,19 +75,6 @@ export function MainLayout() {
         showProgress={loadingState?.showProgress}
       />
 
-      {config?.getFeature('walSheetz.enabled', false) &&
-       config?.getFeature('walSheetz.ui.showPanel', false) && (
-        <WalSheetzContractPanel
-          isOpen={walSheetzPanelOpen}
-          onClose={closeWalSheetzPanel}
-          walletConnection={{
-            isConnected: walletConnected,
-            address: walletAddress,
-            balance: walletBalance,
-            network: walletNetwork
-          }}
-        />
-      )}
     </div>
   )
 }

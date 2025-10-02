@@ -263,7 +263,12 @@ class Logger {
   endTimer(operation, metadata = {}) {
     const startTime = this.performanceMarks.get(operation);
     if (!startTime) {
-      this.warn(LogComponent.PERFORMANCE, 'timer_end', `No start time found for operation: ${operation}`);
+      // Reduce noise for missing timer starts - likely due to concurrent operations
+      this.debug(LogComponent.PERFORMANCE, 'timer_end_no_start', `No start time found for operation: ${operation}`, {
+        operation,
+        availableTimers: Array.from(this.performanceMarks.keys()),
+        metadata
+      });
       return null;
     }
 

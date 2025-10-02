@@ -423,7 +423,7 @@ export class BlockchainAdapter extends IBlockchainService {
           collaboration: collabInitialized
         });
         
-        // Subscribe to blockchain events
+        // Subscribe to blockchain events from gRPC
         this.suiService.subscribeToEvents((event) => {
           logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'blockchain_event', `Blockchain event received: ${event.type}`, {
             eventType: event.type,
@@ -432,8 +432,22 @@ export class BlockchainAdapter extends IBlockchainService {
           });
           this.handleBlockchainEvent(event);
         });
-        
-        logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'event_subscription', 'Subscribed to blockchain events');
+
+        // Subscribe to real-time blockchain events from WebSocket service
+        const { webSocketService } = await import('../services/WebSocketService.js');
+        this.webSocketService = webSocketService; // Store reference for cleanup
+        this.webSocketEventListener = (event) => {
+          logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'websocket_blockchain_event', 'Real-time blockchain event received', {
+            eventType: event.type,
+            source: event.source,
+            timestamp: event.receivedAt
+          });
+          this.handleBlockchainEvent(event);
+        };
+
+        webSocketService.on('blockchainEvent', this.webSocketEventListener);
+
+        logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'event_subscription', 'Subscribed to blockchain events (gRPC + WebSocket)');
       } else {
         logger.warn(LogComponent.BLOCKCHAIN_ADAPTER, 'initialize_services', 'Partial service initialization', {
           suiInitialized,
@@ -3099,6 +3113,34 @@ export class BlockchainAdapter extends IBlockchainService {
     } catch (error) {
       logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'cache_cleanup_error', 'Error clearing BlockchainAdapter cache', {
         error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error'
+      });
+    }
+  }
+
+  // Cleanup method for proper disposal of the adapter
+  cleanup() {
+    logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'cleanup', 'Cleaning up BlockchainAdapter');
+
+    try {
+      // Remove WebSocket event listener if it exists
+      if (this.webSocketEventListener && this.webSocketService) {
+        this.webSocketService.off('blockchainEvent', this.webSocketEventListener);
+        this.webSocketEventListener = null;
+        this.webSocketService = null;
+        logger.debug(LogComponent.BLOCKCHAIN_ADAPTER, 'cleanup_websocket', 'WebSocket event listener removed');
+      }
+
+      // Clear invalid object cache
+      this.clearInvalidObjectCache();
+
+      // Disconnect from collaboration
+      this.disconnectFromCollaboration();
+
+      logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'cleanup_complete', 'BlockchainAdapter cleanup completed');
+    } catch (error) {
+      logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'cleanup_error', 'Error during BlockchainAdapter cleanup', {
+        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
+        stack: error.stack
       });
     }
   }

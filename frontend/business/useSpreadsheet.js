@@ -5,6 +5,8 @@ import { StorageAdapter } from '../adapters/StorageAdapter.js';
 import { webSocketService } from '../services/WebSocketService.js';
 import { useWalletConnection } from '../hooks/useWalletConnection.ts';
 import { browserWalletManager } from '../services/BrowserWalletManager.js';
+import { parseCellRef } from '../utils/cellUtils.js';
+import luckysheetApi from '../services/luckysheetApi.js';
 
 /**
  * React hook for spreadsheet business logic
@@ -32,7 +34,6 @@ export function useSpreadsheet() {
     lastChecked: Date.now()
   });
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
-  const [walSheetzPanelOpen, setWalSheetzPanelOpen] = useState(false);
 
   // Use the wallet connection hook
   const walletConnection = useWalletConnection();
@@ -47,6 +48,7 @@ export function useSpreadsheet() {
   const saveReminderIntervalRef = useRef(null);
   const autoSaveIntervalRef = useRef(null);
   const saveToBlockchainRef = useRef(null);
+  const loadingOperationRef = useRef(null); // Track ongoing load operations
   
   // Auto-discover user's spreadsheets when wallet connects
   const autoDiscoverSpreadsheets = useCallback(async () => {
@@ -76,6 +78,12 @@ export function useSpreadsheet() {
   const checkSessionRestoration = useCallback(async () => {
     if (!storageRef.current || !walletConnection.isConnected) return;
 
+    // Prevent concurrent session restoration
+    if (loadingOperationRef.current) {
+      console.log('⚠️ Load operation in progress, skipping session restoration');
+      return;
+    }
+
     // Validate and clean session data first
     const sessionValid = storageRef.current.validateAndCleanSession();
     if (!sessionValid) {
@@ -103,9 +111,12 @@ export function useSpreadsheet() {
           details: 'Loading from blockchain storage...'
         });
         setSaveStatus('loading');
-        
+
+        // Mark session restoration as ongoing operation
+        const spreadsheetId = storageRef.current.getCurrentSpreadsheetId();
+        loadingOperationRef.current = `session-${spreadsheetId}`;
+
         try {
-          const spreadsheetId = storageRef.current.getCurrentSpreadsheetId();
           if (spreadsheetId && blockchainRef.current && engineRef.current) {
             // Set up session restoration timeout
             const restorationTimeout = setTimeout(() => {
@@ -113,6 +124,7 @@ export function useSpreadsheet() {
               setLoadingState({ isLoading: false, message: '', details: '' });
               setSaveStatus('error');
               storageRef.current.clearSession();
+              loadingOperationRef.current = null; // Clear operation on timeout
             }, 15000); // 15 second timeout for restoration
 
             try {
@@ -252,12 +264,14 @@ export function useSpreadsheet() {
               console.log('✅ WalSheetz: Session restored successfully with enhanced error boundaries!');
               setLoadingState({ isLoading: false, message: '', details: '' });
               setSaveStatus('saved');
+              loadingOperationRef.current = null; // Clear operation on success
             } catch (restorationError) {
               clearTimeout(restorationTimeout);
               console.warn('⚠️ WalSheetz: Error during session restoration:', restorationError.message);
               storageRef.current.clearSession();
               setLoadingState({ isLoading: false, message: '', details: '' });
               setSaveStatus('ready');
+              loadingOperationRef.current = null; // Clear operation on error
             }
           }
         } catch (error) {
@@ -265,6 +279,7 @@ export function useSpreadsheet() {
           storageRef.current.clearSession();
           setLoadingState({ isLoading: false, message: '', details: '' });
           setSaveStatus('ready');
+          loadingOperationRef.current = null; // Clear operation on failure
         }
       } else {
         // Different wallet connected, clear old session
@@ -596,9 +611,16 @@ export function useSpreadsheet() {
     engineRef.current.handleCellBlur();
   }, []);
 
-  // Handle formula change
+  // Handle formula change - called by Luckysheet events
   const handleFormulaChange = useCallback((value) => {
     setFormulaValue(value);
+  }, []);
+
+  // Clear formula preview when selection changes
+  const clearFormulaPreview = useCallback(() => {
+    // Reset formula value when changing cells
+    // Luckysheet manages its own editor state, we just track it
+    setFormulaValue('');
   }, []);
 
   // Connect Slush wallet (simplified for single wallet support)
@@ -961,6 +983,21 @@ export function useSpreadsheet() {
       return { success: false, error: 'Services not initialized' };
     }
 
+    // Check if already loading this spreadsheet
+    if (loadingOperationRef.current === spreadsheetId) {
+      console.log(`⚠️ Already loading spreadsheet ${spreadsheetId}, skipping duplicate request`);
+      return { success: false, error: 'Already loading this spreadsheet' };
+    }
+
+    // Check if any load is in progress
+    if (loadingOperationRef.current) {
+      console.log(`⚠️ Another spreadsheet (${loadingOperationRef.current}) is loading, cancelling current load of ${spreadsheetId}`);
+      return { success: false, error: 'Another load operation is in progress' };
+    }
+
+    // Mark this operation as in progress
+    loadingOperationRef.current = spreadsheetId;
+
     // Set initial loading state
     setLoadingState({
       isLoading: true,
@@ -1035,6 +1072,9 @@ export function useSpreadsheet() {
         setLoadingState({ isLoading: false, message: '', details: '' });
         setSaveStatus('saved');
 
+        // Clear loading operation
+        loadingOperationRef.current = null;
+
         return {
           success: true,
           title: uiTitle || 'Loaded Spreadsheet',
@@ -1058,6 +1098,9 @@ export function useSpreadsheet() {
           errorType
         });
         setSaveStatus('error');
+
+        // Clear loading operation
+        loadingOperationRef.current = null;
 
         console.error('[useSpreadsheet] Load failed:', {
           error: result.error,
@@ -1083,6 +1126,9 @@ export function useSpreadsheet() {
         errorType
       });
       setSaveStatus('error');
+
+      // Clear loading operation
+      loadingOperationRef.current = null;
 
       console.error('[useSpreadsheet] Load exception:', {
         error: errorMessage,
@@ -1380,13 +1426,13 @@ export function useSpreadsheet() {
     spreadsheetData,
     saveReminder,
     autoSaveEnabled,
-    walSheetzPanelOpen,
 
     // Actions
     handleCellEdit,
     handleCellSelect,
     handleCellBlur,
     handleFormulaChange,
+    clearFormulaPreview,
     connectWallet,
     disconnectWallet,
     saveToBlockchain,
@@ -1396,8 +1442,6 @@ export function useSpreadsheet() {
     clearData,
     dismissSaveReminder,
     toggleAutoSave,
-    openWalSheetzPanel: () => setWalSheetzPanelOpen(true),
-    closeWalSheetzPanel: () => setWalSheetzPanelOpen(false),
 
     // Utilities
     getStatus,

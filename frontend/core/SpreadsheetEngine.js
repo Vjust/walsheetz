@@ -1432,6 +1432,17 @@ export class SpreadsheetEngine {
 
     const formulaUpper = formula.toUpperCase();
 
+    // GUARD: If Luckysheet has already successfully evaluated a WZ function, skip SpreadsheetEngine handling
+    // This prevents double-handling now that we have proper execution wrappers in Luckysheet
+    if (formulaUpper.includes('WZ.') && cellData.value !== undefined && cellData.value !== '#NAME?' && cellData.value !== '#ERROR') {
+      // Luckysheet successfully handled this WZ function, no need for SpreadsheetEngine to process it
+      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'formula_already_handled', `WZ formula already handled by Luckysheet for ${cellRef}`, {
+        cellRef,
+        value: cellData.value
+      });
+      return;
+    }
+
     try {
       // Check for SUI_BALANCE formula
       const balanceMatch = formulaUpper.match(/^=SUI_BALANCE\s*\(\s*["']?([^"')]+)["']?\s*\)$/);
@@ -2155,7 +2166,8 @@ export class SpreadsheetEngine {
       clearTimeout(timeout);
       return response.ok;
     } catch (error) {
-      logger.warn(LogComponent.SPREADSHEET_ENGINE, 'bridge_health_check', 'Bridge health check failed', {
+      // Downgrade to debug - bridge is optional for UI-only development
+      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'bridge_health_check', 'Bridge health check failed (expected if running UI-only)', {
         error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error'
       });
       return false;
@@ -2337,7 +2349,16 @@ export class SpreadsheetEngine {
               allSheets[0].name = sheetTitle;
               luckysheetApi.refreshFormula();
 
-              logger.warn(LogComponent.SPREADSHEET_ENGINE, 'luckysheet_fallback', `Used fallback getAllSheets method for data update`);
+              // Only warn if this seems like an unexpected fallback (not during initialization)
+              if (window.luckysheet && window.luckysheet.getSheet) {
+                logger.debug(LogComponent.SPREADSHEET_ENGINE, 'luckysheet_fallback', `Used fallback getAllSheets method for data update`, {
+                  hasLuckysheet: !!window.luckysheet,
+                  hasLuckysheetfile: !!window.luckysheetfile,
+                  luckysheetfileType: typeof window.luckysheetfile
+                });
+              } else {
+                logger.info(LogComponent.SPREADSHEET_ENGINE, 'luckysheet_fallback_init', `Using fallback during Luckysheet initialization`);
+              }
             }
           }
         } catch (refreshError) {
