@@ -171,10 +171,12 @@ class BrowserWalrusService {
       console.error(`[BrowserWalrusService:${connectId}] Connection test failed:`, {
         error: typeof error === 'string' ? error : error.message || 'Unknown error',
         stack: error.stack,
-        fallbackBehavior: 'continuing anyway (endpoints might still work)',
         timestamp: new Date().toISOString()
       });
-      
+
+      // Mark as disconnected on error
+      this.isConnected = false;
+
       // Emit error event for UI
       this.emitOperationEvent({
         type: 'connection_error',
@@ -185,10 +187,9 @@ class BrowserWalrusService {
           connectId
         }
       });
-      
-      // Don't fail completely - the endpoints might work even if /v1/api fails
-      this.isConnected = true;
-      return true;
+
+      // Return false to indicate connection failure
+      return false;
     }
   }
 

@@ -108,31 +108,43 @@ class ConfigLoader {
 
   // Detect current network from various sources
   _detectCurrentNetwork(config) {
-    // Check URL parameters first
-    const urlParams = new URLSearchParams(window.location.search);
-    const networkParam = urlParams.get('network');
-    
-    if (networkParam && config.networks[networkParam]) {
-      console.log(`[ConfigLoader] 🌐 Network from URL: ${networkParam}`);
-      return networkParam;
+    // Detect if we're in a browser environment
+    const isBrowser = typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+
+    if (isBrowser) {
+      // Check URL parameters first
+      const urlParams = new URLSearchParams(window.location.search);
+      const networkParam = urlParams.get('network');
+
+      if (networkParam && config.networks[networkParam]) {
+        console.log(`[ConfigLoader] 🌐 Network from URL: ${networkParam}`);
+        return networkParam;
+      }
+
+      // Check localStorage
+      const storedNetwork = localStorage.getItem('walSheetz_network');
+      if (storedNetwork && config.networks[storedNetwork]) {
+        console.log(`[ConfigLoader] 💾 Network from storage: ${storedNetwork}`);
+        return storedNetwork;
+      }
+
+      // Check hostname for environment hints
+      const hostname = window.location.hostname;
+      if (hostname.includes('mainnet') && config.networks.mainnet) {
+        return 'mainnet';
+      }
+      if (hostname.includes('devnet') && config.networks.devnet) {
+        return 'devnet';
+      }
+    } else {
+      // Node.js environment: check environment variables
+      const nodeEnv = process.env.SUI_NETWORK || process.env.NETWORK;
+      if (nodeEnv && config.networks[nodeEnv]) {
+        console.log(`[ConfigLoader] 🖥️  Network from Node.js env: ${nodeEnv}`);
+        return nodeEnv;
+      }
     }
-    
-    // Check localStorage
-    const storedNetwork = localStorage.getItem('walSheetz_network');
-    if (storedNetwork && config.networks[storedNetwork]) {
-      console.log(`[ConfigLoader] 💾 Network from storage: ${storedNetwork}`);
-      return storedNetwork;
-    }
-    
-    // Check hostname for environment hints
-    const hostname = window.location.hostname;
-    if (hostname.includes('mainnet') && config.networks.mainnet) {
-      return 'mainnet';
-    }
-    if (hostname.includes('devnet') && config.networks.devnet) {
-      return 'devnet';
-    }
-    
+
     // Default to testnet
     console.log('[ConfigLoader] 🏗️ Using default network: testnet');
     return 'testnet';
@@ -152,14 +164,18 @@ class ConfigLoader {
       if (!this.networks[networkName]) {
         throw new Error(`Unknown network: ${networkName}`);
       }
-      
+
       this.currentNetwork = networkName;
-      localStorage.setItem('walSheetz_network', networkName);
-      
+
+      // Only persist to localStorage in browser environment
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        localStorage.setItem('walSheetz_network', networkName);
+      }
+
       // Clear caches when switching networks
       self.abiCache.clear();
       self.networkValidationCache.clear();
-      
+
       console.log(`[ConfigLoader] 🔄 Switched to network: ${networkName}`);
       return this.getCurrentNetwork();
     };

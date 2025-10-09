@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   useCurrentAccount,
   useSignTransaction,
@@ -36,6 +36,10 @@ export function useWalletConnection(): UseWalletConnection {
   const [balance, setBalance] = useState<WalletBalance | null>(null);
   const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
 
+  // Refs for connection timeout tracking (must be at hook top-level)
+  const isConnectingRef = useRef<boolean>(false);
+  const timeoutIdRef = useRef<NodeJS.Timeout | null>(null);
+
   // Get wallet balance when connected
   useEffect(() => {
     if (currentAccount?.address) {
@@ -70,9 +74,12 @@ export function useWalletConnection(): UseWalletConnection {
   // Connect to a specific wallet
   const connectWallet = useCallback((wallet: Wallet): Promise<unknown> => {
     console.log('Attempting to connect wallet:', wallet.name);
+
+    // Set connecting state
     setIsConnecting(true);
     setConnectionError(null);
     setSelectedWallet(wallet);
+    isConnectingRef.current = true;
 
     // Return a promise for better async handling
     return new Promise((resolve, reject) => {
@@ -81,12 +88,22 @@ export function useWalletConnection(): UseWalletConnection {
         {
           onSuccess: (result: unknown) => {
             console.log('Wallet connection successful:', result);
+            isConnectingRef.current = false;
+            if (timeoutIdRef.current) {
+              clearTimeout(timeoutIdRef.current);
+              timeoutIdRef.current = null;
+            }
             setIsConnecting(false);
             setConnectionError(null);
             resolve(result);
           },
           onError: (error: Error) => {
             console.error('Wallet connection failed:', error);
+            isConnectingRef.current = false;
+            if (timeoutIdRef.current) {
+              clearTimeout(timeoutIdRef.current);
+              timeoutIdRef.current = null;
+            }
             setIsConnecting(false);
             const errorMessage = error?.message || error?.toString() || 'Failed to connect wallet';
             setConnectionError(errorMessage);
@@ -96,15 +113,16 @@ export function useWalletConnection(): UseWalletConnection {
       );
 
       // Add timeout to prevent hanging
-      setTimeout(() => {
-        if (isConnecting) {
+      timeoutIdRef.current = setTimeout(() => {
+        if (isConnectingRef.current) {
+          isConnectingRef.current = false;
           setIsConnecting(false);
           setConnectionError('Connection timeout - please try again');
           reject(new Error('Connection timeout'));
         }
       }, 30000);
     });
-  }, [connect, isConnecting]);
+  }, [connect]);
 
   // Disconnect wallet
   const disconnectWallet = useCallback((): void => {

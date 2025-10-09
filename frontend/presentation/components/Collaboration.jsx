@@ -5,7 +5,7 @@ import '../styles/collaboration.css';
 /**
  * Collaboration component for real-time user presence and cell highlighting via gRPC
  */
-export function Collaboration({ blockchainAdapter, isWalletConnected, onConnectWallet }) {
+export function Collaboration({ blockchainAdapter, isWalletConnected, onConnectWallet, spreadsheetId }) {
   const [users, setUsers] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [lockedCells, setLockedCells] = useState(new Set());
@@ -95,16 +95,20 @@ export function Collaboration({ blockchainAdapter, isWalletConnected, onConnectW
 
     // Subscribe to real-time blockchain events instead of polling
     let eventSubscription;
-    if (collaborationService.subscribeToBlockchainEvents) {
+    // Only subscribe if we have a spreadsheet ID and the method is available
+    if (spreadsheetId && collaborationService.subscribeToBlockchainEvents) {
       eventSubscription = collaborationService.subscribeToBlockchainEvents(spreadsheetId, {
         onCellEvent: handleCollaborationUpdate,
         onUserEvent: handleCollaborationUpdate,
         onVersionUpdate: handleCollaborationUpdate
       });
     } else {
-      // Fallback to periodic updates only if event subscription not available
-      console.warn('[Collaboration] Event subscription not available, falling back to periodic updates');
-      var fallbackInterval = setInterval(handleCollaborationUpdate, 30000); // Reduced from 5s to 30s
+      // Log reason for not subscribing
+      if (!spreadsheetId) {
+        console.log('[Collaboration] No spreadsheet ID available, skipping event subscription');
+      } else if (!collaborationService.subscribeToBlockchainEvents) {
+        console.warn('[Collaboration] Event subscription not available, feature currently disabled');
+      }
     }
 
     // Cleanup
@@ -116,18 +120,13 @@ export function Collaboration({ blockchainAdapter, isWalletConnected, onConnectW
       collaborationService.off('networkUpdate', handleNetworkUpdate);
       collaborationService.off('error', handleError);
       collaborationService.off('reconnected', handleReconnected);
-      
+
       // Unsubscribe from blockchain events
       if (eventSubscription && typeof eventSubscription === 'function') {
         eventSubscription(); // Call unsubscribe function
       }
-      
-      // Clear fallback interval if it exists
-      if (typeof fallbackInterval !== 'undefined') {
-        clearInterval(fallbackInterval);
-      }
     };
-  }, [blockchainAdapter]);
+  }, [blockchainAdapter, spreadsheetId]);
 
   // Handle wallet connection for collaboration
   const handleConnectWallet = async () => {

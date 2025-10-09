@@ -6,6 +6,7 @@ import { ErrorBoundary } from './components/ErrorBoundary.jsx'
 import { LogViewer } from './components/LogViewer.jsx'
 import { WalrusStatus } from './components/WalrusStatus.jsx'
 import RateLimiterStatus from '../components/RateLimiterStatus.jsx'
+import { TestModeBanner } from './components/TestModeBanner.jsx'
 import { Dashboard } from '../pages/Dashboard.jsx'
 import { SpreadsheetEditor } from '../pages/SpreadsheetEditor.jsx'
 import { logger, LogComponent } from '../utils/Logger.js'
@@ -42,6 +43,7 @@ function App() {
                   </Routes>
 
                   {/* Global components */}
+                  <TestModeBanner />
                   <LogViewer />
                   {showWalrusStatus && (
                     <WalrusStatus position="bottom-right" minimized={true} />

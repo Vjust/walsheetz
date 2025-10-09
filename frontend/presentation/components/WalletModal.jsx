@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useWalletConnection } from '../../hooks/useWalletConnection.ts';
+import { useWalletConnectionFactory } from '../../hooks/useWalletConnectionFactory.ts';
 
 export function WalletModal({ isOpen, onClose }) {
-  const walletConnection = useWalletConnection();
+  const walletConnection = useWalletConnectionFactory();
   const { installed, notInstalled } = walletConnection.availableWallets;
   const [connecting, setConnecting] = useState(null);
   const [error, setError] = useState(null);

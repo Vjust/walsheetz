@@ -11,7 +11,22 @@ const VERBOSE_PROXY = process.env.VITE_VERBOSE_PROXY === 'true'
 
 export default defineConfig({
   root: '.',
-  plugins: [react()],
+  plugins: [
+    react(),
+    // Production build guard - prevent test mode in production
+    {
+      name: 'test-mode-guard',
+      buildStart() {
+        if (process.env.NODE_ENV === 'production' && process.env.VITE_TEST_AUTH_BYPASS === 'true') {
+          throw new Error(
+            '❌ VITE_TEST_AUTH_BYPASS cannot be enabled in production builds!\n' +
+            'Test mode is for development and testing only.\n' +
+            'Remove VITE_TEST_AUTH_BYPASS=true from your environment variables.'
+          );
+        }
+      }
+    }
+  ],
   server: {
     port: 3005,
     host: '0.0.0.0',

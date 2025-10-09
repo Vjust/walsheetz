@@ -3,10 +3,12 @@ import { SpreadsheetEngine } from '../core/SpreadsheetEngine.js';
 import { BlockchainAdapter } from '../adapters/BlockchainAdapter.js';
 import { StorageAdapter } from '../adapters/StorageAdapter.js';
 import { webSocketService } from '../services/WebSocketService.js';
-import { useWalletConnection } from '../hooks/useWalletConnection.ts';
+import { useWalletConnectionFactory } from '../hooks/useWalletConnectionFactory.ts';
 import { browserWalletManager } from '../services/BrowserWalletManager.js';
 import { parseCellRef } from '../utils/cellUtils.js';
 import luckysheetApi from '../services/luckysheetApi.js';
+import { TestModeAdapter } from '../services/testing/TestModeAdapter.js';
+import { isAuthBypassed } from '../utils/testMode.js';
 
 /**
  * React hook for spreadsheet business logic
@@ -35,8 +37,8 @@ export function useSpreadsheet() {
   });
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
 
-  // Use the wallet connection hook
-  const walletConnection = useWalletConnection();
+  // Use the wallet connection factory (returns mock in test mode)
+  const walletConnection = useWalletConnectionFactory();
   
   const engineRef = useRef(null);
   const blockchainRef = useRef(null);
@@ -52,6 +54,9 @@ export function useSpreadsheet() {
   
   // Auto-discover user's spreadsheets when wallet connects
   const autoDiscoverSpreadsheets = useCallback(async () => {
+    // Skip auto-discovery in test mode
+    if (isAuthBypassed()) return;
+
     if (!walletConnection.isConnected || !blockchainRef.current) return;
 
     try {
@@ -451,7 +456,13 @@ export function useSpreadsheet() {
         storageRef.current = new StorageAdapter();
 
         console.log('⛓️ Creating BlockchainAdapter...');
-        blockchainRef.current = new BlockchainAdapter(storageRef.current);
+        // Use TestModeAdapter in test mode, otherwise use real BlockchainAdapter
+        if (isAuthBypassed()) {
+          console.log('🧪 Test Mode: Using TestModeAdapter');
+          blockchainRef.current = new TestModeAdapter(storageRef.current);
+        } else {
+          blockchainRef.current = new BlockchainAdapter(storageRef.current);
+        }
 
         console.log('🧮 Creating SpreadsheetEngine...');
         engineRef.current = new SpreadsheetEngine(

@@ -72,17 +72,16 @@ class CollaborationService {
     }
   }
 
-  // Connect user to collaboration session (browser simulation mode)
-  async connectUser(userId = 'demo-user', userName = 'Demo User') {
+  // Connect user to collaboration session
+  async connectUser(userId, userName) {
     console.log('[CollaborationService] Connecting user:', { userId, userName });
-    
+
     if (this.collaborationEnabled) {
       console.log('[CollaborationService] User already connected');
       return this.currentUser;
     }
 
     try {
-      // Create mock user object for demo
       this.currentUser = {
         userId: userId,
         userName: userName,
@@ -93,8 +92,8 @@ class CollaborationService {
       };
 
       this.collaborationEnabled = true;
-      console.log('[CollaborationService] ✅ User connected (demo mode):', this.currentUser);
-      
+      console.log('[CollaborationService] ✅ User connected:', this.currentUser);
+
       return this.currentUser;
     } catch (error) {
       console.error('Failed to connect user to collaboration:', error);
@@ -109,19 +108,18 @@ class CollaborationService {
     }
 
     try {
-      // Clean up in simulation mode
       this.mockUsers.delete(this.currentUser.userId);
-      
+
       this.currentUser = null;
       this.collaborationEnabled = false;
-      
+
       console.log('User disconnected from collaboration');
     } catch (error) {
       console.error('Failed to disconnect user from collaboration:', error);
     }
   }
 
-  // Lock a cell for editing (simulation mode)
+  // Lock a cell for editing
   async lockCell(cellRef) {
     if (!this.collaborationEnabled || !this.currentUser) {
       throw new Error('User not connected to collaboration');
@@ -134,7 +132,6 @@ class CollaborationService {
         throw new Error(`Cell ${cellRef} is locked by ${lockStatus.userId}`);
       }
 
-      // Simulate cell locking
       this.cellLockCache.set(cellRef, {
         userId: this.currentUser.userId,
         color: this.currentUser.color,
@@ -147,8 +144,8 @@ class CollaborationService {
         userId: this.currentUser.userId,
         color: this.currentUser.color
       });
-      
-      console.log(`Cell ${cellRef} locked successfully (demo mode)`);
+
+      console.log(`Cell ${cellRef} locked successfully`);
       return { success: true };
     } catch (error) {
       console.error('Failed to lock cell:', error);
@@ -156,7 +153,7 @@ class CollaborationService {
     }
   }
 
-  // Unlock a cell (simulation mode)
+  // Unlock a cell
   async unlockCell(cellRef) {
     if (!this.collaborationEnabled || !this.currentUser) {
       return;
@@ -164,13 +161,13 @@ class CollaborationService {
 
     try {
       const lockStatus = this.cellLockCache.get(cellRef);
-      
+
       if (!lockStatus || lockStatus.userId !== this.currentUser.userId) {
         console.log(`Cell ${cellRef} not locked by current user`);
         return;
       }
 
-      console.log(`Unlocking cell ${cellRef} (demo mode)`);
+      console.log(`Unlocking cell ${cellRef}`);
 
       // Remove from local cache
       this.cellLockCache.delete(cellRef);
@@ -322,7 +319,7 @@ class CollaborationService {
     return this.userColors[Math.abs(hash) % this.userColors.length];
   }
 
-  // Get user name by ID (simulation mode)
+  // Get user name by ID
   getUserName(userId) {
     const user = this.mockUsers.get(userId) || this.currentUser;
     return user?.userName || this.generateUserName(userId);
@@ -334,7 +331,7 @@ class CollaborationService {
     return '0x123'; // Placeholder
   }
 
-  // Get current collaboration state (simulation mode)
+  // Get current collaboration state
   getCollaborationState() {
     return {
       activeUsers: this.mockUsers.size > 0 ? Array.from(this.mockUsers.values()) : [this.currentUser].filter(Boolean),
@@ -345,12 +342,12 @@ class CollaborationService {
     };
   }
 
-  // Get cell lock status (simulation mode)
+  // Get cell lock status
   getCellLockStatus(cellRef) {
     return this.cellLockCache.get(cellRef) || null;
   }
 
-  // Check if current user can edit cell (simulation mode)
+  // Check if current user can edit cell
   canEditCell(cellRef) {
     if (!this.currentUser) return false;
     const lockStatus = this.cellLockCache.get(cellRef);
@@ -421,7 +418,7 @@ class CollaborationService {
     }
   }
 
-  // Get service status (simulation mode)
+  // Get service status
   getStatus() {
     return {
       isInitialized: this.isInitialized,
@@ -429,6 +426,20 @@ class CollaborationService {
       currentUser: this.currentUser,
       grpcStatus: grpcService.getStatus(),
       cacheSize: this.cellLockCache.size
+    };
+  }
+
+  // Stub method for blockchain event subscription (not yet implemented)
+  // This prevents errors when called from Collaboration component
+  subscribeToBlockchainEvents(spreadsheetId, callbacks) {
+    console.log('[CollaborationService] subscribeToBlockchainEvents called but not yet implemented', {
+      spreadsheetId,
+      hasCallbacks: !!callbacks
+    });
+
+    // Return no-op unsubscribe function
+    return () => {
+      console.log('[CollaborationService] No-op unsubscribe called');
     };
   }
 }

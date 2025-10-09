@@ -18,8 +18,29 @@ export class EncryptionUtility {
       hash: 'SHA-256'
     };
 
-    // Initialize encryption key
-    this.initializeEncryptionKey(options);
+    // Store the initialization promise for lazy loading
+    this._initPromise = null;
+    this._isReady = false;
+
+    // Start initialization asynchronously but don't await in constructor
+    this._initPromise = this.initializeEncryptionKey(options);
+  }
+
+  /**
+   * Ensure encryption is ready before use
+   */
+  async ensureReady() {
+    if (this._isReady) {
+      return;
+    }
+
+    if (this._initPromise) {
+      await this._initPromise;
+    }
+
+    if (!this.encryptionKey) {
+      throw new Error('Encryption key failed to initialize');
+    }
   }
 
   /**
@@ -52,12 +73,15 @@ export class EncryptionUtility {
         this.encryptionKey = await this.deriveKeyFromString(keyMaterial);
       }
 
+      this._isReady = true;
+
       logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'encryption_init', 'Encryption utility initialized', {
         hasKey: !!this.encryptionKey,
         keyType: typeof keyMaterial
       });
 
     } catch (error) {
+      this._isReady = false;
       logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'encryption_init_failed', 'Failed to initialize encryption key', {
         error: error.message
       });
@@ -152,6 +176,9 @@ export class EncryptionUtility {
    */
   async encrypt(data) {
     try {
+      // Ensure encryption is ready before proceeding
+      await this.ensureReady();
+
       if (!this.encryptionKey) {
         throw new Error('Encryption key not initialized');
       }
@@ -209,6 +236,9 @@ export class EncryptionUtility {
    */
   async decrypt(encryptedData) {
     try {
+      // Ensure encryption is ready before proceeding
+      await this.ensureReady();
+
       if (!this.encryptionKey) {
         throw new Error('Encryption key not initialized');
       }
@@ -292,7 +322,8 @@ export class EncryptionUtility {
    */
   getEncryptionStatus() {
     return {
-      initialized: !!this.encryptionKey,
+      initialized: this._isReady && !!this.encryptionKey,
+      isReady: this._isReady,
       algorithm: this.algorithm,
       keyLength: this.keyLength,
       hasWalletAddress: !!this.getWalletAddress()

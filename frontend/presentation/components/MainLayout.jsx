@@ -19,7 +19,8 @@ export function MainLayout() {
     walletNetwork,
     webSocketService,
     blockchainService,
-    connectWallet
+    connectWallet,
+    getCurrentSpreadsheetId
   } = useSpreadsheetContext()
 
   const [config, setConfig] = useState(null)
@@ -55,10 +56,11 @@ export function MainLayout() {
         walletNetwork={walletNetwork}
       />
       
-      <Collaboration 
+      <Collaboration
         blockchainAdapter={blockchainService}
         isWalletConnected={walletConnected}
         onConnectWallet={connectWallet}
+        spreadsheetId={getCurrentSpreadsheetId?.() || null}
       />
       
       <NotificationContainer />

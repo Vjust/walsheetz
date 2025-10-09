@@ -14,5 +14,12 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
     trace: 'off'
   },
+  // Web server configuration for test mode
+  webServer: {
+    command: 'VITE_TEST_AUTH_BYPASS=true bun run dev',
+    url: 'http://localhost:3005',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120000,
+  },
   reporter: 'line'
 })

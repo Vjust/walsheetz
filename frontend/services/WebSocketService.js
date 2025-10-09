@@ -1,4 +1,5 @@
 import { logger, LogComponent } from '../utils/Logger.js';
+import { isAuthBypassed } from '../utils/testMode.js';
 
 /**
  * WebSocket service for real-time collaboration features
@@ -137,14 +138,32 @@ export class WebSocketService {
   // Connect to WebSocket server
   connect(spreadsheetId, userId, wsUrl = 'ws://localhost:8081') {
     logger.startTimer('websocket_connect');
-    logger.info(LogComponent.WEBSOCKET_SERVICE, 'connect_request', 'WebSocket connection requested', { 
-      spreadsheetId, 
-      userId, 
+
+    // Test mode: skip WebSocket connection, return immediate success
+    if (isAuthBypassed()) {
+      logger.info(LogComponent.WEBSOCKET_SERVICE, 'test_mode_connect', '🧪 Test mode active: skipping WebSocket connection', {
+        spreadsheetId,
+        userId
+      });
+      this.isConnected = true;
+      this.spreadsheetId = spreadsheetId;
+      this.userId = userId;
+      this.connectionHealth.isHealthy = true;
+
+      // Emit connected event for compatibility
+      this.emit('connected', { spreadsheetId, userId, testMode: true });
+
+      return Promise.resolve();
+    }
+
+    logger.info(LogComponent.WEBSOCKET_SERVICE, 'connect_request', 'WebSocket connection requested', {
+      spreadsheetId,
+      userId,
       wsUrl,
       currentConnection: this.isConnected,
       reconnectAttempts: this.reconnectAttempts
     });
-    
+
     if (this.isConnected && this.spreadsheetId === spreadsheetId) {
       logger.info(LogComponent.WEBSOCKET_SERVICE, 'already_connected', 'Already connected to this spreadsheet');
       return Promise.resolve();
@@ -158,17 +177,6 @@ export class WebSocketService {
 
         // Store reject function for use in error handling
         this.connectionReject = reject;
-
-        // For demo purposes, we'll simulate WebSocket functionality
-        // Only use demo mode for explicit demo URLs, not localhost bridge
-        if (wsUrl.includes('demo') || wsUrl === 'ws://demo') {
-          logger.info(LogComponent.WEBSOCKET_SERVICE, 'demo_mode', 'Using simulated connection for demo', {
-            wsUrl,
-            mode: 'simulated'
-          });
-          this.simulateConnection(resolve);
-          return;
-        }
 
         logger.info(LogComponent.WEBSOCKET_SERVICE, 'real_connection', 'Establishing real WebSocket connection', {
           fullUrl: `${wsUrl}/spreadsheet/${spreadsheetId}?userId=${userId}`
@@ -317,64 +325,6 @@ export class WebSocketService {
     });
   }
 
-  // Simulate WebSocket connection for demo
-  simulateConnection(resolve) {
-    logger.info(LogComponent.WEBSOCKET_SERVICE, 'simulate_start', 'Starting simulated connection for demo', {
-      spreadsheetId: this.spreadsheetId,
-      userId: this.userId
-    });
-    this.isConnected = true;
-    
-    // Simulate connection delay
-    setTimeout(() => {
-      const connectionDuration = logger.endTimer('websocket_connect');
-      logger.info(LogComponent.WEBSOCKET_SERVICE, 'simulate_connected', 'Simulated connection established', {
-        connectionDuration,
-        mode: 'demo'
-      });
-      
-      this.emit('connected', { 
-        spreadsheetId: this.spreadsheetId, 
-        userId: this.userId 
-      });
-      resolve();
-    }, 100);
-
-    // Simulate some demo users for testing
-    setTimeout(() => {
-      logger.info(LogComponent.WEBSOCKET_SERVICE, 'demo_users', 'Adding simulated demo users');
-      
-      const demoUsers = [
-        {
-          userId: 'demo-user-1',
-          userName: 'Alice',
-          activeCell: null,
-          color: '#FF6B6B',
-          lastSeen: Date.now()
-        },
-        {
-          userId: 'demo-user-2', 
-          userName: 'Bob',
-          activeCell: null,
-          color: '#4ECDC4',
-          lastSeen: Date.now()
-        }
-      ];
-      
-      demoUsers.forEach(user => {
-        this.userPresence.set(user.userId, user);
-      });
-      
-      logger.info(LogComponent.WEBSOCKET_SERVICE, 'demo_users', 'Demo users added successfully', {
-        userCount: this.userPresence.size,
-        users: demoUsers.map(u => ({ userId: u.userId, userName: u.userName }))
-      });
-      
-      this.emit('userPresenceUpdate', {
-        users: Array.from(this.userPresence.values())
-      });
-    }, 2000);
-  }
 
   // Disconnect WebSocket
   disconnect() {
@@ -883,6 +833,15 @@ export class WebSocketService {
 
   // Send message to server
   sendMessage(type, data) {
+    // Test mode: log and return success without sending
+    if (isAuthBypassed()) {
+      logger.debug(LogComponent.WEBSOCKET_SERVICE, 'test_mode_send', '🧪 Test mode: simulating message send', {
+        type,
+        dataKeys: data ? Object.keys(data) : []
+      });
+      return true; // Return success in test mode
+    }
+
     // Gracefully ignore unrecognized message types to avoid breaking the bridge
     const recognizedTypes = [
       'subscribe', 'unsubscribe', 'lockCell', 'unlockCell', 'presence',
@@ -916,10 +875,12 @@ export class WebSocketService {
       return false;
     }
 
-    // Fallback to demo mode if no WebSocket connection is available
     if (!this.ws) {
-      this.handleDemoMessage(type, data);
-      return true;
+      logger.warn(LogComponent.WEBSOCKET_SERVICE, 'no_websocket', 'No WebSocket connection available', {
+        type,
+        isConnected: this.isConnected
+      });
+      return false;
     }
 
     try {
@@ -959,24 +920,6 @@ export class WebSocketService {
     }
   }
 
-  // Handle demo messages locally
-  handleDemoMessage(type, data) {
-    switch (type) {
-      case 'lockCell':
-        // Simulate another user locking the cell after a delay
-        setTimeout(() => {
-          if (Math.random() > 0.7) { // 30% chance of conflict
-            this.handleCellLocked({
-              ...data,
-              userId: 'demo-user-1',
-              userName: 'Alice',
-              color: '#FF6B6B'
-            });
-          }
-        }, 500 + Math.random() * 1000);
-        break;
-    }
-  }
 
   // Lock a cell
   lockCell(cellRef) {

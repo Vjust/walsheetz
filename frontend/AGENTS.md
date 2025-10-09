@@ -30,7 +30,7 @@
 ## Testing & Tooling
 - Unit tests for UI modules live under `tests/unit/frontend` (Vitest + happy-dom); run with `bun run test:unit`.
 - Integration flows touching backend services belong in `tests/integration` or Playwright specs under `tests/e2e`.
-- Keep demo components (`presentation/components`) aligned with domain hooks when business logic changes.
+- Keep presentation components (`presentation/components`) aligned with domain hooks when business logic changes.
 
 ## Coordination
 - Changes to browser services often require mirrored updates in `blockchain/` and bridge scripts under `scripts/`.
