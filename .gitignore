@@ -139,3 +139,6 @@ codefetch/
 # HRM reasoning files
 hrm_reasoning.db
 hrm_reasoning.*
+
+# Reference documentation
+Sui Ref/
