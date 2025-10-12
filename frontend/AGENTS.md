@@ -28,10 +28,21 @@
 - Add global providers or UI chrome through `presentation/App.jsx` to ensure tests bootstrap correctly.
 
 ## Testing & Tooling
-- Unit tests for UI modules live under `tests/unit/frontend` (Vitest + happy-dom); run with `bun run test:unit`.
-- Integration flows touching backend services belong in `tests/integration` or Playwright specs under `tests/e2e`.
-- Keep presentation components (`presentation/components`) aligned with domain hooks when business logic changes.
+- **Planned:** Unit tests for UI modules will live under `tests/unit/frontend` (Vitest + happy-dom)
+  - ⚠️ **Current Status:** Frontend unit tests not yet implemented
+  - Run all unit tests (blockchain only currently): `bun run test:unit`
+  - See `docs/TESTING.md` for coverage gaps and planned tests
+- Integration flows touching backend services belong in `tests/integration` or Playwright specs under `tests/e2e`
+- Keep presentation components (`presentation/components`) aligned with domain hooks when business logic changes
 
 ## Coordination
-- Changes to browser services often require mirrored updates in `blockchain/` and bridge scripts under `scripts/`.
-- Document new capabilities or configuration toggles in `docs/` and ensure `app-config.json` stays accurate.
+- Changes to browser services often require mirrored updates in `blockchain/` and bridge scripts under `scripts/`
+- Document new capabilities or configuration toggles in `docs/` and ensure `app-config.json` stays accurate
+- **Key Documentation:**
+  - `docs/README.md` - Comprehensive developer guide with architecture overview
+  - `docs/TESTING.md` - Testing guide and coverage status
+  - `docs/CONFIGURATION.md` - Environment variables and feature flags
+  - `docs/scripts/README.md` - Script catalog and usage
+- **Cross-references:**
+  - See `blockchain/AGENTS.md` for backend coordination
+  - All services use configuration from `blockchain/config.js` - never hardcode endpoints

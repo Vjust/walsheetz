@@ -24,7 +24,7 @@ curl -fsSL https://bun.sh/install | bash
 
 # Clone the repository
 git clone [your-repo-url]
-cd fortunesheet
+cd walsheetz
 
 # Install dependencies with Bun
 bun install
@@ -33,11 +33,18 @@ bun install
 ### Development
 
 ```bash
-# Start development server
+# Start development server (UI only)
 bun run dev
+
+# Start full stack (WebSocket bridge + UI)
+bun run dev:full
 ```
 
 The application will open at `http://localhost:3005`
+
+**Development Modes:**
+- **UI Only** (`bun run dev`): Frontend development without blockchain features
+- **Full Stack** (`bun run dev:full`): Complete system with WebSocket-gRPC bridge for blockchain integration
 
 ### Core Functionality
 
@@ -78,10 +85,31 @@ bun run preview
 
 ## 📝 Scripts
 
-- `bun dev` - Start development server
-- `bun build` - Build for production
-- `bun preview` - Preview production build
-- `bun serve` - Alias for dev server
+### Development
+- `bun run dev` - Start development server (UI only)
+- `bun run dev:full` - Start full stack (bridge + UI)
+- `bun run bridge` - Start WebSocket-gRPC bridge only
+- `bun run cleanup` - Clean up occupied ports
+
+### Build & Deploy
+- `bun run build` - Build for production
+- `bun run preview` - Preview production build
+- `bun run typecheck` - Run TypeScript type checking
+
+### Testing
+- `bun run test:unit` - Run unit tests (blockchain/walrus only currently)
+- `bun run test:coverage` - Generate coverage report
+- `bun run test:walrus` - Run Walrus integration tests
+- `bun run test:integration` - Run integration tests
+- `bun run test:property` - Run property-based tests
+- `bun run test:e2e:playwright` - Run E2E tests with Playwright
+
+### Diagnostics
+- `bun run diagnose:save` - Diagnose save issues
+- `bun run test:proxy` - Test proxy configuration
+- `bun run test:wallet` - Test wallet connection
+
+See [docs/scripts/README.md](docs/scripts/README.md) for detailed script documentation.
 
 ## 🎨 Features
 
@@ -117,26 +145,60 @@ devTools.testWalletConnection()   // Test wallet functionality
 ## 📦 Project Structure
 
 ```
-fortunesheet/
-├── blockchain/         # Blockchain integration
-│   ├── config.js       # Network configuration (testnet/mainnet)
-│   ├── wallet-manager.js # Sui wallet connection
-│   ├── sui-service.js  # Sui blockchain operations
-│   ├── walrus-service.js # Walrus storage operations
-│   └── version-control.js # Cell-level versioning
-├── frontend/
-│   ├── app.js          # Main application
-│   ├── storage.js      # Enhanced storage with blockchain
-│   ├── sync-engine.js  # Auto-save and edit tracking
-│   ├── ui-handlers.js  # UI with wallet integration
-│   ├── utils.js        # Utility functions
-│   ├── homepage.html   # Landing page
-│   └── arctic-theme.css # Arctic styling
-├── index.html          # Spreadsheet page
-├── vite.config.js      # Vite configuration
-├── bunfig.toml         # Bun configuration
-└── package.json        # Dependencies
+walsheetz/
+├── blockchain/              # Node/Bun blockchain services
+│   ├── config.js            # Network & feature configuration
+│   ├── sui-service.js       # Sui RPC operations
+│   ├── sui-grpc-service.js  # Sui gRPC integration
+│   ├── grpc-service.js      # Core gRPC client
+│   ├── walrus-service.js    # Walrus storage operations
+│   ├── websocket-grpc-bridge.js # WebSocket-gRPC bridge server
+│   ├── event-stream-manager.js  # Event subscription handling
+│   ├── graphql-event-subscriber.js # GraphQL fallback for events
+│   └── utils/               # Rate limiter, logging, resilience
+├── frontend/                # React SPA
+│   ├── main.jsx             # Vite entry point
+│   ├── presentation/        # App shell, routing, error boundaries
+│   │   ├── App.jsx          # Root component with providers
+│   │   └── components/      # Global UI elements
+│   ├── pages/               # Route-level screens (Dashboard, SpreadsheetEditor)
+│   ├── components/          # Reusable UI components
+│   ├── providers/           # React context providers (Wallet, Spreadsheet)
+│   ├── services/            # Browser-safe API wrappers
+│   │   ├── BrowserGrpcService.js    # WebSocket bridge client
+│   │   ├── BrowserSuiService.js     # Browser Sui operations
+│   │   ├── BrowserWalrusService.js  # Browser Walrus client
+│   │   └── luckysheet/      # Luckysheet injection & extensions
+│   ├── adapters/            # Service-to-UI adapters
+│   ├── business/            # Domain hooks (useSpreadsheet)
+│   ├── core/                # Spreadsheet engine primitives
+│   ├── hooks/               # Shared React hooks
+│   ├── utils/               # Logger, EventBus, CircuitBreaker
+│   ├── types/               # TypeScript definitions
+│   └── interfaces/          # Service interfaces
+├── scripts/                 # Operational utilities
+│   ├── start-bridge.js      # Bridge server startup
+│   ├── cleanup-ports.js     # Port cleanup utility
+│   ├── run-walrus-integration-tests.js
+│   ├── test-blockchain-integration.js
+│   ├── diagnose-save-issues.js
+│   └── verify-*.js          # Verification scripts
+├── tests/                   # Test suites
+│   └── unit/                # Unit tests (blockchain/walrus only currently)
+│       └── blockchain/      # Blockchain service tests
+│       # Note: integration/, property/, e2e/ directories planned but not yet created
+├── docs/                    # Documentation
+│   ├── README.md            # Developer guide (see below)
+│   ├── TESTING.md           # Testing guide
+│   ├── CONFIGURATION.md     # Environment & config reference
+│   └── scripts/             # Script catalog
+├── move/                    # Sui Move smart contracts
+├── index.html               # Main entry point
+├── vite.config.js           # Vite configuration
+└── package.json             # Dependencies & scripts
 ```
+
+For detailed architecture and development conventions, see **[docs/README.md](docs/README.md)**.
 
 ## 🏗️ Building with Bun
 
@@ -252,23 +314,35 @@ storage: {
 Run the test suite:
 
 ```bash
-# Unit tests
+# Unit tests (blockchain/walrus services only currently)
 bun run test:unit
 
-# Integration tests  
+# Integration tests
 bun run test:integration
+
+# Walrus integration tests
+bun run test:walrus
+
+# Property-based tests
+bun run test:property
 
 # Coverage report (target: 80%+)
 bun run test:coverage
+
+# E2E tests
+bun run test:e2e:playwright
 ```
 
-Key test coverage areas:
-- ✅ Compression/decompression with magic byte detection
-- ✅ HEAD precheck with correlation ID capture
-- ✅ Redundancy fallback across multiple endpoints
-- ✅ Delta chain enforcement and reconstruction
-- ✅ Transaction serialization for gas estimation
+**Current Test Coverage:**
+- ✅ Blockchain services (Sui gRPC, GraphQL, rate limiting)
+- ✅ Walrus integration (compression, redundancy, delta chains)
+- ✅ Transaction serialization and gas estimation
 - ✅ Event queries with fully-qualified types
+- ❌ Frontend unit tests (planned but not yet implemented)
+- ⚠️ Integration tests (partial coverage)
+- ⚠️ E2E tests (basic infrastructure in place)
+
+See **[docs/TESTING.md](docs/TESTING.md)** for detailed testing guide and coverage gaps.
 
 ### Troubleshooting
 

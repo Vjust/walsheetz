@@ -249,7 +249,7 @@ export const config = {
     maxClients: (typeof process !== 'undefined' && process.env && process.env.BRIDGE_MAX_CLIENTS) ? parseInt(process.env.BRIDGE_MAX_CLIENTS) : 100,
     pingInterval: 30000,                     // 30 second ping interval
     logLevel: (typeof process !== 'undefined' && process.env && process.env.BRIDGE_LOG_LEVEL) ? process.env.BRIDGE_LOG_LEVEL : 'INFO',
-    enableMetrics: (typeof process !== 'undefined' && process.env && process.env.ENABLE_METRICS !== 'false') || false,
+    enableMetrics: (typeof process !== 'undefined' && process.env && process.env.ENABLE_METRICS === 'true') || false,
     healthCheck: {
       enabled: true,
       path: '/health',

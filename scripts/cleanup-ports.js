@@ -14,7 +14,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Required ports for the application
-const REQUIRED_PORTS = [3005]; // Vite dev server
+const REQUIRED_PORTS = [
+  3005, // Vite dev server
+  8081  // WebSocket-gRPC bridge
+];
 const STALE_FILES = ['.vite_pid', '.vite_pid_poll'];
 
 console.log('🧹 Starting cleanup process...');

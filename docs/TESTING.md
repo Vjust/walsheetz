@@ -19,104 +19,107 @@ This guide explains how to test the deployed Sui smart contracts locally with th
 
 ## Quick Start
 
-1. **Copy the test environment file:**
+1. **Install dependencies:**
    ```bash
-   cp .env.test .env.test.local
+   bun install
    ```
 
-2. **Edit `.env.test.local`** with your test wallet address:
-   ```env
-   TEST_WALLET_ADDRESS=0x... # Your testnet wallet address
-   TEST_PRIVATE_KEY=       # Optional: for real transactions
+2. **Run unit tests:**
+   ```bash
+   bun run test:unit
    ```
 
-3. **Get test SUI from the faucet:**
+3. **Run tests with coverage:**
    ```bash
-   curl -X POST https://faucet.testnet.sui.io/gas \
-     -H "Content-Type: application/json" \
-     -d '{"FixedAmountRequest": {"recipient": "YOUR_WALLET_ADDRESS"}}'
+   bun run test:coverage
    ```
 
-4. **Run the test script:**
+4. **For Walrus integration tests** (requires bridge):
    ```bash
-   ./scripts/run-live-test.sh
+   # Terminal 1: Start the bridge
+   bun run bridge
+
+   # Terminal 2: Run Walrus tests
+   bun run test:walrus
    ```
 
 ## Test Methods
 
-### Method 1: Automated Node.js Tests
+### Method 1: Vitest Unit Tests
 
-Run the complete test suite directly with Node.js:
-
-```bash
-node tests/test-deployed-contract.js
-```
-
-This runs:
-- gRPC connection tests
-- Contract verification
-- Transaction building tests
-- Event monitoring
-- WebSocket bridge tests
-
-### Method 2: Docker-Based Testing
-
-Run tests in isolated Docker containers:
+Run unit tests with Vitest (current coverage: blockchain/walrus services only):
 
 ```bash
-docker-compose -f docker-compose.local-test.yml up test-runner
+# All unit tests
+bun run test:unit
+
+# With coverage report
+bun run test:coverage
+
+# Watch mode for development
+bun run test:watch
+
+# Interactive UI
+bun run test:ui
 ```
 
-Benefits:
-- Isolated environment
-- No local dependencies
-- Reproducible results
-- Parallel test execution
+**Current Coverage:**
+- ✅ `tests/unit/blockchain/` - Blockchain service tests
+  - GraphQL error recovery
+  - Rate limiting
+  - Circuit breakers
+- ✅ `tests/unit/blockchain-walrus-service.test.js` - Walrus integration
+- ✅ `tests/unit/browser-walrus-service.test.js` - Browser client
+- ❌ `tests/unit/frontend/` - **Not yet implemented** (planned)
 
-### Method 3: Interactive Testing
+### Method 2: Walrus Integration Tests
 
-Start an interactive REPL for manual testing:
+Test Walrus storage operations (requires bridge):
 
 ```bash
-./scripts/run-live-test.sh
-# Choose option 3
+# Start bridge first
+bun run bridge
+
+# Run Walrus integration tests
+bun run test:walrus
+
+# Verbose output
+bun run test:walrus:verbose
+
+# SDK integration tests
+bun run test:walrus:sdk
 ```
 
-In the REPL, you can:
-```javascript
-// Check balance
-await suiGrpcService.getBalance('0x...')
+### Method 3: Integration Tests
 
-// Create spreadsheet
-const result = await suiGrpcService.createSpreadsheet(
-  'Test Sheet',
-  '0x...wallet',
-  mockSigner
-)
-
-// Monitor events
-grpcService.on('spreadsheetEvent', console.log)
-```
-
-### Method 4: Vitest Unit & Integration Tests
-
-Run the full test suite with Vitest:
+Run integration tests (requires bridge):
 
 ```bash
-# All tests
-npm test
+# Start bridge
+bun run dev:full
 
-# Unit tests only
-npm run test:unit
+# Run integration tests
+bun run test:integration
+```
 
-# Integration tests only
-npm run test:integration
+### Method 4: Property-Based Tests
 
-# Property-based tests
-npm run test:property
+Run property-based tests with fast-check:
 
-# With coverage
-npm run test:coverage
+```bash
+bun run test:property
+```
+
+### Method 5: E2E Tests
+
+Run end-to-end tests with Playwright:
+
+```bash
+# Playwright E2E tests
+bun run test:e2e:playwright
+
+# Neko containerized E2E tests
+bun run test:e2e:neko
 ```
 
 ## Configuration
@@ -157,17 +160,24 @@ TEST_VERBOSE=true
 
 1. **Start the WebSocket Bridge:**
    ```bash
-   docker-compose -f docker-compose.local-test.yml up ws-grpc-bridge
+   bun run bridge
+   # Or for full stack:
+   bun run dev:full
    ```
 
-2. **Run Integration Tests:**
+2. **Run All Tests:**
    ```bash
-   npm run test:integration
-   ```
+   # Unit tests (no bridge required)
+   bun run test:unit
 
-3. **Run Property Tests:**
-   ```bash
-   npm run test:property
+   # Integration tests (requires bridge)
+   bun run test:integration
+
+   # Property-based tests
+   bun run test:property
+
+   # Walrus integration tests (requires bridge)
+   bun run test:walrus
    ```
 
 ### Testing Real Transactions
@@ -220,32 +230,55 @@ grpcService.on('cellLocked', (event) => {
 
 ## Test Coverage
 
-The test suite covers:
+### Current Test Surface
 
-### Unit Tests
-- [x] BCS encoding for all types
-- [x] Transaction building for all operations
+The test suite currently covers:
+
+### ✅ Unit Tests (Blockchain/Walrus Only)
+**Location:** `tests/unit/blockchain/`
+- [x] GraphQL error recovery and fallback
+- [x] Rate limiting logic
+- [x] Circuit breaker patterns
+- [x] Walrus compression/decompression
+- [x] Walrus redundancy fallback
+- [x] Delta chain reconstruction
+- [x] Transaction serialization
 - [x] Event parsing and filtering
-- [x] Gas estimation logic
 
-### Integration Tests
+**Location:** `tests/unit/`
+- [x] `blockchain-walrus-service.test.js` - Walrus service integration
+- [x] `browser-walrus-service.test.js` - Browser client wrapper
+
+### ⚠️ Integration Tests (Partial Coverage)
+**Location:** `tests/integration/`
 - [x] gRPC connection to Sui testnet
-- [x] Contract deployment verification
-- [x] Transaction execution (mock mode)
-- [x] Event subscription and reception
 - [x] WebSocket bridge functionality
+- [x] Walrus storage operations
+- [ ] Full spreadsheet persistence flow (TODO)
+- [ ] Multi-user collaboration scenarios (TODO)
 
-### Property-Based Tests
-- [x] 100+ randomized test cases
-- [x] Cell reference validation
-- [x] Transaction structure validation
-- [x] Event filtering correctness
+### ⚠️ Property-Based Tests (Basic)
+**Location:** `tests/property/`
+- [x] Randomized test cases with fast-check
+- [ ] Extended property coverage (TODO)
 
-### End-to-End Tests
-- [x] Complete spreadsheet creation flow
-- [x] Version saving workflow
-- [x] Cell locking mechanism
-- [x] Real-time collaboration
+### ⚠️ E2E Tests (Infrastructure Only)
+**Location:** `tests/e2e/`
+- [x] Playwright test infrastructure
+- [x] Neko containerized setup
+- [ ] Comprehensive E2E scenarios (TODO)
+
+### ❌ Missing Coverage (Planned)
+- [ ] **Frontend Unit Tests** (`tests/unit/frontend/`)
+  - No React component tests
+  - No business logic hook tests
+  - No service wrapper tests
+- [ ] **Full Integration Tests**
+  - Limited collaboration scenarios
+  - Missing persistence edge cases
+- [ ] **Load/Stress Tests**
+  - No concurrent user testing
+  - No performance benchmarks
 
 ## Troubleshooting
 
@@ -275,12 +308,17 @@ The test suite covers:
 
 ### Debug Mode
 
-Enable verbose logging:
+Enable verbose logging for tests:
 
 ```bash
-export LOG_LEVEL=debug
-export TEST_VERBOSE=true
-node tests/test-deployed-contract.js
+# Unit tests with verbose output
+bun run test:unit --reporter=verbose
+
+# Walrus tests with verbose output
+bun run test:walrus:verbose
+
+# Integration tests with debug logging
+BRIDGE_LOG_LEVEL=DEBUG bun run test:integration
 ```
 
 ### Checking Contract State
