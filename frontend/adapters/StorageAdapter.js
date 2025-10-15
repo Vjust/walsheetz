@@ -459,17 +459,55 @@ export class StorageAdapter extends IStorageService {
       if (importedData.spreadsheet) {
         await this.saveData(importedData.spreadsheet);
       }
-      
+
       if (importedData.history) {
         localStorage.setItem(this.historyKey, JSON.stringify(importedData.history));
       }
-      
+
       return { success: true };
     } catch (error) {
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: typeof error === 'string' ? error : error.message || 'Unknown error'
       };
+    }
+  }
+
+  // Walrus epoch preference management
+  setWalrusEpochPreference(spreadsheetId, epochs) {
+    try {
+      if (!spreadsheetId) {
+        console.warn('Cannot set Walrus epoch preference: no spreadsheet ID provided');
+        return false;
+      }
+
+      const key = `walsheetz_epoch_pref_${spreadsheetId}`
+      localStorage.setItem(key, epochs.toString())
+      console.log(`Walrus epoch preference saved for spreadsheet ${spreadsheetId}:`, epochs)
+      return true;
+    } catch (error) {
+      console.error('Failed to save Walrus epoch preference:', error)
+      return false;
+    }
+  }
+
+  getWalrusEpochPreference(spreadsheetId) {
+    try {
+      if (!spreadsheetId) {
+        return null;
+      }
+
+      const key = `walsheetz_epoch_pref_${spreadsheetId}`
+      const stored = localStorage.getItem(key)
+
+      if (!stored) {
+        return null;
+      }
+
+      return parseInt(stored);
+    } catch (error) {
+      console.error('Failed to get Walrus epoch preference:', error)
+      return null;
     }
   }
 }

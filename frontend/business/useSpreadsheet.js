@@ -696,10 +696,62 @@ export function useSpreadsheet() {
     }
   }, [walletConnection, updateSyncStatus]);
 
+  // Get Walrus epoch preference for current spreadsheet
+  const getWalrusEpochPreference = useCallback(() => {
+    if (!storageRef.current) return null;
+    const spreadsheetId = storageRef.current.getCurrentSpreadsheetId();
+    if (!spreadsheetId) return null;
+
+    const preference = storageRef.current.getWalrusEpochPreference(spreadsheetId);
+    if (preference) return preference;
+
+    // Fallback to config default if no preference set
+    try {
+      const { getCurrentConfig } = require('../blockchain/config.js');
+      const config = getCurrentConfig();
+      return config.walrus?.features?.epochsDefault || 50;
+    } catch (error) {
+      console.warn('Failed to get config default epochs:', error);
+      return 50;
+    }
+  }, []);
+
+  // Set Walrus epoch preference for current spreadsheet
+  const setWalrusEpochPreference = useCallback(async (epochs) => {
+    if (!storageRef.current) {
+      return { success: false, error: 'Storage not initialized' };
+    }
+
+    const spreadsheetId = storageRef.current.getCurrentSpreadsheetId();
+    if (!spreadsheetId) {
+      return { success: false, error: 'No spreadsheet loaded' };
+    }
+
+    try {
+      const success = storageRef.current.setWalrusEpochPreference(spreadsheetId, epochs);
+
+      if (success) {
+        console.log(`[useSpreadsheet] Walrus epoch preference saved for spreadsheet: ${epochs} epochs`);
+        return { success: true };
+      } else {
+        return { success: false, error: 'Failed to save preference' };
+      }
+    } catch (error) {
+      console.error('[useSpreadsheet] Error saving epoch preference:', error);
+      return { success: false, error: typeof error === 'string' ? error : error.message || 'Unknown error' };
+    }
+  }, []);
+
   // Save to blockchain
-  const saveToBlockchain = useCallback(async (title = null) => {
+  const saveToBlockchain = useCallback(async (title = null, epochs = null) => {
     if (!engineRef.current) {
       return { success: false, error: 'Engine not initialized' };
+    }
+
+    // Get epoch preference if not explicitly provided
+    let epochsToUse = epochs;
+    if (!epochsToUse) {
+      epochsToUse = getWalrusEpochPreference();
     }
 
     // Set loading state for save operation
@@ -737,7 +789,7 @@ export function useSpreadsheet() {
       }
 
       setSaveStatus('saving');
-      
+
       // Update loading state for data preparation
       setLoadingState(prev => ({
         ...prev,
@@ -755,7 +807,7 @@ export function useSpreadsheet() {
         }));
       }, 300);
 
-      const result = await engineRef.current.save(title);
+      const result = await engineRef.current.save(title, epochsToUse);
 
       if (result.success) {
         // Check if wallet was disconnected (localStorage-only save)
@@ -1506,12 +1558,14 @@ export function useSpreadsheet() {
     makeSpreadsheetPrivate,
     transferOwnership,
     pruneOldVersions,
-    deleteSpreadsheet
-    ,
+    deleteSpreadsheet,
     queryDatasets,
     snoozeCommitPrompt,
     suppressCommitPrompts,
     // IDs and titles
-    getCurrentSpreadsheetId
+    getCurrentSpreadsheetId,
+    // Walrus epoch management
+    getWalrusEpochPreference,
+    setWalrusEpochPreference
   };
 }

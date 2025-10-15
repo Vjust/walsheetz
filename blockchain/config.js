@@ -103,6 +103,8 @@ export const config = {
         rateLimiterEnabled: (env.RATE_LIMITER_ENABLED ?? 'true') !== 'false', // Default true
         useSdk: (env.WALRUS_USE_SDK ?? 'false') === 'true', // Default false for safe rollout
         epochsDefault: parseInt(env.WALRUS_EPOCHS_DEFAULT || '50'),
+        epochMax: parseInt(env.WALRUS_EPOCH_MAX || '200'),
+        epochRenewalWarningDays: parseInt(env.WALRUS_EPOCH_RENEWAL_WARNING || '7'),
         sdkNetwork: 'testnet'
       },
       
@@ -150,6 +152,8 @@ export const config = {
         rateLimiterEnabled: process.env.RATE_LIMITER_ENABLED !== 'false',
         useSdk: (env.WALRUS_USE_SDK ?? 'false') === 'true', // Default false for safe rollout
         epochsDefault: parseInt(env.WALRUS_EPOCHS_DEFAULT || '50'),
+        epochMax: parseInt(env.WALRUS_EPOCH_MAX || '200'),
+        epochRenewalWarningDays: parseInt(env.WALRUS_EPOCH_RENEWAL_WARNING || '7'),
         sdkNetwork: 'mainnet'
       },
       

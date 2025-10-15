@@ -309,8 +309,14 @@ WALRUS_EPOCH_MAX=200              # Upper bound users can pick in UI
 **UI Behaviour:**
 
 - Display chunk info in the status bar and dataset explorer.
-- “Renew storage” button shortcuts to Walrus purchase flow when expiry is near.
+- "Renew storage" button shortcuts to Walrus purchase flow when expiry is near.
 - When users choose a different duration the selection persists per spreadsheet.
+- Users can open the Storage Management modal via "Manage Storage" button on expiry warnings.
+- Epoch preference is saved per spreadsheet in localStorage under `walsheetz_epoch_pref_{spreadsheetId}`.
+
+**Implementation:**
+
+See [`docs/WALRUS_EPOCH_SELECTION_GUIDE.md`](WALRUS_EPOCH_SELECTION_GUIDE.md) for complete implementation details and threading instructions.
 
 See [`docs/architecture/walrus-indexing.md`](architecture/walrus-indexing.md) for the full ADR.
 

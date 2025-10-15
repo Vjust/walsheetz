@@ -910,12 +910,18 @@ export class BlockchainAdapter extends IBlockchainService {
 
       // Step 2: Store data to Walrus first (faster, no wallet interaction)
       logger.startTimer('walrus_storage_optimized');
-      logger.info(LogComponent.STORAGE_SERVICE, 'walrus_store_optimized', 'Storing spreadsheet data in Walrus');
+
+      // Get default epochs from config
+      const { getCurrentConfig } = require('../blockchain/config.js');
+      const config = getCurrentConfig();
+      const defaultEpochs = config.walrus?.features?.epochsDefault || 50;
+
+      logger.info(LogComponent.STORAGE_SERVICE, 'walrus_store_optimized', `Storing spreadsheet data in Walrus with ${defaultEpochs} epochs`);
 
       await this.walrusService.connect();
 
       const walrusResult = await this.walrusService.storeBlob(spreadsheetData, {
-        epochs: 50,
+        epochs: defaultEpochs,
         contentType: 'application/json'
       });
 
@@ -1545,18 +1551,21 @@ export class BlockchainAdapter extends IBlockchainService {
    * Create atomic operations for the save process with parallel processing
    */
   _createAtomicSaveOperations(data, options) {
+    // Extract epochs from options, use default if not provided
+    const epochs = options?.epochs || 50;
+
     return [
       // Parallel operations that can run concurrently
       {
         name: 'walrus_storage',
         execute: async (context, operationId) => {
-          logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_walrus', `Executing Walrus storage [${operationId}]`);
+          logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_walrus', `Executing Walrus storage with ${epochs} epochs [${operationId}]`);
 
           // Connect to Walrus if not already connected
           await this.walrusService.connect();
 
           const walrusResult = await this.walrusService.storeBlob(data, {
-            epochs: 50,
+            epochs: epochs,
             contentType: 'application/json'
           });
 

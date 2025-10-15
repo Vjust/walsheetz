@@ -1027,12 +1027,17 @@ export class SpreadsheetEngine {
   /**
    * Save current state
    */
-  async save(title = null) {
+  async save(title = null, epochs = null) {
     logger.startTimer('spreadsheet_save');
+
+    // Use default or provided epochs for Walrus storage
+    const epochsToUse = epochs || 50;
+
     logger.info(LogComponent.SPREADSHEET_ENGINE, 'save_start', `Starting spreadsheet save operation`, {
       editCount: this.editCount,
       pendingEdits: this.pendingEdits.size,
-      walletConnected: this.blockchainService?.isWalletConnected() || false
+      walletConnected: this.blockchainService?.isWalletConnected() || false,
+      epochs: epochsToUse
     });
 
     // Set flag to indicate save in progress
@@ -1045,18 +1050,19 @@ export class SpreadsheetEngine {
       logger.debug(LogComponent.SPREADSHEET_ENGINE, 'data_collected', `Spreadsheet data collected for save`, {
         dataSize: JSON.stringify(data).length,
         editCount: data.edits?.length || 0,
-        version: data.version
+        version: data.version,
+        epochs: epochsToUse
       });
-      
+
       // Save to local storage
       logger.debug(LogComponent.SPREADSHEET_ENGINE, 'storage_save', `Saving to local storage`);
       await this.storageService.saveData(data)
       logger.info(LogComponent.SPREADSHEET_ENGINE, 'storage_save', `Successfully saved to local storage`);
-      
+
       // Save to blockchain if connected
       if (this.blockchainService?.isWalletConnected()) {
-        logger.info(LogComponent.SPREADSHEET_ENGINE, 'blockchain_save', `Attempting blockchain save`);
-        const blockchainResult = await this.blockchainService.saveToBlockchain(data)
+        logger.info(LogComponent.SPREADSHEET_ENGINE, 'blockchain_save', `Attempting blockchain save with ${epochsToUse} epochs`);
+        const blockchainResult = await this.blockchainService.saveToBlockchain(data, { epochs: epochsToUse })
         
         if (!blockchainResult.success) {
           logger.warn(LogComponent.SPREADSHEET_ENGINE, 'blockchain_save_failed', `Blockchain save failed`, {

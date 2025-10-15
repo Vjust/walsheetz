@@ -14,7 +14,8 @@ export function SaveStatusIndicator({
   onSuppressPrompts,
   poaStatus = null, // PoA certificate status: 'certified', 'uncertified', 'pending', 'expired', 'unknown'
   blobId = null, // Current blob ID
-  onSaveToBlockchain = null // Callback to open save to blockchain modal
+  onSaveToBlockchain = null, // Callback to open save to blockchain modal
+  onManageStorage = null // Callback to open storage management modal
 }) {
   const formatTimeAgo = (timestamp) => {
     if (!timestamp) return null;
@@ -175,6 +176,16 @@ export function SaveStatusIndicator({
                 {isExpiryCritical && ' ⚠️ Expired — renew immediately'}
                 {(!isExpiryCritical && isExpirySoon) && ' ⚠️ Renewal required soon'}
               </span>
+              {(isExpiryCritical || isExpirySoon) && onManageStorage && (
+                <button
+                  className="manage-storage-button"
+                  onClick={onManageStorage}
+                  title="Manage storage duration and renewal"
+                  style={{ marginLeft: '8px', fontSize: '12px', padding: '4px 8px' }}
+                >
+                  Manage Storage
+                </button>
+              )}
             </div>
           )}
           {poaStatus && (
