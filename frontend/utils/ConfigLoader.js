@@ -46,11 +46,15 @@ class ConfigLoader {
   async _loadConfig() {
     try {
       console.log('[ConfigLoader] 🔄 Loading runtime config with cache-busting...');
-      
+
       const timestamp = Date.now();
       const response = await fetch(`/app-config.json?t=${timestamp}&bust=${Math.random()}`);
-      
+
       if (!response.ok) {
+        // Suppress logging for expected 404 errors during initial startup or cache misses
+        if (response.status === 404) {
+          console.debug('[ConfigLoader] ℹ️ Config file not found (expected during startup or in development), falling back to embedded config');
+        }
         throw new Error(`Config fetch failed: ${response.status} ${response.statusText}`);
       }
       
@@ -79,8 +83,14 @@ class ConfigLoader {
       return config;
       
     } catch (error) {
-      console.error('[ConfigLoader] ❌ Failed to load runtime config:', error);
-      
+      // Only log as error if it's not a 404 (which is expected in dev/test environments)
+      const errorMsg = typeof error === 'string' ? error : error?.message || 'Unknown error';
+      if (!errorMsg.includes('404')) {
+        console.warn('[ConfigLoader] ⚠️  Failed to load runtime config:', errorMsg);
+      } else {
+        console.debug('[ConfigLoader] ℹ️  Using fallback config (could not load /app-config.json)');
+      }
+
       // Return fallback config if main config fails
       return this._getFallbackConfig();
     }

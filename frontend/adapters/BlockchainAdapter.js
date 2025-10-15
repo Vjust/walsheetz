@@ -1176,6 +1176,7 @@ export class BlockchainAdapter extends IBlockchainService {
         default: // 'standard'
           console.log('💾 Using standard storage');
           walrusResult = await this.walrusService.storeBlob(data, {
+            epochs: options.epochs || 50,
             spreadsheetId: this.spreadsheetObjectId || data.title,
             chunk: options.chunk
           });

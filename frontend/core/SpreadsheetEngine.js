@@ -147,26 +147,9 @@ export class SpreadsheetEngine {
       
       // Initialize last edit timestamp as null - will be set only when actual edits occur
       // this.lastEditTimestamp remains null until first edit
-      
-      // Initialize WebSocket connection for real-time collaboration
-      try {
-        logger.info(LogComponent.SPREADSHEET_ENGINE, 'websocket_connect', 'Attempting WebSocket connection');
 
-        // Check bridge health before connecting
-        const bridgeHealthy = await this.checkBridgeHealth();
-        if (!bridgeHealthy) {
-          logger.warn(LogComponent.SPREADSHEET_ENGINE, 'bridge_health_check', 'Bridge is not healthy, skipping WebSocket connection');
-        } else {
-          await this.webSocketService.connect(this.spreadsheetId, this.userId, 'ws://localhost:8081');
-          this.setupCollaborationListeners()
-          logger.info(LogComponent.SPREADSHEET_ENGINE, 'websocket_connect', 'WebSocket connected successfully');
-        }
-      } catch (wsError) {
-        logger.warn(LogComponent.SPREADSHEET_ENGINE, 'websocket_connect', 'WebSocket connection failed, continuing without real-time features', {
-          error: typeof wsError === 'string' ? wsError : wsError.message || 'Unknown error',
-          stack: wsError.stack
-        });
-      }
+      // WebSocket collaboration disabled for single-user MVP
+      logger.info(LogComponent.SPREADSHEET_ENGINE, 'websocket_connect', 'WebSocket collaboration disabled for single-user MVP');
       
       // Setup smart auto-save after successful initialization (only if enabled)
       if (this.autoSaveEnabled) {
@@ -644,52 +627,11 @@ export class SpreadsheetEngine {
   }
 
   /**
-   * Setup collaboration event listeners
+   * Setup collaboration event listeners - disabled for single-user MVP
+   * Phase 2: Re-enable this method when adding multi-user collaboration
    */
   setupCollaborationListeners() {
-    logger.info(LogComponent.SPREADSHEET_ENGINE, 'collaboration_setup', 'Setting up collaboration event listeners');
-    
-    this.webSocketService.on('cellLocked', (data) => {
-      logger.info(LogComponent.COLLABORATION, 'cell_locked', `Cell locked by user`, {
-        cellRef: data.cellRef,
-        userName: data.userName,
-        userId: data.userId,
-        timestamp: Date.now()
-      });
-      // Emit event for UI to handle highlighting
-      this.emit('cellLocked', data);
-    });
-
-    this.webSocketService.on('cellUnlocked', (data) => {
-      logger.info(LogComponent.COLLABORATION, 'cell_unlocked', `Cell unlocked by user`, {
-        cellRef: data.cellRef,
-        userId: data.userId,
-        timestamp: Date.now()
-      });
-      this.emit('cellUnlocked', data);
-    });
-
-    this.webSocketService.on('userJoined', (data) => {
-      logger.info(LogComponent.COLLABORATION, 'user_joined', `User joined spreadsheet`, {
-        userName: data.userName,
-        userId: data.userId,
-        timestamp: Date.now(),
-        totalUsers: data.totalUsers || 'unknown'
-      });
-      this.emit('userJoined', data);
-    });
-
-    this.webSocketService.on('userLeft', (data) => {
-      logger.info(LogComponent.COLLABORATION, 'user_left', `User left spreadsheet`, {
-        userId: data.userId,
-        userName: data.userName,
-        timestamp: Date.now(),
-        remainingUsers: data.remainingUsers || 'unknown'
-      });
-      this.emit('userLeft', data);
-    });
-    
-    logger.info(LogComponent.SPREADSHEET_ENGINE, 'collaboration_setup', 'Collaboration event listeners configured');
+    logger.info(LogComponent.SPREADSHEET_ENGINE, 'collaboration_setup', 'Collaboration listeners disabled for single-user MVP');
   }
 
   /**
@@ -793,26 +735,9 @@ export class SpreadsheetEngine {
       editCount: this.editCount,
       pendingEdits: this.pendingEdits.size
     });
-    
-    // Check if cell is locked by another user
-    if (this.webSocketService.isCellLocked(cellRef)) {
-      logger.warn(LogComponent.SPREADSHEET_ENGINE, 'cell_edit_blocked', `Cannot edit cell ${cellRef} - locked by another user`, {
-        cellRef,
-        lockedBy: this.webSocketService.getCellLockOwner(cellRef),
-        editCount: this.editCount
-      });
-      logger.endTimer(`cell_edit_${cellRef}`);
-      return {
-        success: false,
-        error: `Cell ${cellRef} is currently being edited by another user`,
-        cellRef,
-        editCount: this.editCount
-      }
-    }
 
-    // Lock the cell for editing
-    logger.debug(LogComponent.SPREADSHEET_ENGINE, 'cell_lock', `Locking cell for editing`, { cellRef });
-    this.webSocketService.lockCell(cellRef)
+    // Cell locking disabled for single-user MVP
+    // Phase 2: Re-enable when adding multi-user collaboration
     this.currentEditingCell = cellRef
     
     // Track the edit
@@ -844,16 +769,8 @@ export class SpreadsheetEngine {
       newValueLength: String(newValue || '').length
     });
     
-    // Send real-time edit update
-    try {
-      this.webSocketService.sendCellEdit(cellRef, newValue, oldValue)
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'websocket_edit_sent', `Real-time edit sent via WebSocket`, { cellRef });
-    } catch (wsError) {
-      logger.warn(LogComponent.SPREADSHEET_ENGINE, 'websocket_edit_failed', `Failed to send real-time edit update`, {
-        cellRef,
-        error: typeof wsError === 'string' ? wsError : wsError.message || 'Unknown error'
-      });
-    }
+    // Real-time edit updates disabled for single-user MVP
+    // Phase 2: Re-enable WebSocket broadcasting when adding multi-user collaboration
     
     // Track in blockchain service
     if (this.blockchainService) {
@@ -898,25 +815,8 @@ export class SpreadsheetEngine {
       previousCell: this.currentEditingCell
     });
     
-    // Unlock previous cell if different
-    if (this.currentEditingCell && this.currentEditingCell !== cellRef) {
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'cell_unlock', `Unlocking previous cell`, {
-        previousCell: this.currentEditingCell,
-        newCell: cellRef
-      });
-      this.webSocketService.unlockCell(this.currentEditingCell)
-    }
-    
-    // Update presence
-    try {
-      this.webSocketService.updatePresence(cellRef)
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'presence_update', `User presence updated`, { cellRef });
-    } catch (presenceError) {
-      logger.warn(LogComponent.SPREADSHEET_ENGINE, 'presence_update_failed', `Failed to update user presence`, {
-        cellRef,
-        error: typeof presenceError === 'string' ? presenceError : presenceError.message || 'Unknown error'
-      });
-    }
+    // Cell unlocking and presence updates disabled for single-user MVP
+    // Phase 2: Re-enable when adding multi-user collaboration
     
     this.currentEditingCell = cellRef
     
@@ -932,19 +832,10 @@ export class SpreadsheetEngine {
         cellRef: this.currentEditingCell,
         timestamp: Date.now()
       });
-      
-      try {
-        this.webSocketService.unlockCell(this.currentEditingCell)
-        logger.debug(LogComponent.SPREADSHEET_ENGINE, 'cell_unlock', `Cell unlocked on blur`, {
-          cellRef: this.currentEditingCell
-        });
-      } catch (unlockError) {
-        logger.warn(LogComponent.SPREADSHEET_ENGINE, 'cell_unlock_failed', `Failed to unlock cell on blur`, {
-          cellRef: this.currentEditingCell,
-          error: typeof unlockError === 'string' ? unlockError : unlockError.message || 'Unknown error'
-        });
-      }
-      
+
+      // Cell unlocking disabled for single-user MVP
+      // Phase 2: Re-enable when adding multi-user collaboration
+
       this.currentEditingCell = null
     } else {
       logger.debug(LogComponent.SPREADSHEET_ENGINE, 'cell_blur', `Cell blur called but no current editing cell`);
@@ -2250,18 +2141,9 @@ export class SpreadsheetEngine {
       });
       // Note: In production, might want to trigger a final save here
     }
-    
-    // Disconnect WebSocket
-    if (this.webSocketService) {
-      try {
-        this.webSocketService.disconnect()
-        logger.info(LogComponent.SPREADSHEET_ENGINE, 'cleanup', `WebSocket disconnected`);
-      } catch (wsError) {
-        logger.warn(LogComponent.SPREADSHEET_ENGINE, 'cleanup', `Error during WebSocket disconnect`, {
-          error: typeof wsError === 'string' ? wsError : wsError.message || 'Unknown error'
-        });
-      }
-    }
+
+    // WebSocket cleanup disabled for single-user MVP
+    // Phase 2: Re-enable when adding multi-user collaboration
     
     logger.info(LogComponent.SPREADSHEET_ENGINE, 'cleanup', `Cleanup process completed`);
   }

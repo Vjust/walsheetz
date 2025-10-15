@@ -2,7 +2,12 @@
 
 Navigate your data like a walrus on ice! A powerful spreadsheet application with **Sui blockchain integration** and **Walrus decentralized storage** built with Vite and Bun.
 
-> **📌 Current MVP Scope**: This is a **single-user MVP deployment**. Collaboration features (real-time cell locking, multi-user presence, WebSocket bridge) are disabled. The bridge infrastructure is not required for this deployment - the application runs standalone with full blockchain integration through Sui RPC. For Phase 2 (multi-user collaboration), these features can be re-enabled by restoring commented-out code.
+> **📌 Current MVP Scope**: This is a **single-user MVP deployment**.
+> - ✅ Full blockchain integration (Sui RPC, Walrus storage)
+> - ✅ Standalone operation (no bridge server required)
+> - ❌ Collaboration features disabled (Phase 2)
+>
+> Real-time collaboration (cell locking, multi-user presence, WebSocket bridge) will be implemented in Phase 2. For the current single-user deployment, the application runs standalone through Sui RPC with full decentralized storage via Walrus.
 
 ## 🌊 Blockchain Features
 

@@ -52,9 +52,10 @@ class BrowserSuiService {
       this.config = await this.configLoader.getConfig();
       const networkConfig = this.config.getCurrentNetwork();
 
-      // Initialize SuiClient with runtime config
+      // Initialize SuiClient with ABSOLUTE URL (GraphQL client needs direct access, not proxy)
+      // The @mysten/sui v1.38.0 uses GraphQL internally, which doesn't work through the /sui-rpc proxy
       this.client = new SuiClient({
-        url: this.config.getServiceUrl('sui-rpc')
+        url: networkConfig.rpcUrl
       });
 
       logger.debug(LogComponent.BLOCKCHAIN_ADAPTER, 'config_loaded', 'Configuration loaded', {

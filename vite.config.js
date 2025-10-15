@@ -13,6 +13,8 @@ export default defineConfig({
   root: '.',
   // Reduce Vite console noise
   logLevel: 'warn',
+  // Public assets folder (app-config.json, etc.)
+  publicDir: 'public',
   plugins: [
     react(),
     // Production build guard - prevent test mode in production

@@ -5,15 +5,18 @@ import { SuiClient } from '@mysten/sui/client';
 class BrowserGrpcService {
   constructor() {
     console.log('[BrowserGrpcService] Initializing...');
-    
+
     this.client = null; // Will be initialized after config load
     this.config = null;
     this.configLoader = configLoader;
     this.isConnected = false;
     this.eventListeners = new Map();
     this.subscriptions = new Map();
+    // eventCallbacks: Stores blockchain event subscriptions (NOT collaboration events)
+    // Used for real-time and fallback polling of Move contract events
+    // Collaboration-specific events disabled for single-user MVP (Phase 2)
     this.eventCallbacks = new Map();
-    
+
     console.log('[BrowserGrpcService] Constructor completed - will load config during initialization');
   }
 
@@ -58,7 +61,10 @@ class BrowserGrpcService {
         this.config = await this.configLoader.getConfig();
       }
       if (!this.client) {
-        this.client = new SuiClient({ url: this.config.getServiceUrl('sui-rpc') });
+        // Use ABSOLUTE URL directly for SuiClient (GraphQL client needs direct access, not proxy)
+        // The @mysten/sui v1.38.0 uses GraphQL internally, which doesn't work through the /sui-rpc proxy
+        const networkConfig = this.config.getCurrentNetwork();
+        this.client = new SuiClient({ url: networkConfig.rpcUrl });
       }
 
       // Test connection

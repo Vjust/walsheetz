@@ -100,6 +100,12 @@ Controls whether to attempt gRPC checkpoint streaming or immediately fallback to
 
 ## Bridge Server Configuration
 
+### ⚠️ Phase 2 - Not implemented in single-user MVP
+
+The WebSocket bridge enables multi-user real-time collaboration. This section documents the configuration for **Phase 2 implementation only**. The current single-user MVP deployment does not require bridge infrastructure.
+
+---
+
 ### Port & Host
 **Location:** `blockchain/config.js:247-249`
 

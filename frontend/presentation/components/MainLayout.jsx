@@ -17,7 +17,6 @@ export function MainLayout() {
     walletAddress,
     walletBalance,
     walletNetwork,
-    webSocketService,
     blockchainService,
     connectWallet,
     getCurrentSpreadsheetId

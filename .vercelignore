@@ -1,0 +1,25 @@
+node_modules
+.git
+.env.local
+.env.*.local
+tests
+docs
+scripts
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+.DS_Store
+Dockerfile*
+docker-compose*
+.eslintrc*
+.prettierrc*
+tsconfig.json
+vite.config.js
+vitest.config.ts
+playwright.config.ts
+.github
+Sui Ref
+protos
+README.md
+LICENSE

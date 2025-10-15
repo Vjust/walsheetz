@@ -1,5 +1,11 @@
 # WalSheetz Bridge Server Enhancements Summary
 
+## ⚠️ Phase 2 - Not implemented in single-user MVP
+
+This document describes the WebSocket-gRPC bridge server enhancements that enable multi-user real-time collaboration. **These features are not implemented in the current single-user MVP deployment.** This documentation is preserved for Phase 2 implementation reference.
+
+---
+
 ## Overview
 This document summarizes the comprehensive enhancements made to the WalSheetz WebSocket-gRPC bridge server to improve logging, observability, and Docker containerization.
 
