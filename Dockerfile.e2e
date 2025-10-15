@@ -1,0 +1,46 @@
+# Dockerfile for E2E Testing with Playwright
+# Based on official Playwright image with Node.js
+
+FROM mcr.microsoft.com/playwright:v1.40.0-jammy
+
+# Set working directory
+WORKDIR /app
+
+# Install Bun (required for this project)
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH="/root/.bun/bin:$PATH"
+
+# Copy package files
+COPY package.json bun.lockb* ./
+
+# Install dependencies
+RUN bun install --frozen-lockfile
+
+# Install Playwright browsers (already in base image, but ensure latest)
+RUN bunx playwright install --with-deps chromium firefox webkit
+
+# Copy application code
+COPY . .
+
+# Set environment variables
+ENV NODE_ENV=test
+ENV E2E_HEADLESS=true
+ENV E2E_LOG_COLORS=true
+ENV E2E_LOG_TIMESTAMPS=true
+ENV E2E_LOG_LEVEL=verbose
+
+# Create directories for test results
+RUN mkdir -p tests/e2e/screenshots \
+    tests/e2e/screenshots/failures \
+    tests/e2e/screenshots/baselines \
+    tests/e2e/screenshots/current \
+    tests/e2e/screenshots/diffs \
+    tests/e2e/videos \
+    tests/e2e/reports \
+    tests/e2e/test-results
+
+# Expose port for application
+EXPOSE 3005
+
+# Default command runs E2E tests
+CMD ["bun", "run", "test:e2e"]

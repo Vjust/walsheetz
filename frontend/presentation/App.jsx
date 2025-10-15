@@ -3,12 +3,14 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { WalletProviders } from '../providers/WalletProviders.jsx'
 import { SpreadsheetProvider } from './components/SpreadsheetProvider.jsx'
 import { ErrorBoundary } from './components/ErrorBoundary.jsx'
-import { LogViewer } from './components/LogViewer.jsx'
 import { WalrusStatus } from './components/WalrusStatus.jsx'
 import RateLimiterStatus from '../components/RateLimiterStatus.jsx'
 import { TestModeBanner } from './components/TestModeBanner.jsx'
 import { Dashboard } from '../pages/Dashboard.jsx'
 import { SpreadsheetEditor } from '../pages/SpreadsheetEditor.jsx'
+import { BlobCatalog } from './pages/BlobCatalog.jsx'
+import { SpreadsheetWorkspace } from './pages/SpreadsheetWorkspace.jsx'
+import { ExploreTundra } from './pages/ExploreTundra.jsx'
 import { logger, LogComponent } from '../utils/Logger.js'
 import '../services/luckysheetApi.js' // Phase 0: Expose wrapper to window for console testing
 import './styles/collaboration.css'
@@ -39,12 +41,14 @@ function App() {
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/index.html" element={<Navigate to="/" replace />} />
+                    <Route path="/explore" element={<ExploreTundra />} />
                     <Route path="/spreadsheet/:id" element={<SpreadsheetEditor />} />
+                    <Route path="/blobs" element={<BlobCatalog />} />
+                    <Route path="/workspace" element={<SpreadsheetWorkspace />} />
                   </Routes>
 
                   {/* Global components */}
                   <TestModeBanner />
-                  <LogViewer />
                   {showWalrusStatus && (
                     <WalrusStatus position="bottom-right" minimized={true} />
                   )}

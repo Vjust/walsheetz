@@ -1,12 +1,14 @@
 # 🦭 WalSheetz - Arctic Collaborative Spreadsheets
 
-Navigate your data like a walrus on ice! A powerful spreadsheet application with **Sui blockchain integration** and **Walrus permanent storage** built with Vite and Bun.
+Navigate your data like a walrus on ice! A powerful spreadsheet application with **Sui blockchain integration** and **Walrus decentralized storage** built with Vite and Bun.
+
+> **📌 Current MVP Scope**: This is a **single-user MVP deployment**. Collaboration features (real-time cell locking, multi-user presence, WebSocket bridge) are disabled. The bridge infrastructure is not required for this deployment - the application runs standalone with full blockchain integration through Sui RPC. For Phase 2 (multi-user collaboration), these features can be re-enabled by restoring commented-out code.
 
 ## 🌊 Blockchain Features
 
 - **Sui Wallet Integration**: Connect with Sui Wallet, Suiet, or other compatible wallets
 - **Automatic Saving**: Data saved to Walrus every 5 seconds or after 3+ edits
-- **Version Control**: Cell-level versioning with permanent blockchain storage
+- **Version Control**: Cell-level versioning with decentralized blockchain storage
 - **Walrus Quilt**: Efficient batch storage for small file optimization
 - **Testnet Ready**: Full support for Sui testnet with easy mainnet migration
 
@@ -368,4 +370,4 @@ See **[docs/TESTING.md](docs/TESTING.md)** for detailed testing guide and covera
 
 ---
 
-Built with ❄️ by the WalSheetz team - Now with permanent blockchain storage! 🦭⛓️
+Built with ❄️ by the WalSheetz team - Now with decentralized blockchain storage! 🦭⛓️

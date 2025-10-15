@@ -674,17 +674,9 @@ class BrowserGrpcService {
     this.emit('disconnected');
   }
 
-  // For debugging - trigger mock events
+  // Mock event triggering disabled for single-user MVP
   triggerMockEvent(eventType, data = {}) {
-    const callback = this.eventCallbacks.get('blockchain');
-    if (callback) {
-      callback({
-        type: eventType,
-        data: data,
-        transactionDigest: `mock_${Date.now()}`,
-        timestampMs: Date.now()
-      });
-    }
+    // No-op: mock events not needed in production
   }
 }
 

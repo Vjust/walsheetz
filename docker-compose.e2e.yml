@@ -1,0 +1,92 @@
+# Docker Compose Configuration for E2E Testing
+# Orchestrates application and test runner
+
+version: '3.8'
+
+services:
+  # Application server for testing
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=test
+      - VITE_TEST_AUTH_BYPASS=true
+      - PORT=3005
+    ports:
+      - "3005:3005"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: bun run dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3005"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - e2e-network
+
+  # E2E test runner
+  e2e-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.e2e
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=test
+      - APP_URL=http://app:3005
+      - E2E_HEADLESS=true
+      - E2E_LOG_COLORS=true
+      - E2E_LOG_TIMESTAMPS=true
+      - E2E_LOG_LEVEL=verbose
+      - CI=true
+    volumes:
+      - ./tests/e2e:/app/tests/e2e
+      - ./playwright.config.js:/app/playwright.config.js
+      - e2e-results:/app/tests/e2e/test-results
+      - e2e-reports:/app/tests/e2e/reports
+      - e2e-screenshots:/app/tests/e2e/screenshots
+      - e2e-videos:/app/tests/e2e/videos
+    command: bun run test:e2e:docker
+    networks:
+      - e2e-network
+
+  # Optional: Test runner with UI mode for debugging
+  e2e-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.e2e
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=test
+      - APP_URL=http://app:3005
+      - E2E_HEADLESS=false
+      - DISPLAY=:99
+    volumes:
+      - ./tests/e2e:/app/tests/e2e
+      - ./playwright.config.js:/app/playwright.config.js
+      - e2e-results:/app/tests/e2e/test-results
+      - e2e-reports:/app/tests/e2e/reports
+    ports:
+      - "9323:9323"  # Playwright UI port
+    command: bun run test:e2e:ui
+    networks:
+      - e2e-network
+    profiles:
+      - debug
+
+networks:
+  e2e-network:
+    driver: bridge
+
+volumes:
+  e2e-results:
+  e2e-reports:
+  e2e-screenshots:
+  e2e-videos:

@@ -22,6 +22,8 @@ export const config = {
       explorerUrl: 'https://testnet.suivision.xyz',
       packageId: '0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7',
       registryObjectId: '0x9a6b94f79762fa608c5f0938d092744a8e5b69852f860eb17afa4ab11e24fe25',
+      // Module version for upgrade compatibility tracking
+      moduleVersion: 1,
       // Feature compatibility for deployed package ABI
       features: {
         // The deployed testnet package uses save_version(spreadsheet, walrus_blob_id, content_hash, cell_count, description, clock)
@@ -49,6 +51,8 @@ export const config = {
       explorerUrl: 'https://suivision.xyz',
       packageId: '0x991454976a4ef8535ed3572bb1c500dcd565855d49a51f1fadc7f70a316c9631',
       registryObjectId: '0x66f68bfb639dbc7f24519bcdbbfdb376057d87c6d508ea7a8d67746a11721ca5',
+      // Module version for upgrade compatibility tracking
+      moduleVersion: 1,
       features: {
         contentHashInSave: true,
         rateLimiterEnabled: (env.RATE_LIMITER_ENABLED ?? 'true') !== 'false',
@@ -262,22 +266,16 @@ export const config = {
     showRateLimiterStatus: (env.SHOW_RATE_LIMITER_STATUS ?? 'false') === 'true'
   },
   
-  // Collaboration settings
+  // Collaboration settings - DISABLED for single-user MVP
+  // Collaboration features are not used in the single-user build
   collaboration: {
-    userTimeoutMs: 300000,                   // 5 minute user timeout
-    cellLockTimeoutMs: 60000,                // 1 minute cell lock timeout
-    maxActiveUsers: 100,                     // Max concurrent users
-    eventHistorySize: 1000,                  // Max events to keep in memory
-    presenceUpdateIntervalMs: 10000,         // 10 second presence updates
-    
-    // Event types to monitor
-    eventTypes: {
-      cellLocked: 'CellLocked',
-      cellUnlocked: 'CellUnlocked', 
-      versionSaved: 'VersionSaved',
-      userJoined: 'UserJoined',
-      userLeft: 'UserLeft'
-    }
+    enabled: false,  // Collaboration disabled
+    // Kept for reference but not used:
+    // userTimeoutMs: 300000,
+    // cellLockTimeoutMs: 60000,
+    // maxActiveUsers: 100,
+    // eventHistorySize: 1000,
+    // presenceUpdateIntervalMs: 10000
   },
   
   // Deposit and gas management settings

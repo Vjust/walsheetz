@@ -154,3 +154,119 @@ export async function buildSaveVersionArgs(tx, data) {
 
   return { args, signature: sig }
 }
+
+/**
+ * Detect on-chain module version from ABI metadata
+ * Returns { moduleVersion: number, debug: object }
+ */
+export async function detectModuleVersion() {
+  try {
+    const cfg = await configLoader.getConfig()
+    const net = cfg.getCurrentNetwork()
+    const abi = await configLoader.detectABI(net.packageId, cfg.currentNetwork)
+
+    // Try to find get_module_version function in ABI
+    const versionFunc = abi?.functions?.['spreadsheet::get_module_version']
+
+    // If ABI has the version getter, we know the module supports versioning
+    if (versionFunc) {
+      console.log('[ABI] Module version support detected in ABI')
+
+      // If we have the actual version in metadata, use it
+      // Otherwise default to config
+      const configVersion = net.moduleVersion || 1
+
+      return {
+        moduleVersion: configVersion,
+        supportsVersioning: true,
+        debug: {
+          reason: 'abi_detected',
+          configVersion,
+          packageId: net.packageId
+        }
+      }
+    }
+
+    // Fallback to config
+    const configVersion = net.moduleVersion || 1
+    console.warn('[ABI] Module version function not found in ABI, using config fallback:', configVersion)
+
+    return {
+      moduleVersion: configVersion,
+      supportsVersioning: false,
+      debug: {
+        reason: 'fallback_to_config',
+        configVersion,
+        packageId: net.packageId
+      }
+    }
+
+  } catch (error) {
+    console.error('[ABI] Module version detection failed:', error)
+
+    // Fallback to config
+    const cfg = await configLoader.getConfig()
+    const net = cfg.getCurrentNetwork()
+    const configVersion = net.moduleVersion || 1
+
+    return {
+      moduleVersion: configVersion,
+      supportsVersioning: false,
+      debug: {
+        reason: 'detection_error',
+        error: error.message,
+        configVersion
+      }
+    }
+  }
+}
+
+/**
+ * Check if a spreadsheet object is compatible with current module version
+ * Returns { compatible: boolean, spreadsheetVersion: number, moduleVersion: number, needsMigration: boolean }
+ */
+export async function checkSpreadsheetVersionCompatibility(spreadsheetData) {
+  try {
+    const { moduleVersion } = await detectModuleVersion()
+
+    // Extract spreadsheet version from object data
+    // spreadsheetData could be from blockchain query result
+    // Default to 0 for legacy objects that don't have module_version
+    const spreadsheetVersion = spreadsheetData?.module_version ||
+                               spreadsheetData?.content?.fields?.module_version ||
+                               0
+
+    const compatible = spreadsheetVersion === moduleVersion
+    const needsMigration = spreadsheetVersion < moduleVersion
+
+    console.log('[ABI] Spreadsheet version compatibility check:', {
+      spreadsheetVersion,
+      moduleVersion,
+      compatible,
+      needsMigration
+    })
+
+    return {
+      compatible,
+      spreadsheetVersion,
+      moduleVersion,
+      needsMigration,
+      canWrite: compatible, // Only allow writes if versions match
+      canRead: true // Always allow reads
+    }
+
+  } catch (error) {
+    console.error('[ABI] Version compatibility check failed:', error)
+
+    // Default to legacy object (version 0) when detection fails
+    return {
+      compatible: false,
+      spreadsheetVersion: 0,
+      moduleVersion: 0,
+      needsMigration: true,
+      canWrite: false, // Don't allow writes when version detection fails
+      canRead: true, // Always allow reads
+      error: error.message
+    }
+  }
+}

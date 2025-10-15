@@ -97,13 +97,28 @@ export function CreateDocumentModal({ isOpen, onClose, onCreate }) {
         timestamp: Date.now()
       };
 
-      // Set up progress tracking
-      creationService.onProgress = (state) => {
-        setCreationState({ ...state });
-      };
+      // Seed initial progress state so the UI can display estimates immediately
+      const initialSteps = creationService.getCreationSteps(creationRequest).map((step) => ({
+        ...step,
+        estimatedDuration: step.estimatedDuration ? Math.ceil(step.estimatedDuration / 1000) : null
+      }));
+      const estimatedTotalSeconds = Math.ceil(creationService.estimateCreationTime(creationRequest) / 1000);
+
+      setCreationState({
+        status: 'loading',
+        currentStep: 0,
+        steps: initialSteps,
+        estimatedTime: estimatedTotalSeconds || null,
+        estimatedTimeRemaining: estimatedTotalSeconds || null
+      });
 
       // Execute creation with the new service
-      const result = await creationService.createSpreadsheet(creationRequest);
+      const result = await creationService.createSpreadsheet({
+        ...creationRequest,
+        onProgress: (state) => {
+          setCreationState({ ...state });
+        }
+      });
 
       // Call the original onCreate with the result
       await onCreate(result.title, result);

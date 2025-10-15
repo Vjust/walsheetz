@@ -161,7 +161,7 @@ export function LoadingOverlay({
         <div className="loading-type-info">
           {error && errorType === 'wallet_required' && (
             <div className="type-info error-info">
-              <small>💡 Connect your wallet to access blockchain features and save data permanently</small>
+              <small>💡 Connect your wallet to access blockchain features and save data securely</small>
             </div>
           )}
           {error && errorType === 'error' && errorType !== 'wallet_required' && (

@@ -962,9 +962,12 @@ class SuiService {
   // Store spreadsheet version metadata on blockchain
   async storeSpreadsheetVersion(versionData) {
     try {
+      // Ensure spreadsheet is using the latest module version before mutating
+      await this.ensureSpreadsheetVersion(versionData.spreadsheetObjectId);
+
       const transaction = await this.createStorageTransaction(versionData);
       const result = await this.executeTransaction(transaction);
-      
+
       return {
         success: true,
         transactionDigest: result.digest,
@@ -1229,7 +1232,7 @@ class SuiService {
       const balance = await this.getBalance(walletManager.currentAccount.address);
       const totalBalanceMIST = parseInt(balance.totalBalance);
       const requiredGasMIST = parseInt(estimatedGas.totalGasUsed);
-      
+
       // Add 20% buffer for gas price fluctuations
       const requiredWithBuffer = Math.floor(requiredGasMIST * 1.2);
 
@@ -1244,6 +1247,227 @@ class SuiService {
     } catch (error) {
       console.error('Failed to check balance:', error);
       return { sufficient: false, error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error' };
+    }
+  }
+
+  // === Upgrade & Migration Methods ===
+
+  /**
+   * Get the module version of a spreadsheet object (reads from dynamic field)
+   */
+  async getSpreadsheetVersion(spreadsheetId) {
+    try {
+      const config = getCurrentConfig();
+      if (!config.sui.packageId) {
+        throw new Error('Package ID not configured for current network');
+      }
+
+      // First verify the object exists
+      const result = await this.client.getObject({
+        id: spreadsheetId,
+        options: {
+          showContent: true,
+          showType: true
+        }
+      });
+
+      if (!result.data || !result.data.content) {
+        throw new Error(`Spreadsheet object not found: ${spreadsheetId}`);
+      }
+
+      // Fetch dynamic fields to read version
+      let moduleVersion = 0; // Default for legacy objects
+
+      try {
+        const dynamicFields = await this.client.getDynamicFields({
+          parentId: spreadsheetId
+        });
+
+        // Find version field (key is b"module_version")
+        const versionField = dynamicFields.data?.find(f => {
+          const nameValue = f.name?.value;
+          if (typeof nameValue === 'string') {
+            return nameValue === 'module_version';
+          }
+          // Handle bytes format: [109, 111, 100, 117, 108, 101, 95, 118, 101, 114, 115, 105, 111, 110]
+          if (Array.isArray(nameValue)) {
+            const str = String.fromCharCode(...nameValue);
+            return str === 'module_version';
+          }
+          return false;
+        });
+
+        if (versionField) {
+          const fieldObj = await this.client.getDynamicFieldObject({
+            parentId: spreadsheetId,
+            name: versionField.name
+          });
+          moduleVersion = fieldObj.data?.content?.fields?.value || 0;
+        }
+      } catch (dynErr) {
+        // Dynamic field read failed, treat as legacy object (version 0)
+        console.warn(`[SuiService] No dynamic version field found for ${spreadsheetId}, treating as legacy (v0)`);
+      }
+
+      const isLegacy = moduleVersion === 0;
+      console.log(`[SuiService] Spreadsheet ${spreadsheetId} version: ${moduleVersion}${isLegacy ? ' (legacy)' : ''}`);
+
+      return {
+        success: true,
+        spreadsheetId,
+        moduleVersion,
+        isLegacy,
+        objectData: result.data
+      };
+    } catch (error) {
+      console.error('Failed to get spreadsheet version:', error);
+      return {
+        success: false,
+        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
+        spreadsheetId
+      };
+    }
+  }
+
+  /**
+   * Get versions for multiple spreadsheets in batch (reduces RPC calls)
+   */
+  async getSpreadsheetVersionsBatch(spreadsheetIds) {
+    try {
+      const results = await Promise.allSettled(
+        spreadsheetIds.map(id => this.getSpreadsheetVersion(id))
+      );
+
+      return spreadsheetIds.map((id, index) => {
+        const result = results[index];
+        if (result.status === 'fulfilled' && result.value.success) {
+          return result.value;
+        } else {
+          return {
+            success: false,
+            spreadsheetId: id,
+            error: result.status === 'rejected' ? result.reason : result.value.error,
+            moduleVersion: 0,
+            isLegacy: true
+          };
+        }
+      });
+    } catch (error) {
+      console.error('Failed to batch read spreadsheet versions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Ensure spreadsheet is using the latest module version before mutations
+   */
+  async ensureSpreadsheetVersion(spreadsheetId) {
+    try {
+      const config = getCurrentConfig();
+      const expectedVersion = config.sui.moduleVersion || 1;
+
+      const versionCheck = await this.getSpreadsheetVersion(spreadsheetId);
+
+      if (!versionCheck.success) {
+        throw new Error(`Failed to check spreadsheet version: ${versionCheck.error}`);
+      }
+
+      if (versionCheck.moduleVersion !== expectedVersion) {
+        console.warn(`[SuiService] ⚠️ Version mismatch for spreadsheet ${spreadsheetId}`, {
+          spreadsheetVersion: versionCheck.moduleVersion,
+          expectedVersion,
+          needsMigration: versionCheck.moduleVersion < expectedVersion
+        });
+
+        throw new Error(
+          `Spreadsheet version mismatch: object has version ${versionCheck.moduleVersion}, ` +
+          `expected ${expectedVersion}. Migration required.`
+        );
+      }
+
+      console.log(`[SuiService] ✅ Spreadsheet version verified: ${expectedVersion}`);
+      return { success: true, version: expectedVersion };
+
+    } catch (error) {
+      console.error('Failed to ensure spreadsheet version:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create transaction to migrate a spreadsheet (admin only)
+   */
+  createMigrateSpreadsheetTransaction(spreadsheetId, adminCapId) {
+    const tx = new Transaction();
+    const config = getCurrentConfig();
+
+    if (!config.sui.packageId) {
+      throw new Error('Package ID not configured for current network');
+    }
+
+    if (!adminCapId) {
+      throw new Error('AdminCap ID required for migration');
+    }
+
+    tx.moveCall({
+      target: `${config.sui.packageId}::spreadsheet::migrate_spreadsheet`,
+      arguments: [
+        tx.object(spreadsheetId),
+        tx.object(adminCapId)
+      ],
+      typeArguments: []
+    });
+
+    return tx;
+  }
+
+  /**
+   * Migrate a spreadsheet to the latest module version (admin only)
+   */
+  async migrateSpreadsheet(spreadsheetId, adminCapId) {
+    try {
+      console.log(`[SuiService] Migrating spreadsheet: ${spreadsheetId}`);
+
+      // Check current version
+      const versionCheck = await this.getSpreadsheetVersion(spreadsheetId);
+      if (!versionCheck.success) {
+        return { success: false, error: `Failed to check version: ${versionCheck.error}` };
+      }
+
+      const config = getCurrentConfig();
+      const targetVersion = config.sui.moduleVersion || 1;
+
+      if (versionCheck.moduleVersion >= targetVersion) {
+        return {
+          success: false,
+          error: `Spreadsheet is already at version ${versionCheck.moduleVersion}`,
+          currentVersion: versionCheck.moduleVersion
+        };
+      }
+
+      // Create and execute migration transaction
+      const transaction = this.createMigrateSpreadsheetTransaction(spreadsheetId, adminCapId);
+      const result = await this.executeTransaction(transaction);
+
+      if (result.success) {
+        console.log('[SuiService] ✅ Spreadsheet migrated successfully');
+        return {
+          success: true,
+          transactionDigest: result.digest,
+          spreadsheetId,
+          oldVersion: versionCheck.moduleVersion,
+          newVersion: targetVersion
+        };
+      } else {
+        return result;
+      }
+    } catch (error) {
+      console.error('Failed to migrate spreadsheet:', error);
+      return {
+        success: false,
+        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
+        spreadsheetId
+      };
     }
   }
 
@@ -1296,10 +1520,13 @@ class SuiService {
   async updateSpreadsheetTitle(spreadsheetId, newTitle) {
     try {
       console.log(`[SuiService] Updating spreadsheet title: ${spreadsheetId} -> "${newTitle}"`);
-      
+
+      // Ensure spreadsheet is using the latest module version before mutating
+      await this.ensureSpreadsheetVersion(spreadsheetId);
+
       const transaction = this.createUpdateTitleTransaction(spreadsheetId, newTitle);
       const result = await this.executeTransaction(transaction);
-      
+
       if (result.success) {
         console.log('[SuiService] ✅ Spreadsheet title updated successfully');
         return {
@@ -1354,10 +1581,13 @@ class SuiService {
   async makeSpreadsheetPublic(spreadsheetId) {
     try {
       console.log(`[SuiService] Making spreadsheet public: ${spreadsheetId}`);
-      
+
+      // Ensure spreadsheet is using the latest module version before mutating
+      await this.ensureSpreadsheetVersion(spreadsheetId);
+
       const transaction = this.createMakePublicTransaction(spreadsheetId);
       const result = await this.executeTransaction(transaction);
-      
+
       if (result.success) {
         console.log('[SuiService] ✅ Spreadsheet made public successfully');
         return {
@@ -1377,10 +1607,13 @@ class SuiService {
   async makeSpreadsheetPrivate(spreadsheetId) {
     try {
       console.log(`[SuiService] Making spreadsheet private: ${spreadsheetId}`);
-      
+
+      // Ensure spreadsheet is using the latest module version before mutating
+      await this.ensureSpreadsheetVersion(spreadsheetId);
+
       const transaction = this.createMakePrivateTransaction(spreadsheetId);
       const result = await this.executeTransaction(transaction);
-      
+
       if (result.success) {
         console.log('[SuiService] ✅ Spreadsheet made private successfully');
         return {
@@ -1421,15 +1654,18 @@ class SuiService {
   async transferSpreadsheetOwnership(spreadsheetId, newOwnerAddress) {
     try {
       console.log(`[SuiService] Transferring spreadsheet ownership: ${spreadsheetId} -> ${newOwnerAddress}`);
-      
+
       // Validate address format
       if (!this.isValidAddress(newOwnerAddress)) {
         return { success: false, error: 'Invalid recipient address format' };
       }
-      
+
+      // Ensure spreadsheet is using the latest module version before mutating
+      await this.ensureSpreadsheetVersion(spreadsheetId);
+
       const transaction = this.createTransferOwnershipTransaction(spreadsheetId, newOwnerAddress);
       const result = await this.executeTransaction(transaction);
-      
+
       if (result.success) {
         console.log('[SuiService] ✅ Spreadsheet ownership transferred successfully');
         return {
@@ -1470,10 +1706,13 @@ class SuiService {
   async pruneOldVersions(spreadsheetId, keepCount = 10) {
     try {
       console.log(`[SuiService] Pruning old versions for spreadsheet: ${spreadsheetId}, keeping ${keepCount} versions`);
-      
+
+      // Ensure spreadsheet is using the latest module version before mutating
+      await this.ensureSpreadsheetVersion(spreadsheetId);
+
       const transaction = this.createPruneVersionsTransaction(spreadsheetId, keepCount);
       const result = await this.executeTransaction(transaction);
-      
+
       if (result.success) {
         console.log('[SuiService] ✅ Old versions pruned successfully');
         return {

@@ -36,6 +36,8 @@ export class SpreadsheetCreationService {
     };
 
     this.activeCreation = creation;
+    creation.status = 'loading';
+    this.emitProgress(creation);
 
     try {
       logger.info(LogComponent.UI_COMPONENT, 'creation_start', 'Starting enhanced spreadsheet creation', {
@@ -57,6 +59,8 @@ export class SpreadsheetCreationService {
         result
       });
 
+      creation.status = 'success';
+      this.emitProgress(creation, { status: 'success' });
       creation.onSuccess(result);
       return result;
 
@@ -81,6 +85,8 @@ export class SpreadsheetCreationService {
         error: error.message
       });
 
+      creation.status = 'error';
+      this.emitProgress(creation, { status: 'error', error: error.message });
       creation.onError(error);
       throw error;
     } finally {
@@ -92,8 +98,6 @@ export class SpreadsheetCreationService {
    * Execute creation steps with progress tracking
    */
   async executeCreationSteps(creation) {
-    const { steps, onProgress } = creation;
-
     // Step 1: Validation
     await this.executeStep(creation, 0, async () => {
       return this.validateCreationRequest(creation);
@@ -140,13 +144,8 @@ export class SpreadsheetCreationService {
     // Update step status to current
     step.status = 'current';
     step.startTime = Date.now();
-
-    creation.onProgress({
-      currentStep: stepIndex,
-      totalSteps: creation.steps.length,
-      step: step,
-      estimatedTimeRemaining: this.calculateRemainingTime(creation)
-    });
+    creation.status = 'loading';
+    this.emitProgress(creation);
 
     try {
       const result = await stepFunction();
@@ -157,12 +156,7 @@ export class SpreadsheetCreationService {
       step.duration = step.endTime - step.startTime;
       step.result = result;
 
-      creation.onProgress({
-        currentStep: stepIndex,
-        totalSteps: creation.steps.length,
-        step: step,
-        estimatedTimeRemaining: this.calculateRemainingTime(creation)
-      });
+      this.emitProgress(creation);
 
       return result;
 
@@ -172,15 +166,60 @@ export class SpreadsheetCreationService {
       step.duration = step.endTime - step.startTime;
       step.error = error.message;
 
-      creation.onProgress({
-        currentStep: stepIndex,
-        totalSteps: creation.steps.length,
-        step: step,
-        error: error.message
-      });
+      creation.status = 'error';
+      this.emitProgress(creation, { status: 'error', error: error.message });
 
       throw error;
     }
+  }
+
+  emitProgress(creation, overrides = {}) {
+    if (typeof creation.onProgress !== 'function') {
+      return;
+    }
+
+    creation.onProgress(this.buildProgressState(creation, overrides));
+  }
+
+  buildProgressState(creation, overrides = {}) {
+    const elapsedMs = Date.now() - creation.startTime;
+    const remainingMs = this.calculateRemainingTime(creation);
+    const estimatedTotalSeconds = creation.estimatedDuration
+      ? Math.ceil(creation.estimatedDuration / 1000)
+      : null;
+    const remainingSeconds = Number.isFinite(remainingMs)
+      ? Math.max(0, Math.ceil(remainingMs / 1000))
+      : null;
+
+    const state = {
+      id: creation.id,
+      title: creation.title,
+      status: overrides.status || creation.status || 'loading',
+      currentStep: creation.currentStep,
+      totalSteps: creation.steps.length,
+      steps: creation.steps.map((step) => ({
+        title: step.title,
+        description: step.description,
+        status: step.status,
+        estimatedDuration: typeof step.estimatedDuration === 'number'
+          ? Math.ceil(step.estimatedDuration / 1000)
+          : null,
+        duration: typeof step.duration === 'number'
+          ? Math.ceil(step.duration / 1000)
+          : null,
+        error: step.error,
+        details: step.details
+      })),
+      estimatedTime: estimatedTotalSeconds,
+      estimatedTimeRemaining: remainingSeconds,
+      elapsedTime: Math.max(0, Math.floor(elapsedMs / 1000))
+    };
+
+    if (Object.prototype.hasOwnProperty.call(overrides, 'error')) {
+      state.error = overrides.error;
+    }
+
+    return state;
   }
 
   /**
@@ -361,11 +400,14 @@ export class SpreadsheetCreationService {
       }
     });
 
+    creation.currentStep = 0;
+    creation.status = 'loading';
+    this.emitProgress(creation);
+
     // Wait before retry
     await new Promise(resolve => setTimeout(resolve, delay));
 
     // Retry from the beginning
-    creation.currentStep = 0;
     return this.executeCreationSteps(creation);
   }
 
@@ -420,9 +462,30 @@ export class SpreadsheetCreationService {
    */
   calculateRemainingTime(creation) {
     const elapsed = Date.now() - creation.startTime;
-    const progress = (creation.currentStep + 0.5) / creation.steps.length;
-    const estimated = creation.estimatedDuration / progress;
-    return Math.max(0, estimated - elapsed);
+    const steps = creation.steps || [];
+    if (!steps.length) {
+      const fallback = (creation.estimatedDuration || 0) - elapsed;
+      return Math.max(0, fallback);
+    }
+
+    const current = steps[creation.currentStep];
+    const remainingAfterCurrent = steps
+      .slice(creation.currentStep + 1)
+      .reduce((sum, step) => sum + (step.estimatedDuration || 0), 0);
+
+    let remainingCurrent = 0;
+    if (current) {
+      if (current.status === 'current') {
+        const estimate = current.estimatedDuration || 0;
+        const elapsedInStep = current.startTime ? Date.now() - current.startTime : 0;
+        remainingCurrent = Math.max(0, estimate - elapsedInStep);
+      } else if (current.status === 'pending') {
+        remainingCurrent = current.estimatedDuration || 0;
+      }
+    }
+
+    const remaining = remainingCurrent + remainingAfterCurrent;
+    return Math.max(0, remaining);
   }
 
   /**

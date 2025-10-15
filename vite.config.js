@@ -11,6 +11,8 @@ const VERBOSE_PROXY = process.env.VITE_VERBOSE_PROXY === 'true'
 
 export default defineConfig({
   root: '.',
+  // Reduce Vite console noise
+  logLevel: 'warn',
   plugins: [
     react(),
     // Production build guard - prevent test mode in production
@@ -24,6 +26,25 @@ export default defineConfig({
             'Remove VITE_TEST_AUTH_BYPASS=true from your environment variables.'
           );
         }
+      }
+    },
+    // Dev environment status summary
+    {
+      name: 'walsheetz-dev-status',
+      configureServer(server) {
+        server.httpServer?.once('listening', () => {
+          setTimeout(() => {
+            const port = server.config.server.port || 3005;
+            console.log('\n' + '='.repeat(60));
+            console.log('✅ WalSheetz Dev Environment Ready');
+            console.log('='.repeat(60));
+            console.log(`• Vite UI:        http://localhost:${port}`);
+            console.log(`• Bridge Server:  http://localhost:8081`);
+            console.log(`• Bridge Health:  http://localhost:8081/health`);
+            console.log(`• Network:        testnet (Sui + Walrus)`);
+            console.log('='.repeat(60) + '\n');
+          }, 100); // Slight delay to ensure bridge has started
+        });
       }
     }
   ],
@@ -130,25 +151,13 @@ export default defineConfig({
         }
       },
 
-      // WebSocket proxy for collaboration
-      '/ws': {
-        target: 'ws://localhost:8081',
-        ws: true,
-        changeOrigin: true,
-        configure: (proxy) => {
-          proxy.on('error', (err) => {
-            console.error('[Vite Proxy] WebSocket error:', typeof err === 'string' ? err : (err && err.message) || 'Unknown error');
-          });
-          if (VERBOSE_PROXY) {
-            proxy.on('open', () => {
-              console.log('[Vite Proxy] WebSocket connection opened');
-            });
-            proxy.on('close', () => {
-              console.log('[Vite Proxy] WebSocket connection closed');
-            });
-          }
-        }
-      }
+      // WebSocket proxy - DISABLED for single-user MVP
+      // Collaboration features are not used in the single-user build
+      // '/ws': {
+      //   target: 'ws://localhost:8081',
+      //   ws: true,
+      //   changeOrigin: true
+      // }
     }
   },
   resolve: {

@@ -8,9 +8,13 @@ module walsheets::spreadsheet {
     use sui::event;
     use sui::table::{Self, Table};
     use sui::clock::{Self, Clock};
+    use sui::dynamic_field;
     use std::string::{Self, String};
     use std::vector;
     use std::option;
+
+    /// Module version for upgrade compatibility
+    const MODULE_VERSION: u64 = 1;
 
     /// Error codes
     const E_NOT_OWNER: u64 = 0;
@@ -25,6 +29,7 @@ module walsheets::spreadsheet {
     const E_VERSION_NOT_FOUND: u64 = 9;
     const E_LOCK_EXPIRED: u64 = 10;
     const E_INVALID_VERSION: u64 = 11;
+    const E_WRONG_VERSION: u64 = 12;
 
     /// Constants
     const LOCK_TIMEOUT_MS: u64 = 300000; // 5 minutes
@@ -34,10 +39,18 @@ module walsheets::spreadsheet {
     const PAGE_SIZE: u64 = 100;
     const MAX_DELETION_BATCH_SIZE: u64 = 50; // Max versions to delete in one batch
 
+    /// Dynamic field key for version tracking
+    const VERSION_FIELD_KEY: vector<u8> = b"module_version";
+
     /// Permission levels for collaboration
     const PERMISSION_VIEW: u8 = 0;
     const PERMISSION_EDIT: u8 = 1;
     const PERMISSION_ADMIN: u8 = 2;
+
+    /// Admin capability for spreadsheet module upgrades and migrations
+    public struct SpreadsheetAdminCap has key {
+        id: UID,
+    }
 
     /// Cell lock information
     public struct CellLock has store, drop, copy {
@@ -175,15 +188,40 @@ module walsheets::spreadsheet {
         timestamp: u64,
     }
 
+    public struct SpreadsheetMigrated has copy, drop {
+        spreadsheet_id: address,
+        old_version: u64,
+        new_version: u64,
+        timestamp: u64,
+        outstanding_walrus_refs: u64,
+    }
+
+    public struct RegistryMigrated has copy, drop {
+        registry_id: address,
+        old_version: u64,
+        new_version: u64,
+        timestamp: u64,
+    }
+
     /// Initialize the module with a global registry
     fun init(ctx: &mut TxContext) {
-        let registry = SpreadsheetRegistry {
+        let mut registry = SpreadsheetRegistry {
             id: object::new(ctx),
             spreadsheets: table::new(ctx),
             spreadsheet_list: vector::empty(),
             total_count: 0,
         };
+
+        // Set registry version via dynamic field BEFORE sharing
+        set_registry_version(&mut registry, MODULE_VERSION);
+
         transfer::share_object(registry);
+
+        // Mint admin capability for module upgrades and migrations
+        let admin_cap = SpreadsheetAdminCap {
+            id: object::new(ctx),
+        };
+        transfer::transfer(admin_cap, tx_context::sender(ctx));
     }
 
     /// Validate string input
@@ -233,12 +271,54 @@ module walsheets::spreadsheet {
         addr != @0x0
     }
 
+    /// Get spreadsheet version from dynamic field (0 if legacy)
+    fun get_spreadsheet_version(spreadsheet: &Spreadsheet): u64 {
+        if (dynamic_field::exists_(&spreadsheet.id, VERSION_FIELD_KEY)) {
+            *dynamic_field::borrow(&spreadsheet.id, VERSION_FIELD_KEY)
+        } else {
+            0 // Legacy object without version
+        }
+    }
+
+    /// Set spreadsheet version in dynamic field
+    fun set_spreadsheet_version(spreadsheet: &mut Spreadsheet, version: u64) {
+        if (dynamic_field::exists_(&spreadsheet.id, VERSION_FIELD_KEY)) {
+            *dynamic_field::borrow_mut(&mut spreadsheet.id, VERSION_FIELD_KEY) = version;
+        } else {
+            dynamic_field::add(&mut spreadsheet.id, VERSION_FIELD_KEY, version);
+        }
+    }
+
+    /// Get registry version from dynamic field (0 if legacy)
+    fun get_registry_version(registry: &SpreadsheetRegistry): u64 {
+        if (dynamic_field::exists_(&registry.id, VERSION_FIELD_KEY)) {
+            *dynamic_field::borrow(&registry.id, VERSION_FIELD_KEY)
+        } else {
+            0 // Legacy object without version
+        }
+    }
+
+    /// Set registry version in dynamic field
+    fun set_registry_version(registry: &mut SpreadsheetRegistry, version: u64) {
+        if (dynamic_field::exists_(&registry.id, VERSION_FIELD_KEY)) {
+            *dynamic_field::borrow_mut(&mut registry.id, VERSION_FIELD_KEY) = version;
+        } else {
+            dynamic_field::add(&mut registry.id, VERSION_FIELD_KEY, version);
+        }
+    }
+
+    /// Assert that spreadsheet is using latest module version
+    fun assert_latest_version(spreadsheet: &Spreadsheet) {
+        let version = get_spreadsheet_version(spreadsheet);
+        assert!(version == MODULE_VERSION, E_WRONG_VERSION);
+    }
+
     /// Check if user has permission
     fun has_permission(spreadsheet: &Spreadsheet, user: address, required_level: u8): bool {
         if (user == spreadsheet.owner) return true;
-        
+
         if (required_level == PERMISSION_VIEW && spreadsheet.is_public) return true;
-        
+
         if (table::contains(&spreadsheet.collaborators, user)) {
             let permission = table::borrow(&spreadsheet.collaborators, user);
             permission.level >= required_level
@@ -263,11 +343,11 @@ module walsheets::spreadsheet {
     ): address {
         // Validate input
         assert!(validate_string(&title, MAX_TITLE_LENGTH), E_EMPTY_STRING);
-        
+
         let sender = tx_context::sender(ctx);
         let timestamp = tx_context::epoch_timestamp_ms(ctx);
-        
-        let spreadsheet = Spreadsheet {
+
+        let mut spreadsheet = Spreadsheet {
             id: object::new(ctx),
             title,
             owner: sender,
@@ -282,8 +362,11 @@ module walsheets::spreadsheet {
             active_editors: table::new(ctx),
         };
 
+        // Set version via dynamic field
+        set_spreadsheet_version(&mut spreadsheet, MODULE_VERSION);
+
         let spreadsheet_id = object::uid_to_address(&spreadsheet.id);
-        
+
         // Add to registry with efficient Table lookup
         table::add(&mut registry.spreadsheets, spreadsheet_id, true);
         vector::push_back(&mut registry.spreadsheet_list, spreadsheet_id);
@@ -311,14 +394,17 @@ module walsheets::spreadsheet {
         clock: &Clock,
         ctx: &mut TxContext
     ): address {
+        // Assert spreadsheet is using latest module version
+        assert_latest_version(spreadsheet);
+
         // Validate inputs
         assert!(validate_string(&walrus_blob_id, MAX_BLOB_ID_LENGTH), E_INVALID_INPUT);
         assert!(validate_string(&content_hash, MAX_BLOB_ID_LENGTH), E_INVALID_INPUT); // Reuse length limit for hash
         assert!(validate_string(&description, MAX_DESCRIPTION_LENGTH), E_INVALID_INPUT);
-        
+
         let sender = tx_context::sender(ctx);
         let timestamp = clock::timestamp_ms(clock);
-        
+
         // Check permission (must be owner or have EDIT permission)
         assert!(has_permission(spreadsheet, sender, PERMISSION_EDIT), E_NOT_AUTHORIZED);
 
@@ -392,6 +478,9 @@ module walsheets::spreadsheet {
         clock: &Clock,
         ctx: &mut TxContext
     ): address {
+        // Assert spreadsheet is using latest module version
+        assert_latest_version(spreadsheet);
+
         // Validate inputs
         assert!(validate_string(&walrus_blob_id, MAX_BLOB_ID_LENGTH), E_INVALID_INPUT);
         assert!(validate_string(&content_hash, MAX_BLOB_ID_LENGTH), E_INVALID_INPUT);
@@ -484,12 +573,15 @@ module walsheets::spreadsheet {
         clock: &Clock,
         ctx: &mut TxContext
     ): bool {
+        // Assert spreadsheet is using latest module version
+        assert_latest_version(spreadsheet);
+
         // Validate cell reference format
         assert!(validate_cell_ref(&cell_ref), E_INVALID_CELL_REF);
-        
+
         let sender = tx_context::sender(ctx);
         let timestamp = clock::timestamp_ms(clock);
-        
+
         // Check permission
         assert!(has_permission(spreadsheet, sender, PERMISSION_EDIT), E_NOT_AUTHORIZED);
         
@@ -545,6 +637,9 @@ module walsheets::spreadsheet {
         clock: &Clock,
         ctx: &mut TxContext
     ) {
+        // Assert spreadsheet is using latest module version
+        assert_latest_version(spreadsheet);
+
         let sender = tx_context::sender(ctx);
         let timestamp = clock::timestamp_ms(clock);
         
@@ -576,9 +671,12 @@ module walsheets::spreadsheet {
         clock: &Clock,
         ctx: &mut TxContext
     ) {
+        // Assert spreadsheet is using latest module version
+        assert_latest_version(spreadsheet);
+
         let sender = tx_context::sender(ctx);
         let timestamp = clock::timestamp_ms(clock);
-        
+
         // Only owner or admin can add collaborators
         assert!(has_permission(spreadsheet, sender, PERMISSION_ADMIN), E_NOT_OWNER);
         
@@ -614,6 +712,9 @@ module walsheets::spreadsheet {
         collaborator: address,
         ctx: &mut TxContext
     ) {
+        // Assert spreadsheet is using latest module version
+        assert_latest_version(spreadsheet);
+
         let sender = tx_context::sender(ctx);
         
         // Only owner or admin can remove collaborators
@@ -678,6 +779,9 @@ module walsheets::spreadsheet {
         spreadsheet: &Spreadsheet,
         ctx: &mut TxContext
     ) {
+        // Assert spreadsheet is using latest module version
+        assert_latest_version(spreadsheet);
+
         let sender = tx_context::sender(ctx);
         assert!(sender == spreadsheet.owner, E_NOT_OWNER);
         
@@ -709,6 +813,9 @@ module walsheets::spreadsheet {
         mut versions: vector<Version>,
         ctx: &mut TxContext
     ) {
+        // Assert spreadsheet is using latest module version
+        assert_latest_version(&spreadsheet);
+
         let sender = tx_context::sender(ctx);
         assert!(sender == spreadsheet.owner, E_NOT_OWNER);
         
@@ -802,6 +909,9 @@ module walsheets::spreadsheet {
         spreadsheet: Spreadsheet,
         ctx: &mut TxContext
     ) {
+        // Assert spreadsheet is using latest module version
+        assert_latest_version(&spreadsheet);
+
         let sender = tx_context::sender(ctx);
         assert!(sender == spreadsheet.owner, E_NOT_OWNER);
         
@@ -918,6 +1028,9 @@ module walsheets::spreadsheet {
         new_title: String,
         ctx: &mut TxContext
     ) {
+        // Assert spreadsheet is using latest module version
+        assert_latest_version(spreadsheet);
+
         let sender = tx_context::sender(ctx);
         assert!(sender == spreadsheet.owner, E_NOT_OWNER);
         assert!(validate_string(&new_title, MAX_TITLE_LENGTH), E_EMPTY_STRING);
@@ -931,6 +1044,9 @@ module walsheets::spreadsheet {
         spreadsheet: &mut Spreadsheet,
         ctx: &mut TxContext
     ) {
+        // Assert spreadsheet is using latest module version
+        assert_latest_version(spreadsheet);
+
         let sender = tx_context::sender(ctx);
         assert!(sender == spreadsheet.owner, E_NOT_OWNER);
         
@@ -943,6 +1059,9 @@ module walsheets::spreadsheet {
         spreadsheet: &mut Spreadsheet,
         ctx: &mut TxContext
     ) {
+        // Assert spreadsheet is using latest module version
+        assert_latest_version(spreadsheet);
+
         let sender = tx_context::sender(ctx);
         assert!(sender == spreadsheet.owner, E_NOT_OWNER);
         
@@ -956,6 +1075,9 @@ module walsheets::spreadsheet {
         new_owner: address,
         ctx: &mut TxContext
     ) {
+        // Assert spreadsheet is using latest module version
+        assert_latest_version(spreadsheet);
+
         let sender = tx_context::sender(ctx);
         assert!(sender == spreadsheet.owner, E_NOT_OWNER);
         assert!(validate_address(new_owner), E_INVALID_ADDRESS);
@@ -971,6 +1093,9 @@ module walsheets::spreadsheet {
         clock: &Clock,
         ctx: &mut TxContext
     ) {
+        // Assert spreadsheet is using latest module version
+        assert_latest_version(spreadsheet);
+
         let sender = tx_context::sender(ctx);
         assert!(has_permission(spreadsheet, sender, PERMISSION_ADMIN), E_NOT_OWNER);
         
@@ -1015,6 +1140,9 @@ module walsheets::spreadsheet {
         preserve_full_versions: bool,
         ctx: &mut TxContext
     ) {
+        // Assert spreadsheet is using latest module version
+        assert_latest_version(spreadsheet);
+
         let sender = tx_context::sender(ctx);
         assert!(sender == spreadsheet.owner, E_NOT_OWNER);
 
@@ -1068,6 +1196,9 @@ module walsheets::spreadsheet {
         keep_count: u64,
         ctx: &mut TxContext
     ) {
+        // Assert spreadsheet is using latest module version
+        assert_latest_version(spreadsheet);
+
         let sender = tx_context::sender(ctx);
         assert!(sender == spreadsheet.owner, E_NOT_OWNER);
 
@@ -1119,5 +1250,77 @@ module walsheets::spreadsheet {
         } else {
             (option::none(), option::none(), option::none())
         }
+    }
+
+    /// Get current module version for client verification
+    public fun get_module_version(): u64 {
+        MODULE_VERSION
+    }
+
+    /// Get spreadsheet module version (public for clients)
+    public fun get_spreadsheet_version_public(spreadsheet: &Spreadsheet): u64 {
+        get_spreadsheet_version(spreadsheet)
+    }
+
+    /// Get registry module version (public for clients)
+    public fun get_registry_version_public(registry: &SpreadsheetRegistry): u64 {
+        get_registry_version(registry)
+    }
+
+    /// Migrate a spreadsheet to the latest module version (admin only)
+    public entry fun migrate_spreadsheet(
+        spreadsheet: &mut Spreadsheet,
+        _cap: &SpreadsheetAdminCap,
+        ctx: &mut TxContext
+    ) {
+        let old_version = get_spreadsheet_version(spreadsheet);
+
+        // Only migrate if needed
+        assert!(old_version < MODULE_VERSION, E_INVALID_INPUT);
+
+        // Update module version via dynamic field
+        set_spreadsheet_version(spreadsheet, MODULE_VERSION);
+
+        // Backfill any new fields here if needed
+        // For now, compression_info and storage_info in Version are already optional
+
+        let spreadsheet_id = object::uid_to_address(&spreadsheet.id);
+        let timestamp = tx_context::epoch_timestamp_ms(ctx);
+        let outstanding_walrus_refs = vector::length(&spreadsheet.version_history);
+
+        // Emit migration event
+        event::emit(SpreadsheetMigrated {
+            spreadsheet_id,
+            old_version,
+            new_version: MODULE_VERSION,
+            timestamp,
+            outstanding_walrus_refs,
+        });
+    }
+
+    /// Migrate the registry to the latest version (admin only)
+    public entry fun migrate_registry(
+        registry: &mut SpreadsheetRegistry,
+        _cap: &SpreadsheetAdminCap,
+        ctx: &mut TxContext
+    ) {
+        let old_version = get_registry_version(registry);
+
+        // Only migrate if needed
+        assert!(old_version < MODULE_VERSION, E_INVALID_INPUT);
+
+        // Update registry version via dynamic field
+        set_registry_version(registry, MODULE_VERSION);
+
+        let registry_id = object::uid_to_address(&registry.id);
+        let timestamp = tx_context::epoch_timestamp_ms(ctx);
+
+        // Emit migration event
+        event::emit(RegistryMigrated {
+            registry_id,
+            old_version,
+            new_version: MODULE_VERSION,
+            timestamp,
+        });
     }
 }

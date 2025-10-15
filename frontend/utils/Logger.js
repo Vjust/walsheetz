@@ -3,19 +3,17 @@
  * Provides structured logging with contextual metadata and performance tracking
  */
 
-export const LogLevel = {
-  DEBUG: 0,
-  INFO: 1,
-  WARN: 2,
-  ERROR: 3,
-  CRITICAL: 4
-};
+import { LogLevel, logConfig } from './LogConfig.js';
+
+// Re-export for convenience
+export { LogLevel };
 
 export const LogComponent = {
   SPREADSHEET_ENGINE: 'SpreadsheetEngine',
   BLOCKCHAIN_ADAPTER: 'BlockchainAdapter',
   WEBSOCKET_SERVICE: 'WebSocketService',
   UI_COMPONENT: 'UIComponent',
+  UI: 'UI', // Alias for UI components
   WALLET_MANAGER: 'WalletManager',
   STORAGE_SERVICE: 'StorageService',
   COLLABORATION: 'Collaboration',
@@ -74,9 +72,61 @@ class RequestThrottle {
 // Global request throttler
 const globalThrottle = new RequestThrottle(3, 200);
 
+/**
+ * Log Throttle Helper
+ * Prevents high-frequency logs from flooding the console
+ */
+class LogThrottle {
+  constructor() {
+    this.lastLogTimes = new Map(); // key -> timestamp
+    this.logCounts = new Map(); // key -> count since last log
+  }
+
+  /**
+   * Check if a log should be emitted based on throttle rules
+   * @param {string} key - Unique identifier for this log
+   * @param {number} intervalMs - Minimum interval between logs (default: 30000ms = 30s)
+   * @returns {{ shouldLog: boolean, count: number }} - Whether to log and accumulated count
+   */
+  shouldLog(key, intervalMs = 30000) {
+    const now = Date.now();
+    const lastTime = this.lastLogTimes.get(key) || 0;
+    const count = (this.logCounts.get(key) || 0) + 1;
+
+    if (now - lastTime >= intervalMs) {
+      // Time to log again
+      this.lastLogTimes.set(key, now);
+      this.logCounts.set(key, 0);
+      return { shouldLog: true, count };
+    } else {
+      // Still within throttle interval, accumulate count
+      this.logCounts.set(key, count);
+      return { shouldLog: false, count };
+    }
+  }
+
+  /**
+   * Reset throttle state for a specific key
+   * @param {string} key - Key to reset
+   */
+  reset(key) {
+    this.lastLogTimes.delete(key);
+    this.logCounts.delete(key);
+  }
+
+  /**
+   * Clear all throttle state
+   */
+  clearAll() {
+    this.lastLogTimes.clear();
+    this.logCounts.clear();
+  }
+}
+
 class Logger {
   constructor() {
-    this.logLevel = LogLevel.INFO;
+    // Use logConfig for global log level
+    this.logLevel = logConfig.getGlobalLogLevel();
     this.sessionId = this.generateSessionId();
     this.userId = null;
     this.spreadsheetId = null;
@@ -84,7 +134,10 @@ class Logger {
     this.maxLogHistory = 1000;
     this.debugMode = this.getDebugModeFromStorage();
     this.performanceMarks = new Map();
-    
+
+    // Initialize log throttler
+    this.logThrottle = new LogThrottle();
+
     // Performance monitoring
     this.metrics = {
       operationCounts: new Map(),
@@ -93,7 +146,10 @@ class Logger {
       userActions: new Map()
     };
 
-    console.log(`🔧 Logger initialized - Session: ${this.sessionId}, Debug Mode: ${this.debugMode}`);
+    // Only log initialization at INFO level or above
+    if (this.shouldLog(LogLevel.INFO)) {
+      console.log(`🔧 Logger initialized - Session: ${this.sessionId}, Debug Mode: ${this.debugMode}`);
+    }
   }
 
   generateSessionId() {
@@ -125,7 +181,15 @@ class Logger {
   }
 
   log(level, component, action, message, metadata = {}) {
-    if (level < this.logLevel) return;
+    // Use logConfig to determine if this level should be logged
+    if (!logConfig.shouldLog(level)) {
+      return;
+    }
+
+    // For DEBUG level, check component-specific override
+    if (level === LogLevel.DEBUG && !logConfig.isDebugEnabled(component)) {
+      return;
+    }
 
     const timestamp = new Date().toISOString();
     const logEntry = {
@@ -246,6 +310,66 @@ class Logger {
 
   critical(component, action, message, metadata = {}) {
     this.log(LogLevel.CRITICAL, component, action, message, metadata);
+  }
+
+  // Throttled logging helpers
+  /**
+   * Log a message with throttling to prevent console flooding
+   * @param {string} throttleKey - Unique key for this throttled log
+   * @param {number} level - Log level
+   * @param {string} component - Component name
+   * @param {string} action - Action name
+   * @param {string} message - Log message
+   * @param {object} metadata - Additional metadata
+   * @param {number} intervalMs - Throttle interval (default: 30000ms = 30s)
+   */
+  throttle(throttleKey, level, component, action, message, metadata = {}, intervalMs = 30000) {
+    const { shouldLog, count } = this.logThrottle.shouldLog(throttleKey, intervalMs);
+
+    if (shouldLog) {
+      // Include accumulated count in metadata if > 1
+      const enrichedMetadata = count > 1
+        ? { ...metadata, throttledCount: count, throttleKey }
+        : metadata;
+
+      const enrichedMessage = count > 1
+        ? `${message} (${count - 1} similar events throttled in last ${intervalMs / 1000}s)`
+        : message;
+
+      this.log(level, component, action, enrichedMessage, enrichedMetadata);
+    }
+  }
+
+  /**
+   * Convenience method for throttled debug logs
+   */
+  throttleDebug(throttleKey, component, action, message, metadata = {}, intervalMs = 30000) {
+    this.throttle(throttleKey, LogLevel.DEBUG, component, action, message, metadata, intervalMs);
+  }
+
+  /**
+   * Convenience method for throttled info logs
+   */
+  throttleInfo(throttleKey, component, action, message, metadata = {}, intervalMs = 30000) {
+    this.throttle(throttleKey, LogLevel.INFO, component, action, message, metadata, intervalMs);
+  }
+
+  /**
+   * Check if debug logging is enabled for a specific component
+   * @param {string} component - Component name
+   * @returns {boolean}
+   */
+  isDebugEnabled(component) {
+    return logConfig.isDebugEnabled(component);
+  }
+
+  /**
+   * Check if a specific log level should be logged
+   * @param {number} level - LogLevel to check
+   * @returns {boolean}
+   */
+  shouldLog(level) {
+    return logConfig.shouldLog(level);
   }
 
   // Performance monitoring methods

@@ -211,7 +211,8 @@ class BrowserWalrusService {
           title: data.title || 'Untitled Spreadsheet',
           createdAt: data.createdAt || Date.now(),
           lastModified: Date.now(),
-          format: 'walsheetz-v1'
+          format: 'walsheetz-v1',
+          chunk: this.buildWalrusChunkMetadata(data.metadata?.chunk, options)
         },
         changes: data.changes || [],
         cells: this.optimizeCellData(data.cells || {}),
@@ -536,7 +537,7 @@ class BrowserWalrusService {
         const enhancedData = {
           ...data,
           metadata: {
-            ...data.metadata,
+            ...(data.metadata || {}),
             uploadAttempt: attempt,
             client: 'walsheetz-browser'
             // timestamp will be added by encodeSpreadsheetData
@@ -1431,6 +1432,401 @@ class BrowserWalrusService {
         exists: false
       };
     }
+  }
+
+  /**
+   * Get PoA (Proof of Availability) certificate for a blob
+   * @param {string} blobId - Blob ID to check
+   * @returns {Promise<Object>} PoA certificate status
+   */
+  async getPoACertificate(blobId) {
+    console.log(`[BrowserWalrusService] Getting PoA certificate for ${blobId}...`);
+
+    try {
+      // First check if blob exists
+      const blobInfo = await this.getBlobInfo(blobId);
+      if (!blobInfo.success || !blobInfo.exists) {
+        return {
+          success: false,
+          blobId,
+          poaStatus: 'not_found',
+          error: 'Blob not found'
+        };
+      }
+
+      // Query PoA certificate status from aggregator
+      // Note: This is a placeholder - actual PoA certificate API may differ
+      const response = await fetch(`${this.aggregatorUrl}/v1/blobs/${blobId}/certificate`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        // If certificate endpoint doesn't exist, blob is uncertified
+        if (response.status === 404) {
+          return {
+            success: true,
+            blobId,
+            poaStatus: 'uncertified',
+            certificate: null
+          };
+        }
+        throw new Error(`PoA certificate request failed: ${response.status}`);
+      }
+
+      const certificate = await response.json();
+
+      console.log(`[BrowserWalrusService] PoA certificate retrieved:`, {
+        blobId,
+        status: certificate.status || 'certified'
+      });
+
+      return {
+        success: true,
+        blobId,
+        poaStatus: certificate.status || 'certified',
+        certificate: {
+          validators: certificate.validators || [],
+          timestamp: certificate.timestamp || Date.now(),
+          expiry: certificate.expiry || null,
+          metadata: certificate
+        }
+      };
+
+    } catch (error) {
+      console.error(`[BrowserWalrusService] Failed to get PoA certificate ${blobId}:`, error);
+      return {
+        success: false,
+        blobId,
+        poaStatus: 'error',
+        error: typeof error === 'string' ? error : error.message || 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Get enriched blob metadata (combines blob info with PoA status)
+   * @param {string} blobId - Blob ID
+   * @returns {Promise<Object>} Enriched blob metadata
+   */
+  async getBlobMetadata(blobId) {
+    console.log(`[BrowserWalrusService] Getting blob metadata for ${blobId}...`);
+
+    try {
+      // Get blob info and PoA certificate in parallel
+      const [blobInfo, poaCert] = await Promise.all([
+        this.getBlobInfo(blobId),
+        this.getPoACertificate(blobId)
+      ]);
+
+      if (!blobInfo.success) {
+        return {
+          success: false,
+          error: blobInfo.error || 'Failed to get blob info'
+        };
+      }
+
+      const metadata = {
+        blobId,
+        exists: blobInfo.exists,
+        size: blobInfo.metadata?.size || null,
+        status: blobInfo.metadata?.status || 'unknown',
+        poaStatus: poaCert.poaStatus || 'unknown',
+        certificate: poaCert.certificate || null,
+        timestamp: Date.now()
+      };
+
+      console.log(`[BrowserWalrusService] Blob metadata retrieved:`, metadata);
+
+      return {
+        success: true,
+        metadata
+      };
+
+    } catch (error) {
+      console.error(`[BrowserWalrusService] Failed to get blob metadata ${blobId}:`, error);
+      return {
+        success: false,
+        error: typeof error === 'string' ? error : error.message || 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Stream blob data chunks to grid engine
+   * @param {string} blobId - Blob ID to stream
+   * @param {number} startRow - Starting row in grid
+   * @param {number} startCol - Starting column in grid
+   * @param {Object} options - Streaming options
+   * @returns {Promise<Object>} Streaming result
+   */
+  async streamBlobToGrid(blobId, startRow, startCol, options = {}) {
+    console.log(`[BrowserWalrusService] Streaming blob ${blobId} to grid at (${startRow}, ${startCol})...`);
+
+    try {
+      const {
+        chunkSize = 1024 * 1024, // 1MB chunks
+        maxSize = 100 * 1024 * 1024, // 100MB max
+        onProgress = null,
+        parser = null // Optional parser function
+      } = options;
+
+      // Retrieve blob data
+      const blobResult = await this.retrieveBlob(blobId, null, { maxSize });
+
+      if (!blobResult.success) {
+        throw new Error(blobResult.error || 'Failed to retrieve blob');
+      }
+
+      const data = blobResult.data;
+      let parsedData;
+
+      // Parse data if parser provided
+      if (parser && typeof parser === 'function') {
+        parsedData = await parser(data, { startRow, startCol });
+      } else {
+        // Try to auto-detect and parse
+        parsedData = await this._autoParseBlob(data, { startRow, startCol });
+      }
+
+      console.log(`[BrowserWalrusService] Blob streamed successfully:`, {
+        blobId,
+        rowsProcessed: parsedData.rows || 0,
+        colsProcessed: parsedData.cols || 0
+      });
+
+      // Call progress callback if provided
+      if (onProgress) {
+        onProgress({
+          blobId,
+          progress: 100,
+          complete: true,
+          rows: parsedData.rows,
+          cols: parsedData.cols
+        });
+      }
+
+      return {
+        success: true,
+        blobId,
+        startRow,
+        startCol,
+        endRow: startRow + (parsedData.rows || 0) - 1,
+        endCol: startCol + (parsedData.cols || 0) - 1,
+        data: parsedData.data,
+        metadata: {
+          rows: parsedData.rows || 0,
+          cols: parsedData.cols || 0,
+          format: parsedData.format || 'unknown'
+        }
+      };
+
+    } catch (error) {
+      console.error(`[BrowserWalrusService] Failed to stream blob ${blobId} to grid:`, error);
+      return {
+        success: false,
+        error: typeof error === 'string' ? error : error.message || 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Read partial blob data (range request)
+   * @param {string} blobId - Blob ID
+   * @param {number} offset - Byte offset to start reading
+   * @param {number} length - Number of bytes to read
+   * @returns {Promise<Object>} Partial blob data
+   */
+  async readBlobRange(blobId, offset, length) {
+    console.log(`[BrowserWalrusService] Reading blob range ${blobId} [${offset}, ${offset + length})...`);
+
+    try {
+      const response = await fetch(`${this.aggregatorUrl}/v1/blobs/${blobId}`, {
+        method: 'GET',
+        headers: {
+          'Range': `bytes=${offset}-${offset + length - 1}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Range request failed: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.arrayBuffer();
+      const contentRange = response.headers.get('content-range');
+      const totalSize = contentRange ? parseInt(contentRange.split('/')[1]) : null;
+
+      console.log(`[BrowserWalrusService] Blob range read successfully:`, {
+        blobId,
+        offset,
+        bytesRead: data.byteLength,
+        totalSize
+      });
+
+      return {
+        success: true,
+        blobId,
+        offset,
+        length: data.byteLength,
+        totalSize,
+        data: new Uint8Array(data)
+      };
+
+    } catch (error) {
+      console.error(`[BrowserWalrusService] Failed to read blob range ${blobId}:`, error);
+      return {
+        success: false,
+        error: typeof error === 'string' ? error : error.message || 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Auto-parse blob data into grid format
+   * @private
+   * @param {*} data - Raw blob data
+   * @param {Object} options - Parse options
+   * @returns {Promise<Object>} Parsed grid data
+   */
+  async _autoParseBlob(data, options = {}) {
+    const { startRow = 0, startCol = 0 } = options;
+
+    try {
+      // Try to detect format
+      let parsedData;
+      let format = 'unknown';
+
+      // Try JSON first
+      if (typeof data === 'string') {
+        try {
+          const json = JSON.parse(data);
+          format = 'json';
+          parsedData = this._parseJSONToGrid(json, startRow, startCol);
+        } catch {
+          // Not JSON, try CSV
+          format = 'csv';
+          parsedData = this._parseCSVToGrid(data, startRow, startCol);
+        }
+      } else if (data instanceof ArrayBuffer || data instanceof Uint8Array) {
+        // Binary data - try to decode as UTF-8 text
+        const decoder = new TextDecoder('utf-8');
+        const text = decoder.decode(data);
+
+        try {
+          const json = JSON.parse(text);
+          format = 'json';
+          parsedData = this._parseJSONToGrid(json, startRow, startCol);
+        } catch {
+          format = 'csv';
+          parsedData = this._parseCSVToGrid(text, startRow, startCol);
+        }
+      } else if (typeof data === 'object' && data !== null) {
+        // Already parsed JSON object
+        format = 'json';
+        parsedData = this._parseJSONToGrid(data, startRow, startCol);
+      } else {
+        // Unknown type - fallback to string representation
+        format = 'text';
+        parsedData = {
+          data: [[String(data)]],
+          rows: 1,
+          cols: 1
+        };
+      }
+
+      return {
+        ...parsedData,
+        format
+      };
+    } catch (error) {
+      console.error('[BrowserWalrusService] Auto-parse failed:', error);
+      return {
+        data: [[String(data)]],
+        rows: 1,
+        cols: 1,
+        format: 'text'
+      };
+    }
+  }
+
+  /**
+   * Parse JSON data to grid format
+   * @private
+   */
+  _parseJSONToGrid(json, startRow, startCol) {
+    if (Array.isArray(json)) {
+      // Array of objects -> table
+      if (json.length > 0 && typeof json[0] === 'object') {
+        const keys = Object.keys(json[0]);
+        const rows = [keys, ...json.map(obj => keys.map(k => obj[k]))];
+        return {
+          data: rows,
+          rows: rows.length,
+          cols: keys.length
+        };
+      }
+      // Array of primitives -> single column
+      return {
+        data: json.map(val => [val]),
+        rows: json.length,
+        cols: 1
+      };
+    }
+
+    // Single object -> key-value pairs
+    if (typeof json === 'object') {
+      const entries = Object.entries(json);
+      return {
+        data: entries,
+        rows: entries.length,
+        cols: 2
+      };
+    }
+
+    // Primitive -> single cell
+    return {
+      data: [[json]],
+      rows: 1,
+      cols: 1
+    };
+  }
+
+  /**
+   * Parse CSV data to grid format
+   * @private
+   */
+  _parseCSVToGrid(csv, startRow, startCol) {
+    const lines = csv.split(/\r?\n/).filter(line => line.trim());
+    const rows = lines.map(line => {
+      // Simple CSV parser - split by comma, handle quoted fields
+      const fields = [];
+      let current = '';
+      let inQuotes = false;
+
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          fields.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+
+      fields.push(current.trim());
+      return fields;
+    });
+
+    return {
+      data: rows,
+      rows: rows.length,
+      cols: rows[0]?.length || 0
+    };
   }
 
   // Store batch of blobs (sequential for simplicity)
@@ -2975,6 +3371,47 @@ class BrowserWalrusService {
       console.error('[BrowserWalrusService] Cache clear failed:', error);
       console.warn('[BrowserWalrusService] Partial cache clear may have occurred');
     }
+  }
+
+  getRenewalThresholdDays(options) {
+    const config = getCurrentConfig();
+    const override = options?.chunk?.renewalWarningDays;
+    const defaultWarning = config.storage?.features?.chunk?.renewalWarningDays ||
+      config.walrus?.features?.renewalWarningDays ||
+      7;
+    return Math.max(1, override || defaultWarning);
+  }
+
+  buildWalrusChunkMetadata(existingChunk = {}, options = {}) {
+    const config = getCurrentConfig();
+    const now = Date.now();
+    const chunkOptions = options.chunk || {};
+
+    const epochsDefault = chunkOptions.epochs ||
+      existingChunk.epochsPurchased ||
+      config.walrus?.features?.epochsDefault ||
+      50;
+
+    const epochSeconds = config.walrus?.features?.epochSeconds || 60 * 60 * 24 * 2;
+    const epochStart = existingChunk.epochStart || chunkOptions.epochStart || Math.floor(now / 1000 / epochSeconds);
+    const epochEnd = epochStart + epochsDefault;
+
+    const expiryTimestamp = chunkOptions.expiryTimestamp ||
+      existingChunk.expiryTimestamp ||
+      (epochEnd * epochSeconds * 1000);
+
+    return {
+      epochsPurchased: epochsDefault,
+      epochStart,
+      epochEnd,
+      expiryTimestamp,
+      renewalCount: existingChunk.renewalCount || 0,
+      lastRenewedAt: existingChunk.lastRenewedAt || now,
+      renewalWarningDays: this.getRenewalThresholdDays(options),
+      purchaseReceipt: chunkOptions.purchaseReceipt || existingChunk.purchaseReceipt || null,
+      walrusPublisher: chunkOptions.publisherUrl || this.publisherUrl,
+      walrusBlobId: chunkOptions.blobId || existingChunk.walrusBlobId || null
+    };
   }
 }
 

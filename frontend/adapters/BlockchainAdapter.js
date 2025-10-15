@@ -3,7 +3,8 @@ import { IBlockchainService } from '../interfaces/IBlockchainService.js';
 import { browserWalletManager } from '../services/BrowserWalletManager.js';
 import { browserSuiService } from '../services/BrowserSuiService.js';
 import { browserWalrusService } from '../services/BrowserWalrusService.js';
-import { collaborationService, initializeCollaboration } from '../services/CollaborationService.js';
+// Collaboration disabled for single-user MVP
+// import { collaborationService } from '../services/CollaborationService.js';
 import { errorRecoveryService } from '../services/ErrorRecoveryService.js';
 import { progressiveEnhancementService } from '../services/ProgressiveEnhancementService.js';
 import { offlineModeService } from '../services/OfflineModeService.js';
@@ -407,22 +408,15 @@ export class BlockchainAdapter extends IBlockchainService {
         service: 'SuiService'
       });
       
-      // Initialize collaboration
-      logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'collaboration_init', 'Initializing collaboration service');
-      const collabInitialized = await initializeCollaboration();
-      logger.logBlockchainOperation('collaboration_initialize', collabInitialized, {
-        service: 'CollaborationService'
-      });
-      
+      // Collaboration disabled for single-user MVP
       this.syncStatus.grpcConnected = suiInitialized;
-      this.syncStatus.collaborationEnabled = collabInitialized;
+      this.syncStatus.collaborationEnabled = false;
       
-      if (suiInitialized && collabInitialized) {
+      if (suiInitialized) {
         logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'initialize_services', 'All services fully initialized', {
-          suiService: suiInitialized,
-          collaboration: collabInitialized
+          suiService: suiInitialized
         });
-        
+
         // Subscribe to blockchain events from gRPC
         this.suiService.subscribeToEvents((event) => {
           logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'blockchain_event', `Blockchain event received: ${event.type}`, {
@@ -433,33 +427,18 @@ export class BlockchainAdapter extends IBlockchainService {
           this.handleBlockchainEvent(event);
         });
 
-        // Subscribe to real-time blockchain events from WebSocket service
-        const { webSocketService } = await import('../services/WebSocketService.js');
-        this.webSocketService = webSocketService; // Store reference for cleanup
-        this.webSocketEventListener = (event) => {
-          logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'websocket_blockchain_event', 'Real-time blockchain event received', {
-            eventType: event.type,
-            source: event.source,
-            timestamp: event.receivedAt
-          });
-          this.handleBlockchainEvent(event);
-        };
-
-        webSocketService.on('blockchainEvent', this.webSocketEventListener);
-
-        logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'event_subscription', 'Subscribed to blockchain events (gRPC + WebSocket)');
+        logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'event_subscription', 'Subscribed to blockchain events');
       } else {
         logger.warn(LogComponent.BLOCKCHAIN_ADAPTER, 'initialize_services', 'Partial service initialization', {
           suiInitialized,
-          collabInitialized,
           degradedMode: true
         });
       }
-      
+
       const initDuration = logger.endTimer('blockchain_services_init');
       logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'initialize_services', 'Service initialization completed', {
         duration: initDuration,
-        allServicesOnline: suiInitialized && collabInitialized
+        allServicesOnline: suiInitialized
       });
       
     } catch (error) {
@@ -482,8 +461,7 @@ export class BlockchainAdapter extends IBlockchainService {
         autoConnect: data.autoConnect || false
       });
       
-      // Auto-connect to collaboration when wallet connects
-      this.connectToCollaboration();
+      // Collaboration disabled for single-user MVP
     });
 
     this.walletManager.on('disconnected', () => {
@@ -493,8 +471,7 @@ export class BlockchainAdapter extends IBlockchainService {
         syncQueueSize: this.syncQueue.length
       });
       
-      // Auto-disconnect from collaboration when wallet disconnects
-      this.disconnectFromCollaboration();
+      // Collaboration disabled for single-user MVP
     });
 
     this.walletManager.on('error', (error) => {
@@ -505,22 +482,8 @@ export class BlockchainAdapter extends IBlockchainService {
       });
     });
 
-    // Listen to collaboration events
-    this.collaborationService.on('versionSaved', (data) => {
-      logger.info(LogComponent.COLLABORATION, 'version_saved', 'Version saved via collaboration', {
-        versionId: data.versionId,
-        blobId: data.blobId,
-        timestamp: data.timestamp
-      });
-    });
+    // Collaboration event listeners disabled for single-user MVP
 
-    this.collaborationService.on('error', (error) => {
-      logger.error(LogComponent.COLLABORATION, 'collaboration_error', 'Collaboration service error', {
-        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
-        stack: error.stack
-      });
-    });
-    
     logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'setup_listeners', 'Event listeners configured successfully');
   }
 
@@ -1092,8 +1055,11 @@ export class BlockchainAdapter extends IBlockchainService {
   async saveToBlockchainEnhanced(data, options = {}) {
     logger.startTimer('blockchain_save_enhanced');
     const saveId = `save-enhanced-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const rawDataSize = JSON.stringify(data).length;
-    
+
+    // Normalize incoming data shape (engine vs UI producer)
+    const normalizedData = this._normalizeSpreadsheetData(data);
+    const rawDataSize = JSON.stringify(normalizedData).length;
+
     // Enhanced options with defaults
     const enhancedOptions = {
       useRedundancy: options.useRedundancy || false,
@@ -1153,7 +1119,8 @@ export class BlockchainAdapter extends IBlockchainService {
           walrusResult = await this.walrusService.storeDeltaVersion(
             this.spreadsheetObjectId || data.title,
             data,
-            previousBlobId
+            previousBlobId,
+            { chunk: options.chunk }
           );
           break;
           
@@ -1162,7 +1129,7 @@ export class BlockchainAdapter extends IBlockchainService {
           walrusResult = await this.walrusService.storeWithRedundancy(
             data,
             enhancedOptions.redundancyLevel,
-            { spreadsheetId: this.spreadsheetObjectId || data.title }
+            { spreadsheetId: this.spreadsheetObjectId || data.title, chunk: options.chunk }
           );
           break;
           
@@ -1172,9 +1139,10 @@ export class BlockchainAdapter extends IBlockchainService {
           const deltaResult = await this.walrusService.storeDeltaVersion(
             this.spreadsheetObjectId || data.title,
             data,
-            previousBlobId
+            previousBlobId,
+            { chunk: options.chunk }
           );
-          
+
           if (deltaResult.success && deltaResult.compressionInfo?.compressionRatio >= enhancedOptions.compressionThreshold) {
             // Delta was effective, now store with redundancy
             walrusResult = await this.walrusService.storeWithRedundancy(
@@ -1183,7 +1151,8 @@ export class BlockchainAdapter extends IBlockchainService {
               {
                 spreadsheetId: this.spreadsheetObjectId || data.title,
                 isDelta: true,
-                compressionRatio: deltaResult.compressionInfo.compressionRatio
+                compressionRatio: deltaResult.compressionInfo.compressionRatio,
+                chunk: options.chunk
               }
             );
             walrusResult.compressionInfo = deltaResult.compressionInfo;
@@ -1193,7 +1162,7 @@ export class BlockchainAdapter extends IBlockchainService {
             walrusResult = await this.walrusService.storeWithRedundancy(
               data,
               enhancedOptions.redundancyLevel,
-              { spreadsheetId: this.spreadsheetObjectId || data.title }
+              { spreadsheetId: this.spreadsheetObjectId || data.title, chunk: options.chunk }
             );
           }
           break;
@@ -1201,7 +1170,8 @@ export class BlockchainAdapter extends IBlockchainService {
         default: // 'standard'
           console.log('💾 Using standard storage');
           walrusResult = await this.walrusService.storeBlob(data, {
-            spreadsheetId: this.spreadsheetObjectId || data.title
+            spreadsheetId: this.spreadsheetObjectId || data.title,
+            chunk: options.chunk
           });
           break;
       }
@@ -1232,12 +1202,17 @@ export class BlockchainAdapter extends IBlockchainService {
         integrityVerified: true
       };
 
+      let executeResult;
+
       if (!this.spreadsheetObjectId) {
         // Handle new spreadsheet with enhanced features
+        // NOTE: createSpreadsheetWithInitialVersion executes BOTH transactions internally
+        // (create spreadsheet + save initial version), so we use its result directly
         console.log('🚀 Creating new spreadsheet with enhanced combined transaction');
-        
+
+        let description;
         if (enhancedOptions.useRedundancy) {
-          // Use standard transaction with enhanced metadata in description
+          // Use enhanced metadata in description
           const enhancedMetadata = {
             desc: transactionData.description,
             redundant: transactionData.redundantBlobIds?.length > 0,
@@ -1245,29 +1220,34 @@ export class BlockchainAdapter extends IBlockchainService {
             compression: transactionData.compressionRatio
           };
           // Stringify and truncate to <= 500 chars
-          const enhancedDescription = JSON.stringify(enhancedMetadata).substring(0, 500);
-          
-          transaction = await this.suiService.createSpreadsheetWithInitialVersion(
-            normalizedData.title || 'WalSheetz Spreadsheet',
-            transactionData.walrusBlobId,
-            contentHash,
-            cellCount,
-            enhancedDescription
-          );
+          description = JSON.stringify(enhancedMetadata).substring(0, 500);
         } else {
-          // Use standard combined transaction
-          transaction = await this.suiService.createSpreadsheetWithInitialVersion(
-            normalizedData.title || 'WalSheetz Spreadsheet',
-            transactionData.walrusBlobId,
-            contentHash,
-            cellCount,
-            transactionData.description
-          );
+          description = transactionData.description;
+        }
+
+        executeResult = await this.suiService.createSpreadsheetWithInitialVersion(
+          normalizedData.title || 'WalSheetz Spreadsheet',
+          transactionData.walrusBlobId,
+          contentHash,
+          cellCount,
+          description
+        );
+
+        logger.endTimer('blockchain_transaction_enhanced');
+
+        if (!executeResult.success) {
+          throw new Error(`Enhanced blockchain transaction failed: ${executeResult.error || 'Unknown error'}`);
+        }
+
+        // Extract and store the spreadsheet object ID from the result
+        if (executeResult.spreadsheetObjectId) {
+          this.spreadsheetObjectId = executeResult.spreadsheetObjectId;
         }
       } else {
-        // Update existing spreadsheet
+        // Update existing spreadsheet - create TransactionBlock and execute it
+        let transaction;
         if (enhancedOptions.useRedundancy || storageStrategy.includes('delta')) {
-          // Use standard transaction with enhanced metadata in description
+          // Use enhanced metadata in description
           const enhancedMetadata = {
             desc: transactionData.description,
             redundant: transactionData.redundantBlobIds?.length > 0,
@@ -1280,21 +1260,13 @@ export class BlockchainAdapter extends IBlockchainService {
         } else {
           transaction = this.suiService.createStorageTransaction(transactionData);
         }
-      }
 
-      // Execute transaction
-      const executeResult = await this.suiService.executeTransaction(transaction);
-      logger.endTimer('blockchain_transaction_enhanced');
-      
-      if (!executeResult.success) {
-        throw new Error(`Enhanced blockchain transaction failed: ${executeResult.error}`);
-      }
+        // Execute transaction
+        executeResult = await this.suiService.executeTransaction(transaction);
+        logger.endTimer('blockchain_transaction_enhanced');
 
-      // Handle object ID extraction for new spreadsheets
-      if (!this.spreadsheetObjectId) {
-        const spreadsheetObjectId = this.extractSpreadsheetObjectId(executeResult);
-        if (spreadsheetObjectId) {
-          this.spreadsheetObjectId = spreadsheetObjectId;
+        if (!executeResult.success) {
+          throw new Error(`Enhanced blockchain transaction failed: ${executeResult.error}`);
         }
       }
 
@@ -1314,13 +1286,17 @@ export class BlockchainAdapter extends IBlockchainService {
 
       const totalDuration = logger.endTimer('blockchain_save_enhanced');
 
+      // Extract transaction digest from result (format differs for new vs existing spreadsheets)
+      const transactionDigest = executeResult.digest || executeResult.saveTransactionDigest || executeResult.createTransactionDigest;
+
       logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'save_enhanced_success', '🎉 Enhanced blockchain save completed', {
         saveId,
         strategy: storageStrategy,
         blobId: walrusResult.blobId || walrusResult.primaryBlobId,
         redundantBlobIds: walrusResult.allBlobIds?.slice(1)?.length || 0,
         compressionRatio: walrusResult.compressionInfo?.compressionRatio,
-        transactionDigest: executeResult.digest,
+        transactionDigest,
+        spreadsheetObjectId: this.spreadsheetObjectId,
         duration: totalDuration
       });
 
@@ -1331,7 +1307,8 @@ export class BlockchainAdapter extends IBlockchainService {
         blobId: walrusResult.blobId || walrusResult.primaryBlobId,
         redundantBlobIds: walrusResult.allBlobIds?.slice(1) || [],
         compressionInfo: walrusResult.compressionInfo,
-        transactionDigest: executeResult.digest,
+        transactionDigest,
+        spreadsheetObjectId: this.spreadsheetObjectId,
         duration: totalDuration,
         enhancedFeatures: {
           redundancy: enhancedOptions.useRedundancy,
@@ -2285,16 +2262,36 @@ export class BlockchainAdapter extends IBlockchainService {
       
       // Set current spreadsheet
       this.spreadsheetObjectId = spreadsheetId;
-      
+
+      // Check version compatibility
+      let versionCompatibility = null;
+      try {
+        versionCompatibility = await this.suiService.validateSpreadsheetVersion(spreadsheetId);
+
+        if (!versionCompatibility.compatible) {
+          logger.warn(LogComponent.BLOCKCHAIN_ADAPTER, 'version_mismatch', 'Spreadsheet version mismatch detected', {
+            spreadsheetId,
+            spreadsheetVersion: versionCompatibility.spreadsheetVersion,
+            moduleVersion: versionCompatibility.moduleVersion,
+            needsMigration: versionCompatibility.needsMigration
+          });
+        }
+      } catch (versionError) {
+        logger.warn(LogComponent.BLOCKCHAIN_ADAPTER, 'version_check_failed', 'Failed to check version compatibility', {
+          error: typeof versionError === 'string' ? versionError : (versionError && versionError.message) || 'Unknown error'
+        });
+        // Continue loading even if version check fails
+      }
+
       const duration = logger.endTimer('load_spreadsheet');
-      
+
       // Handle empty spreadsheets (created but no versions saved)
       if (result.isEmptySpreadsheet) {
         logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'spreadsheet_load_empty', 'Loaded empty spreadsheet (no versions)', {
           spreadsheetId,
           duration
         });
-        
+
         return {
           success: true,
           data: result.spreadsheetData,
@@ -2302,16 +2299,18 @@ export class BlockchainAdapter extends IBlockchainService {
             spreadsheetId,
             version: null,
             allVersions: [],
-            isEmpty: true
+            isEmpty: true,
+            versionCompatibility
           }
         };
       }
-      
+
       logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'spreadsheet_load_success', 'Successfully loaded spreadsheet', {
         spreadsheetId,
         version: result.version.version_number,
         cellCount: result.version.cell_count,
-        duration
+        duration,
+        versionCompatible: versionCompatibility?.compatible
       });
 
       return {
@@ -2320,7 +2319,8 @@ export class BlockchainAdapter extends IBlockchainService {
         metadata: {
           spreadsheetId,
           version: result.version,
-          allVersions: result.allVersions
+          allVersions: result.allVersions,
+          versionCompatibility
         }
       };
     } catch (error) {

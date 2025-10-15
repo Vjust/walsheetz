@@ -1,4 +1,5 @@
-import { webSocketService } from '../services/WebSocketService.js';
+// WebSocket service disabled for single-user MVP
+// import { webSocketService } from '../services/WebSocketService.js';
 import { logger, LogComponent } from '../utils/Logger.js';
 import { CircuitBreaker } from '../utils/CircuitBreaker.js';
 import luckysheetApi from '../services/luckysheetApi.js';
@@ -10,6 +11,7 @@ import {
   WZ_BALANCE,
   WZ_APY
 } from '../services/formulas/WalSheetzFunctions.js';
+import { recordTelemetry } from '../utils/Telemetry.js';
 
 /**
  * Core spreadsheet business logic
@@ -18,7 +20,7 @@ export class SpreadsheetEngine {
   constructor(storageService, blockchainService, autoSaveEnabled = false) {
     this.storageService = storageService
     this.blockchainService = blockchainService
-    this.webSocketService = webSocketService
+    // this.webSocketService = webSocketService; // Disabled for single-user MVP
     this.editCount = 0
     this.pendingEdits = new Map()
     this.lastManualSaveTimestamp = null
@@ -47,13 +49,23 @@ export class SpreadsheetEngine {
 
     // Smart auto-save configuration
     this.walrusAutoSaveInterval = 30000; // 30 seconds for Walrus-only saves
-    this.blockchainSyncInterval = 300000; // 5 minutes for blockchain sync
+    this.blockchainCommitInterval = 300000; // 5 minutes before showing commit prompt
+    this.commitReminderInterval = 60000; // Check every minute for reminder conditions
     this.walrusAutoSaveTimer = null;
-    this.blockchainSyncTimer = null;
+    this.commitPromptTimer = null;
     this.lastWalrusSaveTimestamp = null;
-    this.lastBlockchainSyncTimestamp = null;
+    this.lastSuiCommitTimestamp = null;
     this.pendingWalrusSaves = [];
-    this.saveStatus = 'ready'; // 'ready', 'saving_walrus', 'saving_blockchain', 'synced'
+    this.pendingSuiCommit = null;
+    this.saveStatus = 'ready'; // 'ready', 'saving_walrus', 'awaiting_commit', 'committing', 'synced'
+    this.commitPromptState = {
+      visible: false,
+      suppressed: false,
+      since: null,
+      lastPromptedAt: null,
+      metadata: null,
+      snoozeUntil: null
+    };
 
     // Offline queue for disconnected saves
     this.offlineQueue = [];
@@ -61,12 +73,20 @@ export class SpreadsheetEngine {
     this.offlineQueueProcessingTimer = null;
     this.maxOfflineQueueSize = 50; // Maximum items in offline queue
     this.offlineRetryInterval = 30000; // 30 seconds retry interval
-    
+
+    // Formula refresh scheduling
+    this.refreshSchedules = new Map(); // cellRef -> { interval, timer, lastRun, formula }
+    this.refreshSchedulerTimer = null; // Main scheduler loop
+    this.refreshSchedulerInterval = 1000; // Check every second for cells to refresh
+    this.minRefreshInterval = 5000; // Minimum 5 seconds between refreshes for a cell
+    this.maxRefreshInterval = 3600000; // Maximum 1 hour between refreshes
+    this.refreshEnabled = true; // Global enable/disable flag
+
     logger.info(LogComponent.SPREADSHEET_ENGINE, 'constructor', 'SpreadsheetEngine initialized', {
       userId: this.userId,
       spreadsheetId: this.spreadsheetId
     });
-    
+
     logger.setContext(this.userId, this.spreadsheetId);
   }
 
@@ -207,10 +227,9 @@ export class SpreadsheetEngine {
       this.performWalrusAutoSave();
     }, this.walrusAutoSaveInterval);
 
-    // Setup periodic blockchain sync (with wallet prompts)
-    this.blockchainSyncTimer = setInterval(() => {
-      this.performBlockchainSync();
-    }, this.blockchainSyncInterval);
+    this.commitPromptTimer = setInterval(() => {
+      this.checkCommitPromptConditions();
+    }, this.commitReminderInterval);
 
     logger.info(LogComponent.SPREADSHEET_ENGINE, 'start_autosave_timers', 'Auto-save timers started');
   }
@@ -225,9 +244,9 @@ export class SpreadsheetEngine {
       clearInterval(this.walrusAutoSaveTimer);
       this.walrusAutoSaveTimer = null;
     }
-    if (this.blockchainSyncTimer) {
-      clearInterval(this.blockchainSyncTimer);
-      this.blockchainSyncTimer = null;
+    if (this.commitPromptTimer) {
+      clearInterval(this.commitPromptTimer);
+      this.commitPromptTimer = null;
     }
 
     logger.info(LogComponent.SPREADSHEET_ENGINE, 'stop_autosave_timers', 'Auto-save timers stopped');
@@ -287,14 +306,14 @@ export class SpreadsheetEngine {
           data: data,
           title: this.getSpreadsheetTitle?.() || 'Auto-save'
         });
-        this.saveStatus = 'ready'; // Reset status since we queued the operation
+        this.saveStatus = 'ready';
         return;
       }
 
-      // Save to Walrus only (no blockchain transaction)
       const walrusResult = await this.blockchainService.walrusService.storeBlob(data, {
         autoSave: true,
-        spreadsheetId: this.spreadsheetId
+        spreadsheetId: this.spreadsheetId,
+        chunk: data.metadata?.chunk
       });
 
       if (walrusResult.success) {
@@ -302,7 +321,13 @@ export class SpreadsheetEngine {
         this.pendingWalrusSaves.push({
           blobId: walrusResult.blobId,
           timestamp: Date.now(),
-          data: data
+          data: data,
+          metadata: walrusResult.metadata
+        });
+        recordTelemetry('walrus_autosave_success', {
+          blobId: walrusResult.blobId,
+          size: walrusResult.size,
+          chunkExpiryTimestamp: walrusResult.metadata?.chunk?.expiryTimestamp || null
         });
 
         // Keep only last 10 pending saves
@@ -333,59 +358,64 @@ export class SpreadsheetEngine {
   /**
    * Perform periodic blockchain sync (batches pending Walrus saves)
    */
-  async performBlockchainSync() {
+  async commitPendingWalrusSaves() {
     if (!this.blockchainService?.isWalletConnected()) {
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'blockchain_sync_skipped', 'Blockchain sync skipped - wallet not connected');
+      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'commit_skipped', 'Sui commit skipped - wallet not connected');
       return;
     }
 
     if (this.pendingWalrusSaves.length === 0) {
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'blockchain_sync_skipped', 'Blockchain sync skipped - no pending saves');
+      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'commit_skipped', 'Sui commit skipped - no pending saves');
       return;
     }
 
     if (this.isSaveInProgress) {
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'blockchain_sync_skipped', 'Blockchain sync skipped - save in progress');
+      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'commit_skipped', 'Sui commit skipped - save in progress');
       return;
     }
 
     // Check if we're online for blockchain sync
     if (!this.isOnline) {
-      logger.info(LogComponent.SPREADSHEET_ENGINE, 'blockchain_sync_offline', 'Adding blockchain sync to offline queue');
+      logger.info(LogComponent.SPREADSHEET_ENGINE, 'commit_offline', 'Adding Sui commit to offline queue');
       const blobIds = this.pendingWalrusSaves.map(save => save.blobId);
       this.addToOfflineQueue({
-        type: 'blockchain_sync',
+        type: 'sui_commit',
         blobIds: blobIds
       });
       return;
     }
 
-    logger.info(LogComponent.SPREADSHEET_ENGINE, 'blockchain_sync_start', 'Starting blockchain sync', {
+    logger.info(LogComponent.SPREADSHEET_ENGINE, 'commit_start', 'Starting Sui commit', {
       pendingSaves: this.pendingWalrusSaves.length
     });
 
-    this.saveStatus = 'saving_blockchain';
+    this.saveStatus = 'committing';
     this.isSaveInProgress = true;
 
     try {
       // Get the latest Walrus save for blockchain sync
       const latestSave = this.pendingWalrusSaves[this.pendingWalrusSaves.length - 1];
 
-      // Create blockchain transaction for the latest Walrus blob
       const blockchainResult = await this.blockchainService.saveToBlockchain(latestSave.data, {
         walrusBlobId: latestSave.blobId,
-        skipWalrusUpload: true // Use existing Walrus blob
+        skipWalrusUpload: true
       });
 
       if (blockchainResult.success) {
-        this.lastBlockchainSyncTimestamp = Date.now();
+        this.lastSuiCommitTimestamp = Date.now();
         this.lastManualSaveTimestamp = Date.now();
         this.saveStatus = 'synced';
 
-        // Clear pending saves after successful blockchain sync
         this.pendingWalrusSaves = [];
+        this.pendingSuiCommit = null;
 
-        logger.info(LogComponent.SPREADSHEET_ENGINE, 'blockchain_sync_success', 'Blockchain sync completed', {
+        recordTelemetry('sui_commit_success', {
+          walrusBlobId: latestSave.blobId,
+          transactionId: blockchainResult.transactionId,
+          chunkExpiryTimestamp: latestSave.metadata?.chunk?.expiryTimestamp || null
+        });
+
+        logger.info(LogComponent.SPREADSHEET_ENGINE, 'commit_success', 'Sui commit completed', {
           transactionId: blockchainResult.transactionId,
           blobId: latestSave.blobId
         });
@@ -393,7 +423,7 @@ export class SpreadsheetEngine {
         throw new Error(blockchainResult.error || 'Blockchain sync failed');
       }
     } catch (error) {
-      logger.warn(LogComponent.SPREADSHEET_ENGINE, 'blockchain_sync_error', 'Blockchain sync failed', {
+      logger.warn(LogComponent.SPREADSHEET_ENGINE, 'commit_error', 'Sui commit failed', {
         error: typeof error === 'string' ? error : error.message || 'Unknown error'
       });
       this.saveStatus = 'error';
@@ -563,11 +593,11 @@ export class SpreadsheetEngine {
         });
         return await this.executeWalrusSave(operation.data, operation.title);
 
-      case 'blockchain_sync':
-        logger.debug(LogComponent.SPREADSHEET_ENGINE, 'offline_queue_blockchain', 'Processing offline blockchain sync', {
+      case 'sui_commit':
+        logger.debug(LogComponent.SPREADSHEET_ENGINE, 'offline_queue_commit', 'Processing offline Sui commit', {
           queueId: item.id
         });
-        return await this.executeBlockchainSync(operation.blobIds);
+        return await this.executeSuiCommit(operation.blobIds);
 
       default:
         throw new Error(`Unknown offline operation type: ${operation.type}`);
@@ -599,17 +629,17 @@ export class SpreadsheetEngine {
   /**
    * Execute a blockchain sync operation
    */
-  async executeBlockchainSync(blobIds) {
+  async executeSuiCommit(blobIds) {
     if (!this.blockchainService?.isWalletConnected()) {
       throw new Error('Wallet not connected');
     }
 
     const result = await this.blockchainService.syncToBlockchain(blobIds);
     if (result.success) {
-      this.lastBlockchainSyncTimestamp = Date.now();
+      this.lastSuiCommitTimestamp = Date.now();
       return result;
     } else {
-      throw new Error(result.error || 'Blockchain sync failed');
+      throw new Error(result.error || 'Sui commit failed');
     }
   }
 
@@ -1233,7 +1263,7 @@ export class SpreadsheetEngine {
    */
   async forceSyncToBlockchain() {
     logger.info(LogComponent.SPREADSHEET_ENGINE, 'force_sync_triggered', `Manual blockchain sync triggered`);
-    return await this.performBlockchainSync();
+    return await this.commitPendingWalrusSaves();
   }
 
   /**
@@ -2099,14 +2129,14 @@ export class SpreadsheetEngine {
       // Smart auto-save status
       saveStatus: this.saveStatus,
       lastWalrusSaveTimestamp: this.lastWalrusSaveTimestamp,
-      lastBlockchainSyncTimestamp: this.lastBlockchainSyncTimestamp,
+      lastSuiCommitTimestamp: this.lastSuiCommitTimestamp,
       pendingWalrusSaves: this.pendingWalrusSaves.length,
-      walrusAutoSaveEnabled: !!this.walrusAutoSaveTimer,
-      blockchainSyncEnabled: !!this.blockchainSyncTimer,
+      commitPromptEnabled: !!this.commitPromptTimer,
 
       // Time since saves for UI display
       timeSinceLastWalrusSave: this.lastWalrusSaveTimestamp ? Date.now() - this.lastWalrusSaveTimestamp : null,
-      timeSinceLastBlockchainSync: this.lastBlockchainSyncTimestamp ? Date.now() - this.lastBlockchainSyncTimestamp : null,
+      timeSinceLastSuiCommit: this.lastSuiCommitTimestamp ? Date.now() - this.lastSuiCommitTimestamp : null,
+      chunkMetadata: this.commitPromptState.metadata?.chunk || null,
 
       // Offline queue status
       isOnline: this.isOnline,
@@ -2179,7 +2209,6 @@ export class SpreadsheetEngine {
       currentEditingCell: this.currentEditingCell,
       pendingEdits: this.pendingEdits.size,
       walrusAutoSaveActive: !!this.walrusAutoSaveTimer,
-      blockchainSyncActive: !!this.blockchainSyncTimer
     });
 
     // Clear smart auto-save timers
@@ -2191,6 +2220,11 @@ export class SpreadsheetEngine {
       this.offlineQueueProcessingTimer = null;
       logger.debug(LogComponent.SPREADSHEET_ENGINE, 'cleanup', `Offline queue processing timer cleared`);
     }
+
+    // Clean up refresh scheduler
+    this.stopRefreshScheduler();
+    this.refreshSchedules.clear();
+    logger.debug(LogComponent.SPREADSHEET_ENGINE, 'cleanup', `Refresh scheduler stopped and cleared`);
 
     // Remove online/offline event listeners
     if (this.onlineHandler) {
@@ -2224,6 +2258,196 @@ export class SpreadsheetEngine {
     }
     
     logger.info(LogComponent.SPREADSHEET_ENGINE, 'cleanup', `Cleanup process completed`);
+  }
+
+  /**
+   * Register a cell for periodic refresh
+   * @param {string} cellRef - Cell reference (e.g., "A1", "B5")
+   * @param {number} interval - Refresh interval in milliseconds
+   * @param {string} formula - Formula to re-execute
+   */
+  registerCellForRefresh(cellRef, interval, formula) {
+    // Validate interval
+    const clampedInterval = Math.max(
+      this.minRefreshInterval,
+      Math.min(interval, this.maxRefreshInterval)
+    );
+
+    if (clampedInterval !== interval) {
+      logger.warn(LogComponent.SPREADSHEET_ENGINE, 'register_refresh',
+        `Refresh interval clamped for cell ${cellRef}`, {
+          requested: interval,
+          actual: clampedInterval
+        });
+    }
+
+    // Store schedule
+    this.refreshSchedules.set(cellRef, {
+      interval: clampedInterval,
+      lastRun: Date.now(),
+      formula,
+      enabled: true
+    });
+
+    logger.debug(LogComponent.SPREADSHEET_ENGINE, 'register_refresh',
+      `Registered cell for refresh`, {
+        cellRef,
+        interval: clampedInterval,
+        formula: formula.substring(0, 50)
+      });
+
+    // Start scheduler if not already running
+    if (!this.refreshSchedulerTimer && this.refreshEnabled) {
+      this.startRefreshScheduler();
+    }
+  }
+
+  /**
+   * Unregister a cell from periodic refresh
+   * @param {string} cellRef - Cell reference
+   */
+  unregisterCellForRefresh(cellRef) {
+    const removed = this.refreshSchedules.delete(cellRef);
+
+    if (removed) {
+      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'unregister_refresh',
+        `Unregistered cell from refresh`, { cellRef });
+    }
+
+    // Stop scheduler if no more cells to refresh
+    if (this.refreshSchedules.size === 0 && this.refreshSchedulerTimer) {
+      this.stopRefreshScheduler();
+    }
+  }
+
+  /**
+   * Start the refresh scheduler loop
+   */
+  startRefreshScheduler() {
+    if (this.refreshSchedulerTimer) {
+      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'start_refresh_scheduler',
+        'Refresh scheduler already running');
+      return;
+    }
+
+    logger.info(LogComponent.SPREADSHEET_ENGINE, 'start_refresh_scheduler',
+      'Starting refresh scheduler', {
+        cellCount: this.refreshSchedules.size,
+        interval: this.refreshSchedulerInterval
+      });
+
+    this.refreshSchedulerTimer = setInterval(
+      () => this._runRefreshScheduler(),
+      this.refreshSchedulerInterval
+    );
+  }
+
+  /**
+   * Stop the refresh scheduler loop
+   */
+  stopRefreshScheduler() {
+    if (this.refreshSchedulerTimer) {
+      clearInterval(this.refreshSchedulerTimer);
+      this.refreshSchedulerTimer = null;
+
+      logger.info(LogComponent.SPREADSHEET_ENGINE, 'stop_refresh_scheduler',
+        'Refresh scheduler stopped');
+    }
+  }
+
+  /**
+   * Enable/disable refresh scheduler globally
+   * @param {boolean} enabled - Enable or disable
+   */
+  setRefreshEnabled(enabled) {
+    this.refreshEnabled = enabled;
+
+    if (enabled && this.refreshSchedules.size > 0 && !this.refreshSchedulerTimer) {
+      this.startRefreshScheduler();
+    } else if (!enabled && this.refreshSchedulerTimer) {
+      this.stopRefreshScheduler();
+    }
+
+    logger.info(LogComponent.SPREADSHEET_ENGINE, 'set_refresh_enabled',
+      `Refresh scheduler ${enabled ? 'enabled' : 'disabled'}`);
+  }
+
+  /**
+   * Main refresh scheduler loop - checks all cells and refreshes as needed
+   * @private
+   */
+  _runRefreshScheduler() {
+    const now = Date.now();
+    const toRefresh = [];
+
+    // Check each registered cell
+    for (const [cellRef, schedule] of this.refreshSchedules.entries()) {
+      if (!schedule.enabled) continue;
+
+      const timeSinceLastRun = now - schedule.lastRun;
+      if (timeSinceLastRun >= schedule.interval) {
+        toRefresh.push({ cellRef, schedule });
+      }
+    }
+
+    // Refresh cells
+    if (toRefresh.length > 0) {
+      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'refresh_scheduler',
+        `Refreshing ${toRefresh.length} cells`, {
+          cells: toRefresh.map(r => r.cellRef)
+        });
+
+      toRefresh.forEach(({ cellRef, schedule }) => {
+        this._refreshCell(cellRef, schedule);
+        schedule.lastRun = now;
+      });
+    }
+  }
+
+  /**
+   * Refresh a specific cell by re-executing its formula
+   * @private
+   * @param {string} cellRef - Cell reference
+   * @param {Object} schedule - Refresh schedule object
+   */
+  async _refreshCell(cellRef, schedule) {
+    try {
+      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'refresh_cell',
+        `Refreshing cell ${cellRef}`, { formula: schedule.formula });
+
+      // Re-execute formula via Luckysheet if available
+      if (window.luckysheet) {
+        // Parse cell reference (e.g., "A1" -> row=0, col=0)
+        const match = cellRef.match(/^([A-Z]+)(\d+)$/);
+        if (match) {
+          const col = match[1].charCodeAt(0) - 65; // A=0, B=1, etc.
+          const row = parseInt(match[2]) - 1; // 1-indexed to 0-indexed
+
+          // Get current cell value
+          const currentValue = window.luckysheet.getCellValue(row, col);
+
+          // Only refresh if it's still a formula
+          if (currentValue && typeof currentValue === 'object' && currentValue.f) {
+            // Force recalculation by setting the same formula
+            window.luckysheet.setCellValue(row, col, currentValue);
+
+            logger.debug(LogComponent.SPREADSHEET_ENGINE, 'refresh_cell',
+              `Cell ${cellRef} refreshed`, { row, col });
+          } else {
+            // Cell no longer contains a formula, unregister it
+            logger.warn(LogComponent.SPREADSHEET_ENGINE, 'refresh_cell',
+              `Cell ${cellRef} no longer has formula, unregistering`, { currentValue });
+            this.unregisterCellForRefresh(cellRef);
+          }
+        }
+      }
+    } catch (error) {
+      logger.error(LogComponent.SPREADSHEET_ENGINE, 'refresh_cell_error',
+        `Error refreshing cell ${cellRef}`, {
+          error: error.message,
+          cellRef
+        });
+    }
   }
 
   /**
@@ -2484,6 +2708,68 @@ export class SpreadsheetEngine {
       });
 
       return { success: false, error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error' };
+    }
+  }
+
+  checkCommitPromptConditions() {
+    if (!this.blockchainService?.isWalletConnected()) return;
+    if (this.commitPromptState.suppressed) return;
+    if (this.isSaveInProgress) return;
+
+    const latestSave = this.pendingWalrusSaves[this.pendingWalrusSaves.length - 1];
+    if (!latestSave) return;
+
+    const now = Date.now();
+    if (this.commitPromptState.snoozeUntil && now < this.commitPromptState.snoozeUntil) {
+      return;
+    }
+
+    const elapsedSinceAutoSave = now - latestSave.timestamp;
+    if (elapsedSinceAutoSave < this.blockchainCommitInterval) {
+      return;
+    }
+
+    const chunk = latestSave.metadata?.chunk || null;
+    const expiresSoon = chunk?.expiryTimestamp
+      ? chunk.expiryTimestamp - now < (chunk.renewalWarningDays || 7) * 86400000
+      : false;
+
+    this.commitPromptState.visible = true;
+    this.commitPromptState.metadata = {
+      blobId: latestSave.blobId,
+      chunk,
+      expiresSoon
+    };
+    this.commitPromptState.lastPromptedAt = now;
+  }
+
+  snoozeCommitPrompt(durationMs = 5 * 60 * 1000) {
+    this.commitPromptState.visible = false;
+    this.commitPromptState.snoozeUntil = Date.now() + durationMs;
+  }
+
+  suppressCommitPrompts() {
+    this.commitPromptState.visible = false;
+    this.commitPromptState.suppressed = true;
+  }
+
+  async getDatasets(filter = {}) {
+    if (!this.blockchainService?.walrusService?.queryDatasets) {
+      return { success: false, error: 'Dataset query not available' };
+    }
+
+    try {
+      const ownerAddress = this.blockchainService.walletManager?.getWalletInfo().address || null;
+      const filterWithOwner = {
+        owner: ownerAddress,
+        ...filter
+      };
+      return await this.blockchainService.walrusService.queryDatasets(filterWithOwner);
+    } catch (error) {
+      logger.error(LogComponent.SPREADSHEET_ENGINE, 'dataset_query_failed', 'Walrus dataset query failed', {
+        error: typeof error === 'string' ? error : error.message || 'Unknown error'
+      });
+      return { success: false, error: typeof error === 'string' ? error : error.message || 'Unknown error' };
     }
   }
 }

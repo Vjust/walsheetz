@@ -4,6 +4,7 @@ import { browserWalletManager } from './BrowserWalletManager.js';
 import { SuiClient } from '@mysten/sui/client';
 import { Transaction } from '@mysten/sui/transactions';
 import { detectSaveVersionSignature } from '../utils/AbiHelpers.js';
+import { logger, LogComponent, LogLevel } from '../utils/Logger.js';
 
 class BrowserSuiService {
   constructor() {
@@ -22,19 +23,19 @@ class BrowserSuiService {
     this.transactionQueue = [];
     this.isProcessingTransaction = false;
 
-    console.log('[BrowserSuiService] Constructor completed - will load config during initialization');
+    logger.debug(LogComponent.BLOCKCHAIN_ADAPTER, 'constructor', 'BrowserSuiService constructor completed');
   }
 
   // Initialize the service
   async initialize() {
     // Prevent multiple initializations
     if (this.initialized) {
-      console.log('[BrowserSuiService] Already initialized, skipping...');
+      logger.debug(LogComponent.BLOCKCHAIN_ADAPTER, 'initialize', 'Already initialized, skipping');
       return true;
     }
 
     if (this.initializing) {
-      console.log('[BrowserSuiService] Initialization already in progress, waiting...');
+      logger.debug(LogComponent.BLOCKCHAIN_ADAPTER, 'initialize', 'Initialization already in progress, waiting');
       // Wait for existing initialization to complete
       while (this.initializing) {
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -45,40 +46,43 @@ class BrowserSuiService {
     this.initializing = true;
 
     try {
-      console.log('[BrowserSuiService] Starting initialization...');
-      
+      logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'initialize', 'Starting BrowserSuiService initialization');
+
       // Load runtime configuration
       this.config = await this.configLoader.getConfig();
       const networkConfig = this.config.getCurrentNetwork();
-      
+
       // Initialize SuiClient with runtime config
       this.client = new SuiClient({
         url: this.config.getServiceUrl('sui-rpc')
       });
-      
-      console.log('[BrowserSuiService] Config loaded:', {
+
+      logger.debug(LogComponent.BLOCKCHAIN_ADAPTER, 'config_loaded', 'Configuration loaded', {
         network: this.config.currentNetwork,
-        rpcUrl: networkConfig.rpcUrl,
         packageId: networkConfig.packageId,
-        registryObjectId: networkConfig.registryObjectId,
-        proxyUrl: this.config.getProxyUrl('sui-rpc')
+        registryObjectId: networkConfig.registryObjectId
       });
 
       // Test connection to Sui RPC
       const chainId = await this.client.getChainIdentifier();
-      console.log('[BrowserSuiService] ✅ Connected to Sui network, chain ID:', chainId);
-      
+      logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'connection_success', `Connected to Sui network, chain ID: ${chainId}`);
+
       // Best-effort network consistency check
       try {
         await this.checkNetworkAgainstConfig?.(chainId);
       } catch (e) {
-        console.warn('[BrowserSuiService] Network consistency check skipped/failed:', (typeof e === 'string' ? e : e?.message || 'Unknown error'));
+        logger.warn(LogComponent.BLOCKCHAIN_ADAPTER, 'network_check', 'Network consistency check skipped/failed', {
+          error: typeof e === 'string' ? e : e?.message || 'Unknown error'
+        });
       }
 
       this.initialized = true;
       return true;
     } catch (error) {
-      console.error('[BrowserSuiService] ❌ Failed to connect to Sui testnet:', error);
+      logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'init_failed', 'Failed to connect to Sui testnet', {
+        error: error.message,
+        stack: error.stack
+      });
       this.initialized = false;
       return false;
     } finally {
@@ -851,7 +855,7 @@ class BrowserSuiService {
 
   // Execute a transaction using the connected wallet with queue management
   async executeTransaction(transaction) {
-    console.log('[BrowserSuiService] 📥 Queuing transaction execution');
+    logger.debug(LogComponent.BLOCKCHAIN_ADAPTER, 'tx_queue', 'Queuing transaction execution');
 
     return new Promise((resolve, reject) => {
       // Add to queue with a unique identifier and promise resolvers
@@ -864,7 +868,10 @@ class BrowserSuiService {
       };
 
       this.transactionQueue.push(queueItem);
-      console.log(`[BrowserSuiService] 📋 Added transaction to queue (position: ${this.transactionQueue.length}, id: ${queueItem.id})`);
+      logger.debug(LogComponent.BLOCKCHAIN_ADAPTER, 'tx_queued', `Transaction added to queue`, {
+        queuePosition: this.transactionQueue.length,
+        txId: queueItem.id
+      });
 
       // Start processing if not already running
       this._processTransactionQueue();
@@ -874,33 +881,44 @@ class BrowserSuiService {
   // Process the transaction queue one at a time
   async _processTransactionQueue() {
     if (this.isProcessingTransaction) {
-      console.log('[BrowserSuiService] ⏳ Transaction already in progress, waiting...');
+      logger.throttleDebug('tx-queue-wait', LogComponent.BLOCKCHAIN_ADAPTER, 'tx_queue_wait',
+        'Transaction already in progress, waiting', {}, 30000);
       return;
     }
 
     if (this.transactionQueue.length === 0) {
-      console.log('[BrowserSuiService] ✅ Transaction queue is empty');
+      logger.throttleDebug('tx-queue-empty', LogComponent.BLOCKCHAIN_ADAPTER, 'tx_queue_empty',
+        'Transaction queue is empty', {}, 60000);
       return;
     }
 
     this.isProcessingTransaction = true;
     const queueItem = this.transactionQueue.shift();
 
-    console.log(`[BrowserSuiService] ⚡ Processing transaction ${queueItem.id} (${this.transactionQueue.length} remaining in queue)`);
+    logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'tx_processing', `Processing transaction ${queueItem.id}`, {
+      queueRemaining: this.transactionQueue.length
+    });
 
     try {
       const result = await this._executeTransactionInternal(queueItem.transaction);
       queueItem.resolve(result);
-      console.log(`[BrowserSuiService] ✅ Transaction ${queueItem.id} completed successfully`);
+      logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'tx_success', `Transaction completed successfully`, {
+        txId: queueItem.id
+      });
     } catch (error) {
-      console.error(`[BrowserSuiService] ❌ Transaction ${queueItem.id} failed:`, error);
+      logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'tx_failed', `Transaction failed`, {
+        txId: queueItem.id,
+        error: error.message
+      });
       queueItem.reject(error);
     } finally {
       this.isProcessingTransaction = false;
 
       // Process next transaction in queue if any
       if (this.transactionQueue.length > 0) {
-        console.log(`[BrowserSuiService] 🔄 Processing next transaction in queue (${this.transactionQueue.length} remaining)`);
+        logger.debug(LogComponent.BLOCKCHAIN_ADAPTER, 'tx_queue_next', `Processing next transaction in queue`, {
+          queueRemaining: this.transactionQueue.length
+        });
         setTimeout(() => this._processTransactionQueue(), 100); // Small delay to prevent tight loops
       }
     }
@@ -909,7 +927,7 @@ class BrowserSuiService {
   // Internal transaction execution (the original executeTransaction logic)
   async _executeTransactionInternal(transaction) {
     try {
-      console.log('[BrowserSuiService] 🚀 Starting transaction execution');
+      logger.debug(LogComponent.BLOCKCHAIN_ADAPTER, 'tx_execute', 'Starting transaction execution');
 
       const walletInfo = this.walletManager.getWalletInfo();
       if (!walletInfo.connected) {
@@ -2409,6 +2427,9 @@ class BrowserSuiService {
     try {
       console.log('[BrowserSuiService] 📢 Making spreadsheet public:', spreadsheetId);
 
+      // Ensure spreadsheet is using the latest module version before mutating
+      await this.ensureSpreadsheetVersion(spreadsheetId);
+
       const transaction = this.createMakePublicTransaction(spreadsheetId);
       const result = await this.executeTransaction(transaction);
 
@@ -2432,6 +2453,9 @@ class BrowserSuiService {
   async makeSpreadsheetPrivate(spreadsheetId) {
     try {
       console.log('[BrowserSuiService] 🔒 Making spreadsheet private:', spreadsheetId);
+
+      // Ensure spreadsheet is using the latest module version before mutating
+      await this.ensureSpreadsheetVersion(spreadsheetId);
 
       const transaction = this.createMakePrivateTransaction(spreadsheetId);
       const result = await this.executeTransaction(transaction);
@@ -2462,6 +2486,9 @@ class BrowserSuiService {
         return { success: false, error: 'Invalid recipient address format' };
       }
 
+      // Ensure spreadsheet is using the latest module version before mutating
+      await this.ensureSpreadsheetVersion(spreadsheetId);
+
       const transaction = this.createTransferOwnershipTransaction(spreadsheetId, newOwnerAddress);
       const result = await this.executeTransaction(transaction);
 
@@ -2485,6 +2512,9 @@ class BrowserSuiService {
   async pruneOldVersions(spreadsheetId, keepCount = 10) {
     try {
       console.log('[BrowserSuiService] ✂️ Pruning old versions for spreadsheet:', spreadsheetId, 'keeping', keepCount, 'versions');
+
+      // Ensure spreadsheet is using the latest module version before mutating
+      await this.ensureSpreadsheetVersion(spreadsheetId);
 
       const transaction = this.createPruneVersionsTransaction(spreadsheetId, keepCount);
       const result = await this.executeTransaction(transaction);
@@ -2579,6 +2609,383 @@ class BrowserSuiService {
       console.log('[BrowserSuiService] ✅ Invalid object cache cleared');
     } catch (error) {
       console.error('[BrowserSuiService] Error clearing invalid object cache:', error);
+    }
+  }
+
+  // === Upgrade & Migration Methods ===
+
+  /**
+   * Get the module version of a spreadsheet object (reads from dynamic field)
+   */
+  async getSpreadsheetVersion(spreadsheetId) {
+    try {
+      const packageId = await this.getPackageId();
+
+      // First verify the object exists
+      const result = await this.client.getObject({
+        id: spreadsheetId,
+        options: {
+          showContent: true,
+          showType: true
+        }
+      });
+
+      if (!result.data || !result.data.content) {
+        throw new Error(`Spreadsheet object not found: ${spreadsheetId}`);
+      }
+
+      // Fetch dynamic fields to read version
+      let moduleVersion = 0; // Default for legacy objects
+
+      try {
+        const dynamicFields = await this.client.getDynamicFields({
+          parentId: spreadsheetId
+        });
+
+        // Find version field (key is b"module_version")
+        const versionField = dynamicFields.data?.find(f => {
+          const nameValue = f.name?.value;
+          if (typeof nameValue === 'string') {
+            return nameValue === 'module_version';
+          }
+          // Handle bytes format: [109, 111, 100, 117, 108, 101, 95, 118, 101, 114, 115, 105, 111, 110]
+          if (Array.isArray(nameValue)) {
+            const str = String.fromCharCode(...nameValue);
+            return str === 'module_version';
+          }
+          return false;
+        });
+
+        if (versionField) {
+          const fieldObj = await this.client.getDynamicFieldObject({
+            parentId: spreadsheetId,
+            name: versionField.name
+          });
+          moduleVersion = fieldObj.data?.content?.fields?.value || 0;
+        }
+      } catch (dynErr) {
+        // Dynamic field read failed, treat as legacy object (version 0)
+        console.warn(`[BrowserSuiService] No dynamic version field found for ${spreadsheetId}, treating as legacy (v0)`);
+      }
+
+      const isLegacy = moduleVersion === 0;
+      console.log(`[BrowserSuiService] Spreadsheet ${spreadsheetId} version: ${moduleVersion}${isLegacy ? ' (legacy)' : ''}`);
+
+      return {
+        success: true,
+        spreadsheetId,
+        moduleVersion,
+        isLegacy,
+        objectData: result.data
+      };
+    } catch (error) {
+      console.error('[BrowserSuiService] Failed to get spreadsheet version:', error);
+      return {
+        success: false,
+        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
+        spreadsheetId
+      };
+    }
+  }
+
+  /**
+   * Get versions for multiple spreadsheets in batch (reduces RPC calls)
+   */
+  async getSpreadsheetVersionsBatch(spreadsheetIds) {
+    try {
+      const results = await Promise.allSettled(
+        spreadsheetIds.map(id => this.getSpreadsheetVersion(id))
+      );
+
+      return spreadsheetIds.map((id, index) => {
+        const result = results[index];
+        if (result.status === 'fulfilled' && result.value.success) {
+          return result.value;
+        } else {
+          return {
+            success: false,
+            spreadsheetId: id,
+            error: result.status === 'rejected' ? result.reason : result.value.error,
+            moduleVersion: 0,
+            isLegacy: true
+          };
+        }
+      });
+    } catch (error) {
+      console.error('[BrowserSuiService] Failed to batch read spreadsheet versions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Ensure spreadsheet is using the latest module version before mutations
+   */
+  async ensureSpreadsheetVersion(spreadsheetId) {
+    try {
+      const config = await this.getRuntimeConfig();
+      const net = config.getCurrentNetwork();
+      const expectedVersion = net.moduleVersion || 1;
+
+      const versionCheck = await this.getSpreadsheetVersion(spreadsheetId);
+
+      if (!versionCheck.success) {
+        throw new Error(`Failed to check spreadsheet version: ${versionCheck.error}`);
+      }
+
+      if (versionCheck.moduleVersion !== expectedVersion) {
+        console.warn(`[BrowserSuiService] ⚠️ Version mismatch for spreadsheet ${spreadsheetId}`, {
+          spreadsheetVersion: versionCheck.moduleVersion,
+          expectedVersion,
+          needsMigration: versionCheck.moduleVersion < expectedVersion
+        });
+
+        throw new Error(
+          `Spreadsheet version mismatch: object has version ${versionCheck.moduleVersion}, ` +
+          `expected ${expectedVersion}. Migration required.`
+        );
+      }
+
+      console.log(`[BrowserSuiService] ✅ Spreadsheet version verified: ${expectedVersion}`);
+      return { success: true, version: expectedVersion };
+
+    } catch (error) {
+      console.error('[BrowserSuiService] Failed to ensure spreadsheet version:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Validate spreadsheet version and return compatibility info
+   */
+  async validateSpreadsheetVersion(spreadsheetId) {
+    try {
+      const { detectModuleVersion, checkSpreadsheetVersionCompatibility } = await import('../utils/AbiHelpers.js');
+
+      const versionCheck = await this.getSpreadsheetVersion(spreadsheetId);
+      if (!versionCheck.success) {
+        return {
+          compatible: false,
+          error: versionCheck.error,
+          canWrite: false,
+          canRead: false
+        };
+      }
+
+      // Use ABI helpers to check compatibility
+      const compatibility = await checkSpreadsheetVersionCompatibility(versionCheck.objectData);
+
+      console.log('[BrowserSuiService] Spreadsheet version validation:', compatibility);
+      return compatibility;
+
+    } catch (error) {
+      console.error('[BrowserSuiService] Version validation failed:', error);
+      return {
+        compatible: false,
+        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
+        canWrite: false,
+        canRead: true // Allow reads even if validation fails
+      };
+    }
+  }
+
+  /**
+   * Create transaction to migrate a spreadsheet (admin only)
+   */
+  async createMigrateSpreadsheetTransaction(spreadsheetId, adminCapId) {
+    try {
+      const packageId = await this.getPackageId();
+
+      if (!adminCapId) {
+        throw new Error('AdminCap ID required for migration');
+      }
+
+      const walletInfo = this.walletManager.getWalletInfo();
+      if (!walletInfo || !walletInfo.connected || !walletInfo.address) {
+        throw new Error('Wallet not connected - cannot create migration transaction');
+      }
+
+      const tx = new Transaction();
+      tx.setSender(walletInfo.address);
+
+      tx.moveCall({
+        target: `${packageId}::spreadsheet::migrate_spreadsheet`,
+        arguments: [
+          tx.object(spreadsheetId),
+          tx.object(adminCapId)
+        ],
+        typeArguments: []
+      });
+
+      // Set dynamic gas budget
+      await this.setDynamicGasBudget(tx, 'migrate_spreadsheet');
+
+      console.log('[BrowserSuiService] ✅ Migration transaction created');
+      return tx;
+
+    } catch (error) {
+      console.error('[BrowserSuiService] Failed to create migration transaction:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a transaction to certify a Walrus blob with PoA (Proof of Availability)
+   * @param {string} blobId - Walrus blob ID to certify
+   * @param {Object} options - Certification options
+   * @returns {Promise<Transaction>} Transaction object ready to be executed
+   */
+  async createCertifyBlobTransaction(blobId, options = {}) {
+    try {
+      console.log('[BrowserSuiService] 🎫 Creating blob certification transaction for:', blobId);
+
+      // Validate blob ID
+      if (!blobId || typeof blobId !== 'string') {
+        throw new Error('Valid blob ID is required for certification');
+      }
+
+      // Get wallet info for sender address
+      const walletInfo = this.walletManager.getWalletInfo();
+      if (!walletInfo || !walletInfo.connected || !walletInfo.address) {
+        throw new Error('Wallet not connected - cannot create certification transaction');
+      }
+
+      console.log('[BrowserSuiService] Using sender address for certification:', walletInfo.address);
+
+      // Create Transaction for PoA certification
+      const tx = new Transaction();
+      tx.setSender(walletInfo.address);
+
+      // Get Walrus system package ID from config
+      // In production, this would be the deployed Walrus system package
+      const config = await this.getRuntimeConfig();
+      const walrusSystemPackage = config.walrus?.systemPackageId || '0x0'; // Placeholder
+
+      console.log('[BrowserSuiService] 🔨 Building certification moveCall...');
+      console.log('[BrowserSuiService] Walrus System Package:', walrusSystemPackage);
+      console.log('[BrowserSuiService] Blob ID to certify:', blobId);
+
+      // Call the Walrus system's certify_blob function
+      // This is a placeholder - actual implementation depends on Walrus contract ABI
+      tx.moveCall({
+        target: `${walrusSystemPackage}::walrus::certify_blob`,
+        arguments: [
+          tx.pure.string(blobId),
+          // Add duration argument if provided (default 30 days)
+          tx.pure.u64(options.durationDays ? options.durationDays * 86400 : 30 * 86400)
+        ],
+        typeArguments: []
+      });
+
+      // Set dynamic gas budget for certification
+      await this.setDynamicGasBudget(tx, 'certify_blob');
+
+      console.log('[BrowserSuiService] ✅ Certification transaction created successfully');
+      return tx;
+
+    } catch (error) {
+      console.error('[BrowserSuiService] Failed to create certification transaction:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Certify a Walrus blob with PoA (Proof of Availability)
+   * @param {string} blobId - Walrus blob ID to certify
+   * @param {Object} options - Certification options
+   * @returns {Promise<Object>} Certification result with transaction digest and status
+   */
+  async certifyBlob(blobId, options = {}) {
+    try {
+      console.log('[BrowserSuiService] 🎫 Starting blob certification for:', blobId);
+
+      // Create certification transaction
+      const transaction = await this.createCertifyBlobTransaction(blobId, options);
+
+      // Execute transaction through wallet
+      const result = await this.executeTransaction(transaction);
+
+      if (result.success) {
+        console.log('[BrowserSuiService] ✅ Blob certified successfully:', {
+          blobId,
+          digest: result.digest
+        });
+
+        return {
+          success: true,
+          blobId,
+          transactionDigest: result.digest,
+          effects: result.effects,
+          events: result.events,
+          timestamp: Date.now(),
+          durationDays: options.durationDays || 30
+        };
+      } else {
+        console.error('[BrowserSuiService] ❌ Blob certification failed:', result.error);
+        return {
+          success: false,
+          blobId,
+          error: result.error || 'Certification transaction failed'
+        };
+      }
+
+    } catch (error) {
+      console.error('[BrowserSuiService] Failed to certify blob:', error);
+      return {
+        success: false,
+        blobId,
+        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown certification error'
+      };
+    }
+  }
+
+  /**
+   * Migrate a spreadsheet to the latest module version (admin only)
+   */
+  async requestSpreadsheetMigration(spreadsheetId, adminCapId) {
+    try {
+      console.log(`[BrowserSuiService] Requesting migration for spreadsheet: ${spreadsheetId}`);
+
+      // Check current version
+      const versionCheck = await this.getSpreadsheetVersion(spreadsheetId);
+      if (!versionCheck.success) {
+        return { success: false, error: `Failed to check version: ${versionCheck.error}` };
+      }
+
+      const config = await this.getRuntimeConfig();
+      const net = config.getCurrentNetwork();
+      const targetVersion = net.moduleVersion || 1;
+
+      if (versionCheck.moduleVersion >= targetVersion) {
+        return {
+          success: false,
+          error: `Spreadsheet is already at version ${versionCheck.moduleVersion}`,
+          currentVersion: versionCheck.moduleVersion
+        };
+      }
+
+      // Create and execute migration transaction
+      const transaction = await this.createMigrateSpreadsheetTransaction(spreadsheetId, adminCapId);
+      const result = await this.executeTransaction(transaction);
+
+      if (result.success) {
+        console.log('[BrowserSuiService] ✅ Spreadsheet migrated successfully');
+        return {
+          success: true,
+          digest: result.digest,
+          spreadsheetId,
+          oldVersion: versionCheck.moduleVersion,
+          newVersion: targetVersion
+        };
+      } else {
+        return result;
+      }
+    } catch (error) {
+      console.error('[BrowserSuiService] Failed to migrate spreadsheet:', error);
+      return {
+        success: false,
+        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
+        spreadsheetId
+      };
     }
   }
 }

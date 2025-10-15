@@ -4,10 +4,17 @@ import '../styles/save-status-indicator.css';
 export function SaveStatusIndicator({
   saveStatus,
   lastWalrusSave,
-  lastBlockchainSync,
+  lastSuiCommit,
   pendingWalrusSaves,
   onSyncNow,
-  walletConnected
+  walletConnected,
+  chunkMetadata,
+  renewalWarningDays,
+  onRemindLater,
+  onSuppressPrompts,
+  poaStatus = null, // PoA certificate status: 'certified', 'uncertified', 'pending', 'expired', 'unknown'
+  blobId = null, // Current blob ID
+  onSaveToBlockchain = null // Callback to open save to blockchain modal
 }) {
   const formatTimeAgo = (timestamp) => {
     if (!timestamp) return null;
@@ -50,6 +57,20 @@ export function SaveStatusIndicator({
           className: 'synced',
           showSync: false
         };
+      case 'awaiting_commit':
+        return {
+          icon: '⏳',
+          text: 'Commit ready for blockchain',
+          className: 'awaiting-commit',
+          showSync: true
+        };
+      case 'committing':
+        return {
+          icon: '⛓️',
+          text: 'Confirm in wallet to publish',
+          className: 'syncing',
+          showSync: false
+        };
       case 'error':
         return {
           icon: '❌',
@@ -77,7 +98,12 @@ export function SaveStatusIndicator({
 
   const statusInfo = getStatusInfo();
   const walrusTime = formatTimeAgo(lastWalrusSave);
-  const blockchainTime = formatTimeAgo(lastBlockchainSync);
+  const suiCommitTime = formatTimeAgo(lastSuiCommit);
+  const expiryTimestamp = chunkMetadata?.expiryTimestamp || null;
+  const expiresInMs = expiryTimestamp ? expiryTimestamp - Date.now() : null;
+  const expiryWarningMs = (renewalWarningDays || 7) * 86400000;
+  const isExpiryCritical = expiresInMs !== null && expiresInMs <= 0;
+  const isExpirySoon = expiresInMs !== null && expiresInMs > 0 && expiresInMs < expiryWarningMs;
 
   return (
     <div className={`save-status-indicator ${statusInfo.className}`}>
@@ -93,9 +119,39 @@ export function SaveStatusIndicator({
             Sync Now
           </button>
         )}
+        {statusInfo.showSync && !walletConnected && (
+          <span className="status-hint">Connect wallet to publish changes</span>
+        )}
       </div>
 
-      {/* Detailed status tooltip */}
+      {(onRemindLater || onSuppressPrompts) && statusInfo.showSync && (
+        <div className="status-actions">
+          {onRemindLater && (
+            <button className="remind-later-button" onClick={onRemindLater}>Remind me later</button>
+          )}
+          {onSuppressPrompts && (
+            <button className="suppress-button" onClick={onSuppressPrompts}>Don't show again</button>
+          )}
+        </div>
+      )}
+
+      {/* Save to Blockchain prompt */}
+      {blobId && onSaveToBlockchain && poaStatus === 'uncertified' && walletConnected && (
+        <div className="poa-prompt">
+          <span className="poa-prompt-icon">⚠️</span>
+          <span className="poa-prompt-text">
+            Your data may be deleted without blockchain protection
+          </span>
+          <button
+            className="save-blockchain-button"
+            onClick={onSaveToBlockchain}
+            title="Guarantee data availability"
+          >
+            Save to Blockchain
+          </button>
+        </div>
+      )}
+
       <div className="status-tooltip">
         <div className="tooltip-section">
           <div className="tooltip-title">Save Status</div>
@@ -105,15 +161,43 @@ export function SaveStatusIndicator({
               <span className="tooltip-value">{walrusTime}</span>
             </div>
           )}
-          {blockchainTime && walletConnected && (
+          {suiCommitTime && walletConnected && (
             <div className="tooltip-item">
               <span className="tooltip-label">Blockchain:</span>
-              <span className="tooltip-value">{blockchainTime}</span>
+              <span className="tooltip-value">{suiCommitTime}</span>
+            </div>
+          )}
+          {expiryTimestamp && (
+            <div className={`tooltip-item ${isExpiryCritical ? 'expiry-critical' : isExpirySoon ? 'expiry-warning' : ''}`}>
+              <span className="tooltip-label">Walrus expiry:</span>
+              <span className="tooltip-value">
+                {new Date(expiryTimestamp).toLocaleString()}
+                {isExpiryCritical && ' ⚠️ Expired — renew immediately'}
+                {(!isExpiryCritical && isExpirySoon) && ' ⚠️ Renewal required soon'}
+              </span>
+            </div>
+          )}
+          {poaStatus && (
+            <div className={`tooltip-item poa-status-${poaStatus}`}>
+              <span className="tooltip-label">Blockchain Storage:</span>
+              <span className="tooltip-value poa-badge">
+                {poaStatus === 'certified' && '✅ Protected'}
+                {poaStatus === 'uncertified' && '❌ Not Protected'}
+                {poaStatus === 'pending' && '⏳ Saving...'}
+                {poaStatus === 'expired' && '⚠️ Expired'}
+                {poaStatus === 'unknown' && '❓ Unknown'}
+              </span>
+            </div>
+          )}
+          {blobId && (
+            <div className="tooltip-item">
+              <span className="tooltip-label">Blob ID:</span>
+              <span className="tooltip-value blob-id">{blobId.substring(0, 16)}...</span>
             </div>
           )}
           {pendingWalrusSaves > 0 && (
             <div className="tooltip-item">
-              <span className="tooltip-label">Pending syncs:</span>
+              <span className="tooltip-label">Pending commits:</span>
               <span className="tooltip-value">{pendingWalrusSaves}</span>
             </div>
           )}
@@ -129,9 +213,9 @@ export function SaveStatusIndicator({
           <div className="tooltip-title">How it works</div>
           <div className="tooltip-item">
             <div className="tooltip-explanation">
-              • Changes save to storage every 30 seconds (no prompts)<br/>
-              • Blockchain sync every 5 minutes (requires wallet approval)<br/>
-              • Manual sync available anytime
+              • Changes save to storage every 30 seconds (no prompts)<br />
+              • Blockchain commit requires approval (after edits or on demand)<br />
+              • Walrus chunk expiry triggers renewal prompts and warnings
             </div>
           </div>
         </div>

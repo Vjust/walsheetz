@@ -190,25 +190,73 @@ import { config } from '@blockchain/config.js'  // Blockchain modules
 - Avoid `../` relative paths across module boundaries
 
 ### Logging
-Centralized logger in `frontend/utils/Logger.js`:
-```javascript
-import Logger from '@/utils/Logger.js'
+WalSheetz uses centralized logging with environment-based configuration and component-specific filtering.
 
-Logger.info('User action', { userId, action: 'save' })
-Logger.error('Save failed', { error, blobId })
-Logger.debug('State update', { oldState, newState })
+**Frontend Logger:**
+```javascript
+import { logger, LogComponent, LogLevel } from '@/utils/Logger.js'
+
+logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'save', 'Saving spreadsheet', { blobId })
+logger.error(LogComponent.STORAGE_SERVICE, 'save_failed', 'Save failed', { error })
+logger.debug(LogComponent.WALLET_MANAGER, 'connect', 'Wallet connected', { address })
+```
+
+**Backend Logger (Node/Bun):**
+```javascript
+import { createLogger } from './utils/logger.js'
+const logger = createLogger('ComponentName')
+
+logger.info('Operation completed', { duration, status })
+logger.throttleInfo('throttle-key', 'Repeated operation', { count }, 30000)
 ```
 
 **Log Levels:**
-- `DEBUG` - Development diagnostics (not in production)
-- `INFO` - Normal operations (user actions, state changes)
-- `WARN` - Recoverable issues (fallback triggered, deprecated usage)
-- `ERROR` - Failures requiring attention
-- `CRITICAL` - System-threatening issues
+- `DEBUG` (0) - Detailed diagnostics (opt-in only)
+- `INFO` (1) - Normal operations
+- `WARN` (2) - Recoverable issues (default in dev)
+- `ERROR` (3) - Failures requiring attention
+- `CRITICAL` (4) - System-threatening issues
 
-**Bridge Logging:**
-- Set `BRIDGE_LOG_LEVEL=DEBUG` for verbose WebSocket/gRPC logs
-- Logs include correlation IDs for request tracing
+**Controlling Log Verbosity:**
+
+Environment variables (set in `.env` or shell):
+```bash
+# Frontend log level (browser console)
+VITE_LOG_LEVEL=WARN                # DEBUG, INFO, WARN, ERROR, CRITICAL
+
+# Component-specific debug (comma-separated)
+VITE_DEBUG_COMPONENTS=BLOCKCHAIN_ADAPTER,STORAGE_SERVICE
+
+# Backend log level (Node/Bun scripts)
+LOG_LEVEL=INFO
+BRIDGE_LOG_LEVEL=DEBUG             # Bridge-specific override
+
+# Verbose Vite proxy logs
+VITE_VERBOSE_PROXY=true
+```
+
+Quick debugging without restart (query parameters):
+```bash
+# Enable all debug logs
+http://localhost:3005?debug=true
+
+# Enable debug for specific components
+http://localhost:3005?debug=BLOCKCHAIN_ADAPTER
+http://localhost:3005?debug=BLOCKCHAIN_ADAPTER,WALLET_MANAGER
+```
+
+Runtime debugging (browser console):
+```javascript
+// Enable debug for components at runtime
+window.walSheetzLogConfig.enableDebugForComponents('BLOCKCHAIN_ADAPTER')
+window.walSheetzLogConfig.enableDebugForAll()
+
+// View logger metrics
+window.walSheetzLogger.getMetrics()
+window.walSheetzLogger.exportLogs({ component: 'BLOCKCHAIN_ADAPTER' })
+```
+
+**For detailed logging guide, see [debug-logging.md](debug-logging.md)**
 
 ### Configuration
 **Never hardcode endpoints or feature flags!**
@@ -389,6 +437,14 @@ bun run dev
 # Start bridge with debug logging
 BRIDGE_LOG_LEVEL=DEBUG bun run bridge
 
+# Full stack with debug logging
+LOG_LEVEL=DEBUG BRIDGE_LOG_LEVEL=DEBUG bun run dev:full
+
+# Enable frontend blockchain debug (query param or env)
+http://localhost:3005?debug=BLOCKCHAIN_ADAPTER,STORAGE_SERVICE
+# OR
+VITE_DEBUG_COMPONENTS=BLOCKCHAIN_ADAPTER,STORAGE_SERVICE bun run dev
+
 # Check bridge health
 curl http://localhost:8081/health
 
@@ -398,6 +454,8 @@ curl http://localhost:8081/metrics
 # Diagnose save issues
 bun run diagnose:save
 ```
+
+**See [debug-logging.md](debug-logging.md) for detailed debugging scenarios**
 
 ### Switching Networks
 Edit `blockchain/config.js:399`:
@@ -411,6 +469,8 @@ environment: 'testnet'  // or 'mainnet'
 
 ## Additional Resources
 
+- **[upgrade-guide.md](upgrade-guide.md)** - 🆕 Upgrade-safe Walrus ↔︎ Sui integration guide
+- **[debug-logging.md](debug-logging.md)** - Debug logging guide & verbosity control
 - **[TESTING.md](TESTING.md)** - Comprehensive testing guide
 - **[CONFIGURATION.md](CONFIGURATION.md)** - Environment variables & feature flags
 - **[scripts/README.md](scripts/README.md)** - Script catalog & usage
@@ -428,7 +488,11 @@ environment: 'testnet'  // or 'mainnet'
 
 ### Key Environment Variables
 - `BRIDGE_PORT=8081` - Bridge server port
-- `BRIDGE_LOG_LEVEL=INFO` - Bridge logging (DEBUG, INFO, WARN, ERROR)
+- `VITE_LOG_LEVEL=WARN` - Frontend log level (DEBUG, INFO, WARN, ERROR, CRITICAL)
+- `LOG_LEVEL=INFO` - Backend log level (DEBUG, INFO, WARN, ERROR, CRITICAL)
+- `BRIDGE_LOG_LEVEL=INFO` - Bridge-specific log level override
+- `VITE_DEBUG_COMPONENTS=` - Component-specific debug (e.g., BLOCKCHAIN_ADAPTER,WALLET_MANAGER)
+- `VITE_VERBOSE_PROXY=false` - Verbose Vite proxy logging
 - `WALRUS_COMPRESSION=true` - Enable Walrus compression
 - `RATE_LIMITER_ENABLED=true` - Enable rate limiting
 

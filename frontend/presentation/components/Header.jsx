@@ -19,7 +19,6 @@ export function Header() {
     fontFamily: 'Arial',
     fontSize: '12'
   })
-  const [smartSaveStatus, setSmartSaveStatus] = useState(null)
 
   const { spreadsheetData } = useSpreadsheetContext()
 
@@ -43,7 +42,11 @@ export function Header() {
     syncToBlockchain,
     getStatus,
     renameSpreadsheet,
-    getCurrentSpreadsheetId
+    getCurrentSpreadsheetId,
+    snoozeCommitPrompt,
+    suppressCommitPrompts,
+    smartSaveStatus,
+    queryDatasets
   } = useSpreadsheetContext()
 
   // Debug helper to check available Luckysheet methods
@@ -245,21 +248,10 @@ export function Header() {
     return () => clearInterval(interval)
   }, [])
 
-  // Poll smart save status
+  // Suppress unused warnings for queryDatasets
   useEffect(() => {
-    const pollStatus = () => {
-      if (getStatus) {
-        const status = getStatus();
-        setSmartSaveStatus(status);
-      }
-    };
-
-    // Poll every 2 seconds
-    const interval = setInterval(pollStatus, 2000);
-    pollStatus(); // Initial call
-
-    return () => clearInterval(interval);
-  }, [getStatus])
+    void queryDatasets;
+  }, [queryDatasets])
 
   const formatAddress = (address) => {
     if (!address) return ''
@@ -980,11 +972,15 @@ export function Header() {
             {smartSaveStatus && (
               <SaveStatusIndicator
                 saveStatus={smartSaveStatus.saveStatus}
-                lastWalrusSave={smartSaveStatus.timeSinceLastWalrusSave}
-                lastBlockchainSync={smartSaveStatus.timeSinceLastBlockchainSync}
+                lastWalrusSave={smartSaveStatus.lastWalrusSaveTimestamp}
+                lastSuiCommit={smartSaveStatus.lastSuiCommitTimestamp}
                 pendingWalrusSaves={smartSaveStatus.pendingWalrusSaves}
                 onSyncNow={syncToBlockchain}
                 walletConnected={walletConnected}
+                chunkMetadata={smartSaveStatus.chunkMetadata}
+                renewalWarningDays={smartSaveStatus.chunkMetadata?.renewalWarningDays || 7}
+                onRemindLater={snoozeCommitPrompt}
+                onSuppressPrompts={suppressCommitPrompts}
               />
             )}
 

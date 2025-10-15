@@ -20,7 +20,7 @@
   --glass-shadow-heavy: 0 12px 40px rgba(0, 172, 193, 0.25);
   
   /* Background Gradients */
-  --ice-gradient-bg: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 50%, #90CAF9 100%);
+  --ice-gradient-bg: linear-gradient(135deg, #B3D9F2 0%, #7FBCE8 50%, #5AAEE3 100%);
   --ice-gradient-header: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 100%);
   --ice-gradient-button: linear-gradient(135deg, rgba(0, 172, 193, 0.8) 0%, rgba(0, 151, 167, 0.9) 100%);
   --ice-gradient-button-hover: linear-gradient(135deg, rgba(0, 172, 193, 0.9) 0%, rgba(0, 151, 167, 1) 100%);

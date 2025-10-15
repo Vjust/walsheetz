@@ -1,0 +1,35 @@
+# Test Environment Dockerfile
+# Provides isolated environment for running unit tests with extensive logging
+
+FROM node:20-alpine
+
+# Install development tools for better debugging
+RUN apk add --no-cache \
+    bash \
+    git \
+    curl \
+    jq
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json* ./
+
+# Install dependencies
+RUN npm install
+
+# Copy source code and tests
+COPY . .
+
+# Set environment variables for test logging
+ENV NODE_ENV=test
+ENV VITEST_LOG_LEVEL=verbose
+ENV FORCE_COLOR=1
+ENV CI=true
+
+# Create test output directory
+RUN mkdir -p /app/test-results
+
+# Default command runs tests with verbose output
+CMD ["npm", "run", "test:docker:run"]

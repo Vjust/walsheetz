@@ -20,7 +20,9 @@ User Action → Header.jsx → luckysheetApi → window.luckysheet → DOM Updat
                     ↓
             SpreadsheetEngine.js ← luckysheetApi.getAllSheets() ← Updated Data
                     ↓
-            Blockchain/Storage Services
+    Walrus Auto-save (epochs + chunk metadata) → Sui Commit Prompt (5 min cadence)
+                    ↓
+   Walrus/Sui Index Services → Dataset Explorer & Renewal UX
 ```
 
 ## Fallback Behavior Patterns

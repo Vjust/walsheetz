@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { SpreadsheetEngine } from '../core/SpreadsheetEngine.js';
 import { BlockchainAdapter } from '../adapters/BlockchainAdapter.js';
 import { StorageAdapter } from '../adapters/StorageAdapter.js';
-import { webSocketService } from '../services/WebSocketService.js';
+// WebSocket service disabled for single-user MVP
+// import { webSocketService } from '../services/WebSocketService.js';
 import { useWalletConnectionFactory } from '../hooks/useWalletConnectionFactory.ts';
 import { browserWalletManager } from '../services/BrowserWalletManager.js';
 import { parseCellRef } from '../utils/cellUtils.js';
@@ -43,7 +44,8 @@ export function useSpreadsheet() {
   const engineRef = useRef(null);
   const blockchainRef = useRef(null);
   const storageRef = useRef(null);
-  const webSocketRef = useRef(webSocketService);
+  // WebSocket disabled for single-user MVP
+  const webSocketRef = useRef(null);
   const servicesInitializedRef = useRef(false);
   const sessionRestorationAttemptedRef = useRef(false);
   const autoDiscoveryAttemptedRef = useRef(false);
@@ -1421,6 +1423,27 @@ export function useSpreadsheet() {
     }
   }, [updateSyncStatus]);
 
+  const queryDatasets = useCallback(async (filter = {}) => {
+    if (!engineRef.current) return { success: false, error: 'Engine not initialized' };
+    return await engineRef.current.getDatasets(filter);
+  }, []);
+
+  const snoozeCommitPrompt = useCallback(() => {
+    if (engineRef.current?.commitPromptState) {
+      engineRef.current.commitPromptState.visible = false;
+      engineRef.current.commitPromptState.since = Date.now();
+    }
+    setSaveReminder(prev => ({ ...prev, visible: false }));
+  }, []);
+
+  const suppressCommitPrompts = useCallback(() => {
+    if (engineRef.current?.commitPromptState) {
+      engineRef.current.commitPromptState.visible = false;
+      engineRef.current.commitPromptState.suppressed = true;
+    }
+    setSaveReminder(prev => ({ ...prev, visible: false }));
+  }, []);
+
   return {
     // State
     currentCell,
@@ -1437,6 +1460,7 @@ export function useSpreadsheet() {
     spreadsheetData,
     saveReminder,
     autoSaveEnabled,
+    smartSaveStatus: getStatus?.(),
 
     // Actions
     handleCellEdit,
@@ -1459,8 +1483,8 @@ export function useSpreadsheet() {
     getStorageInfo,
     exportData,
     
-    // Collaboration
-    webSocketService: webSocketRef.current,
+    // Collaboration disabled for single-user MVP
+    // webSocketService: webSocketRef.current,
     
     // Manual setters (for direct UI control)
     setCurrentCell,
@@ -1484,6 +1508,9 @@ export function useSpreadsheet() {
     pruneOldVersions,
     deleteSpreadsheet
     ,
+    queryDatasets,
+    snoozeCommitPrompt,
+    suppressCommitPrompts,
     // IDs and titles
     getCurrentSpreadsheetId
   };

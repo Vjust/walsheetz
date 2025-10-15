@@ -201,6 +201,7 @@ WALRUS_REDUNDANCY=false   # Default: false
 ```bash
 WALRUS_USE_SDK=false          # Default: false (safe rollout)
 WALRUS_EPOCHS_DEFAULT=50      # Default: 50 epochs
+WALRUS_EPOCH_RENEWAL_WARNING=7  # Warn users N days before expiry
 ```
 
 **SDK Network:** Auto-detected from `config.environment` (testnet/mainnet)
@@ -256,6 +257,62 @@ BATCH_PERSISTENCE=true            # Default: true
 2. Prevent data loss on browser refresh
 3. Auto-resume interrupted uploads
 4. Clear persisted batches after successful upload
+
+### Chunk Purchase & Renewal Metadata
+
+Walrus storage is time-bound. Each blob is pinned for a fixed number of epochs (≈2 days per epoch on testnet). To help users manage renewals we add metadata to both the Walrus payload and the indexing layer.
+
+**Walrus Payload:**
+Every spreadsheet blob encodes a `chunk` record:
+
+```json
+{
+  "chunk": {
+    "epochsPurchased": 50,
+    "epochStart": 123456,
+    "epochEnd": 123506,
+    "expiryTimestamp": 1739481600000,
+    "renewalCount": 1,
+    "lastRenewedAt": 1736899200000,
+    "purchaseReceipt": "0x...",        // optional Walrus receipt id
+    "notes": "Mainnet archive copy"
+  }
+}
+```
+
+**Config Defaults:**
+
+```bash
+WALRUS_EPOCHS_DEFAULT=50          # Default epochs when saving
+WALRUS_EPOCH_RENEWAL_WARNING=7    # Warn when <7 days remain
+WALRUS_EPOCH_MAX=200              # Upper bound users can pick in UI
+```
+
+**Renewal Flow:**
+
+1. Auto-save writes to Walrus immediately using the configured epoch count.
+2. Every five minutes we prompt the user to “Publish to Sui” (committing the latest Walrus blob id).
+3. The prompt shows: current chunk expiry, renewal cost estimate (epochs × Walrus price), and “Don’t ask again this session”.
+4. When `expiryTimestamp - now` < `WALRUS_EPOCH_RENEWAL_WARNING` days we raise a prominent banner and send the same info to the off-chain index so other clients see the approaching deadline.
+
+**Index Fields (Sui + off-chain service):**
+
+| Field | Description |
+|-------|-------------|
+| `chunkEpochs` | Epochs purchased for this blob |
+| `chunkExpiry` | UNIX ms timestamp of expiry |
+| `renewalStatus` | `active`, `expiring_soon`, `expired` |
+| `renewalCount` | Number of times renewed |
+| `lastRenewedAt` | Timestamp of last renewal |
+| `defaultEpochSelection` | Suggested epochs for next save |
+
+**UI Behaviour:**
+
+- Display chunk info in the status bar and dataset explorer.
+- “Renew storage” button shortcuts to Walrus purchase flow when expiry is near.
+- When users choose a different duration the selection persists per spreadsheet.
+
+See [`docs/architecture/walrus-indexing.md`](architecture/walrus-indexing.md) for the full ADR.
 
 ---
 
@@ -565,3 +622,20 @@ estimatedGasCosts: {
 ---
 
 For questions or to report configuration issues, see the main [README.md](../README.md) or open an issue on GitHub.
+
+### Telemetry & Observability
+
+WalSheetz surfaces client-side telemetry events so operators can track autosave health, Sui commits, and renewal reminders.
+
+- `frontend/utils/Telemetry.js` emits structured events via the shared logger and a `window` event (`telemetry:event`).
+- `SpreadsheetEngine` records `walrus_autosave_success` and `sui_commit_success` events with blob size, transaction IDs, and chunk expiry timestamps.
+- Integrations can listen for these events and forward them to analytics transports (Datadog, Sentry, etc.).
+- To disable verbose telemetry in development set `VITE_TELEMETRY_ENABLED=false` (default true). Production builds should leave this enabled and configure collectors downstream.
+
+Recommended pipeline:
+
+1. Browser dispatches `telemetry:event`.
+2. Frontend monitoring layer (or service worker) forwards to `/api/telemetry` or directly to your observability backend.
+3. Dashboards/alerts monitor commit success rate and imminent Walrus expirations.
+
+See `docs/README.md` for wiring telemetry exporters and `docs/AGENTS.md` for operational runbooks.

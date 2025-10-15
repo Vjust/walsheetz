@@ -4,6 +4,19 @@ import luckysheetApi from '../../services/luckysheetApi.js'
 import { registerWalSheetzFunctions, WALSHEETZ_FUNCTION_METADATA, WALSHEETZ_FUNCTIONS } from '../../services/formulas/WalSheetzFunctions.js'
 import { isLuckysheetHookInstalled } from '../../services/luckysheet/injectWzIntoSheets.js'
 import { ensureLuckysheetFunctionTree } from '../../services/luckysheet/ensureLuckysheetNesting.js'
+import { useSpreadsheetLifecycle } from '../hooks/useSpreadsheetLifecycle.js'
+
+/**
+ * FEATURE FLAG: Phase 2 Refactor
+ *
+ * Set to true to use new LuckysheetAdapter + useSpreadsheetLifecycle hook.
+ * Set to false to use legacy manual initialization.
+ *
+ * ROLLBACK: If anything breaks, set this to false for instant rollback.
+ *
+ * TODO: Remove this flag and old code path after E2E tests pass consistently.
+ */
+const USE_NEW_LIFECYCLE_HOOK = true
 
 /**
  * Convert WalSheetz metadata to Luckysheet formula format
@@ -139,7 +152,7 @@ export function Spreadsheet() {
   const domEventListenersRef = useRef([])
   const luckysheetReadyRef = useRef(false)
   const lastInitializedDataRef = useRef(null)
-  
+
   const {
     handleCellEdit,
     setCurrentCell,
@@ -149,6 +162,73 @@ export function Spreadsheet() {
     spreadsheetData,
     setLuckysheetReady
   } = useSpreadsheetContext()
+
+  // ============================================================================
+  // NEW PATH: Phase 2 Refactor with LuckysheetAdapter
+  // ============================================================================
+  if (USE_NEW_LIFECYCLE_HOOK) {
+    console.log('🎯 [Spreadsheet] Using NEW lifecycle hook (Phase 2)')
+
+    // Use the new lifecycle hook - this replaces all the manual init logic below
+    const lifecycle = useSpreadsheetLifecycle({
+      spreadsheetData,
+      handleCellEdit,
+      setCurrentCell,
+      handleFormulaChange,
+      clearFormulaPreview,
+      saveToBlockchain,
+      setLuckysheetReady
+    })
+
+    useEffect(() => {
+      // Initialize Luckysheet with new hook
+      lifecycle.initLuckysheet()
+
+      // Cleanup when component unmounts
+      return lifecycle.cleanup
+    }, [spreadsheetData])
+
+    // Keyboard handler still needed
+    useEffect(() => {
+      const handleKeyDown = (event) => {
+        if (window.luckysheet && lifecycle.luckysheetRef.current) {
+          try {
+            // Only handle keyboard shortcuts - don't interfere with normal typing
+            if (event.ctrlKey || event.metaKey) {
+              switch (event.key.toLowerCase()) {
+                case 's':
+                  event.preventDefault()
+                  saveToBlockchain && saveToBlockchain()
+                  return
+                // TODO: Add other keyboard shortcuts if needed
+              }
+            }
+          } catch (error) {
+            console.warn('Error in keyboard handler:', error)
+          }
+        }
+      }
+
+      document.addEventListener('keydown', handleKeyDown)
+      return () => document.removeEventListener('keydown', handleKeyDown)
+    }, [lifecycle.luckysheetRef, saveToBlockchain])
+
+    return (
+      <div className="spreadsheet-wrapper" ref={containerRef}>
+        <div
+          id="luckysheet-container"
+          className="luckysheet-container"
+          tabIndex={0}
+        ></div>
+      </div>
+    )
+  }
+
+  // ============================================================================
+  // OLD PATH: Legacy Manual Initialization (Phase 1)
+  // TODO: Remove this after Phase 2 is verified working
+  // ============================================================================
+  console.log('⚠️  [Spreadsheet] Using LEGACY manual initialization')
 
   useEffect(() => {
     // Handle keyboard events for shortcuts only - let Luckysheet handle cell input naturally

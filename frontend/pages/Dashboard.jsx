@@ -6,7 +6,7 @@ import { SearchBar } from '../components/SearchBar.jsx';
 import { CreateDocumentModal } from '../components/CreateDocumentModal.jsx';
 import { LoadingOverlay } from '../presentation/components/LoadingOverlay.jsx';
 import { logger, LogComponent } from '../utils/Logger.js';
-import IcyBlizzardHero from '../components/effects/IcyBlizzardHero.jsx';
+import UnicornStudioHero from '../presentation/components/UnicornStudioHero.jsx';
 import BlizzardParticles from '../components/effects/BlizzardParticles.jsx';
 import './styles/dashboard.css';
 
@@ -298,31 +298,11 @@ export function Dashboard() {
 
   if (!walletConnected) {
     return (
-      <div className="dashboard">
-        <div className="dashboard-header">
-          <div className="brand-section">
-            <div className="logo-icon ice-glow-animate">
-              <span>🦭</span>
-            </div>
-            <h1>WalSheetz</h1>
-          </div>
-          <div className="header-actions">
-            <button
-              onClick={handleConnectWallet}
-              disabled={connectingWallet}
-              className={`wallet-button primary ${connectingWallet ? 'loading' : ''}`}
-            >
-              {connectingWallet ? '⏳ Connecting...' : '🦭 Connect Wallet'}
-            </button>
-          </div>
-        </div>
-
-        <IcyBlizzardHero
-          onConnectWallet={handleConnectWallet}
-          connectingWallet={connectingWallet}
-          error={error}
-        />
-      </div>
+      <UnicornStudioHero
+        onConnectWallet={handleConnectWallet}
+        connectingWallet={connectingWallet}
+        error={error}
+      />
     );
   }
 

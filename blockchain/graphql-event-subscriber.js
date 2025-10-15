@@ -1,43 +1,9 @@
 // GraphQL event subscriber for checkpoint event fallback
 import { getCurrentConfig } from './config.js';
+import { createLogger } from '../scripts/utils/logger.js';
 
-// Simple logger for GraphQL subscriber
-class GraphQLLogger {
-  constructor() {
-    this.logLevel = process.env.BRIDGE_LOG_LEVEL || 'INFO';
-    this.logLevels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
-  }
-
-  shouldLog(level) {
-    return this.logLevels[level] >= this.logLevels[this.logLevel];
-  }
-
-  debug(message) {
-    if (this.shouldLog('DEBUG')) {
-      console.debug(`🔍 [GraphQLEventSubscriber] ${message}`);
-    }
-  }
-
-  info(message) {
-    if (this.shouldLog('INFO')) {
-      console.info(`ℹ️ [GraphQLEventSubscriber] ${message}`);
-    }
-  }
-
-  warn(message) {
-    if (this.shouldLog('WARN')) {
-      console.warn(`⚠️ [GraphQLEventSubscriber] ${message}`);
-    }
-  }
-
-  error(message) {
-    if (this.shouldLog('ERROR')) {
-      console.error(`❌ [GraphQLEventSubscriber] ${message}`);
-    }
-  }
-}
-
-const gqlLogger = new GraphQLLogger();
+// Create logger for GraphQL subscriber
+const gqlLogger = createLogger('GraphQLEventSubscriber');
 
 export class GraphQLEventSubscriber {
   constructor() {
@@ -348,9 +314,12 @@ export class GraphQLEventSubscriber {
       }
     }
 
-    // Only log if we actually processed new events
+    // Only log if we actually processed new events (throttled to reduce noise)
     if (newEventCount > 0) {
-      gqlLogger.info(`Processed ${newEventCount} new events, checkpoint: ${this.lastCheckpoint}`);
+      gqlLogger.throttleInfo('processed-events', `Processed ${newEventCount} new events, checkpoint: ${this.lastCheckpoint}`, {
+        eventCount: newEventCount,
+        checkpoint: this.lastCheckpoint
+      }, 30000);
     }
   }
 
@@ -409,9 +378,12 @@ export class GraphQLEventSubscriber {
       }
     }
 
-    // Only log if we actually processed new checkpoints
+    // Only log if we actually processed new checkpoints (throttled to reduce noise)
     if (newCheckpointCount > 0) {
-      gqlLogger.debug(`Processed ${newCheckpointCount} new checkpoints, current: ${this.lastCheckpoint}`);
+      gqlLogger.throttleInfo('processed-checkpoints', `Processed ${newCheckpointCount} new checkpoints`, {
+        checkpointCount: newCheckpointCount,
+        currentCheckpoint: this.lastCheckpoint
+      }, 60000); // Log at most every 60s
     }
   }
 
@@ -546,7 +518,7 @@ export class GraphQLEventSubscriber {
    */
   resetBackoffMultiplier() {
     if (this.backoffMultiplier > 1) {
-      console.log('[GraphQLEventSubscriber] Resetting backoff multiplier to normal');
+      gqlLogger.debug('Resetting backoff multiplier to normal');
       this.backoffMultiplier = 1;
     }
   }

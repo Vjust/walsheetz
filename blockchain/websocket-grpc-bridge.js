@@ -1,5 +1,12 @@
 // WebSocket to gRPC bridge for browser-backend communication
 // Enables real-time collaboration without direct gRPC-Web
+//
+// ⚠️ NOTE: This bridge server is NOT USED in the single-user MVP deployment.
+// The single-user MVP uses direct Sui RPC calls instead of the bridge infrastructure.
+// For Phase 2 (multi-user collaboration), this bridge can be restored by:
+// 1. Re-enabling WebSocket imports in frontend services
+// 2. Enabling the /ws proxy in vite.config.js
+// 3. Starting the bridge with: bun run bridge
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
@@ -19,6 +26,9 @@ class BridgeLogger {
     this.startTime = Date.now();
     this.logLevel = process.env.BRIDGE_LOG_LEVEL || 'INFO';
     this.logLevels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, CRITICAL: 4 };
+
+    // Throttle state for high-frequency logs
+    this.throttleState = new Map(); // key -> { lastTime, count }
   }
 
   shouldLog(level) {
@@ -96,6 +106,35 @@ class BridgeLogger {
       return duration;
     }
     return 0;
+  }
+
+  /**
+   * Throttled log - only log if enough time has passed since last log
+   */
+  throttle(key, level, component, action, message, metadata = {}, intervalMs = 30000) {
+    const now = Date.now();
+    const state = this.throttleState.get(key) || { lastTime: 0, count: 0 };
+
+    state.count++;
+
+    if (now - state.lastTime >= intervalMs) {
+      // Time to log again
+      const enrichedMessage = state.count > 1
+        ? `${message} (${state.count - 1} similar events throttled in last ${intervalMs / 1000}s)`
+        : message;
+
+      this.log(level, component, action, enrichedMessage, { ...metadata, throttledCount: state.count });
+
+      // Reset state
+      this.throttleState.set(key, { lastTime: now, count: 0 });
+    } else {
+      // Update count but don't log
+      this.throttleState.set(key, state);
+    }
+  }
+
+  throttleDebug(key, component, action, message, metadata = {}, intervalMs = 30000) {
+    this.throttle(key, 'DEBUG', component, action, message, metadata, intervalMs);
   }
 }
 
@@ -441,15 +480,18 @@ export class WebSocketGrpcBridge extends EventEmitter {
     res.end(JSON.stringify(status));
   }
 
-  // Start metrics collection
+  // Start metrics collection (throttled)
   startMetricsCollection() {
     setInterval(() => {
-      logger.debug('METRICS', 'collection', 'Collecting metrics', {
-        activeConnections: this.clients.size,
-        totalMessages: this.metrics.messages.sent + this.metrics.messages.received,
-        lockedCells: this.collaborationState.lockedCells.size
-      });
-    }, 30000); // Log metrics every 30 seconds
+      // Only log metrics if there's activity or debug is enabled
+      if (this.clients.size > 0 || logger.shouldLog('DEBUG')) {
+        logger.throttle('metrics-collection', 'DEBUG', 'METRICS', 'collection', 'Collecting metrics', {
+          activeConnections: this.clients.size,
+          totalMessages: this.metrics.messages.sent + this.metrics.messages.received,
+          lockedCells: this.collaborationState.lockedCells.size
+        }, 300000); // Log at most every 5 minutes
+      }
+    }, 30000); // Check every 30 seconds, but only log occasionally
   }
 
   // Handle new WebSocket connection
@@ -568,14 +610,14 @@ export class WebSocketGrpcBridge extends EventEmitter {
       });
     });
 
-    // Enhanced ping with logging
+    // Enhanced ping with throttled logging
     const pingInterval = setInterval(() => {
       if (ws.readyState === ws.OPEN) {
         ws.ping();
-        logger.debug('CONNECTION', 'ping_sent', 'Ping sent to client', {
+        logger.throttleDebug(`ping-${clientId}`, 'CONNECTION', 'ping_sent', 'Ping sent to client', {
           clientId: clientId,
           lastActivity: Date.now() - clientInfo.lastActivity
-        });
+        }, 60000); // Log at most every 60s per client
       } else {
         clearInterval(pingInterval);
         logger.debug('CONNECTION', 'ping_stopped', 'Ping interval stopped for disconnected client', {
@@ -585,9 +627,9 @@ export class WebSocketGrpcBridge extends EventEmitter {
     }, 30000);
 
     ws.on('pong', () => {
-      logger.debug('CONNECTION', 'pong_received', 'Pong received from client', {
+      logger.throttleDebug(`pong-${clientId}`, 'CONNECTION', 'pong_received', 'Pong received from client', {
         clientId: clientId
-      });
+      }, 60000); // Log at most every 60s per client
     });
 
     const connectionSetupDuration = logger.endTimer(`connection_${ws}`);

@@ -1,0 +1,475 @@
+/* PoA Certification Modal Styles */
+
+.poa-certification-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.poa-certification-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Header */
+.poa-certification-modal .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.poa-certification-modal .modal-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.poa-certification-modal .close-button {
+  background: none;
+  border: none;
+  font-size: 32px;
+  line-height: 1;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.poa-certification-modal .close-button:hover:not(:disabled) {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.poa-certification-modal .close-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Body */
+.poa-certification-modal .modal-body {
+  padding: 24px;
+}
+
+.poa-certification-modal .blob-info-section {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.poa-certification-modal .info-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.poa-certification-modal .info-row .label {
+  font-weight: 500;
+  color: #6b7280;
+  min-width: 80px;
+}
+
+.poa-certification-modal .info-row .value {
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  color: #111827;
+  background: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Duration Section */
+.poa-certification-modal .duration-section {
+  margin-bottom: 24px;
+}
+
+.poa-certification-modal .duration-section label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.poa-certification-modal .label-text {
+  font-weight: 500;
+  color: #111827;
+}
+
+.poa-certification-modal .label-hint {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.poa-certification-modal .duration-input-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.poa-certification-modal .duration-input {
+  flex: 1;
+  max-width: 120px;
+  padding: 10px 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 16px;
+  transition: border-color 0.2s;
+}
+
+.poa-certification-modal .duration-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.poa-certification-modal .duration-input:disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+}
+
+.poa-certification-modal .duration-unit {
+  font-weight: 500;
+  color: #6b7280;
+}
+
+/* Cost Section */
+.poa-certification-modal .cost-section {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.poa-certification-modal .cost-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e40af;
+  margin-bottom: 8px;
+}
+
+.poa-certification-modal .cost-value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.poa-certification-modal .cost-sui {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1e40af;
+}
+
+.poa-certification-modal .cost-usd {
+  font-size: 14px;
+  color: #3b82f6;
+}
+
+.poa-certification-modal .cost-note {
+  font-size: 12px;
+  color: #6b7280;
+  font-style: italic;
+}
+
+/* Progress Section */
+.poa-certification-modal .progress-section {
+  margin-bottom: 24px;
+}
+
+.poa-certification-modal .progress-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+}
+
+.poa-certification-modal .spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid #e0f2fe;
+  border-top-color: #0ea5e9;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.poa-certification-modal .progress-text {
+  color: #0c4a6e;
+  font-weight: 500;
+}
+
+/* Error Section */
+.poa-certification-modal .error-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.poa-certification-modal .error-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.poa-certification-modal .error-message {
+  color: #991b1b;
+  font-weight: 500;
+}
+
+/* Success Section */
+.poa-certification-modal .success-section {
+  padding: 20px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.poa-certification-modal .success-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.poa-certification-modal .success-message {
+  font-size: 18px;
+  font-weight: 600;
+  color: #14532d;
+  margin-bottom: 16px;
+}
+
+.poa-certification-modal .transaction-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.poa-certification-modal .transaction-info .label {
+  font-weight: 500;
+  color: #166534;
+}
+
+.poa-certification-modal .transaction-link {
+  font-family: 'Courier New', monospace;
+  color: #16a34a;
+  text-decoration: none;
+  border-bottom: 1px dashed #16a34a;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.poa-certification-modal .transaction-link:hover {
+  color: #15803d;
+  border-bottom-color: #15803d;
+}
+
+.poa-certification-modal .success-note {
+  font-size: 14px;
+  color: #166534;
+  font-style: italic;
+}
+
+/* Info Section */
+.poa-certification-modal .info-section {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.poa-certification-modal .info-section h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.poa-certification-modal .info-section p {
+  margin: 0 0 12px;
+  color: #4b5563;
+  line-height: 1.6;
+}
+
+.poa-certification-modal .info-section ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #4b5563;
+}
+
+.poa-certification-modal .info-section li {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+/* Footer */
+.poa-certification-modal .modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.poa-certification-modal .cancel-button,
+.poa-certification-modal .certify-button {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.poa-certification-modal .cancel-button {
+  background: white;
+  border: 1px solid #d1d5db;
+  color: #374151;
+}
+
+.poa-certification-modal .cancel-button:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.poa-certification-modal .certify-button {
+  background: #3b82f6;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.poa-certification-modal .certify-button:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.poa-certification-modal .certify-button:disabled,
+.poa-certification-modal .cancel-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.poa-certification-modal .button-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+  .poa-certification-modal {
+    background: #1f2937;
+    color: #f3f4f6;
+  }
+
+  .poa-certification-modal .modal-header {
+    border-bottom-color: #374151;
+  }
+
+  .poa-certification-modal .modal-header h2 {
+    color: #f3f4f6;
+  }
+
+  .poa-certification-modal .close-button {
+    color: #9ca3af;
+  }
+
+  .poa-certification-modal .close-button:hover:not(:disabled) {
+    background-color: #374151;
+    color: #f3f4f6;
+  }
+
+  .poa-certification-modal .blob-info-section,
+  .poa-certification-modal .info-section {
+    background: #111827;
+  }
+
+  .poa-certification-modal .info-row .value {
+    background: #374151;
+    color: #f3f4f6;
+  }
+
+  .poa-certification-modal .duration-input {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f3f4f6;
+  }
+
+  .poa-certification-modal .modal-footer {
+    border-top-color: #374151;
+  }
+
+  .poa-certification-modal .cancel-button {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f3f4f6;
+  }
+
+  .poa-certification-modal .cancel-button:hover:not(:disabled) {
+    background: #4b5563;
+  }
+}

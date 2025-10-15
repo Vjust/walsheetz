@@ -97,7 +97,8 @@ class WalrusService {
           title: data.title || 'Untitled Spreadsheet',
           createdAt: data.createdAt || Date.now(),
           lastModified: Date.now(),
-          format: 'walsheetz-v1'
+          format: 'walsheetz-v1',
+          chunk: this.buildChunkMetadata(data.metadata?.chunk, options.chunk)
         },
         changes: data.changes || [],
         cells: this.optimizeCellData(data.cells || {}),
@@ -2713,6 +2714,47 @@ class WalrusService {
       console.error('Delta reconstruction failed:', error);
       throw error;
     }
+  }
+
+  getRenewalThresholdDays(options = {}) {
+    const config = getCurrentConfig();
+    const override = options.renewalWarningDays;
+    const defaultWarning = config.storage?.features?.chunk?.renewalWarningDays ||
+      config.walrus?.features?.renewalWarningDays ||
+      7;
+    return Math.max(1, override || defaultWarning);
+  }
+
+  buildChunkMetadata(existingChunk = {}, overrides = {}) {
+    const config = getCurrentConfig();
+    const now = Date.now();
+    const chunkOptions = overrides || {};
+
+    const epochsDefault = chunkOptions.epochs ||
+      existingChunk.epochsPurchased ||
+      config.walrus?.features?.epochsDefault ||
+      50;
+
+    const epochSeconds = config.walrus?.features?.epochSeconds || 60 * 60 * 24 * 2;
+    const epochStart = existingChunk.epochStart || chunkOptions.epochStart || Math.floor(now / 1000 / epochSeconds);
+    const epochEnd = epochStart + epochsDefault;
+
+    const expiryTimestamp = chunkOptions.expiryTimestamp ||
+      existingChunk.expiryTimestamp ||
+      (epochEnd * epochSeconds * 1000);
+
+    return {
+      epochsPurchased: epochsDefault,
+      epochStart,
+      epochEnd,
+      expiryTimestamp,
+      renewalCount: existingChunk.renewalCount || 0,
+      lastRenewedAt: existingChunk.lastRenewedAt || now,
+      renewalWarningDays: this.getRenewalThresholdDays(chunkOptions),
+      purchaseReceipt: chunkOptions.purchaseReceipt || existingChunk.purchaseReceipt || null,
+      walrusPublisher: chunkOptions.publisherUrl || this.config.publisherUrl,
+      walrusBlobId: chunkOptions.blobId || existingChunk.walrusBlobId || null
+    };
   }
 }
 
