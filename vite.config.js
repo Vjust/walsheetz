@@ -166,6 +166,7 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./frontend', import.meta.url)),
       '@blockchain': fileURLToPath(new URL('./blockchain', import.meta.url)),
+      '@scripts': fileURLToPath(new URL('./scripts', import.meta.url)),
       '@sentry/nextjs': fileURLToPath(new URL('./frontend/services/SentryStub.js', import.meta.url))
     }
   },

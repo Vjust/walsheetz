@@ -1,6 +1,6 @@
 // Sui GraphQL Service for Walrus blob and PoA metadata queries
 import { getCurrentConfig } from './config.js';
-import { createLogger } from '../scripts/utils/logger.js';
+import { createLogger } from '@scripts/utils/logger.js';
 import { IGraphQLResponse } from '../frontend/interfaces/graphql/IGraphQLResponse.js';
 
 const logger = createLogger('SuiGraphQLService');
