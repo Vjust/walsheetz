@@ -121,7 +121,7 @@ export function ExploreTundra() {
             <ul className="explore-tundra__feature-list">
               <li>• Decentralized blob storage across distributed network</li>
               <li>• Content-addressed blobs with cryptographic hashes</li>
-              <li>• Automatic gzip compression for spreadsheets >16KB</li>
+              <li>• Automatic gzip compression for spreadsheets &gt;16KB</li>
               <li>• Delta chain optimization (up to 5 deltas before full snapshot)</li>
             </ul>
           </div>

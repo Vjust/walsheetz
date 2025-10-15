@@ -4,7 +4,7 @@ import { browserWalletManager } from '../services/BrowserWalletManager.js';
 import { browserSuiService } from '../services/BrowserSuiService.js';
 import { browserWalrusService } from '../services/BrowserWalrusService.js';
 // Collaboration disabled for single-user MVP
-// import { collaborationService } from '../services/CollaborationService.js';
+import { collaborationService } from '../services/CollaborationService.js';
 import { errorRecoveryService } from '../services/ErrorRecoveryService.js';
 import { progressiveEnhancementService } from '../services/ProgressiveEnhancementService.js';
 import { offlineModeService } from '../services/OfflineModeService.js';
