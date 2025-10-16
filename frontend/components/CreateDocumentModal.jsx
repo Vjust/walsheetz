@@ -300,9 +300,6 @@ export function CreateDocumentModal({ isOpen, onClose, onCreate, blockchainAdapt
             </div>
           </div>
         )}
-
-        {/* Loading Overlay */}
-        {isLoading && <div className="modal-loading-overlay" />}
       </div>
     </div>,
     document.body

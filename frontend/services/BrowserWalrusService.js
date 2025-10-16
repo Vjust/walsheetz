@@ -625,12 +625,18 @@ class BrowserWalrusService {
           }
           
           const error = new Error(`Walrus storage failed: ${response.status} - ${errorText}`);
-          
+          const isWalCoinErr = this.isWalCoinError(errorText);
+
+          if (isWalCoinErr) {
+            console.error(`[BrowserWalrusService:${requestId}] ⚠️ WAL COIN INSUFFICIENCY DETECTED - Publisher out of funds`);
+          }
+
           console.error(`[BrowserWalrusService:${requestId}] Request failed:`, {
             attempt,
             status: response.status,
             statusText: response.statusText,
             errorText,
+            isWalCoinError: isWalCoinErr,
             isRetryable: this.isRetryableError(response.status),
             retryableStatuses: [408, 429, 500, 502, 503, 504],
             duration: requestDuration,
@@ -774,16 +780,26 @@ class BrowserWalrusService {
             });
           }
           
+          // Check for specific error types and provide better messaging
+          const errorMsg = typeof error === 'string' ? error : error.message || 'Unknown error';
+          const isWalCoinError = this.isWalCoinError(errorMsg);
+
+          let userFriendlyMessage = `Blob storage failed after ${attempt} attempts`;
+          if (isWalCoinError) {
+            userFriendlyMessage = '⚠️ Walrus publisher out of WAL coins - Unable to store data. Please try again later or contact support.';
+          }
+
           // Emit failure event for UI
           this.emitOperationEvent({
             type: 'storage_failed',
-            message: `Blob storage failed after ${attempt} attempts`,
+            message: userFriendlyMessage,
             success: false,
             details: {
-              error: typeof error === 'string' ? error : error.message || 'Unknown error',
+              error: errorMsg,
               attempts: attempt,
               requestId,
-              queuedForRetry: !options.isRetry
+              queuedForRetry: !options.isRetry,
+              isWalCoinError: isWalCoinError
             }
           });
 
@@ -964,6 +980,18 @@ class BrowserWalrusService {
   // Helper method to determine if an error is retryable
   isRetryableError(statusCode) {
     return [408, 429, 500, 502, 503, 504].includes(statusCode);
+  }
+
+  // Helper method to detect WAL coin insufficiency errors
+  isWalCoinError(errorText) {
+    if (!errorText) return false;
+    const lowerError = errorText.toLowerCase();
+    return lowerError.includes('wal') &&
+           (lowerError.includes('coin') ||
+            lowerError.includes('balance') ||
+            lowerError.includes('insufficient') ||
+            lowerError.includes('wallet') ||
+            lowerError.includes('insufficient balance'));
   }
 
   // Helper method for delays

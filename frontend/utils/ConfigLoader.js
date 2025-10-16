@@ -342,8 +342,8 @@ class ConfigLoader {
           packageId: '0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7',
           registryObjectId: '0x9a6b94f79762fa608c5f0938d092744a8e5b69852f860eb17afa4ab11e24fe25',
           walrus: {
-            aggregatorUrl: 'https://walrus-testnet-aggregator.nodes.guru:443',
-            publisherUrl: 'https://walrus-testnet-publisher.nodes.guru:443',
+            aggregatorUrl: 'https://aggregator.walrus-testnet.walrus.space',
+            publisherUrl: 'https://publisher.walrus-testnet.walrus.space',
             maxRetries: 3,
             retryDelay: 1000
           }
