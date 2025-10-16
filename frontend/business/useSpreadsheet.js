@@ -395,6 +395,12 @@ export function useSpreadsheet() {
   useEffect(() => {
     browserWalletManager.setWalletConnection(walletConnection);
 
+    // Skip operations during auto-connect phase to prevent race conditions
+    if (walletConnection.isAutoConnecting) {
+      console.log('[useSpreadsheet] Wallet auto-connecting, skipping initialization...');
+      return;
+    }
+
     if (walletConnection.isConnected && walletConnection.address) {
       // Update session with current wallet address
       if (storageRef.current) {
@@ -429,7 +435,7 @@ export function useSpreadsheet() {
       sessionRestorationAttemptedRef.current = false;
       autoDiscoveryAttemptedRef.current = false;
     }
-  }, [walletConnection.isConnected, walletConnection.address, autoSaveEnabled, autoDiscoverSpreadsheets, checkSessionRestoration, startAutoSaveLoop, stopAutoSaveLoop]);
+  }, [walletConnection.isConnected, walletConnection.isAutoConnecting, walletConnection.address, autoSaveEnabled, autoDiscoverSpreadsheets, checkSessionRestoration, startAutoSaveLoop, stopAutoSaveLoop]);
 
   // Initialize services
   useEffect(() => {
@@ -1504,6 +1510,7 @@ export function useSpreadsheet() {
     saveStatus,
     loadingState,
     walletConnected: walletConnection.isConnected,
+    walletAutoConnecting: walletConnection.isAutoConnecting,
     walletAddress: walletConnection.address,
     walletBalance: walletConnection.balance,
     walletNetwork: 'testnet', // Currently hardcoded to testnet

@@ -27,6 +27,7 @@ export function Dashboard() {
 
   const {
     walletConnected,
+    walletAutoConnecting,
     walletAddress,
     connectWallet,
     disconnectWallet,
@@ -42,13 +43,16 @@ export function Dashboard() {
 
   // Load spreadsheets when component mounts or wallet connects
   useEffect(() => {
-    if (walletConnected) {
+    // Only load spreadsheets when wallet is fully connected and auto-connect is complete
+    if (walletConnected && !walletAutoConnecting) {
+      logger.info(LogComponent.UI_COMPONENT, 'dashboard_load_trigger', 'Loading spreadsheets after wallet connection');
       loadSpreadsheets();
-    } else {
+    } else if (!walletConnected && !walletAutoConnecting) {
+      // Clear spreadsheets only when definitively not connected (not during auto-connect)
       setSpreadsheets([]);
       setFilteredSpreadsheets([]);
     }
-  }, [walletConnected]);
+  }, [walletConnected, walletAutoConnecting]);
 
   // Update recent spreadsheets when spreadsheets change
   useEffect(() => {
@@ -296,6 +300,25 @@ export function Dashboard() {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
+  // Show loading state during auto-connect
+  if (walletAutoConnecting) {
+    return (
+      <div className="dashboard-loading-screen">
+        <div className="dashboard-loading-content">
+          <div className="logo-icon ice-glow-animate" style={{ fontSize: '64px', marginBottom: '24px' }}>
+            <span>🦭</span>
+          </div>
+          <h2 style={{ color: '#B3E5FC', marginBottom: '16px' }}>Connecting wallet...</h2>
+          <div className="spinner" style={{ margin: '0 auto' }}></div>
+          <p style={{ color: '#999', marginTop: '16px', fontSize: '14px' }}>
+            Please wait while we restore your session
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show welcome screen if wallet is not connected (and auto-connect has completed)
   if (!walletConnected) {
     return (
       <UnicornStudioHero

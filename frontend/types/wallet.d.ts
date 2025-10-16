@@ -49,6 +49,7 @@ export interface UseWalletConnection {
   // Connection state
   isConnected: boolean;
   isConnecting: boolean;
+  isAutoConnecting: boolean;
   connectionError: string | null;
 
   // Account info

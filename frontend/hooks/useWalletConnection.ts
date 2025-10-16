@@ -32,6 +32,7 @@ export function useWalletConnection(): UseWalletConnection {
   const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
 
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
+  const [isAutoConnecting, setIsAutoConnecting] = useState<boolean>(true);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [balance, setBalance] = useState<WalletBalance | null>(null);
   const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
@@ -39,6 +40,25 @@ export function useWalletConnection(): UseWalletConnection {
   // Refs for connection timeout tracking (must be at hook top-level)
   const isConnectingRef = useRef<boolean>(false);
   const timeoutIdRef = useRef<NodeJS.Timeout | null>(null);
+  const autoConnectCompletedRef = useRef<boolean>(false);
+
+  // Track auto-connect completion
+  useEffect(() => {
+    // Auto-connect happens on mount. We need to detect when it completes.
+    // If we have wallets available and haven't completed auto-connect yet, set a small delay
+    if (!autoConnectCompletedRef.current) {
+      const timer = setTimeout(() => {
+        console.log('[useWalletConnection] Auto-connect phase completed', {
+          hasAccount: !!currentAccount?.address,
+          walletsCount: wallets.length
+        });
+        autoConnectCompletedRef.current = true;
+        setIsAutoConnecting(false);
+      }, 1500); // Give dapp-kit time to auto-connect
+
+      return () => clearTimeout(timer);
+    }
+  }, [wallets.length]);
 
   // Get wallet balance when connected
   useEffect(() => {
@@ -292,6 +312,7 @@ export function useWalletConnection(): UseWalletConnection {
     // Connection state
     isConnected,
     isConnecting,
+    isAutoConnecting,
     connectionError,
 
     // Account info
