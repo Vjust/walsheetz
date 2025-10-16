@@ -972,7 +972,8 @@ class BrowserWalrusService {
   }
 
   /**
-   * Store data with metadata wrapper (compatibility method for SpreadsheetCreationService)
+   * Store data using Walrus Quilt format (batched/optimized storage)
+   * Quilt optimizes storage costs by batching multiple small changes together
    * @param {string|object} data - The data to store (can be stringified JSON or object)
    * @param {object} metadata - Metadata about the data (title, type, version, template, etc.)
    * @param {object} options - Additional options for storage
@@ -994,20 +995,42 @@ class BrowserWalrusService {
         }
       }
 
-      // Merge metadata into the data object
-      const dataWithMetadata = {
+      // Structure data in Quilt format for optimized storage
+      // Quilt batches small files/changes together to reduce costs
+      const quiltData = {
         ...parsedData,
         metadata: {
           ...(parsedData.metadata || {}),
           ...metadata,
-          storedAt: Date.now()
+          storedAt: Date.now(),
+          contentType: 'application/octet-stream',
+          format: metadata.format || 'walsheetz-v1'
+        },
+        quilt: {
+          format: metadata.format || 'walsheetz-quilt-v1',
+          compression: 'binary-json',
+          tags: [
+            'walsheetz',
+            metadata.type || 'spreadsheet',
+            ...(metadata.template ? [`template:${metadata.template}`] : []),
+            ...(parsedData.spreadsheetId ? [`id:${parsedData.spreadsheetId}`] : []),
+            ...(metadata.version ? [`version:${metadata.version}`] : [])
+          ]
         }
       }
 
-      // Call the existing storeBlob method
-      const result = await this.storeBlob(dataWithMetadata, options)
+      console.log('[BrowserWalrusService] Storing with Quilt format:', {
+        hasChanges: !!quiltData.changes,
+        changeCount: quiltData.changes?.length || 0,
+        format: quiltData.quilt.format,
+        spreadsheetId: quiltData.spreadsheetId,
+        tags: quiltData.quilt.tags
+      })
 
-      // Return result in expected format
+      // Call the existing storeBlob method with quilt-formatted data
+      const result = await this.storeBlob(quiltData, options)
+
+      // Return result in expected format with quilt metadata
       return {
         success: result.success,
         blobId: result.blobId,
@@ -1016,7 +1039,11 @@ class BrowserWalrusService {
         endEpoch: result.endEpoch,
         suiObjectId: result.suiObjectId,
         status: result.status,
-        url: result.url
+        url: result.url,
+        metadata: {
+          ...quiltData.metadata,
+          quilt: quiltData.quilt
+        }
       }
     } catch (error) {
       console.error('[BrowserWalrusService] storeWithQuilt failed:', error)
