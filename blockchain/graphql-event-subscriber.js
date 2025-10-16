@@ -1,6 +1,6 @@
 // GraphQL event subscriber for checkpoint event fallback
 import { getCurrentConfig } from './config.js';
-import { createLogger } from '@scripts/utils/logger.js';
+import { createLogger } from './utils/logger.js';
 
 // Create logger for GraphQL subscriber
 const gqlLogger = createLogger('GraphQLEventSubscriber');
