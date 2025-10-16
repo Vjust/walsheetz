@@ -1,11 +1,34 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { BrowserWalrusService } from '../../frontend/services/BrowserWalrusService.js';
+
+// Mock the dependencies
+vi.mock('../../frontend/utils/ConfigLoader.js', () => ({
+  configLoader: {
+    getConfig: vi.fn()
+  }
+}));
+
+vi.mock('../../blockchain/config.js', () => ({
+  getCurrentConfig: () => ({
+    walrus: {
+      publisherUrl: 'http://localhost:8080',
+      aggregatorUrl: 'http://localhost:9000',
+      features: {}
+    }
+  })
+}));
 
 describe('BrowserWalrusService', () => {
   let service;
   let mockFetch;
+  let originalNodeEnv;
 
   beforeEach(() => {
+    // Save original NODE_ENV
+    originalNodeEnv = process.env.NODE_ENV;
+    // Override NODE_ENV to not be 'test' for connect tests
+    process.env.NODE_ENV = 'vitest-unit';
+
     // Mock global fetch
     mockFetch = vi.fn();
     global.fetch = mockFetch;
@@ -18,8 +41,20 @@ describe('BrowserWalrusService', () => {
     service = new BrowserWalrusService();
   });
 
+  afterEach(() => {
+    // Restore NODE_ENV
+    process.env.NODE_ENV = originalNodeEnv;
+    vi.clearAllMocks();
+  });
+
   describe('connect', () => {
     it('should return true when connection is successful', async () => {
+      // Mock configLoader.getConfig()
+      const { configLoader } = await import('../../frontend/utils/ConfigLoader.js');
+      configLoader.getConfig.mockResolvedValueOnce({
+        resolveHealthyServiceUrl: vi.fn().mockResolvedValue('http://localhost:8080')
+      });
+
       // Mock successful health check response
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -40,6 +75,12 @@ describe('BrowserWalrusService', () => {
     });
 
     it('should handle connection failure gracefully', async () => {
+      // Mock configLoader.getConfig()
+      const { configLoader } = await import('../../frontend/utils/ConfigLoader.js');
+      configLoader.getConfig.mockResolvedValueOnce({
+        resolveHealthyServiceUrl: vi.fn().mockResolvedValue('http://localhost:8080')
+      });
+
       // Mock failed fetch
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
@@ -49,6 +90,12 @@ describe('BrowserWalrusService', () => {
     });
 
     it('should handle non-200 response gracefully', async () => {
+      // Mock configLoader.getConfig()
+      const { configLoader } = await import('../../frontend/utils/ConfigLoader.js');
+      configLoader.getConfig.mockResolvedValueOnce({
+        resolveHealthyServiceUrl: vi.fn().mockResolvedValue('http://localhost:8080')
+      });
+
       // Mock non-OK response
       mockFetch.mockResolvedValueOnce({
         ok: false,
@@ -62,7 +109,13 @@ describe('BrowserWalrusService', () => {
     });
 
     it('should emit operation events during connection', async () => {
-      const eventSpy = vi.spyOn(service, 'emit');
+      // Mock configLoader.getConfig()
+      const { configLoader } = await import('../../frontend/utils/ConfigLoader.js');
+      configLoader.getConfig.mockResolvedValueOnce({
+        resolveHealthyServiceUrl: vi.fn().mockResolvedValue('http://localhost:8080')
+      });
+
+      const eventSpy = vi.spyOn(service, 'emitOperationEvent');
 
       mockFetch.mockResolvedValueOnce({
         ok: true,

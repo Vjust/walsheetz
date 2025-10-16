@@ -7,6 +7,9 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./tests/setup.js'],
 
+    // Exclude E2E tests (they use Playwright instead of vitest)
+    exclude: ['**/node_modules/**', '**/dist/**', '**/tests/e2e/**'],
+
     // Enhanced logging and reporting
     reporters: process.env.CI ? ['verbose', 'json'] : ['verbose'],
     outputFile: {
@@ -56,7 +59,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./frontend', import.meta.url)),
-      '@blockchain': fileURLToPath(new URL('./blockchain', import.meta.url))
+      '@blockchain': fileURLToPath(new URL('./blockchain', import.meta.url)),
+      '@scripts': fileURLToPath(new URL('./scripts', import.meta.url))
     }
   },
   define: {

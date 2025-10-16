@@ -6,6 +6,13 @@ vi.mock('../../blockchain/config.js', () => ({
     walrus: {
       publisherUrl: 'http://localhost:8080',
       aggregatorUrl: 'http://localhost:9000'
+    },
+    storage: {
+      features: {
+        batchPersistence: {
+          enabled: false
+        }
+      }
     }
   })
 }));
@@ -37,18 +44,22 @@ describe('WalrusService', () => {
   beforeEach(async () => {
     // Mock global fetch
     mockFetch = vi.fn();
-    global.fetch = mockFetch;
-    global.crypto = {
+    vi.stubGlobal('fetch', mockFetch);
+
+    // Mock crypto using vi.stubGlobal
+    vi.stubGlobal('crypto', {
       subtle: {
         digest: vi.fn().mockResolvedValue(new ArrayBuffer(32))
       }
-    };
-    global.Blob = class MockBlob {
+    });
+
+    // Mock Blob
+    vi.stubGlobal('Blob', class MockBlob {
       constructor(data, options) {
         this.data = data;
         this.type = options?.type || 'application/octet-stream';
       }
-    };
+    });
 
     // Mock console methods
     vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -81,7 +92,10 @@ describe('WalrusService', () => {
           newlyCreated: {
             blobObject: {
               id: 'test-blob-id',
-              storedEpoch: 123
+              blobId: 'test-blob-id-123',
+              storage: {
+                endEpoch: 173
+              }
             }
           }
         })
@@ -97,7 +111,7 @@ describe('WalrusService', () => {
 
       // Verify the method returns successfully
       expect(result).toHaveProperty('success', true);
-      expect(result).toHaveProperty('blobId', 'test-blob-id');
+      expect(result).toHaveProperty('blobId', 'test-blob-id-123');
     });
 
     it('should handle encoding errors gracefully', async () => {
@@ -107,11 +121,8 @@ describe('WalrusService', () => {
       vi.spyOn(service, 'encodeSpreadsheetData')
         .mockRejectedValue(new Error('Encoding failed'));
 
-      const result = await service.storeWithQuilt(testData);
-
-      // Should handle the error and return failure
-      expect(result).toHaveProperty('success', false);
-      expect(result).toHaveProperty('error');
+      // Should throw an error with meaningful message
+      await expect(service.storeWithQuilt(testData)).rejects.toThrow('Encoding failed');
     });
 
     it('should create blob with correct binary data', async () => {
@@ -132,7 +143,10 @@ describe('WalrusService', () => {
           newlyCreated: {
             blobObject: {
               id: 'test-blob-id',
-              storedEpoch: 123
+              blobId: 'test-blob-id-123',
+              storage: {
+                endEpoch: 173
+              }
             }
           }
         })

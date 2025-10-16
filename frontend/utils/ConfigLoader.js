@@ -331,8 +331,8 @@ class ConfigLoader {
   // Fallback config for when main config fails
   _getFallbackConfig() {
     console.log('[ConfigLoader] 🚨 Using fallback config');
-    
-    return {
+
+    const fallbackConfig = {
       version: '1.0.0-fallback',
       timestamp: new Date().toISOString(),
       currentNetwork: 'testnet',
@@ -364,13 +364,13 @@ class ConfigLoader {
       metadata: {
         appName: 'WalSheetz',
         appVersion: '1.0.0-fallback'
-      },
-      // Add runtime methods to fallback too
-      getCurrentNetwork: function() { return this.networks[this.currentNetwork]; },
-      getFeature: function(path, def) { return def; },
-      setFeature: function() {},
-      getServiceUrl: function() { return ''; }
+      }
     };
+
+    // Add all runtime methods to fallback config
+    this._addRuntimeMethods(fallbackConfig);
+
+    return fallbackConfig;
   }
 
   // Validate network connectivity and package existence

@@ -17,6 +17,17 @@ export default defineConfig({
   publicDir: 'public',
   plugins: [
     react(),
+    // Custom alias resolver for scripts directory
+    {
+      name: 'resolve-scripts-alias',
+      resolveId(source) {
+        if (source.startsWith('@scripts/')) {
+          const scriptPath = source.replace('@scripts/', './scripts/');
+          return this.resolve(scriptPath, undefined, { skipSelf: true });
+        }
+        return null;
+      }
+    },
     // Production build guard - prevent test mode in production
     {
       name: 'test-mode-guard',
@@ -61,6 +72,7 @@ export default defineConfig({
       allow: [
         fileURLToPath(new URL('./frontend', import.meta.url)),
         fileURLToPath(new URL('./blockchain', import.meta.url)),
+        fileURLToPath(new URL('./scripts', import.meta.url)),
         fileURLToPath(new URL('.', import.meta.url))
       ]
     },
@@ -182,6 +194,12 @@ export default defineConfig({
   build: {
     commonjsOptions: {
       include: [/node_modules/]
+    },
+    rollupOptions: {
+      external: [],
+      output: {
+        manualChunks: undefined
+      }
     }
   },
   ssr: {
