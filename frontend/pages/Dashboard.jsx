@@ -38,7 +38,10 @@ export function Dashboard() {
     makeSpreadsheetPrivate,
     transferOwnership,
     pruneOldVersions,
-    deleteSpreadsheet
+    deleteSpreadsheet,
+    blockchainAdapter,
+    storageAdapter,
+    spreadsheetEngine
   } = useSpreadsheetContext();
 
   // Load spreadsheets when component mounts or wallet connects
@@ -510,6 +513,9 @@ export function Dashboard() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onCreate={handleCreateNew}
+        blockchainAdapter={blockchainAdapter}
+        storageAdapter={storageAdapter}
+        spreadsheetEngine={spreadsheetEngine}
       />
 
       {/* Loading Overlay for operations */}

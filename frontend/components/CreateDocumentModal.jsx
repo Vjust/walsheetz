@@ -4,7 +4,7 @@ import { SpreadsheetCreationService } from '../services/SpreadsheetCreationServi
 import { ProgressIndicator } from './ProgressIndicator.jsx';
 import './styles/create-document-modal.css';
 
-export function CreateDocumentModal({ isOpen, onClose, onCreate }) {
+export function CreateDocumentModal({ isOpen, onClose, onCreate, blockchainAdapter, storageAdapter, spreadsheetEngine }) {
   const [title, setTitle] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState('blank');
@@ -87,7 +87,7 @@ export function CreateDocumentModal({ isOpen, onClose, onCreate }) {
     setError(null);
 
     try {
-      const creationService = new SpreadsheetCreationService();
+      const creationService = new SpreadsheetCreationService(blockchainAdapter, storageAdapter, spreadsheetEngine);
 
       // Create creation request with template support
       const creationRequest = {

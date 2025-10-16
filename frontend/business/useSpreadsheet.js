@@ -1573,6 +1573,10 @@ export function useSpreadsheet() {
     getCurrentSpreadsheetId,
     // Walrus epoch management
     getWalrusEpochPreference,
-    setWalrusEpochPreference
+    setWalrusEpochPreference,
+    // Service adapters (for advanced components like SpreadsheetCreationService)
+    blockchainAdapter: blockchainRef.current,
+    storageAdapter: storageRef.current,
+    spreadsheetEngine: engineRef.current
   };
 }
