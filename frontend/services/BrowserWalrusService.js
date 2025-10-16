@@ -971,6 +971,62 @@ class BrowserWalrusService {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
+  /**
+   * Store data with metadata wrapper (compatibility method for SpreadsheetCreationService)
+   * @param {string|object} data - The data to store (can be stringified JSON or object)
+   * @param {object} metadata - Metadata about the data (title, type, version, template, etc.)
+   * @param {object} options - Additional options for storage
+   * @returns {Promise<object>} Result with success, blobId, size, error
+   */
+  async storeWithQuilt(data, metadata = {}, options = {}) {
+    try {
+      // Parse data if it's a string
+      let parsedData = data
+      if (typeof data === 'string') {
+        try {
+          parsedData = JSON.parse(data)
+        } catch (parseError) {
+          console.error('[BrowserWalrusService] Failed to parse data string:', parseError)
+          return {
+            success: false,
+            error: `Failed to parse data: ${parseError.message}`
+          }
+        }
+      }
+
+      // Merge metadata into the data object
+      const dataWithMetadata = {
+        ...parsedData,
+        metadata: {
+          ...(parsedData.metadata || {}),
+          ...metadata,
+          storedAt: Date.now()
+        }
+      }
+
+      // Call the existing storeBlob method
+      const result = await this.storeBlob(dataWithMetadata, options)
+
+      // Return result in expected format
+      return {
+        success: result.success,
+        blobId: result.blobId,
+        size: result.size,
+        error: result.error,
+        endEpoch: result.endEpoch,
+        suiObjectId: result.suiObjectId,
+        status: result.status,
+        url: result.url
+      }
+    } catch (error) {
+      console.error('[BrowserWalrusService] storeWithQuilt failed:', error)
+      return {
+        success: false,
+        error: error.message || 'Unknown error during storage'
+      }
+    }
+  }
+
   // Retrieve blob from Walrus using HTTP API with content integrity verification
   async retrieveBlob(blobId, expectedHash = null, options = {}) {
     const { normalizeToUI = true } = options || {};
