@@ -95,7 +95,8 @@ class BrowserWalrusService {
       this.sdkClient = null;
     }
 
-    console.log('[BrowserWalrusService] Initialized with testnet endpoints:', {
+    const currentNetwork = config.environment || 'testnet';
+    console.log(`[BrowserWalrusService] Initialized with ${currentNetwork} endpoints:`, {
       publisherUrl: this.publisherUrl,
       aggregatorUrl: this.aggregatorUrl,
       batchingEnabled: true,
@@ -104,6 +105,52 @@ class BrowserWalrusService {
       maxRetryQueueSize: this.maxRetryQueueSize,
       sdkEnabled: !!this.sdkClient
     });
+
+    // Listen for network changes and update endpoints dynamically
+    if (typeof window !== 'undefined') {
+      window.addEventListener('network-changed', (event) => {
+        const newNetwork = event.detail.network;
+        console.log(`[BrowserWalrusService] Network changed to: ${newNetwork}, updating endpoints...`);
+        this._updateEndpointsForNetwork(newNetwork);
+      });
+    }
+  }
+
+  /**
+   * Update endpoints when network changes (e.g., testnet to mainnet)
+   * @private
+   */
+  _updateEndpointsForNetwork(network) {
+    const config = getCurrentConfig();
+    const oldPublisher = this.publisherUrl;
+    const oldAggregator = this.aggregatorUrl;
+
+    this.publisherUrl = config.walrus.publisherUrl;
+    this.aggregatorUrl = config.walrus.aggregatorUrl;
+
+    console.log('[BrowserWalrusService] Endpoints updated:', {
+      network,
+      oldPublisher,
+      newPublisher: this.publisherUrl,
+      oldAggregator,
+      newAggregator: this.aggregatorUrl
+    });
+
+    // Clear any cached data that might be network-specific
+    this.pendingRequests.clear();
+    this.isConnected = false;
+
+    // Reset health status to reflect network change
+    this.healthStatus = {
+      lastCheck: null,
+      isHealthy: false,
+      publisherAvailable: false,
+      aggregatorAvailable: false,
+      lastError: null,
+      checkInProgress: false,
+      consecutiveFailures: 0,
+      lastSuccessfulOperation: null
+    };
   }
 
   // Connect to Walrus network (test connectivity)
