@@ -6,7 +6,6 @@ import { SpreadsheetProvider } from './components/SpreadsheetProvider.jsx'
 import { ErrorBoundary } from './components/ErrorBoundary.jsx'
 import { WalrusStatus } from './components/WalrusStatus.jsx'
 import { NetworkSelector, NetworkConfirmDialog } from './components/NetworkSelector.jsx'
-import { NetworkBanner } from './components/NetworkBanner.jsx'
 import { NetworkMismatchWarning } from './components/NetworkMismatchWarning.jsx'
 import RateLimiterStatus from '../components/RateLimiterStatus.jsx'
 import { TestModeBanner } from './components/TestModeBanner.jsx'
@@ -54,7 +53,6 @@ function App() {
 
                     {/* Global components */}
                     <NetworkSelector position="top-left" />
-                    <NetworkBanner />
                     <NetworkMismatchWarning />
                     <NetworkConfirmDialog />
                     <TestModeBanner />
