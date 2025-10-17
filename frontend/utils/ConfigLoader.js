@@ -132,7 +132,7 @@ class ConfigLoader {
       }
 
       // Check localStorage
-      const storedNetwork = localStorage.getItem('walSheetz_network');
+      const storedNetwork = localStorage.getItem('walsheetz_network');
       if (storedNetwork && config.networks[storedNetwork]) {
         console.log(`[ConfigLoader] 💾 Network from storage: ${storedNetwork}`);
         return storedNetwork;
@@ -179,7 +179,7 @@ class ConfigLoader {
 
       // Only persist to localStorage in browser environment
       if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-        localStorage.setItem('walSheetz_network', networkName);
+        localStorage.setItem('walsheetz_network', networkName);
       }
 
       // Clear caches when switching networks

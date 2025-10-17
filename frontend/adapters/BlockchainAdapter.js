@@ -637,6 +637,30 @@ export class BlockchainAdapter extends IBlockchainService {
     return this.walletManager.getWalletInfo();
   }
 
+  /**
+   * Get wallet balance in SUI
+   * @returns {Promise<number>} Balance in SUI (not MIST)
+   * @throws {Error} If wallet is not connected
+   */
+  async getWalletBalance() {
+    if (!this.isWalletConnected()) {
+      throw new Error('Wallet not connected');
+    }
+
+    const walletInfo = this.walletManager.getWalletInfo();
+    const address = walletInfo.address;
+
+    try {
+      const balanceData = await this.suiService.getBalance(address);
+      const balanceMIST = parseInt(balanceData.totalBalance || '0');
+      const balanceSUI = balanceMIST / 1_000_000_000; // Convert MIST to SUI
+
+      return balanceSUI;
+    } catch (error) {
+      throw new Error(`Failed to get wallet balance: ${error.message}`);
+    }
+  }
+
   generateVersion() {
     return `v${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
@@ -2279,12 +2303,22 @@ export class BlockchainAdapter extends IBlockchainService {
         versionCompatibility = await this.suiService.validateSpreadsheetVersion(spreadsheetId);
 
         if (!versionCompatibility.compatible) {
-          logger.warn(LogComponent.BLOCKCHAIN_ADAPTER, 'version_mismatch', 'Spreadsheet version mismatch detected', {
-            spreadsheetId,
-            spreadsheetVersion: versionCompatibility.spreadsheetVersion,
-            moduleVersion: versionCompatibility.moduleVersion,
-            needsMigration: versionCompatibility.needsMigration
-          });
+          // For legacy spreadsheets (v0), this is expected behavior - log at info level
+          const isLegacySpreadsheet = versionCompatibility.spreadsheetVersion === 0 && versionCompatibility.moduleVersion === 1;
+          const logLevel = isLegacySpreadsheet ? 'info' : 'warn';
+
+          logger[logLevel](LogComponent.BLOCKCHAIN_ADAPTER, 'version_mismatch',
+            isLegacySpreadsheet
+              ? 'Loading legacy spreadsheet (version 0) - this is expected for older data'
+              : 'Spreadsheet version mismatch detected',
+            {
+              spreadsheetId,
+              spreadsheetVersion: versionCompatibility.spreadsheetVersion,
+              moduleVersion: versionCompatibility.moduleVersion,
+              needsMigration: versionCompatibility.needsMigration,
+              isLegacy: isLegacySpreadsheet
+            }
+          );
         }
       } catch (versionError) {
         logger.warn(LogComponent.BLOCKCHAIN_ADAPTER, 'version_check_failed', 'Failed to check version compatibility', {
