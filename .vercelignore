@@ -15,7 +15,6 @@ docker-compose*
 .eslintrc*
 .prettierrc*
 tsconfig.json
-vite.config.js
 vitest.config.ts
 playwright.config.ts
 .github

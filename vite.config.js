@@ -181,7 +181,9 @@ export default defineConfig({
       '@blockchain': fileURLToPath(new URL('./blockchain', import.meta.url)),
       '@scripts': fileURLToPath(new URL('./scripts', import.meta.url)),
       '@sentry/nextjs': fileURLToPath(new URL('./frontend/services/SentryStub.js', import.meta.url))
-    }
+    },
+    // Ensure .js extensions are resolved properly
+    extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json']
   },
   define: {
     global: 'globalThis',
@@ -201,7 +203,10 @@ export default defineConfig({
       output: {
         manualChunks: undefined
       }
-    }
+    },
+    // Ensure blockchain directory is accessible during build
+    outDir: 'dist',
+    emptyOutDir: true
   },
   ssr: {
     noExternal: ['@sentry/nextjs']
