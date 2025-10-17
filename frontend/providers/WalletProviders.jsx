@@ -7,6 +7,7 @@ import {
 import { getFullnodeUrl } from '@mysten/sui/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@mysten/dapp-kit/dist/index.css';
+import { useNetwork } from './NetworkProvider.jsx';
 
 // Create a query client for React Query
 const queryClient = new QueryClient({
@@ -32,8 +33,8 @@ const { networkConfig } = createNetworkConfig({
   mainnet: { 
     url: getFullnodeUrl('mainnet'),
     variables: {
-      packageId: null, // To be deployed
-      registryObjectId: null, // To be created
+      packageId: '0x991454976a4ef8535ed3572bb1c500dcd565855d49a51f1fadc7f70a316c9631',
+      registryObjectId: '0x66f68bfb639dbc7f24519bcdbbfdb376057d87c6d508ea7a8d67746a11721ca5',
     }
   },
   devnet: { 
@@ -111,10 +112,12 @@ const walletConfig = {
   }
 };
 
-export function WalletProviders({ children, defaultNetwork = 'testnet' }) {
+export function WalletProviders({ children }) {
+  const { network } = useNetwork();
+  
   return (
     <QueryClientProvider client={queryClient}>
-      <SuiClientProvider networks={networkConfig} defaultNetwork={defaultNetwork}>
+      <SuiClientProvider networks={networkConfig} defaultNetwork={network}>
         <WalletProvider {...walletConfig}>
           {children}
         </WalletProvider>

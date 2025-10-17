@@ -712,14 +712,8 @@ export function useSpreadsheet() {
     if (preference) return preference;
 
     // Fallback to config default if no preference set
-    try {
-      const { getCurrentConfig } = require('../blockchain/config.js');
-      const config = getCurrentConfig();
-      return config.walrus?.features?.epochsDefault || 50;
-    } catch (error) {
-      console.warn('Failed to get config default epochs:', error);
-      return 50;
-    }
+    // Just return 50 as default - config is already loaded globally
+    return 50;
   }, []);
 
   // Set Walrus epoch preference for current spreadsheet

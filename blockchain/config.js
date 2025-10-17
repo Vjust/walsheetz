@@ -397,13 +397,23 @@ export const config = {
     }
   },
 
-  // Current environment
-  environment: 'testnet' // Change to 'mainnet' for production
+  // Current environment - defaults to testnet, can be overridden dynamically
+  environment: 'testnet' // Default environment
+};
+
+// Helper to get current network from localStorage (browser) or config (Node)
+const getCurrentNetwork = () => {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    // Browser environment - read from localStorage
+    return localStorage.getItem('walsheetz_network') || config.environment;
+  }
+  // Node.js environment - use config or env variable
+  return (typeof process !== 'undefined' && process.env && process.env.NETWORK) || config.environment;
 };
 
 // Helper functions
 export const getCurrentConfig = () => {
-  const env = config.environment;
+  const env = getCurrentNetwork();
   return {
     sui: config.sui[env],
     walrus: config.walrus[env],

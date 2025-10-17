@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { NetworkBadge } from '../presentation/components/NetworkBadge.jsx';
+import { useNetwork } from '../providers/NetworkProvider.jsx';
 import './styles/document-card.css';
 
 export function DocumentCard({
@@ -11,7 +13,8 @@ export function DocumentCard({
   onMakePrivate,
   onTransfer,
   onPrune,
-  onDelete
+  onDelete,
+  onMigrate
 }) {
   const [showManageMenu, setShowManageMenu] = useState(false);
   const [showRenameDialog, setShowRenameDialog] = useState(false);
@@ -21,6 +24,8 @@ export function DocumentCard({
   const [transferAddress, setTransferAddress] = useState('');
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const { network, isTestnet, isMainnet } = useNetwork();
 
   const formatDate = (timestamp) => {
     const date = new Date(timestamp);
@@ -135,7 +140,7 @@ export function DocumentCard({
 
   const cardContent = (
     <div
-      className={`document-card ${compact ? 'compact' : ''} ${isLoading ? 'loading' : ''}`}
+      className={`document-card ${compact ? 'compact' : ''} ${isLoading ? 'loading' : ''} ${showManageMenu ? 'menu-open' : ''}`}
       onClick={handleOpen}
     >
       <div className="card-header">
@@ -206,6 +211,19 @@ export function DocumentCard({
           <button onClick={handlePrune}>
             🗑️ Clean Old Versions
           </button>
+
+          {/* Show migrate button when on testnet (includes legacy spreadsheets without network metadata) */}
+          {isTestnet && onMigrate && (
+            <button 
+              className="migrate-button"
+              onClick={() => {
+                onMigrate(spreadsheet);
+                setShowManageMenu(false);
+              }}
+            >
+              🚀 Migrate to Mainnet
+            </button>
+          )}
 
           <button
             className="delete-button"

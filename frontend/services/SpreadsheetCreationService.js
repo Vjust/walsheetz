@@ -275,6 +275,11 @@ export class SpreadsheetCreationService {
    */
   async prepareSpreadsheetData(creation) {
     const templateData = this.getTemplateData(creation.template);
+    
+    // Get current network
+    const { getCurrentConfig } = await import('@blockchain/config.js');
+    const config = getCurrentConfig();
+    const network = config.environment;
 
     const data = {
       version: `v${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -282,10 +287,13 @@ export class SpreadsheetCreationService {
       savedAt: Date.now(),
       title: creation.title,
       template: creation.template,
+      network: network, // Track which network this spreadsheet was created on
       cells: templateData.cells || {},
       edits: [],
       metadata: {
         title: creation.title,
+        network: network,
+        createdOnNetwork: network,
         rows: templateData.rows || 100,
         cols: templateData.cols || 26,
         sheets: templateData.sheets || [{
@@ -301,7 +309,7 @@ export class SpreadsheetCreationService {
     };
 
     creation.data = data;
-    return { prepared: true, dataSize: JSON.stringify(data).length };
+    return { prepared: true, dataSize: JSON.stringify(data).length, network };
   }
 
   /**
@@ -321,7 +329,23 @@ export class SpreadsheetCreationService {
     );
 
     if (!result.success || !result.blobId) {
-      throw new Error(`Failed to store data to Walrus: ${result.error || 'Unknown error'}`);
+      // Check if this is a WAL coin insufficiency error
+      const errorMessage = result.error || 'Unknown error';
+      const isWalCoinError = this.blockchainAdapter.walrusService.isWalCoinError?.(errorMessage) || 
+                             errorMessage.toLowerCase().includes('wal') && 
+                             (errorMessage.toLowerCase().includes('coin') || 
+                              errorMessage.toLowerCase().includes('balance'));
+      
+      if (isWalCoinError) {
+        throw new Error(
+          'Walrus testnet publisher is temporarily out of WAL coins. ' +
+          'This is a testnet infrastructure issue. ' +
+          'Your spreadsheet will be saved locally. ' +
+          'You can retry uploading to Walrus later when the publisher is refunded.'
+        );
+      }
+      
+      throw new Error(`Failed to store data to Walrus: ${errorMessage}`);
     }
 
     creation.walrusBlobId = result.blobId;

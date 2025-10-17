@@ -9,12 +9,18 @@
   border: 1px solid rgba(255, 255, 255, 0.3);
   backdrop-filter: blur(10px);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  z-index: 1;
 }
 
 .document-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
   background: rgba(255, 255, 255, 1);
+  z-index: 10;
+}
+
+.document-card.menu-open {
+  z-index: 50;
 }
 
 .document-card.loading {
@@ -32,6 +38,25 @@
   align-items: flex-start;
   gap: 1rem;
   margin-bottom: 1rem;
+}
+
+.card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.card-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #2d3748;
+  line-height: 1.3;
+  word-break: break-word;
+  flex: 1;
+  min-width: 0;
 }
 
 .document-icon {
@@ -161,6 +186,15 @@
 
 .manage-menu button:hover {
   background: #f7fafc;
+}
+
+.manage-menu button.migrate-button {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.manage-menu button.migrate-button:hover {
+  background: rgba(245, 158, 11, 0.1);
 }
 
 .manage-menu button.delete-button {

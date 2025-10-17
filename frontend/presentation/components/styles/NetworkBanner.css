@@ -1,0 +1,67 @@
+/* Network Banner Styles */
+.network-banner {
+  position: fixed;
+  top: 70px;
+  left: 0;
+  right: 0;
+  z-index: 998;
+  padding: 8px 16px;
+  text-align: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.network-banner.testnet {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.network-banner.mainnet {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+.network-banner-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.network-icon {
+  font-size: 1.1rem;
+}
+
+.network-text {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .network-banner {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+    top: 60px;
+  }
+
+  .network-icon {
+    font-size: 1rem;
+  }
+}
+
+

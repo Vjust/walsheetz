@@ -1,9 +1,13 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { NetworkProvider } from '../providers/NetworkProvider.jsx'
 import { WalletProviders } from '../providers/WalletProviders.jsx'
 import { SpreadsheetProvider } from './components/SpreadsheetProvider.jsx'
 import { ErrorBoundary } from './components/ErrorBoundary.jsx'
 import { WalrusStatus } from './components/WalrusStatus.jsx'
+import { NetworkSelector, NetworkConfirmDialog } from './components/NetworkSelector.jsx'
+import { NetworkBanner } from './components/NetworkBanner.jsx'
+import { NetworkMismatchWarning } from './components/NetworkMismatchWarning.jsx'
 import RateLimiterStatus from '../components/RateLimiterStatus.jsx'
 import { TestModeBanner } from './components/TestModeBanner.jsx'
 import { Dashboard } from '../pages/Dashboard.jsx'
@@ -33,33 +37,39 @@ function App() {
   return (
     <div data-testid="walsheetz-app">
       <ErrorBoundary>
-        <Router>
-          <WalletProviders defaultNetwork="testnet">
-            <ErrorBoundary>
-              <SpreadsheetProvider>
-                <ErrorBoundary>
-                  <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/index.html" element={<Navigate to="/" replace />} />
-                    <Route path="/explore" element={<ExploreTundra />} />
-                    <Route path="/spreadsheet/:id" element={<SpreadsheetEditor />} />
-                    <Route path="/blobs" element={<BlobCatalog />} />
-                    <Route path="/workspace" element={<SpreadsheetWorkspace />} />
-                  </Routes>
+        <NetworkProvider>
+          <Router>
+            <WalletProviders>
+              <ErrorBoundary>
+                <SpreadsheetProvider>
+                  <ErrorBoundary>
+                    <Routes>
+                      <Route path="/" element={<Dashboard />} />
+                      <Route path="/index.html" element={<Navigate to="/" replace />} />
+                      <Route path="/explore" element={<ExploreTundra />} />
+                      <Route path="/spreadsheet/:id" element={<SpreadsheetEditor />} />
+                      <Route path="/blobs" element={<BlobCatalog />} />
+                      <Route path="/workspace" element={<SpreadsheetWorkspace />} />
+                    </Routes>
 
-                  {/* Global components */}
-                  <TestModeBanner />
-                  {showWalrusStatus && (
-                    <WalrusStatus position="bottom-right" minimized={true} />
-                  )}
-                  {showRateLimiterStatus && (
-                    <RateLimiterStatus show={true} position="bottom-right" />
-                  )}
-                </ErrorBoundary>
-              </SpreadsheetProvider>
-            </ErrorBoundary>
-          </WalletProviders>
-        </Router>
+                    {/* Global components */}
+                    <NetworkSelector position="top-left" />
+                    <NetworkBanner />
+                    <NetworkMismatchWarning />
+                    <NetworkConfirmDialog />
+                    <TestModeBanner />
+                    {showWalrusStatus && (
+                      <WalrusStatus position="bottom-right" minimized={true} />
+                    )}
+                    {showRateLimiterStatus && (
+                      <RateLimiterStatus show={true} position="bottom-right" />
+                    )}
+                  </ErrorBoundary>
+                </SpreadsheetProvider>
+              </ErrorBoundary>
+            </WalletProviders>
+          </Router>
+        </NetworkProvider>
       </ErrorBoundary>
     </div>
   )

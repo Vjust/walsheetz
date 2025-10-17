@@ -5,6 +5,9 @@ import { DocumentCard } from '../components/DocumentCard.jsx';
 import { SearchBar } from '../components/SearchBar.jsx';
 import { CreateDocumentModal } from '../components/CreateDocumentModal.jsx';
 import { LoadingOverlay } from '../presentation/components/LoadingOverlay.jsx';
+import { NetworkBadge } from '../presentation/components/NetworkBadge.jsx';
+import { MigrationDialog } from '../presentation/components/MigrationDialog.jsx';
+import { useNetwork } from '../providers/NetworkProvider.jsx';
 import { logger, LogComponent } from '../utils/Logger.js';
 import UnicornStudioHero from '../presentation/components/UnicornStudioHero.jsx';
 import BlizzardParticles from '../components/effects/BlizzardParticles.jsx';
@@ -24,6 +27,10 @@ export function Dashboard() {
   const [recentSpreadsheets, setRecentSpreadsheets] = useState([]);
   const [connectingWallet, setConnectingWallet] = useState(false);
   const [disconnectingWallet, setDisconnectingWallet] = useState(false);
+  const [showMigrationDialog, setShowMigrationDialog] = useState(false);
+  const [spreadsheetToMigrate, setSpreadsheetToMigrate] = useState(null);
+
+  const { network, isMainnet, isTestnet } = useNetwork();
 
   const {
     walletConnected,
@@ -248,6 +255,61 @@ export function Dashboard() {
     return result;
   };
 
+  const handleMigrate = (spreadsheet) => {
+    logger.logUserAction('dashboard_open_migration_dialog', { spreadsheetId: spreadsheet.objectId });
+    setSpreadsheetToMigrate(spreadsheet);
+    setShowMigrationDialog(true);
+  };
+
+  const handleMigrationComplete = async (result) => {
+    logger.info(LogComponent.UI_COMPONENT, 'migration_complete', 'Spreadsheet migration completed', {
+      originalId: result.originalSpreadsheetId,
+      newId: result.mainnetSpreadsheetId
+    });
+    
+    setShowMigrationDialog(false);
+    setSpreadsheetToMigrate(null);
+    
+    // Refresh spreadsheets list
+    await loadSpreadsheets();
+    
+    // Navigate to the new mainnet spreadsheet if it exists
+    if (result.mainnetSpreadsheetId) {
+      navigate(`/spreadsheet/${result.mainnetSpreadsheetId}`);
+    }
+  };
+
+  // Check for pending migration on mount (after network reload)
+  useEffect(() => {
+    const checkPendingMigration = () => {
+      const pendingMigration = localStorage.getItem('walsheetz_pending_migration');
+      if (pendingMigration && walletConnected && spreadsheets.length > 0) {
+        try {
+          const migrationData = JSON.parse(pendingMigration);
+          console.log('[Dashboard] Found pending migration, opening dialog:', migrationData);
+          
+          // Find the spreadsheet (it should be in the testnet list if we just switched from testnet)
+          // Or we can create a minimal spreadsheet object for the dialog
+          const sheet = spreadsheets.find(s => s.objectId === migrationData.spreadsheetId) || {
+            objectId: migrationData.spreadsheetId,
+            title: migrationData.spreadsheetTitle,
+            network: 'testnet'
+          };
+          
+          setSpreadsheetToMigrate(sheet);
+          setShowMigrationDialog(true);
+        } catch (err) {
+          console.error('[Dashboard] Failed to parse pending migration:', err);
+          localStorage.removeItem('walsheetz_pending_migration');
+        }
+      }
+    };
+
+    // Delay check slightly to ensure wallet is fully connected
+    const timer = setTimeout(checkPendingMigration, 500);
+    return () => clearTimeout(timer);
+  }, [walletConnected, spreadsheets]);
+
   const handleConnectWallet = async () => {
     try {
       setConnectingWallet(true);
@@ -385,6 +447,7 @@ export function Dashboard() {
                   onTransfer={handleTransfer}
                   onPrune={handlePrune}
                   onDelete={handleDelete}
+                  onMigrate={handleMigrate}
                 />
               ))}
             </div>
@@ -501,6 +564,7 @@ export function Dashboard() {
                   onTransfer={handleTransfer}
                   onPrune={handlePrune}
                   onDelete={handleDelete}
+                  onMigrate={handleMigrate}
                 />
               ))}
             </div>
@@ -516,6 +580,20 @@ export function Dashboard() {
         blockchainAdapter={blockchainAdapter}
         storageAdapter={storageAdapter}
         spreadsheetEngine={spreadsheetEngine}
+      />
+
+      {/* Migration Dialog */}
+      <MigrationDialog
+        isOpen={showMigrationDialog}
+        onClose={() => {
+          setShowMigrationDialog(false);
+          setSpreadsheetToMigrate(null);
+        }}
+        spreadsheet={spreadsheetToMigrate}
+        blockchainAdapter={blockchainAdapter}
+        storageAdapter={storageAdapter}
+        spreadsheetEngine={spreadsheetEngine}
+        onMigrationComplete={handleMigrationComplete}
       />
 
       {/* Loading Overlay for operations */}

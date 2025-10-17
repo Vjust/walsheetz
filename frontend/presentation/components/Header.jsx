@@ -3,8 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { useSpreadsheetContext } from './SpreadsheetProvider.jsx'
 import { WalletModal } from './WalletModal.jsx'
 import { SaveStatusIndicator } from './SaveStatusIndicator.jsx'
+import { ImportButton } from './ImportButton.jsx'
+import { ExportButton } from './ExportButton.jsx'
+import { ImportPreviewModal } from './ImportPreviewModal.jsx'
 import { logger, LogComponent } from '../../utils/Logger.js'
 import luckysheetApi from '../../services/luckysheetApi.js'
+import SpreadsheetImportExportService from '../../services/SpreadsheetImportExportService.js'
 import '../styles/wallet-modal.css'
 
 export function Header() {
@@ -19,6 +23,14 @@ export function Header() {
     fontFamily: 'Arial',
     fontSize: '12'
   })
+  const [importExportService] = useState(() => new SpreadsheetImportExportService())
+  const [importError, setImportError] = useState(null)
+  const [exportError, setExportError] = useState(null)
+  const [previewModalOpen, setPreviewModalOpen] = useState(false)
+  const [previewData, setPreviewData] = useState(null)
+  const [previewFileName, setPreviewFileName] = useState('')
+  const [pendingImportFile, setPendingImportFile] = useState(null)
+  const [isImporting, setIsImporting] = useState(false)
 
   const { spreadsheetData } = useSpreadsheetContext()
 
@@ -812,6 +824,145 @@ export function Header() {
     }
   } // handleMenuAction ends here
 
+  // Handle import Excel file - show preview first
+  const handleImport = async (file) => {
+    try {
+      setImportError(null)
+      logger.startTimer('import_action')
+
+      logger.logUserAction('import_file_start', {
+        fileName: file.name,
+        fileSize: file.size
+      })
+
+      // Read and convert file
+      const importedData = await importExportService.importFromExcel(file, {
+        title: documentName
+      })
+
+      // Store for later use and show preview
+      setPendingImportFile(file)
+      setPreviewData(importedData)
+      setPreviewFileName(file.name)
+      setPreviewModalOpen(true)
+
+      logger.info(LogComponent.UI_COMPONENT, 'import_preview_shown', 'Import preview displayed', {
+        fileName: file.name,
+        sheetsCount: importedData.sheets?.length || 0
+      })
+    } catch (error) {
+      const errorMsg = error?.message || 'Failed to import file'
+      setImportError(errorMsg)
+
+      logger.error(LogComponent.UI_COMPONENT, 'import_failed', 'File import failed', {
+        error: errorMsg
+      })
+
+      alert(`❌ Import failed: ${errorMsg}`)
+    }
+  }
+
+  // Handle confirmed import from preview modal
+  const handleConfirmImport = async (selectedSheetIndex) => {
+    if (!previewData) return
+
+    try {
+      setIsImporting(true)
+      logger.startTimer('import_confirm_action')
+
+      // Load imported data into Luckysheet
+      if (window.luckysheet && previewData.sheets) {
+        // Use only selected sheet or all sheets
+        const sheetToLoad = previewData.sheets;
+        window.luckysheet.create({
+          container: 'luckysheet',
+          data: sheetToLoad,
+          title: previewData.info?.name || documentName
+        })
+
+        // Update document name
+        setDocumentName(previewData.info?.name || documentName)
+      }
+
+      const duration = logger.endTimer('import_confirm_action')
+
+      logger.info(LogComponent.UI_COMPONENT, 'import_confirmed', 'File imported successfully', {
+        fileName: previewFileName,
+        sheetsCount: previewData.sheets?.length || 0,
+        duration
+      })
+
+      // Close modal and show success
+      setPreviewModalOpen(false)
+      setPreviewData(null)
+      setPendingImportFile(null)
+      alert('✅ File imported successfully! Your data has been loaded into the spreadsheet.')
+    } catch (error) {
+      const errorMsg = error?.message || 'Failed to import file'
+      setImportError(errorMsg)
+
+      logger.error(LogComponent.UI_COMPONENT, 'import_confirm_failed', 'File import confirmation failed', {
+        error: errorMsg
+      })
+
+      alert(`❌ Import failed: ${errorMsg}`)
+    } finally {
+      setIsImporting(false)
+    }
+  }
+
+  // Handle export spreadsheet
+  const handleExport = async (format) => {
+    try {
+      setExportError(null)
+      logger.startTimer('export_action')
+
+      logger.logUserAction('export_start', {
+        format,
+        documentName
+      })
+
+      // Get current Luckysheet data
+      let luckysheetData = {
+        sheets: window.luckysheetfile || [],
+        info: {
+          name: documentName
+        }
+      }
+
+      // Export based on format
+      if (format === 'xlsx') {
+        await importExportService.exportToExcel(luckysheetData, {
+          title: documentName,
+          filename: `${documentName}_${new Date().toISOString().split('T')[0]}.xlsx`
+        })
+      } else if (format === 'csv') {
+        await importExportService.exportToCSV(luckysheetData, {
+          filename: `${documentName}_${new Date().toISOString().split('T')[0]}.csv`
+        })
+      }
+
+      const duration = logger.endTimer('export_action')
+
+      logger.info(LogComponent.UI_COMPONENT, 'export_success', 'Spreadsheet exported successfully', {
+        format,
+        documentName,
+        duration
+      })
+
+    } catch (error) {
+      const errorMsg = error?.message || 'Failed to export spreadsheet'
+      setExportError(errorMsg)
+
+      logger.error(LogComponent.UI_COMPONENT, 'export_failed', 'Spreadsheet export failed', {
+        error: errorMsg,
+        format
+      })
+
+      alert(`❌ Export failed: ${errorMsg}`)
+    }
+  }
+
   // Menu configurations
   const menuItems = {
     File: [
@@ -873,6 +1024,42 @@ export function Header() {
                 ×
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Error Banner */}
+      {importError && (
+        <div className="error-banner import-error-banner">
+          <div className="error-banner-content">
+            <span className="error-banner-text">
+              ❌ Import Error: {importError}
+            </span>
+            <button
+              onClick={() => setImportError(null)}
+              className="error-banner-dismiss-btn"
+              title="Dismiss"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Export Error Banner */}
+      {exportError && (
+        <div className="error-banner export-error-banner">
+          <div className="error-banner-content">
+            <span className="error-banner-text">
+              ❌ Export Error: {exportError}
+            </span>
+            <button
+              onClick={() => setExportError(null)}
+              className="error-banner-dismiss-btn"
+              title="Dismiss"
+            >
+              ×
+            </button>
           </div>
         </div>
       )}
@@ -1059,6 +1246,19 @@ export function Header() {
             ↷
           </button>
         </div>
+
+        <div className="toolbar-section">
+          <ImportButton
+            onImport={handleImport}
+            onError={(error) => setImportError(error?.message || 'Import failed')}
+            title="Import Excel file (.xlsx or .xls)"
+          />
+          <ExportButton
+            onExport={handleExport}
+            onError={(error) => setExportError(error?.message || 'Export failed')}
+            title="Export spreadsheet as Excel or CSV"
+          />
+        </div>
         
         <div className="toolbar-section">
           <button 
@@ -1114,11 +1314,25 @@ export function Header() {
           </select>
         </div>
       </div>
-      
+
+      {/* Import Preview Modal */}
+      <ImportPreviewModal
+        isOpen={previewModalOpen}
+        onClose={() => {
+          setPreviewModalOpen(false)
+          setPreviewData(null)
+          setPendingImportFile(null)
+        }}
+        onConfirm={handleConfirmImport}
+        importData={previewData}
+        fileName={previewFileName}
+        isLoading={isImporting}
+      />
+
       {/* Wallet Modal */}
-      <WalletModal 
-        isOpen={showWalletModal} 
-        onClose={() => setShowWalletModal(false)} 
+      <WalletModal
+        isOpen={showWalletModal}
+        onClose={() => setShowWalletModal(false)}
       />
     </header>
   )
