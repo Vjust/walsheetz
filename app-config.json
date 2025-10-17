@@ -15,8 +15,8 @@
     },
     "mainnet": {
       "rpcUrl": "https://fullnode.mainnet.sui.io:443",
-      "packageId": null,
-      "registryObjectId": null,
+      "packageId": "0x991454976a4ef8535ed3572bb1c500dcd565855d49a51f1fadc7f70a316c9631",
+      "registryObjectId": "0x66f68bfb639dbc7f24519bcdbbfdb376057d87c6d508ea7a8d67746a11721ca5",
       "walrus": {
         "aggregatorUrl": "https://aggregator.walrus.space",
         "publisherUrl": "https://publisher.walrus.space",
