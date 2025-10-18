@@ -1049,21 +1049,18 @@ export class SpreadsheetEngine {
 
       const saveDuration = logger.endTimer('spreadsheet_save');
 
-      // Determine save method and wallet status for return value
-      const walletConnected = this.blockchainService?.isWalletConnected();
+      // Return success (wallet is guaranteed to be connected; throws earlier if disconnected)
       const saveResult = {
         success: true,
-        method: walletConnected ? 'blockchain' : 'localStorage',
-        walletDisconnected: !walletConnected
+        method: 'blockchain'
       };
 
-      logger.info(LogComponent.SPREADSHEET_ENGINE, 'save_completed', `Spreadsheet save completed successfully`, {
+      logger.info(LogComponent.SPREADSHEET_ENGINE, 'save_completed', `Spreadsheet save completed successfully (blockchain)`, {
         previousEditCount,
         previousPendingEdits,
         saveDuration,
         success: true,
-        method: saveResult.method,
-        walletDisconnected: saveResult.walletDisconnected
+        method: saveResult.method
       });
 
       return saveResult

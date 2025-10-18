@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
+import { networkLock } from '../utils/NetworkLock.js'
 
 const NetworkContext = createContext(null)
 
@@ -8,9 +9,15 @@ export function NetworkProvider({ children }) {
   //      Network selection is a user preference, not session-critical data.
   // SCOPE: Single key only: 'walsheetz_network'
   // DOCUMENTED: See docs/STORAGE_ARCHITECTURE.md
+  // SYNC: Uses NetworkLock to prevent race conditions with ConfigLoader
   const [network, setNetwork] = useState(() => {
-    const saved = localStorage.getItem('walsheetz_network')
-    return saved || 'testnet'
+    try {
+      const saved = localStorage.getItem('walsheetz_network')
+      return saved || 'testnet'
+    } catch (e) {
+      console.warn('[NetworkProvider] Failed to read network preference:', e)
+      return 'testnet'
+    }
   })
 
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false)
@@ -18,12 +25,23 @@ export function NetworkProvider({ children }) {
 
   useEffect(() => {
     // Persist network preference (documented exception)
-    localStorage.setItem('walsheetz_network', network)
-    
+    // Use lock to prevent race conditions with ConfigLoader
+    networkLock.withLock(async () => {
+      try {
+        localStorage.setItem('walsheetz_network', network)
+      } catch (e) {
+        console.warn('[NetworkProvider] Failed to write network preference:', e)
+      }
+    }).catch(e => {
+      console.warn('[NetworkProvider] Lock operation failed:', e)
+    })
+
     // Dispatch event so services can react to network changes
-    window.dispatchEvent(new CustomEvent('network-changed', { 
-      detail: { network } 
-    }))
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('network-changed', {
+        detail: { network }
+      }))
+    }
   }, [network])
 
   const requestNetworkSwitch = (newNetwork, skipConfirmation = false) => {

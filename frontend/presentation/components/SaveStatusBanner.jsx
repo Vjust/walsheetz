@@ -7,11 +7,18 @@ import './SaveStatusBanner.css';
  *
  * Displays notification when data is saved locally (fallback mode) due to network issues.
  * Provides "Retry Save" button to attempt blockchain sync when connection is restored.
+ *
+ * Listens to events:
+ * - save:fallback - When fallback save occurs
+ * - save:retry-success - When a retry succeeds
+ * - save:retry-failed - When a retry fails
+ * - save:startup-retry-complete - When auto-retry on startup completes
  */
 export function SaveStatusBanner() {
   const [fallbackSaves, setFallbackSaves] = useState([]);
   const [isRetrying, setIsRetrying] = useState(false);
   const [retryMessage, setRetryMessage] = useState('');
+  const [retryResults, setRetryResults] = useState({});
 
   useEffect(() => {
     const handleFallbackSave = (event) => {
@@ -36,9 +43,91 @@ export function SaveStatusBanner() {
       });
     };
 
+    const handleRetrySuccess = (event) => {
+      const { localKey } = event.detail || {};
+      if (!localKey) return;
+
+      logger.info(LogComponent.UI_COMPONENT, 'retry_success_event', 'Retry success event received', { localKey });
+
+      // Mark this save as successfully synced
+      setRetryResults(prev => ({
+        ...prev,
+        [localKey]: 'success'
+      }));
+
+      // Remove from fallback saves list
+      setFallbackSaves(prev => prev.filter(save => save.localKey !== localKey));
+
+      // Show brief success message
+      setRetryMessage(`✅ Save synced to blockchain`);
+
+      // Clear message after 2 seconds
+      setTimeout(() => {
+        setRetryMessage('');
+      }, 2000);
+    };
+
+    const handleRetryFailed = (event) => {
+      const { localKey, error } = event.detail || {};
+      if (!localKey) return;
+
+      logger.warn(LogComponent.UI_COMPONENT, 'retry_failed_event', 'Retry failed event received', {
+        localKey,
+        error
+      });
+
+      // Mark this save as failed retry
+      setRetryResults(prev => ({
+        ...prev,
+        [localKey]: 'failed'
+      }));
+
+      // Show error message
+      setRetryMessage(`⏳ Retry attempt failed: ${error || 'Unknown error'}. Will retry next time.`);
+
+      // Keep the message visible longer for errors
+      setTimeout(() => {
+        setRetryMessage('');
+      }, 5000);
+    };
+
+    const handleStartupRetryComplete = (event) => {
+      const { successCount, failureCount, total } = event.detail || {};
+
+      logger.info(LogComponent.UI_COMPONENT, 'startup_retry_complete', 'Startup auto-retry complete', {
+        successCount,
+        failureCount,
+        total
+      });
+
+      if (successCount > 0) {
+        setRetryMessage(`✅ ${successCount} of ${total} saves synced during startup`);
+      }
+
+      if (failureCount > 0) {
+        setRetryMessage(prev =>
+          prev ? `${prev}; ${failureCount} still pending` : `⏳ ${failureCount} saves still pending`
+        );
+      }
+
+      // Clear message after 4 seconds
+      setTimeout(() => {
+        setRetryMessage('');
+      }, 4000);
+    };
+
     if (typeof window !== 'undefined') {
       window.addEventListener('save:fallback', handleFallbackSave);
-      return () => window.removeEventListener('save:fallback', handleFallbackSave);
+      window.addEventListener('save:retry-success', handleRetrySuccess);
+      window.addEventListener('save:retry-failed', handleRetryFailed);
+      window.addEventListener('save:startup-retry-complete', handleStartupRetryComplete);
+
+      return () => {
+        window.removeEventListener('save:fallback', handleFallbackSave);
+        window.removeEventListener('save:retry-success', handleRetrySuccess);
+        window.removeEventListener('save:retry-failed', handleRetryFailed);
+        window.removeEventListener('save:startup-retry-complete', handleStartupRetryComplete);
+      };
     }
   }, []);
 

@@ -3225,6 +3225,330 @@ export class BlockchainAdapter extends IBlockchainService {
       });
     }
   }
+
+  /**
+   * Retry a single fallback save to blockchain
+   * @param {string} localKey - The localStorage key for the fallback
+   * @returns {Promise<Object>} Result of retry attempt
+   */
+  async retryFallbackSave(localKey) {
+    try {
+      // Get fallback data from localStorage
+      const fallbackData = localStorage.getItem(localKey);
+      if (!fallbackData) {
+        logger.warn(LogComponent.BLOCKCHAIN_ADAPTER, 'retry_not_found', 'Fallback key not found', { localKey });
+        return {
+          success: false,
+          error: 'Fallback data not found',
+          localKey
+        };
+      }
+
+      let data;
+      try {
+        data = JSON.parse(fallbackData);
+      } catch (e) {
+        logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'retry_parse_error', 'Failed to parse fallback data', {
+          localKey,
+          error: e.message
+        });
+        return {
+          success: false,
+          error: 'Invalid fallback data format',
+          localKey
+        };
+      }
+
+      logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'retry_start', 'Starting fallback retry', {
+        localKey,
+        dataSize: fallbackData.length
+      });
+
+      // Attempt to save to blockchain using existing save method
+      const saveResult = await this.save(data.title, 50);
+
+      if (saveResult.success) {
+        // Delete the fallback key on success
+        localStorage.removeItem(localKey);
+
+        // Emit success event
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('save:retry-success', {
+            detail: {
+              localKey,
+              timestamp: Date.now()
+            }
+          }));
+        }
+
+        logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'retry_success', 'Fallback retry succeeded', {
+          localKey
+        });
+
+        return {
+          success: true,
+          localKey,
+          message: 'Fallback save synced to blockchain'
+        };
+      } else {
+        // Emit failure event but keep the key
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('save:retry-failed', {
+            detail: {
+              localKey,
+              error: saveResult.error || 'Unknown error',
+              timestamp: Date.now()
+            }
+          }));
+        }
+
+        logger.warn(LogComponent.BLOCKCHAIN_ADAPTER, 'retry_failed', 'Fallback retry failed', {
+          localKey,
+          error: saveResult.error
+        });
+
+        return {
+          success: false,
+          localKey,
+          error: saveResult.error || 'Retry failed'
+        };
+      }
+    } catch (error) {
+      logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'retry_error', 'Error during fallback retry', {
+        localKey,
+        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error'
+      });
+
+      return {
+        success: false,
+        localKey,
+        error: error.message || 'Retry error'
+      };
+    }
+  }
+
+  /**
+   * Automatically retry all fallback saves on app startup
+   * Waits for wallet connection before attempting retries
+   */
+  async autoRetryFallbacksOnStartup() {
+    try {
+      // Wait for wallet to be ready (max 5 seconds)
+      let attempts = 0;
+      while (!this.isWalletConnected && attempts < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+      }
+
+      if (!this.isWalletConnected) {
+        logger.warn(LogComponent.BLOCKCHAIN_ADAPTER, 'startup_retry_no_wallet', 'Wallet not connected - skipping auto-retry');
+        return;
+      }
+
+      // Get all fallback keys
+      const fallbackKeys = Object.keys(localStorage).filter(key =>
+        key.startsWith('walsheetz_fallback_')
+      );
+
+      if (fallbackKeys.length === 0) {
+        logger.debug(LogComponent.BLOCKCHAIN_ADAPTER, 'startup_retry_none', 'No fallback saves to retry');
+        return;
+      }
+
+      logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'startup_retry_start', 'Starting auto-retry of fallback saves', {
+        count: fallbackKeys.length
+      });
+
+      let successCount = 0;
+      let failureCount = 0;
+
+      // Retry each fallback sequentially with delay
+      for (const key of fallbackKeys) {
+        const result = await this.retryFallbackSave(key);
+        if (result.success) {
+          successCount++;
+        } else {
+          failureCount++;
+        }
+        // Small delay between retries
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'startup_retry_complete', 'Auto-retry of fallback saves complete', {
+        successCount,
+        failureCount,
+        total: fallbackKeys.length
+      });
+
+      // Emit summary event
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('save:startup-retry-complete', {
+          detail: {
+            successCount,
+            failureCount,
+            total: fallbackKeys.length,
+            timestamp: Date.now()
+          }
+        }));
+      }
+    } catch (error) {
+      logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'startup_retry_error', 'Error during startup auto-retry', {
+        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Check for stale fallback keys (older than 7 days)
+   * @returns {Array} Array of stale fallback info objects
+   */
+  checkStaleFallbacks(maxAgeDays = 7) {
+    try {
+      const staleList = [];
+      const now = Date.now();
+      const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000;
+
+      const fallbackKeys = Object.keys(localStorage).filter(key =>
+        key.startsWith('walsheetz_fallback_')
+      );
+
+      for (const key of fallbackKeys) {
+        // Extract timestamp from key (format: walsheetz_fallback_TIMESTAMP)
+        const timestamp = parseInt(key.replace('walsheetz_fallback_', ''), 10);
+
+        if (isNaN(timestamp)) {
+          logger.warn(LogComponent.BLOCKCHAIN_ADAPTER, 'stale_parse_error', 'Invalid fallback key format', { key });
+          continue;
+        }
+
+        const age = now - timestamp;
+        if (age > maxAgeMs) {
+          staleList.push({
+            key,
+            timestamp,
+            ageMs: age,
+            ageDays: Math.floor(age / (24 * 60 * 60 * 1000)),
+            size: localStorage.getItem(key).length
+          });
+        }
+      }
+
+      logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'stale_check_complete', 'Stale fallback check complete', {
+        staleCount: staleList.length,
+        totalFallbacks: fallbackKeys.length
+      });
+
+      return staleList;
+    } catch (error) {
+      logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'stale_check_error', 'Error checking stale fallbacks', {
+        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error'
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Delete stale fallback keys
+   * @param {Array<string>} keys - Array of localStorage keys to delete
+   * @returns {Object} Deletion result
+   */
+  deleteStaleFallbacks(keys) {
+    try {
+      let deletedCount = 0;
+      const errors = [];
+
+      for (const key of keys) {
+        try {
+          localStorage.removeItem(key);
+          deletedCount++;
+
+          logger.debug(LogComponent.BLOCKCHAIN_ADAPTER, 'stale_deleted', 'Deleted stale fallback', { key });
+        } catch (e) {
+          errors.push({ key, error: e.message });
+          logger.warn(LogComponent.BLOCKCHAIN_ADAPTER, 'stale_delete_error', 'Failed to delete stale fallback', {
+            key,
+            error: e.message
+          });
+        }
+      }
+
+      logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'stale_cleanup_complete', 'Stale fallback cleanup complete', {
+        deletedCount,
+        errorCount: errors.length
+      });
+
+      return {
+        success: errors.length === 0,
+        deletedCount,
+        errors
+      };
+    } catch (error) {
+      logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'stale_cleanup_error', 'Error during stale fallback cleanup', {
+        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error'
+      });
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Export fallback data as JSON
+   * @param {string} key - localStorage key of the fallback
+   * @returns {string} JSON string of fallback data, or null if not found
+   */
+  exportFallbackAsJSON(key) {
+    try {
+      const data = localStorage.getItem(key);
+      if (!data) {
+        logger.warn(LogComponent.BLOCKCHAIN_ADAPTER, 'export_not_found', 'Fallback key not found for export', { key });
+        return null;
+      }
+
+      // Parse and re-stringify for clean JSON
+      const parsed = JSON.parse(data);
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        originalKey: key,
+        timestamp: parseInt(key.replace('walsheetz_fallback_', ''), 10),
+        data: parsed
+      };
+
+      logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'export_complete', 'Exported fallback as JSON', { key });
+
+      return JSON.stringify(exportData, null, 2);
+    } catch (error) {
+      logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'export_error', 'Error exporting fallback', {
+        key,
+        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error'
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Setup event listeners for retry requests
+   * This should be called during app initialization
+   */
+  setupRetryEventListeners() {
+    if (typeof window !== 'undefined') {
+      // Listen for manual retry button clicks
+      window.addEventListener('save:retry-fallbacks', async (event) => {
+        const { fallbackKeys = [] } = event.detail || {};
+
+        logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'manual_retry_triggered', 'Manual fallback retry triggered', {
+          count: fallbackKeys.length
+        });
+
+        for (const key of fallbackKeys) {
+          await this.retryFallbackSave(key);
+        }
+      });
+
+      logger.debug(LogComponent.BLOCKCHAIN_ADAPTER, 'retry_listeners_setup', 'Fallback retry event listeners setup');
+    }
+  }
 }
 
 // Export for global debugging (development only)

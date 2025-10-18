@@ -1,3 +1,5 @@
+import { networkLock } from './NetworkLock.js';
+
 // Runtime configuration loader with cache-busting and ABI detection
 class ConfigLoader {
   constructor() {
@@ -8,7 +10,7 @@ class ConfigLoader {
     this.loadingPromise = null;
     this.abiCache = new Map();
     this.networkValidationCache = new Map();
-    
+
     console.log('[ConfigLoader] Initialized with cache-busting enabled');
   }
 
@@ -132,6 +134,7 @@ class ConfigLoader {
       }
 
       // Check localStorage
+      // NOTE: No lock needed here - this runs during initialization before NetworkProvider starts
       const storedNetwork = localStorage.getItem('walsheetz_network');
       if (storedNetwork && config.networks[storedNetwork]) {
         console.log(`[ConfigLoader] 💾 Network from storage: ${storedNetwork}`);
@@ -178,8 +181,15 @@ class ConfigLoader {
       this.currentNetwork = networkName;
 
       // Only persist to localStorage in browser environment
+      // Use lock to prevent race conditions with NetworkProvider
       if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-        localStorage.setItem('walsheetz_network', networkName);
+        await networkLock.withLock(async () => {
+          try {
+            localStorage.setItem('walsheetz_network', networkName);
+          } catch (e) {
+            console.warn('[ConfigLoader] Failed to write network preference with lock:', e);
+          }
+        });
       }
 
       // Clear caches when switching networks
