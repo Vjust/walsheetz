@@ -4,6 +4,13 @@ import { SpreadsheetMigrator } from '../../services/SpreadsheetMigrator.js'
 import { useNetwork } from '../../providers/NetworkProvider.jsx'
 import './styles/MigrationDialog.css'
 
+// EXCEPTION: localStorage used for migration resume state
+// WHY: Migrations can be long-running operations (minutes/hours). If user's page refreshes
+//      during migration, we should resume from where we left off, not restart.
+//      This provides better UX for large spreadsheet migrations.
+// SCOPE: Single key only: 'walsheetz_pending_migration'
+// CLEARED: Automatically after migration completes
+// DOCUMENTED: See docs/STORAGE_ARCHITECTURE.md
 const MIGRATION_STORAGE_KEY = 'walsheetz_pending_migration'
 
 export function MigrationDialog({ 

@@ -3,8 +3,12 @@ import React, { createContext, useContext, useState, useEffect } from 'react'
 const NetworkContext = createContext(null)
 
 export function NetworkProvider({ children }) {
+  // EXCEPTION: localStorage used for network preference
+  // WHY: User shouldn't need to re-select testnet/mainnet on every page load.
+  //      Network selection is a user preference, not session-critical data.
+  // SCOPE: Single key only: 'walsheetz_network'
+  // DOCUMENTED: See docs/STORAGE_ARCHITECTURE.md
   const [network, setNetwork] = useState(() => {
-    // Load from localStorage or default to testnet
     const saved = localStorage.getItem('walsheetz_network')
     return saved || 'testnet'
   })
@@ -13,7 +17,7 @@ export function NetworkProvider({ children }) {
   const [pendingNetwork, setPendingNetwork] = useState(null)
 
   useEffect(() => {
-    // Save to localStorage whenever network changes
+    // Persist network preference (documented exception)
     localStorage.setItem('walsheetz_network', network)
     
     // Dispatch event so services can react to network changes

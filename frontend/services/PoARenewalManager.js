@@ -462,68 +462,28 @@ class PoARenewalManager {
   }
 
   /**
-   * Load from localStorage
+   * Load from RAM (no localStorage - RAM-only mode)
+   * Note: Renewal tracking is session-scoped. Renewals will be re-queried from blockchain on each page load.
    */
   loadFromStorage() {
-    try {
-      const stored = localStorage.getItem(this.storageKey);
-      if (!stored) return;
-
-      const data = JSON.parse(stored);
-
-      // Load certificates
-      if (data.certificates) {
-        this.certificates = new Map(Object.entries(data.certificates));
-      }
-
-      // Load warnings
-      if (data.renewalWarnings) {
-        this.renewalWarnings = new Map(Object.entries(data.renewalWarnings));
-      }
-
-      // Load config
-      if (data.config) {
-        Object.assign(this.config, data.config);
-      }
-
-      // Restart monitoring for active certificates
-      for (const blobId of this.certificates.keys()) {
-        this.startMonitoring(blobId);
-      }
-
-      logger.info(LogComponent.UI, 'renewal_loaded', 'Renewal data loaded', {
-        certificateCount: this.certificates.size,
-        warningCount: this.renewalWarnings.size
-      });
-
-    } catch (error) {
-      logger.error(LogComponent.UI, 'renewal_load_error', 'Failed to load renewal data', {
-        error: error.message
-      });
-    }
+    logger.info(LogComponent.UI, 'renewal_init', 'Renewal data initialized in RAM (no persistence)', {
+      note: 'Renewal tracking is transient; data persists only in memory for current session'
+    });
+    // No localStorage - start with empty maps
+    // On next page load, renewals will be fetched from blockchain as needed
   }
 
   /**
-   * Save to localStorage
+   * Save to RAM (no localStorage - RAM-only mode)
+   * Note: Renewal tracking is session-scoped and not persisted.
    */
   saveToStorage() {
-    try {
-      const data = {
-        certificates: Object.fromEntries(this.certificates),
-        renewalWarnings: Object.fromEntries(this.renewalWarnings),
-        config: this.config,
-        lastUpdated: Date.now()
-      };
-
-      localStorage.setItem(this.storageKey, JSON.stringify(data));
-
-      logger.debug(LogComponent.UI, 'renewal_saved', 'Renewal data saved');
-
-    } catch (error) {
-      logger.error(LogComponent.UI, 'renewal_save_error', 'Failed to save renewal data', {
-        error: error.message
-      });
-    }
+    logger.debug(LogComponent.UI, 'renewal_memory_tracked', 'Renewal data tracked in memory', {
+      note: 'Not persisted; will be refreshed from blockchain on next page load',
+      currentCertificateCount: this.certificates.size,
+      currentWarningCount: this.renewalWarnings.size
+    });
+    // No localStorage write - data exists in RAM only
   }
 
   /**

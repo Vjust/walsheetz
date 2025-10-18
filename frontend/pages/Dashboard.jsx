@@ -331,6 +331,8 @@ export function Dashboard() {
   };
 
   // Check for pending migration on mount (after network reload)
+  // EXCEPTION: Accessing localStorage for migration resume state (documented exception)
+  // See docs/STORAGE_ARCHITECTURE.md for justification
   useEffect(() => {
     const checkPendingMigration = () => {
       const pendingMigration = localStorage.getItem('walsheetz_pending_migration');

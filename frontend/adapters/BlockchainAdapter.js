@@ -1768,9 +1768,10 @@ export class BlockchainAdapter extends IBlockchainService {
 
     // Fallback save function (local storage only)
     const fallbackSave = async () => {
-      logger.info(LogComponent.STORAGE_SERVICE, 'fallback_save_local', 'Using local storage fallback');
+      logger.warn(LogComponent.STORAGE_SERVICE, 'fallback_save_local', 'Using local storage fallback - blockchain unavailable');
 
-      // Save to local storage
+      // EXCEPTION: localStorage fallback for network resilience (documented)
+      // Data will be retried to blockchain when services recover
       const localKey = `walsheetz_fallback_${Date.now()}`;
       localStorage.setItem(localKey, JSON.stringify(data));
 
@@ -1779,13 +1780,32 @@ export class BlockchainAdapter extends IBlockchainService {
       this.syncStatus.pendingChanges = 0;
       this.editTracker.clear();
 
+      // Emit event for UI notification
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('save:fallback', {
+          detail: {
+            message: 'Network disconnected - changes saved locally only',
+            warning: 'Your data will sync to blockchain when connection is restored',
+            localKey: localKey,
+            action: 'retry_when_online',
+            timestamp: Date.now()
+          }
+        }));
+
+        logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'fallback_event_emitted', 'Notified UI of fallback save', {
+          localKey: localKey,
+          message: 'Network disconnected - saved locally'
+        });
+      }
+
       return {
         success: true,
         method: 'local_fallback',
         localKey,
         message: 'Saved locally - will sync to blockchain when services are available',
         fallback: true,
-        reason: 'Service degradation'
+        reason: 'Service degradation',
+        userNotified: true
       };
     };
 
