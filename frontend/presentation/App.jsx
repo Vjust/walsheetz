@@ -27,6 +27,65 @@ function App() {
     console.log('🚀 WalSheetz App component mounted');
     logger.info(LogComponent.UI_COMPONENT, 'app_mount', 'WalSheetz application started');
 
+    // Initialize fallback retry system
+    const initializeFallbackRetry = async () => {
+      try {
+        // Wait for BlockchainAdapter to be available
+        let attempts = 0;
+        while (!window.walSheetzBlockchainAdapter && attempts < 100) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+
+        if (window.walSheetzBlockchainAdapter) {
+          // Setup event listeners for manual retries
+          if (typeof window.walSheetzBlockchainAdapter.setupRetryEventListeners === 'function') {
+            window.walSheetzBlockchainAdapter.setupRetryEventListeners();
+            logger.info(LogComponent.UI_COMPONENT, 'retry_listeners_setup', 'Fallback retry listeners initialized');
+          }
+
+          // Start auto-retry on startup (after 2 second delay for wallet connection)
+          setTimeout(async () => {
+            if (typeof window.walSheetzBlockchainAdapter.autoRetryFallbacksOnStartup === 'function') {
+              try {
+                await window.walSheetzBlockchainAdapter.autoRetryFallbacksOnStartup();
+              } catch (e) {
+                logger.warn(LogComponent.UI_COMPONENT, 'startup_retry_error', 'Error in startup retry', {
+                  error: e.message
+                });
+              }
+            }
+
+            // Check for stale fallback saves after retry completes
+            if (typeof window.walSheetzBlockchainAdapter.checkStaleFallbacks === 'function') {
+              const staleFallbacks = window.walSheetzBlockchainAdapter.checkStaleFallbacks(7);
+              if (staleFallbacks.length > 0) {
+                logger.info(LogComponent.UI_COMPONENT, 'stale_fallbacks_found', 'Stale fallback saves found', {
+                  count: staleFallbacks.length
+                });
+
+                // Emit event so UI can show cleanup modal
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('stale:fallbacks-found', {
+                    detail: {
+                      staleFallbacks,
+                      timestamp: Date.now()
+                    }
+                  }));
+                }
+              }
+            }
+          }, 2000);
+        }
+      } catch (error) {
+        logger.warn(LogComponent.UI_COMPONENT, 'fallback_init_error', 'Error initializing fallback retry', {
+          error: error.message
+        });
+      }
+    };
+
+    initializeFallbackRetry();
+
     return () => {
       console.log('👋 WalSheetz App component unmounted');
       logger.info(LogComponent.UI_COMPONENT, 'app_unmount', 'WalSheetz application unmounted');
