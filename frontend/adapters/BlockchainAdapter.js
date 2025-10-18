@@ -2766,6 +2766,23 @@ export class BlockchainAdapter extends IBlockchainService {
           this.editTracker.clear();
           this.syncQueue = [];
           this.clearPendingEdits();
+
+          // Also clear the session in storage adapter
+          if (this.storageAdapter) {
+            try {
+              this.storageAdapter.clearSession();
+              logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'session_cleared', '🧹 Session cleared for deleted spreadsheet');
+            } catch (clearError) {
+              logger.warn(LogComponent.BLOCKCHAIN_ADAPTER, 'session_clear_failed', 'Failed to clear session', {
+                error: typeof clearError === 'string' ? clearError : clearError.message
+              });
+            }
+          }
+
+          // Reset sync status for deleted spreadsheet
+          this.syncStatus.pendingChanges = 0;
+          this.syncStatus.lastSync = null;
+          logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'sync_status_reset', 'Sync status reset after deletion');
         }
 
       } else {

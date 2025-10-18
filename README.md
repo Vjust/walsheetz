@@ -98,6 +98,13 @@ bun run preview
 - `bun run bridge` - Start WebSocket-gRPC bridge only
 - `bun run cleanup` - Clean up occupied ports
 
+### Testing
+- `bun run test:unit` - Run unit tests (Vitest)
+- `bun run test:unit:watch` - Run unit tests in watch mode
+- `bun run test:integration` - Run integration tests
+- `node scripts/test-spreadsheet-crud.js` - Run CRUD flow integration test
+- `node scripts/test-spreadsheet-formulas.js` - Test formula evaluation
+
 ### Build & Deploy
 - `bun run build` - Build for production
 - `bun run preview` - Preview production build
@@ -118,7 +125,178 @@ bun run preview
 
 See [docs/scripts/README.md](docs/scripts/README.md) for detailed script documentation.
 
-## 🎨 Features
+## 🔧 Troubleshooting
+
+### CRUD Operations Issues
+
+#### "Spreadsheet not found on blockchain"
+**Problem:** You see this message when trying to save a spreadsheet.
+
+**Causes:**
+- Spreadsheet was deleted from the blockchain
+- Session data is stale after a long idle period
+- Wallet was switched to a different account
+
+**Solutions:**
+1. Refresh the page - the session will be cleared
+2. Create a new spreadsheet
+3. Connect your wallet if it's disconnected
+
+#### "Walrus fetch failed: Blob may have expired"
+**Problem:** Cannot load a spreadsheet that existed before.
+
+**Causes:**
+- Walrus blob storage period ended (Walrus blobs have expiration)
+- Data was never successfully written to Walrus
+- Network connectivity issue to Walrus service
+
+**Solutions:**
+1. Check your network connection
+2. For critical data, ensure auto-save is enabled
+3. Contact support if data is lost - may need to restore from backup
+4. Set higher Walrus epoch preference for longer retention (default is 50 epochs)
+
+#### Auto-save is paused
+**Problem:** You see "Auto-save paused" message and changes aren't being saved.
+
+**Causes:**
+- Wallet is disconnected or not responding
+- Network connectivity lost
+- Auto-save is disabled in settings
+
+**Solutions:**
+1. Check if wallet is connected (look for wallet button status)
+2. Reconnect your Sui wallet
+3. Wait for network connection to be restored
+4. Enable auto-save in settings (if disabled)
+
+#### Create/Save/Delete operations fail
+**Problem:** Create, save, or delete operations show errors or don't complete.
+
+**Causes:**
+- Wallet not connected
+- Insufficient SUI balance for gas fees
+- Network timeout or connectivity issues
+- Blockchain service unavailable
+
+**Solutions:**
+1. Connect your wallet: Click "🦭 Connect Wallet" button
+2. Check wallet balance: Need at least 0.5 SUI for operations
+3. Use faucet to get test SUI: [Sui Testnet Faucet](https://faucet.testnet.sui.io/)
+4. Check network status at [Sui Status](https://suistatus.com/)
+5. Wait a moment and retry (transient network issues)
+
+#### "Please connect your wallet to load spreadsheets"
+**Problem:** Cannot load saved spreadsheets.
+
+**Causes:**
+- Wallet not connected
+- Session expired
+- Signed in with different wallet than original
+
+**Solutions:**
+1. Connect wallet: Click "🦭 Connect Wallet"
+2. Ensure you're using the same wallet account
+3. Refresh the page if wallet connection status seems stuck
+
+### Data & Storage Issues
+
+#### Data is missing after refresh
+**Problem:** Edits are lost after page refresh.
+
+**Causes:**
+- Auto-save was disabled
+- Wallet disconnected before save completed
+- Browser storage cleared
+
+**Solutions:**
+1. Enable auto-save in settings (enabled by default)
+2. Keep wallet connected while editing
+3. Check browser privacy settings - may be clearing storage
+
+#### Spreadsheets list is empty but I have saved sheets
+**Problem:** Dashboard shows "No spreadsheets found" but you have created some.
+
+**Causes:**
+- Wallet not connected
+- Connected with different wallet account
+- Local session cleared
+- Blockchain query failed
+
+**Solutions:**
+1. Connect wallet - must be same account where sheets were created
+2. Check wallet address to confirm correct account
+3. Refresh page and wait for data to load
+4. Check browser console for errors: Right-click → Inspect → Console
+
+### Performance & Advanced
+
+#### Spreadsheet loads slowly
+**Problem:** Takes a long time to load a spreadsheet.
+
+**Causes:**
+- Large spreadsheet with many cells/formulas
+- Slow network connection
+- Walrus blob is large and needs to be fetched
+
+**Solutions:**
+1. Check network speed
+2. Move to a location with better connectivity
+3. Break large spreadsheets into smaller ones
+4. Set appropriate Walrus epoch preference to avoid re-fetching
+
+#### High gas fees for operations
+**Problem:** Blockchain transactions cost more SUI than expected.
+
+**Causes:**
+- Network congestion
+- Large data payload being stored
+- Multiple concurrent operations
+
+**Solutions:**
+1. Batch edits - make multiple changes before saving
+2. Use auto-save to spread operations over time
+3. Monitor gas prices during off-peak hours
+4. Optimize data by deleting unused cells
+
+### Testing & Validation
+
+Run these commands to test CRUD operations:
+
+```bash
+# Test individual CRUD flows
+node scripts/test-spreadsheet-crud.js
+
+# Run full test suite
+bun run test:unit
+
+# Watch mode for development
+bun run test:watch
+```
+
+For comprehensive diagnostics:
+
+```bash
+# Check blockchain connectivity
+bun run test:proxy
+
+# Test wallet connection
+bun run test:wallet
+
+# Diagnose save issues
+bun run diagnose:save
+```
+
+## 📞 Support
+
+If you encounter issues not covered above:
+
+1. **Check the browser console** (F12 → Console tab) for detailed error messages
+2. **Review logs** in your browser's Local Storage
+3. **Test basic connectivity**: `bun run test:proxy`
+4. **Report issues** with detailed error messages and reproduction steps
+
+
 
 - ❄️ Arctic-themed UI
 - 🦭 Walrus-strong performance

@@ -142,6 +142,32 @@ export function useSpreadsheetLifecycle({
       const celldata = convertToLuckysheetData(spreadsheetData);
       console.log('[Lifecycle] Converted celldata:', celldata.length, 'cells');
 
+      // Calculate actual dimensions from celldata (don't hardcode grid size)
+      // This ensures export includes all data, not just first 100x26
+      let actualRows = 100;  // minimum default
+      let actualCols = 26;   // minimum default
+
+      if (celldata && celldata.length > 0) {
+        const bounds = celldata.reduce((acc, cell) => {
+          if (cell && typeof cell.r === 'number') {
+            acc.maxRow = Math.max(acc.maxRow, cell.r);
+          }
+          if (cell && typeof cell.c === 'number') {
+            acc.maxCol = Math.max(acc.maxCol, cell.c);
+          }
+          return acc;
+        }, { maxRow: -1, maxCol: -1 });
+
+        if (bounds.maxRow >= 0) {
+          actualRows = Math.max(actualRows, bounds.maxRow + 1);
+        }
+        if (bounds.maxCol >= 0) {
+          actualCols = Math.max(actualCols, bounds.maxCol + 1);
+        }
+      }
+
+      console.log('[Lifecycle] Calculated sheet dimensions:', { rows: actualRows, cols: actualCols });
+
       // Build WZ function definitions (adapter already did pre-injection)
       const {
         tree: wzFunctionTree,
@@ -157,8 +183,8 @@ export function useSpreadsheetLifecycle({
           status: 1,
           order: 0,
           hide: 0,
-          row: 100,
-          column: 26,
+          row: actualRows,
+          column: actualCols,
           defaultRowHeight: 25,
           defaultColWidth: 80,
           celldata: celldata,

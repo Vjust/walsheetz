@@ -1,11 +1,28 @@
 import { logger, LogComponent } from '../utils/Logger.js';
 import LuckyExcel from 'luckyexcel';
 import * as XLSX from 'xlsx';
+import { parseCSV } from '../utils/BlobParser.js'
 
 /**
  * Service for handling import and export of spreadsheet data
- * - Import: Excel (.xlsx) → Luckysheet JSON format using Luckyexcel
- * - Export: Luckysheet JSON → Excel (.xlsx) format using SheetJS/xlsx
+ *
+ * **Phase 2 Lifecycle Context:**
+ * With the new useSpreadsheetLifecycle hook, Luckysheet's internal state is managed by the hook
+ * and may not be immediately synchronized with window.luckysheetfile. To ensure reliable exports:
+ *
+ * 1. Data sources are checked in priority order:
+ *    - luckysheetData.sheets (passed from Header.jsx - most current in Phase 2)
+ *    - window.luckysheet.getluckysheetfile() (Luckysheet's getter method)
+ *    - window.luckysheet.getAllSheets() (alternative getter)
+ *    - window.luckysheetfile (legacy fallback)
+ *
+ * 2. Sheet data may be in two formats - both are supported:
+ *    - Grid format: sheet.data[row][col] (array of arrays)
+ *    - CellData format: sheet.celldata (array of cell objects with r, c properties)
+ *    - Priority: grid format is preferred when both are present
+ *
+ * **Import:** Excel (.xlsx) → Luckysheet JSON format using Luckyexcel
+ * **Export:** Luckysheet JSON → Excel (.xlsx) or CSV format using SheetJS/xlsx
  */
 export class SpreadsheetImportExportService {
   constructor() {
@@ -28,7 +45,7 @@ export class SpreadsheetImportExportService {
       throw new Error('No file provided');
     }
 
-    const validExtensions = ['.xlsx', '.xls', '.xlsm', '.xlsb'];
+    const validExtensions = ['.xlsx', '.xls', '.xlsm', '.xlsb', '.csv'];
     const fileName = file.name.toLowerCase();
     const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
 
@@ -51,36 +68,174 @@ export class SpreadsheetImportExportService {
         fileSize: file.size
       });
 
-      // Read file as ArrayBuffer
+      // Read file as ArrayBuffer/Text depending on type
+      const isCSV = fileName.endsWith('.csv')
       const arrayBuffer = await this._readFileAsArrayBuffer(file);
+
+      // Ensure we're in a browser environment with proper DOM
+      if (typeof window === 'undefined' || typeof document === 'undefined') {
+        throw new Error('Excel import is only available in browser environment');
+      }
+
+      // Ensure document.body exists (should be present in normal browser environment)
+      if (!document.body) {
+        throw new Error('Document body not available. Please try again.');
+      }
+
+      // CSV path: convert to Luckysheet structure without LuckyExcel
+      if (isCSV) {
+        try {
+          const text = new TextDecoder('utf-8').decode(arrayBuffer)
+          const parsed = parseCSV(text, {})
+
+          const sheet = await this._convertParsedCSVToLuckysheetSheet(parsed, options.title || (file.name.replace(/\.[^.]+$/, '')))
+
+          const exportJson = {
+            info: { name: options.title || (file.name.replace(/\.[^.]+$/, '')) },
+            sheets: [sheet]
+          }
+
+          logger.info(LogComponent.UI_COMPONENT, 'csv_import_success', 'CSV import completed', {
+            fileName: file.name,
+            rows: sheet.row,
+            columns: sheet.column
+          })
+
+          return this._processImportedData(exportJson, options)
+        } catch (error) {
+          logger.error(LogComponent.UI_COMPONENT, 'csv_import_error', 'CSV import failed', {
+            fileName: file.name,
+            error: error?.message || String(error)
+          })
+          throw new Error(`Failed to import CSV file: ${error?.message || 'Unknown error'}`)
+        }
+      }
+
+      // Create a temporary container for LuckyExcel if needed
+      // LuckyExcel sometimes needs DOM access during transformation
+      let tempContainer = document.getElementById('luckyexcel-temp-container');
+      if (!tempContainer) {
+        tempContainer = document.createElement('div');
+        tempContainer.id = 'luckyexcel-temp-container';
+        tempContainer.style.display = 'none';
+        document.body.appendChild(tempContainer);
+      }
 
       // Convert using Luckyexcel
       return await new Promise((resolve, reject) => {
-        LuckyExcel.transformExcelToLucky(
-          arrayBuffer,
-          (exportJson, luckysheetfile) => {
-            logger.info(LogComponent.UI_COMPONENT, 'import_success', 'Excel import completed', {
-              fileName: file.name,
-              sheetsCount: exportJson.sheets?.length || 0
-            });
+        try {
+          LuckyExcel.transformExcelToLucky(
+            arrayBuffer,
+            (exportJson, luckysheetfile) => {
+              logger.info(LogComponent.UI_COMPONENT, 'import_success', 'Excel import completed', {
+                fileName: file.name,
+                sheetsCount: exportJson.sheets?.length || 0
+              });
 
-            // Apply custom options if provided
-            const processedData = this._processImportedData(exportJson, options);
-            resolve(processedData);
-          },
-          (error) => {
-            logger.error(LogComponent.UI_COMPONENT, 'import_error', 'Excel import failed', {
-              fileName: file.name,
-              error: error?.message || String(error)
-            });
+              // Apply custom options if provided
+              const processedData = this._processImportedData(exportJson, options);
+              resolve(processedData);
+            },
+            (error) => {
+              logger.error(LogComponent.UI_COMPONENT, 'import_error', 'Excel import failed', {
+                fileName: file.name,
+                error: error?.message || String(error)
+              });
 
-            reject(new Error(`Failed to import Excel file: ${error?.message || 'Unknown error'}`));
-          }
-        );
+              reject(new Error(`Failed to import Excel file: ${error?.message || 'Unknown error'}`));
+            }
+          );
+        } catch (error) {
+          logger.error(LogComponent.UI_COMPONENT, 'import_exception', 'Excel import threw exception', {
+            fileName: file.name,
+            error: error?.message || String(error)
+          });
+          reject(new Error(`Failed to import Excel file: ${error?.message || 'Unknown error'}`));
+        }
       });
 
     } finally {
       this.importInProgress = false;
+    }
+  }
+
+  /**
+   * Convert parsed CSV grid to a Luckysheet sheet object (asynchronous chunked version)
+   * Processes cells in chunks to avoid stack overflow and blocking the main thread
+   * @private
+   * @param {Object} parsed - Parsed CSV data with rows, cols, and data array
+   * @param {string} sheetName - Name for the sheet
+   * @param {Function} onProgress - Optional callback for progress: (processedCells, totalCells) => {}
+   * @returns {Promise<Object>} Luckysheet sheet object
+   */
+  async _convertParsedCSVToLuckysheetSheet(parsed, sheetName, onProgress = null) {
+    const rows = parsed?.rows || 0
+    const cols = parsed?.cols || 0
+    const data = parsed?.data || []
+    const totalCells = rows * cols
+
+    // Use 5000 cells per chunk for good balance between UI responsiveness and performance
+    const CHUNK_SIZE = 5000
+
+    const celldata = []
+    let processedCells = 0
+
+    logger.debug(LogComponent.UI_COMPONENT, 'csv_conversion_start', 'Starting async CSV conversion', {
+      rows,
+      cols,
+      totalCells,
+      chunkSize: CHUNK_SIZE
+    })
+
+    // Helper to yield control to browser
+    const yieldToMain = () => {
+      return new Promise(resolve => {
+        if (typeof requestIdleCallback !== 'undefined') {
+          requestIdleCallback(() => resolve(), { timeout: 50 })
+        } else {
+          setTimeout(resolve, 0)
+        }
+      })
+    }
+
+    // Process cells in chunks
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const value = data[r]?.[c]
+        if (value !== undefined && value !== null && String(value) !== '') {
+          celldata.push({ r, c, v: { v: value, m: String(value) } })
+        }
+
+        processedCells++
+
+        // Yield control periodically
+        if (processedCells % CHUNK_SIZE === 0) {
+          if (onProgress) {
+            onProgress(processedCells, totalCells)
+          }
+          await yieldToMain()
+        }
+      }
+    }
+
+    // Final progress update
+    if (onProgress && processedCells % CHUNK_SIZE !== 0) {
+      onProgress(totalCells, totalCells)
+    }
+
+    logger.debug(LogComponent.UI_COMPONENT, 'csv_conversion_complete', 'Async CSV conversion completed', {
+      rows,
+      cols,
+      cellCount: celldata.length,
+      totalCells
+    })
+
+    return {
+      name: sheetName || 'Sheet1',
+      row: Math.max(rows, 1),
+      column: Math.max(cols, 1),
+      celldata,
+      config: {}
     }
   }
 
@@ -134,6 +289,7 @@ export class SpreadsheetImportExportService {
 
   /**
    * Export Luckysheet data to CSV file
+   * Phase 2 lifecycle: tries multiple data sources to ensure sheet data is found
    * @param {Object} luckysheetData - Luckysheet data structure
    * @param {Object} options - Export options
    * @returns {Promise<void>} Downloads the CSV file
@@ -155,9 +311,64 @@ export class SpreadsheetImportExportService {
       });
 
       // Use first sheet for CSV (CSV doesn't support multiple sheets)
-      const sheet = luckysheetData.sheets?.[0];
+      let sheet = luckysheetData.sheets?.[0];
+
+      // If sheet is missing from luckysheetData, try to fetch from Luckysheet's live state
       if (!sheet) {
-        throw new Error('No sheet data found');
+        logger.warn(LogComponent.UI_COMPONENT, 'csv_export_no_sheet', 'No sheet in luckysheetData, attempting fallback', {
+          sheetsLength: luckysheetData.sheets?.length
+        });
+
+        // Try to get sheet from Luckysheet's live state
+        if (typeof window !== 'undefined' && window.luckysheet) {
+          try {
+            // Try primary getter (Phase 2 lifecycle)
+            if (typeof window.luckysheet.getluckysheetfile === 'function') {
+              const allSheets = window.luckysheet.getluckysheetfile();
+              if (Array.isArray(allSheets) && allSheets.length > 0) {
+                sheet = allSheets[0];
+                logger.info(LogComponent.UI_COMPONENT, 'csv_export_fallback', 'Retrieved sheet from luckysheet.getluckysheetfile()', {
+                  sheetName: sheet?.name
+                });
+              }
+            }
+
+            // Second fallback: try getAllSheets
+            if (!sheet && typeof window.luckysheet.getAllSheets === 'function') {
+              const allSheets = window.luckysheet.getAllSheets(true);
+              if (Array.isArray(allSheets) && allSheets.length > 0) {
+                sheet = allSheets[0];
+                logger.info(LogComponent.UI_COMPONENT, 'csv_export_fallback', 'Retrieved sheet from luckysheet.getAllSheets()', {
+                  sheetName: sheet?.name
+                });
+              }
+            }
+          } catch (fallbackError) {
+            logger.warn(LogComponent.UI_COMPONENT, 'csv_export_fallback_error', 'Error accessing Luckysheet live state', {
+              error: fallbackError?.message
+            });
+          }
+        }
+
+        // If still no sheet, try window.luckysheetfile
+        if (!sheet && typeof window !== 'undefined' && Array.isArray(window.luckysheetfile) && window.luckysheetfile.length > 0) {
+          sheet = window.luckysheetfile[0];
+          logger.info(LogComponent.UI_COMPONENT, 'csv_export_fallback', 'Retrieved sheet from window.luckysheetfile', {
+            sheetName: sheet?.name
+          });
+        }
+      }
+
+      // If sheet is still missing, provide detailed error message
+      if (!sheet) {
+        const errorDetails = {
+          hasSheets: luckysheetData.sheets ? true : false,
+          sheetsLength: luckysheetData.sheets?.length || 0,
+          luckysheetAvailable: typeof window !== 'undefined' && !!window.luckysheet,
+          dataSource: 'luckysheetData'
+        };
+        logger.error(LogComponent.UI_COMPONENT, 'csv_export_no_data', 'No sheet data available from any source', errorDetails);
+        throw new Error('No sheet data found. Please ensure data is loaded before exporting.');
       }
 
       // Convert to workbook and export as CSV
@@ -189,10 +400,31 @@ export class SpreadsheetImportExportService {
    */
   _readFileAsArrayBuffer(file) {
     return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target.result);
-      reader.onerror = (e) => reject(new Error(`Failed to read file: ${e.target.error}`));
-      reader.readAsArrayBuffer(file);
+      if (typeof FileReader === 'undefined') {
+        reject(new Error('FileReader is not available in this environment'));
+        return;
+      }
+
+      try {
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+          if (e.target && e.target.result) {
+            resolve(e.target.result);
+          } else {
+            reject(new Error('Failed to read file: No result data'));
+          }
+        };
+        
+        reader.onerror = (e) => {
+          const errorMsg = e.target?.error?.message || 'Unknown error reading file';
+          reject(new Error(`Failed to read file: ${errorMsg}`));
+        };
+        
+        reader.readAsArrayBuffer(file);
+      } catch (error) {
+        reject(new Error(`Failed to initialize file reader: ${error.message}`));
+      }
     });
   }
 
@@ -250,32 +482,137 @@ export class SpreadsheetImportExportService {
 
   /**
    * Convert Luckysheet sheet to XLSX worksheet with advanced formatting
+   *
+   * **Phase 2 Lifecycle Support:**
+   * Handles both grid data format (sheet.data[r][c]) and celldata format (sheet.celldata array)
+   * which may come from either:
+   * - useSpreadsheetLifecycle hook initialization (celldata format, row/column calculated from bounds)
+   * - Legacy Luckysheet initialization (can be either format)
+   * - Imported data (typically grid format from user files)
+   *
+   * **Data Format Priority:**
+   * 1. Grid format (sheet.data) - preferred when available
+   * 2. CellData format (sheet.celldata) - used if grid data unavailable
+   * 3. Empty sheet - returned if neither format is available
+   *
    * @private
    */
   _convertSheetToWorksheet(sheet) {
-    if (!sheet || !sheet.data) {
+    if (!sheet) {
       return XLSX.utils.aoa_to_sheet([[]]);
     }
 
-    const rows = sheet.row || 100;
-    const cols = sheet.column || 26;
+    const initialRowCount = typeof sheet.row === 'number' && sheet.row > 0 ? sheet.row : 0;
+    const initialColCount = typeof sheet.column === 'number' && sheet.column > 0 ? sheet.column : 0;
 
-    // Build 2D array from sheet data and prepare cell formatting
-    const matrix = [];
+    // Check which data format is available
+    const hasGridData = Array.isArray(sheet.data) && sheet.data.length > 0;
+    const hasCellData = Array.isArray(sheet.celldata) && sheet.celldata.length > 0;
+
+    // If neither format available, return empty sheet
+    if (!hasGridData && !hasCellData) {
+      return XLSX.utils.aoa_to_sheet([[]]);
+    }
+
+    // Determine effective row/column counts from available data
+    let rows = initialRowCount;
+    let cols = initialColCount;
+
+    if (hasGridData) {
+      rows = Math.max(rows, sheet.data.length || 0);
+      const gridMaxCols = sheet.data.reduce((max, row) => {
+        if (Array.isArray(row)) {
+          return Math.max(max, row.length);
+        }
+        return max;
+      }, 0);
+      cols = Math.max(cols, gridMaxCols);
+    }
+
+    if (hasCellData) {
+      const bounds = sheet.celldata.reduce((acc, cell) => {
+        if (cell && typeof cell.r === 'number') {
+          acc.maxRow = Math.max(acc.maxRow, cell.r);
+        }
+        if (cell && typeof cell.c === 'number') {
+          acc.maxCol = Math.max(acc.maxCol, cell.c);
+        }
+        return acc;
+      }, { maxRow: -1, maxCol: -1 });
+
+      if (bounds.maxRow >= 0) {
+        rows = Math.max(rows, bounds.maxRow + 1);
+      }
+      if (bounds.maxCol >= 0) {
+        cols = Math.max(cols, bounds.maxCol + 1);
+      }
+    }
+
+    rows = Math.max(rows, 1);
+    cols = Math.max(cols, 1);
+
+    // Build lookup for celldata format if needed (more efficient than repeated searching)
+    let cellLookup = null;
+    if (hasCellData) {
+      cellLookup = new Map();
+      for (const cell of sheet.celldata) {
+        if (cell == null) continue;
+        const key = `${cell.r}:${cell.c}`;
+        const payload = cell?.v !== undefined ? cell.v : cell;
+        cellLookup.set(key, payload);
+      }
+    }
+
+    // Helper to get cell from either format (prefer grid data when present)
+    const getCellAt = (r, c) => {
+      const gridCell = hasGridData ? sheet.data?.[r]?.[c] : undefined;
+      if (gridCell !== undefined && gridCell !== null) {
+        return gridCell;
+      }
+      if (cellLookup) {
+        return cellLookup.get(`${r}:${c}`);
+      }
+      return undefined;
+    };
+
+    // Build 2D array from sheet data and collect formatting / formula info
+    const matrix = new Array(rows);
     const cellFormats = {};
+    const formulaCells = {};
 
     for (let r = 0; r < rows; r++) {
-      matrix[r] = [];
+      matrix[r] = new Array(cols);
       for (let c = 0; c < cols; c++) {
-        if (sheet.data[r] && sheet.data[r][c]) {
-          const cell = sheet.data[r][c];
-          // Extract value from cell
-          matrix[r][c] = cell.v !== undefined ? cell.v : cell.m;
+        const cell = getCellAt(r, c);
+        if (cell === undefined || cell === null) continue;
 
-          // Store cell formatting for later application
-          if (cell.s) {
-            cellFormats[XLSX.utils.encode_cell({ r, c })] = this._convertLuckysheetCellStyle(cell.s);
+        if (typeof cell === 'object') {
+          const hasVProp = Object.prototype.hasOwnProperty.call(cell, 'v');
+          const hasMProp = Object.prototype.hasOwnProperty.call(cell, 'm');
+          const cellValue = hasVProp ? cell.v : (hasMProp ? cell.m : '');
+          matrix[r][c] = cellValue !== undefined ? cellValue : '';
+
+          // Track formulas to reapply after sheet creation
+          if (cell.f) {
+            const cellRef = XLSX.utils.encode_cell({ r, c });
+            const formula = typeof cell.f === 'string' && cell.f.startsWith('=') ? cell.f.slice(1) : cell.f;
+            formulaCells[cellRef] = {
+              f: formula,
+              v: matrix[r][c]
+            };
           }
+
+          const styleSource = cell.s || cell;
+          if (styleSource && typeof styleSource === 'object') {
+            const convertedStyle = this._convertLuckysheetCellStyle(styleSource);
+            if (convertedStyle) {
+              const cellRef = XLSX.utils.encode_cell({ r, c });
+              cellFormats[cellRef] = convertedStyle;
+            }
+          }
+        } else {
+          // Primitive value (string, number, etc.)
+          matrix[r][c] = cell;
         }
       }
     }
@@ -289,6 +626,17 @@ export class SpreadsheetImportExportService {
         worksheet[cellRef] = {};
       }
       worksheet[cellRef].s = format;
+    }
+
+    // Apply formulas after worksheet creation
+    for (const [cellRef, { f, v }] of Object.entries(formulaCells)) {
+      if (!worksheet[cellRef]) {
+        worksheet[cellRef] = {};
+      }
+      worksheet[cellRef].f = f;
+      if (v !== undefined) {
+        worksheet[cellRef].v = v;
+      }
     }
 
     // Apply column widths if available
@@ -438,6 +786,15 @@ export class SpreadsheetImportExportService {
 
   /**
    * Convert single sheet to workbook (for CSV export)
+   *
+   * **Purpose:** Wraps a single Luckysheet sheet into a SheetJS workbook structure
+   * suitable for CSV export. CSV format only supports a single sheet, so the first
+   * sheet in a multi-sheet workbook is selected and exported.
+   *
+   * **Phase 2 Lifecycle:**
+   * Works with sheet data from either useSpreadsheetLifecycle hook (celldata format)
+   * or legacy sources, automatically adapting to whichever format is available.
+   *
    * @private
    */
   _convertSheetToWorkbook(sheet, options = {}) {

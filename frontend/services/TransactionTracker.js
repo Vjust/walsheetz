@@ -515,11 +515,17 @@ class TransactionTracker {
 
   /**
    * Load from localStorage
+   * RAM-only mode: No browser persistence
    */
   loadFromStorage() {
     try {
-      const stored = localStorage.getItem(this.storageKey);
-      if (!stored) return;
+      // RAM-only, no browser persistence - localStorage.getItem disabled
+      // const stored = localStorage.getItem(this.storageKey);
+      const stored = null;
+      if (!stored) {
+        console.log('TransactionTracker: RAM-only mode, no browser persistence');
+        return;
+      }
 
       const data = JSON.parse(stored);
 
@@ -569,32 +575,35 @@ class TransactionTracker {
 
   /**
    * Save to localStorage
+   * RAM-only mode: No browser persistence
    */
   saveToStorage() {
     try {
+      // RAM-only, no browser persistence - localStorage.setItem disabled
       // Convert Maps and Sets to serializable format
-      const objectTransactionsObj = {};
-      for (const [objectId, txIds] of this.objectTransactions) {
-        objectTransactionsObj[objectId] = Array.from(txIds);
-      }
+      // const objectTransactionsObj = {};
+      // for (const [objectId, txIds] of this.objectTransactions) {
+      //   objectTransactionsObj[objectId] = Array.from(txIds);
+      // }
 
-      const addressTransactionsObj = {};
-      for (const [address, txIds] of this.addressTransactions) {
-        addressTransactionsObj[address] = Array.from(txIds);
-      }
+      // const addressTransactionsObj = {};
+      // for (const [address, txIds] of this.addressTransactions) {
+      //   addressTransactionsObj[address] = Array.from(txIds);
+      // }
 
-      const data = {
-        version: this.storageVersion,
-        transactions: Object.fromEntries(this.transactions),
-        objectTransactions: objectTransactionsObj,
-        addressTransactions: addressTransactionsObj,
-        pendingTransactions: Array.from(this.pendingTransactions),
-        lastUpdated: Date.now()
-      };
+      // const data = {
+      //   version: this.storageVersion,
+      //   transactions: Object.fromEntries(this.transactions),
+      //   objectTransactions: objectTransactionsObj,
+      //   addressTransactions: addressTransactionsObj,
+      //   pendingTransactions: Array.from(this.pendingTransactions),
+      //   lastUpdated: Date.now()
+      // };
 
-      localStorage.setItem(this.storageKey, JSON.stringify(data));
+      // localStorage.setItem(this.storageKey, JSON.stringify(data));
 
-      logger.debug(LogComponent.BLOCKCHAIN, 'tx_saved', 'Transaction history saved');
+      console.log('TransactionTracker: RAM-only mode, no browser persistence');
+      logger.debug(LogComponent.BLOCKCHAIN, 'tx_saved', 'Transaction history saved (RAM-only)');
 
     } catch (error) {
       logger.error(LogComponent.BLOCKCHAIN, 'tx_save_error', 'Failed to save transaction history', {

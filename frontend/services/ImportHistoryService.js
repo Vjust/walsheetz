@@ -1,15 +1,17 @@
 import { logger, LogComponent } from '../utils/Logger.js';
 
 /**
- * Service for tracking import history and recent files
+ * Service for tracking import history and recent files (RAM-only)
+ *
+ * WARNING: All history is stored in memory only.
+ * No data persists across page reloads.
  */
 export class ImportHistoryService {
   constructor(maxHistoryItems = 50) {
     this.maxHistoryItems = maxHistoryItems;
-    this.storageKey = 'walsheetz_import_history';
-    this.recentFilesKey = 'walsheetz_recent_files';
-    this.history = this._loadHistory();
-    this.recentFiles = this._loadRecentFiles();
+    this.history = [];
+    this.recentFiles = [];
+    console.log('📝 ImportHistoryService initialized (RAM-only, no browser persistence)');
   }
 
   /**
@@ -192,65 +194,6 @@ export class ImportHistoryService {
     });
   }
 
-  /**
-   * Load history from localStorage
-   * @private
-   */
-  _loadHistory() {
-    try {
-      const data = localStorage.getItem(this.storageKey);
-      return data ? JSON.parse(data) : [];
-    } catch (error) {
-      logger.warn(LogComponent.UI_COMPONENT, 'import_history_load_error', 'Failed to load import history', {
-        error: error.message
-      });
-      return [];
-    }
-  }
-
-  /**
-   * Save history to localStorage
-   * @private
-   */
-  _saveHistory() {
-    try {
-      localStorage.setItem(this.storageKey, JSON.stringify(this.history));
-    } catch (error) {
-      logger.error(LogComponent.UI_COMPONENT, 'import_history_save_error', 'Failed to save import history', {
-        error: error.message
-      });
-    }
-  }
-
-  /**
-   * Load recent files from localStorage
-   * @private
-   */
-  _loadRecentFiles() {
-    try {
-      const data = localStorage.getItem(this.recentFilesKey);
-      return data ? JSON.parse(data) : [];
-    } catch (error) {
-      logger.warn(LogComponent.UI_COMPONENT, 'recent_files_load_error', 'Failed to load recent files', {
-        error: error.message
-      });
-      return [];
-    }
-  }
-
-  /**
-   * Save recent files to localStorage
-   * @private
-   */
-  _saveRecentFiles() {
-    try {
-      localStorage.setItem(this.recentFilesKey, JSON.stringify(this.recentFiles));
-    } catch (error) {
-      logger.error(LogComponent.UI_COMPONENT, 'recent_files_save_error', 'Failed to save recent files', {
-        error: error.message
-      });
-    }
-  }
 
   /**
    * Generate a hash for a file based on name and size

@@ -276,7 +276,8 @@ export function parseCSV(csv, options = {}) {
   const rows = lines.map(line => parseCSVLine(line, actualDelimiter));
 
   // Ensure all rows have same column count (pad with empty strings)
-  const maxCols = Math.max(...rows.map(row => row.length));
+  // Use reduce instead of spread operator to avoid stack overflow with large arrays
+  const maxCols = rows.reduce((max, row) => Math.max(max, row.length), 0);
   const normalizedRows = rows.map(row => {
     while (row.length < maxCols) {
       row.push('');
@@ -516,9 +517,10 @@ export function validateGrid(grid) {
   }
 
   // Check for consistent column count
+  // Use reduce instead of spread operator to avoid stack overflow with large arrays
   const colCounts = grid.map(row => row.length);
-  const minCols = Math.min(...colCounts);
-  const maxCols = Math.max(...colCounts);
+  const minCols = colCounts.reduce((min, col) => Math.min(min, col), Infinity);
+  const maxCols = colCounts.reduce((max, col) => Math.max(max, col), 0);
 
   if (maxCols - minCols > 0) {
     return {

@@ -1,0 +1,9 @@
+Sui Ref/
+node_modules/
+dist/
+tests/
+protos/
+*.lock
+*.md
+**/*.test.*
+**/*.spec.*

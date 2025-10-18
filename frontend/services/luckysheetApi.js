@@ -10,6 +10,7 @@ class LuckysheetApi {
     this.isReady = false;
     this.readyPromise = null;
     this.loadingPromise = null;
+    this.gridSizeManager = null; // Will be set during init
   }
 
   /**
@@ -76,6 +77,7 @@ class LuckysheetApi {
    * @param {string} config.containerId - Container element ID
    * @param {Object} config.sheet - Sheet data and configuration
    * @param {Function} config.onReady - Callback when ready
+   * @param {Object} config.gridSizeManager - GridSizeManager instance for capacity tracking
    * @returns {Promise<void>}
    */
   async init(config) {
@@ -85,8 +87,12 @@ class LuckysheetApi {
       containerId = 'luckysheet-container',
       sheet = {},
       onReady = () => {},
+      gridSizeManager = null,
       ...otherConfig
     } = config;
+
+    // Store reference to grid size manager
+    this.gridSizeManager = gridSizeManager;
 
     // Clean up any existing instance
     await this.destroy();
@@ -98,13 +104,26 @@ class LuckysheetApi {
 
     container.innerHTML = '';
 
+    // Use capacity-aware dimensions from GridSizeManager if available
+    let sheetToInit = { ...sheet };
+    if (gridSizeManager) {
+      const dims = gridSizeManager.getDimensions();
+      // Use manager's dimensions for initialization (ensures pre-allocated capacity)
+      sheetToInit.row = dims.rows;
+      sheetToInit.column = dims.cols;
+    } else {
+      // Fallback: use sheet dimensions or sensible defaults
+      sheetToInit.row = sheet.row || 100;
+      sheetToInit.column = sheet.column || 26;
+    }
+
     const luckysheetConfig = {
       container: containerId,
       title: sheet.name || 'WalSheetz',
       lang: 'en',
       showinfobar: false,
       showstatisticBar: false,
-      data: [sheet],
+      data: [sheetToInit],
       ...otherConfig,
       hook: {
         ...otherConfig.hook,
@@ -558,6 +577,59 @@ class LuckysheetApi {
     } catch (error) {
       console.warn('Error renaming sheet:', error);
     }
+  }
+
+  /**
+   * Ensure grid has enough capacity for data
+   * Called before loading large imports to pre-allocate grid space
+   * @param {Object} required - { rows, cols } required dimensions
+   * @returns {boolean} True if capacity was ensured
+   */
+  ensureGridCapacity(required) {
+    if (!this.gridSizeManager || !this.isReady) {
+      console.debug('Grid capacity check skipped: manager or luckysheet not ready');
+      return false;
+    }
+
+    try {
+      const result = this.gridSizeManager.ensureCapacity(required);
+
+      if (result.expanded && window.luckysheetfile && window.luckysheetfile[0]) {
+        // Update the current sheet with new dimensions
+        window.luckysheetfile[0].row = result.newDimensions.rows;
+        window.luckysheetfile[0].column = result.newDimensions.cols;
+
+        // Refresh to apply new grid dimensions
+        this.refresh('all');
+
+        console.debug('Grid expanded:', {
+          oldDims: result.oldDimensions,
+          newDims: result.newDimensions,
+          rowsAdded: result.rowsAdded,
+          colsAdded: result.colsAdded
+        });
+      }
+
+      return result.expanded;
+    } catch (error) {
+      console.warn('Error ensuring grid capacity:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get current grid dimensions from Luckysheet
+   * @returns {Object|null} { rows, cols } or null
+   */
+  getGridDimensions() {
+    if (!this.isReady || !window.luckysheetfile || !window.luckysheetfile[0]) {
+      return null;
+    }
+
+    return {
+      rows: window.luckysheetfile[0].row || 100,
+      cols: window.luckysheetfile[0].column || 26
+    };
   }
 }
 

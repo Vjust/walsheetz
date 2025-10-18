@@ -9,6 +9,7 @@ import { ImportPreviewModal } from './ImportPreviewModal.jsx'
 import { logger, LogComponent } from '../../utils/Logger.js'
 import luckysheetApi from '../../services/luckysheetApi.js'
 import SpreadsheetImportExportService from '../../services/SpreadsheetImportExportService.js'
+import { gridSizeManager } from '../../services/GridSizeManager.js'
 import '../styles/wallet-modal.css'
 
 export function Header() {
@@ -872,8 +873,32 @@ export function Header() {
 
       // Load imported data into Luckysheet
       if (window.luckysheet && previewData.sheets) {
-        // Use only selected sheet or all sheets
+        // Get the sheet to load
         const sheetToLoad = previewData.sheets;
+        const selectedSheet = sheetToLoad[selectedSheetIndex] || sheetToLoad[0];
+
+        // Pre-allocate grid capacity before loading data
+        if (selectedSheet.row && selectedSheet.column) {
+          logger.info(LogComponent.UI_COMPONENT, 'import_prealloc_start', 'Pre-allocating grid capacity for import', {
+            rows: selectedSheet.row,
+            cols: selectedSheet.column
+          });
+
+          const expansionResult = gridSizeManager.preallocateForImport({
+            rows: selectedSheet.row,
+            cols: selectedSheet.column
+          });
+
+          logger.info(LogComponent.UI_COMPONENT, 'import_prealloc_complete', 'Grid pre-allocation completed', {
+            expanded: expansionResult.expanded,
+            newDimensions: expansionResult.newDimensions
+          });
+        }
+
+        // Destroy existing instance before loading new data (prevents addEventListener error)
+        await luckysheetApi.destroy()
+
+        // Load the data with pre-allocated capacity
         window.luckysheet.create({
           container: 'luckysheet',
           data: sheetToLoad,
@@ -922,9 +947,58 @@ export function Header() {
         documentName
       })
 
-      // Get current Luckysheet data
+      // Get current Luckysheet data with proper fallback chain
+      // Phase 2 lifecycle: window.luckysheet.getluckysheetfile() is the canonical source
+      let sheets = []
+
+      // Try primary source: Luckysheet's getter (most current in new lifecycle)
+      if (window.luckysheet && typeof window.luckysheet.getluckysheetfile === 'function') {
+        try {
+          const luckysheetFile = window.luckysheet.getluckysheetfile()
+          if (Array.isArray(luckysheetFile) && luckysheetFile.length > 0) {
+            sheets = luckysheetFile
+            logger.debug(LogComponent.UI_COMPONENT, 'export_data_source', 'Using luckysheet.getluckysheetfile()', {
+              sheetsCount: sheets.length
+            })
+          }
+        } catch (e) {
+          logger.warn(LogComponent.UI_COMPONENT, 'export_getter_error', 'Error calling getluckysheetfile()', {
+            error: e.message
+          })
+        }
+      }
+
+      // Fallback to global variable (works in legacy lifecycle)
+      if (sheets.length === 0 && window.luckysheetfile && Array.isArray(window.luckysheetfile)) {
+        sheets = window.luckysheetfile
+        logger.debug(LogComponent.UI_COMPONENT, 'export_data_source', 'Using window.luckysheetfile fallback', {
+          sheetsCount: sheets.length
+        })
+      }
+
+      // Last resort: try getAllSheets
+      if (sheets.length === 0 && window.luckysheet && typeof window.luckysheet.getAllSheets === 'function') {
+        try {
+          sheets = window.luckysheet.getAllSheets(true) || []
+          logger.debug(LogComponent.UI_COMPONENT, 'export_data_source', 'Using luckysheet.getAllSheets()', {
+            sheetsCount: sheets.length
+          })
+        } catch (e) {
+          logger.warn(LogComponent.UI_COMPONENT, 'export_allsheets_error', 'Error calling getAllSheets()', {
+            error: e.message
+          })
+        }
+      }
+
+      // Clone sheets to avoid mutating Luckysheet's internal state
+      const sheetsToExport = sheets.map(sheet => ({
+        ...sheet,
+        celldata: sheet.celldata ? [...sheet.celldata] : undefined,
+        data: sheet.data ? JSON.parse(JSON.stringify(sheet.data)) : undefined
+      }))
+
       let luckysheetData = {
-        sheets: window.luckysheetfile || [],
+        sheets: sheetsToExport,
         info: {
           name: documentName
         }

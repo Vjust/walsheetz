@@ -2,63 +2,73 @@ import { IStorageService } from '../interfaces/IStorageService.js';
 
 /**
  * Storage service adapter implementing IStorageService
+ *
+ * RAM-ONLY MODE: All data is stored in memory only for the current session.
+ * No data persists to browser storage (localStorage/sessionStorage/IndexedDB).
+ * All spreadsheet data MUST be saved to Walrus + Sui blockchain.
+ *
+ * WARNING: Data will be lost on page refresh unless explicitly saved to blockchain first.
  */
 export class StorageAdapter extends IStorageService {
   constructor() {
     super();
-    this.storageKey = 'walsheetz_data';
-    this.historyKey = 'walsheetz_history';
-    this.sessionKey = 'walsheetz_session';
+
+    // In-memory storage maps (session-scoped)
+    this._data = null;           // Current spreadsheet data
+    this._history = {};          // Cell change history by address
+    this._session = this.createEmptySession();
     this.maxHistoryEntries = 100;
+
+    console.log('💾 RAM-Only Storage Adapter initialized - Walrus is the single source of truth');
   }
 
   async saveData(data) {
     const saveId = `storage-save-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const startTime = Date.now();
-    
+
     try {
-      console.log(`[StorageAdapter:${saveId}] 💾 Starting data save`, {
+      console.log(`[StorageAdapter:${saveId}] 💾 Starting RAM save`, {
         dataSize: JSON.stringify(data).length,
         hasCelldata: !!data?.celldata,
         cellCount: data?.celldata?.length || 0,
         timestamp: new Date().toISOString()
       });
-      
+
       const saveData = {
         ...data,
         savedAt: Date.now(),
         version: data.version || this.generateVersion()
       };
 
-      // Save to localStorage
-      const localStorageStart = Date.now();
-      localStorage.setItem(this.storageKey, JSON.stringify(saveData));
-      const localStorageDuration = Date.now() - localStorageStart;
-      
-      console.log(`[StorageAdapter:${saveId}] 📝 Local storage write complete`, {
-        duration: `${localStorageDuration}ms`,
-        storageKey: this.storageKey,
+      // Store in memory only
+      const memStart = Date.now();
+      this._data = saveData;
+      const memDuration = Date.now() - memStart;
+
+      console.log(`[StorageAdapter:${saveId}] 📝 RAM save complete`, {
+        duration: `${memDuration}ms`,
         dataSize: JSON.stringify(saveData).length
       });
-      
+
       // Update history
       const historyStart = Date.now();
       await this.updateHistory(saveData);
       const historyDuration = Date.now() - historyStart;
 
       const totalDuration = Date.now() - startTime;
-      console.log(`[StorageAdapter:${saveId}] ✅ Data saved successfully`, {
+      console.log(`[StorageAdapter:${saveId}] ✅ Data saved to RAM`, {
         totalDuration: `${totalDuration}ms`,
-        localStorageTime: `${localStorageDuration}ms`,
+        memoryTime: `${memDuration}ms`,
         historyUpdateTime: `${historyDuration}ms`,
-        version: saveData.version
+        version: saveData.version,
+        warning: '⚠️  Data exists in memory only. Must save to blockchain to persist.'
       });
-      
+
       return { success: true, duration: totalDuration };
     } catch (error) {
       console.error('Failed to save data:', error);
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: typeof error === 'string' ? error : error.message || 'Unknown error'
       };
     }
@@ -67,61 +77,45 @@ export class StorageAdapter extends IStorageService {
   async loadData() {
     const loadId = `storage-load-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const startTime = Date.now();
-    
+
     try {
-      console.log(`[StorageAdapter:${loadId}] 📂 Starting data load`, {
-        storageKey: this.storageKey,
+      console.log(`[StorageAdapter:${loadId}] 📂 Starting RAM load`, {
         timestamp: new Date().toISOString()
       });
-      
+
       const fetchStart = Date.now();
-      const stored = localStorage.getItem(this.storageKey);
+      const data = this._data;
       const fetchDuration = Date.now() - fetchStart;
-      
-      if (!stored) {
-        console.log(`[StorageAdapter:${loadId}] 📭 No stored data found, returning default`, {
-          fetchDuration: `${fetchDuration}ms`
+
+      if (!data) {
+        console.log(`[StorageAdapter:${loadId}] 📭 No data in memory, returning default`, {
+          fetchDuration: `${fetchDuration}ms`,
+          note: 'This is expected on first load or after refresh. Load from blockchain if available.'
         });
-        // Return default empty spreadsheet data
         return this.getDefaultData();
       }
 
-      const parseStart = Date.now();
-      const data = JSON.parse(stored);
-      const parseDuration = Date.now() - parseStart;
-      
       const totalDuration = Date.now() - startTime;
-      console.log(`[StorageAdapter:${loadId}] ✅ Data loaded from localStorage`, {
+      console.log(`[StorageAdapter:${loadId}] ✅ Data loaded from RAM`, {
         totalDuration: `${totalDuration}ms`,
         fetchTime: `${fetchDuration}ms`,
-        parseTime: `${parseDuration}ms`,
-        dataSize: stored.length,
+        dataSize: JSON.stringify(data).length,
         cellCount: data?.celldata?.length || 0,
         version: data?.version,
         savedAt: data?.savedAt ? new Date(data.savedAt).toISOString() : 'unknown'
       });
-      
+
       return data;
     } catch (error) {
       console.error('Failed to load data:', error);
-      
-      // Return default data on error
       return this.getDefaultData();
     }
   }
 
   getCellHistory(row, col) {
     try {
-      const historyData = localStorage.getItem(this.historyKey);
-      
-      if (!historyData) {
-        return [];
-      }
-
-      const history = JSON.parse(historyData);
       const cellKey = `${row}-${col}`;
-      
-      return history[cellKey] || [];
+      return this._history[cellKey] || [];
     } catch (error) {
       console.error('Failed to get cell history:', error);
       return [];
@@ -130,9 +124,9 @@ export class StorageAdapter extends IStorageService {
 
   async clearData() {
     try {
-      localStorage.removeItem(this.storageKey);
-      localStorage.removeItem(this.historyKey);
-      console.log('All data cleared from localStorage');
+      this._data = null;
+      this._history = {};
+      console.log('All data cleared from RAM');
     } catch (error) {
       console.error('Failed to clear data:', error);
       throw error;
@@ -141,23 +135,16 @@ export class StorageAdapter extends IStorageService {
 
   async updateHistory(data) {
     try {
-      let history = {};
-      
-      const existingHistory = localStorage.getItem(this.historyKey);
-      if (existingHistory) {
-        history = JSON.parse(existingHistory);
-      }
-
       // Add current save to history if it contains edits
       if (data.edits && Array.isArray(data.edits)) {
         data.edits.forEach(edit => {
           const cellKey = `${edit.row}-${edit.col}`;
-          
-          if (!history[cellKey]) {
-            history[cellKey] = [];
+
+          if (!this._history[cellKey]) {
+            this._history[cellKey] = [];
           }
-          
-          history[cellKey].push({
+
+          this._history[cellKey].push({
             oldValue: edit.oldValue,
             newValue: edit.newValue,
             timestamp: edit.timestamp,
@@ -165,13 +152,11 @@ export class StorageAdapter extends IStorageService {
           });
 
           // Limit history entries per cell
-          if (history[cellKey].length > this.maxHistoryEntries) {
-            history[cellKey] = history[cellKey].slice(-this.maxHistoryEntries);
+          if (this._history[cellKey].length > this.maxHistoryEntries) {
+            this._history[cellKey] = this._history[cellKey].slice(-this.maxHistoryEntries);
           }
         });
       }
-
-      localStorage.setItem(this.historyKey, JSON.stringify(history));
     } catch (error) {
       console.error('Failed to update history:', error);
     }
@@ -198,35 +183,35 @@ export class StorageAdapter extends IStorageService {
   // Additional utility methods
   getStorageInfo() {
     try {
-      const data = localStorage.getItem(this.storageKey);
-      const history = localStorage.getItem(this.historyKey);
-      
+      const dataSize = this._data ? JSON.stringify(this._data).length : 0;
+      const historySize = Object.keys(this._history).length;
+
       return {
-        hasData: !!data,
-        dataSize: data ? data.length : 0,
-        hasHistory: !!history,
-        historySize: history ? history.length : 0,
-        totalSize: (data?.length || 0) + (history?.length || 0)
+        hasData: !!this._data,
+        dataSize: dataSize,
+        hasHistory: historySize > 0,
+        historyEntries: historySize,
+        totalSize: dataSize,
+        storageType: 'RAM-only',
+        note: 'All data is in memory. No browser persistence.'
       };
     } catch (error) {
       return {
         hasData: false,
         dataSize: 0,
         hasHistory: false,
-        historySize: 0,
+        historyEntries: 0,
         totalSize: 0,
         error: typeof error === 'string' ? error : error.message || 'Unknown error'
       };
     }
   }
 
-  // Session persistence methods for Walrus integration
+  // Session persistence methods for Walrus integration (RAM-only)
   setCurrentSpreadsheetId(spreadsheetId) {
     try {
-      const session = this.getSession();
-      session.currentSpreadsheetId = spreadsheetId;
-      session.lastUpdated = Date.now();
-      localStorage.setItem(this.sessionKey, JSON.stringify(session));
+      this._session.currentSpreadsheetId = spreadsheetId;
+      this._session.lastUpdated = Date.now();
       console.log('Current spreadsheet ID saved to session:', spreadsheetId);
     } catch (error) {
       console.error('Failed to save current spreadsheet ID:', error);
@@ -235,8 +220,7 @@ export class StorageAdapter extends IStorageService {
 
   getCurrentSpreadsheetId() {
     try {
-      const session = this.getSession();
-      return session.currentSpreadsheetId || null;
+      return this._session.currentSpreadsheetId || null;
     } catch (error) {
       console.error('Failed to get current spreadsheet ID:', error);
       return null;
@@ -245,11 +229,9 @@ export class StorageAdapter extends IStorageService {
 
   setLastWalrusBlobId(blobId) {
     try {
-      const session = this.getSession();
-      session.lastWalrusBlobId = blobId;
-      session.lastSaveTimestamp = Date.now();
-      session.lastUpdated = Date.now();
-      localStorage.setItem(this.sessionKey, JSON.stringify(session));
+      this._session.lastWalrusBlobId = blobId;
+      this._session.lastSaveTimestamp = Date.now();
+      this._session.lastUpdated = Date.now();
       console.log('Last Walrus blob ID saved to session:', blobId);
     } catch (error) {
       console.error('Failed to save Walrus blob ID:', error);
@@ -258,8 +240,7 @@ export class StorageAdapter extends IStorageService {
 
   getLastWalrusBlobId() {
     try {
-      const session = this.getSession();
-      return session.lastWalrusBlobId || null;
+      return this._session.lastWalrusBlobId || null;
     } catch (error) {
       console.error('Failed to get Walrus blob ID:', error);
       return null;
@@ -268,10 +249,8 @@ export class StorageAdapter extends IStorageService {
 
   setSpreadsheetTitle(title) {
     try {
-      const session = this.getSession();
-      session.spreadsheetTitle = title;
-      session.lastUpdated = Date.now();
-      localStorage.setItem(this.sessionKey, JSON.stringify(session));
+      this._session.spreadsheetTitle = title;
+      this._session.lastUpdated = Date.now();
       console.log('Spreadsheet title saved to session:', title);
     } catch (error) {
       console.error('Failed to save spreadsheet title:', error);
@@ -280,8 +259,7 @@ export class StorageAdapter extends IStorageService {
 
   getSpreadsheetTitle() {
     try {
-      const session = this.getSession();
-      return session.spreadsheetTitle || 'Untitled Spreadsheet';
+      return this._session.spreadsheetTitle || 'Untitled Spreadsheet';
     } catch (error) {
       console.error('Failed to get spreadsheet title:', error);
       return 'Untitled Spreadsheet';
@@ -290,10 +268,8 @@ export class StorageAdapter extends IStorageService {
 
   setWalletAddress(address) {
     try {
-      const session = this.getSession();
-      session.walletAddress = address;
-      session.lastUpdated = Date.now();
-      localStorage.setItem(this.sessionKey, JSON.stringify(session));
+      this._session.walletAddress = address;
+      this._session.lastUpdated = Date.now();
       console.log('Wallet address saved to session:', address?.substring(0, 10) + '...');
     } catch (error) {
       console.error('Failed to save wallet address:', error);
@@ -302,8 +278,7 @@ export class StorageAdapter extends IStorageService {
 
   getWalletAddress() {
     try {
-      const session = this.getSession();
-      return session.walletAddress || null;
+      return this._session.walletAddress || null;
     } catch (error) {
       console.error('Failed to get wallet address:', error);
       return null;
@@ -312,10 +287,8 @@ export class StorageAdapter extends IStorageService {
 
   setAutoSaveEnabled(enabled) {
     try {
-      const session = this.getSession();
-      session.autoSaveEnabled = !!enabled;
-      session.lastUpdated = Date.now();
-      localStorage.setItem(this.sessionKey, JSON.stringify(session));
+      this._session.autoSaveEnabled = !!enabled;
+      this._session.lastUpdated = Date.now();
       console.log('Auto-save preference saved to session:', enabled);
     } catch (error) {
       console.error('Failed to save auto-save preference:', error);
@@ -324,25 +297,15 @@ export class StorageAdapter extends IStorageService {
 
   getAutoSaveEnabled() {
     try {
-      const session = this.getSession();
-      return session.autoSaveEnabled || false; // Default to disabled
+      return this._session.autoSaveEnabled || false;
     } catch (error) {
       console.error('Failed to get auto-save preference:', error);
-      return false; // Default to disabled on error
+      return false;
     }
   }
 
   getSession() {
-    try {
-      const stored = localStorage.getItem(this.sessionKey);
-      if (!stored) {
-        return this.createEmptySession();
-      }
-      return JSON.parse(stored);
-    } catch (error) {
-      console.error('Failed to parse session data, creating new session:', error);
-      return this.createEmptySession();
-    }
+    return { ...this._session };
   }
 
   createEmptySession() {
@@ -360,8 +323,8 @@ export class StorageAdapter extends IStorageService {
 
   clearSession() {
     try {
-      localStorage.removeItem(this.sessionKey);
-      console.log('Session cleared');
+      this._session = this.createEmptySession();
+      console.log('Session cleared and reset to defaults');
     } catch (error) {
       console.error('Failed to clear session:', error);
     }
@@ -369,8 +332,7 @@ export class StorageAdapter extends IStorageService {
 
   hasValidSession() {
     try {
-      const session = this.getSession();
-      return !!(session.currentSpreadsheetId && session.walletAddress);
+      return !!(this._session.currentSpreadsheetId && this._session.walletAddress);
     } catch (error) {
       return false;
     }
@@ -390,16 +352,8 @@ export class StorageAdapter extends IStorageService {
         return false;
       }
 
-      // Check if session is too old (older than 7 days)
-      const maxSessionAge = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
-      if (sessionInfo.sessionAge > maxSessionAge) {
-        console.warn('🧹 Session data too old, clearing:', {
-          ageHours: Math.round(sessionInfo.sessionAge / (60 * 60 * 1000)),
-          maxAgeHours: Math.round(maxSessionAge / (60 * 60 * 1000))
-        });
-        this.clearSession();
-        return false;
-      }
+      // Check if session is too old (older than current page load - for RAM-only, max age is infinite)
+      // RAM-only sessions live for the lifetime of the page, no age limit needed
 
       // Validate required fields
       if (sessionInfo.hasSpreadsheet && !sessionInfo.hasWalletAddress) {
@@ -418,14 +372,14 @@ export class StorageAdapter extends IStorageService {
 
   getSessionInfo() {
     try {
-      const session = this.getSession();
       return {
-        hasSpreadsheet: !!session.currentSpreadsheetId,
-        hasWalrusBlobId: !!session.lastWalrusBlobId,
-        hasWalletAddress: !!session.walletAddress,
-        spreadsheetTitle: session.spreadsheetTitle,
-        lastSaveTimestamp: session.lastSaveTimestamp,
-        sessionAge: Date.now() - (session.lastUpdated || 0)
+        hasSpreadsheet: !!this._session.currentSpreadsheetId,
+        hasWalrusBlobId: !!this._session.lastWalrusBlobId,
+        hasWalletAddress: !!this._session.walletAddress,
+        spreadsheetTitle: this._session.spreadsheetTitle,
+        lastSaveTimestamp: this._session.lastSaveTimestamp,
+        sessionAge: Date.now() - (this._session.lastUpdated || 0),
+        note: 'RAM-only session, no persistence across page reloads'
       };
     } catch (error) {
       return {
@@ -440,14 +394,14 @@ export class StorageAdapter extends IStorageService {
   async exportData() {
     try {
       const data = await this.loadData();
-      const history = localStorage.getItem(this.historyKey);
       const session = this.getSession();
-      
+
       return {
         spreadsheet: data,
-        history: history ? JSON.parse(history) : {},
+        history: { ...this._history },
         session: session,
-        exportedAt: Date.now()
+        exportedAt: Date.now(),
+        note: 'This is RAM-only data. Export for backup/testing purposes only.'
       };
     } catch (error) {
       throw new Error(`Failed to export data: ${typeof error === 'string' ? error : error.message || 'Unknown error'}`);
@@ -460,8 +414,8 @@ export class StorageAdapter extends IStorageService {
         await this.saveData(importedData.spreadsheet);
       }
 
-      if (importedData.history) {
-        localStorage.setItem(this.historyKey, JSON.stringify(importedData.history));
+      if (importedData.history && typeof importedData.history === 'object') {
+        this._history = { ...importedData.history };
       }
 
       return { success: true };
@@ -473,7 +427,7 @@ export class StorageAdapter extends IStorageService {
     }
   }
 
-  // Walrus epoch preference management
+  // Walrus epoch preference management (RAM-only)
   setWalrusEpochPreference(spreadsheetId, epochs) {
     try {
       if (!spreadsheetId) {
@@ -481,12 +435,15 @@ export class StorageAdapter extends IStorageService {
         return false;
       }
 
-      const key = `walsheetz_epoch_pref_${spreadsheetId}`
-      localStorage.setItem(key, epochs.toString())
-      console.log(`Walrus epoch preference saved for spreadsheet ${spreadsheetId}:`, epochs)
+      if (!this._session.epochPreferences) {
+        this._session.epochPreferences = {};
+      }
+
+      this._session.epochPreferences[spreadsheetId] = epochs;
+      console.log(`Walrus epoch preference saved for spreadsheet ${spreadsheetId}:`, epochs);
       return true;
     } catch (error) {
-      console.error('Failed to save Walrus epoch preference:', error)
+      console.error('Failed to save Walrus epoch preference:', error);
       return false;
     }
   }
@@ -497,16 +454,13 @@ export class StorageAdapter extends IStorageService {
         return null;
       }
 
-      const key = `walsheetz_epoch_pref_${spreadsheetId}`
-      const stored = localStorage.getItem(key)
-
-      if (!stored) {
+      if (!this._session.epochPreferences) {
         return null;
       }
 
-      return parseInt(stored);
+      return this._session.epochPreferences[spreadsheetId] || null;
     } catch (error) {
-      console.error('Failed to get Walrus epoch preference:', error)
+      console.error('Failed to get Walrus epoch preference:', error);
       return null;
     }
   }

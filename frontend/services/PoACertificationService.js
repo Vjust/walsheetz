@@ -14,8 +14,8 @@ class PoACertificationService {
     this.maxPollAttempts = 60; // 5 minutes max polling
     this.certificationHistory = new Map(); // blobId -> history array
 
-    // Load history from localStorage
-    this.loadHistoryFromStorage();
+    // Initialize empty history (RAM-only)
+    this.certificationHistory.clear();
 
     logger.info(LogComponent.UI, 'poa_service_init', 'PoACertificationService initialized');
   }
@@ -370,10 +370,13 @@ class PoACertificationService {
 
   /**
    * Load certification history from localStorage
+   * RAM-only mode: No browser persistence
    */
   loadHistoryFromStorage() {
     try {
-      const stored = localStorage.getItem('poa_certification_history');
+      // RAM-only, no browser persistence - localStorage.getItem disabled
+      // const stored = localStorage.getItem('poa_certification_history');
+      const stored = null;
       if (stored) {
         const historyArray = JSON.parse(stored);
         this.certificationHistory = new Map(historyArray);
@@ -382,6 +385,7 @@ class PoACertificationService {
           blobCount: this.certificationHistory.size
         });
       }
+      console.log('PoACertificationService: RAM-only mode, no browser persistence');
     } catch (error) {
       logger.warn(LogComponent.UI, 'poa_history_load_error', 'Failed to load history', {
         error: error.message
@@ -391,11 +395,14 @@ class PoACertificationService {
 
   /**
    * Save certification history to localStorage
+   * RAM-only mode: No browser persistence
    */
   saveHistoryToStorage() {
     try {
-      const historyArray = Array.from(this.certificationHistory.entries());
-      localStorage.setItem('poa_certification_history', JSON.stringify(historyArray));
+      // RAM-only, no browser persistence - localStorage.setItem disabled
+      // const historyArray = Array.from(this.certificationHistory.entries());
+      // localStorage.setItem('poa_certification_history', JSON.stringify(historyArray));
+      console.log('PoACertificationService: RAM-only mode, no browser persistence');
     } catch (error) {
       logger.warn(LogComponent.UI, 'poa_history_save_error', 'Failed to save history', {
         error: error.message

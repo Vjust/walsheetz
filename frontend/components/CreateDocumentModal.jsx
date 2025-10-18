@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { SpreadsheetCreationService } from '../services/SpreadsheetCreationService.js';
 import { ProgressIndicator } from './ProgressIndicator.jsx';
+import { useNetwork } from '../providers/NetworkProvider.jsx';
 import './styles/create-document-modal.css';
 
 export function CreateDocumentModal({ isOpen, onClose, onCreate, blockchainAdapter, storageAdapter, spreadsheetEngine }) {
@@ -11,6 +12,7 @@ export function CreateDocumentModal({ isOpen, onClose, onCreate, blockchainAdapt
   const [creationState, setCreationState] = useState(null);
   const [error, setError] = useState(null);
   const [showProgress, setShowProgress] = useState(false);
+  const { switchNetwork, isTestnet } = useNetwork();
 
   // Template options
   const templates = [
@@ -126,7 +128,31 @@ export function CreateDocumentModal({ isOpen, onClose, onCreate, blockchainAdapt
       // Modal will be closed by parent component on success
     } catch (error) {
       console.error('Error creating document:', error);
-      setError(error.message || 'Failed to create spreadsheet');
+
+      // Check if this is a WAL coin error and provide better UX
+      const errorMsg = error.message || 'Failed to create spreadsheet';
+      const isWalCoinError = errorMsg.toLowerCase().includes('wal') &&
+                            (errorMsg.toLowerCase().includes('coin') ||
+                             errorMsg.toLowerCase().includes('balance'));
+
+      if (isWalCoinError) {
+        setError({
+          isWalCoinError: true,
+          isTestnet,
+          message: errorMsg,
+          detail: isTestnet
+            ? 'The testnet Walrus publisher is temporarily out of funds. Switch to Mainnet for production-ready storage with permanent data.'
+            : 'The Walrus publisher is temporarily out of funds. Please try again later.',
+          switchNetwork: isTestnet ? switchNetwork : null
+        });
+      } else {
+        setError({
+          isWalCoinError: false,
+          message: errorMsg,
+          detail: null
+        });
+      }
+
       setIsLoading(false);
     }
   };
@@ -215,9 +241,62 @@ export function CreateDocumentModal({ isOpen, onClose, onCreate, blockchainAdapt
 
             {/* Error Display */}
             {error && (
-              <div className="error-message">
-                <span className="error-icon">⚠️</span>
-                <span>{error}</span>
+              <div>
+                {error.isWalCoinError && error.isTestnet && error.switchNetwork ? (
+                  <div className="testnet-warning-box">
+                    <div className="warning-header">
+                      <span className="warning-icon">⏳</span>
+                      <div>
+                        <h4>Testnet Publisher Temporarily Unavailable</h4>
+                        <p className="warning-message">{error.message}</p>
+                      </div>
+                    </div>
+
+                    <div className="testnet-limitations">
+                      <h5>📋 Testnet Limitations:</h5>
+                      <ul className="limitations-list">
+                        <li>Limited resources - publishers may run out of WAL coins</li>
+                        <li>Data stored on testnet is not permanent</li>
+                        <li>Best for testing and development only</li>
+                      </ul>
+                    </div>
+
+                    <div className="mainnet-suggestion">
+                      <h5>💡 For Production Use:</h5>
+                      <p>Switch to Mainnet to save your data permanently with reliable resources and real cost efficiency.</p>
+                      <p className="reload-notice">Note: The app will reload when you switch networks.</p>
+                    </div>
+
+                    <div className="testnet-warning-actions">
+                      <button
+                        type="button"
+                        onClick={() => setError(null)}
+                        className="retry-later-btn"
+                      >
+                        Try Again Later
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => error.switchNetwork('mainnet')}
+                        className="mainnet-switch-btn"
+                      >
+                        🌐 Switch to Mainnet →
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={`error-message ${error.isWalCoinError ? 'error-message-walcoin' : ''}`}>
+                    <span className="error-icon">
+                      {error.isWalCoinError ? '⏳' : '⚠️'}
+                    </span>
+                    <div className="error-content">
+                      <span className="error-title">{error.message}</span>
+                      {error.detail && (
+                        <span className="error-detail">{error.detail}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

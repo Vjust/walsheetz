@@ -17,7 +17,7 @@ import { recordTelemetry } from '../utils/Telemetry.js';
  * Core spreadsheet business logic
  */
 export class SpreadsheetEngine {
-  constructor(storageService, blockchainService, autoSaveEnabled = false) {
+  constructor(storageService, blockchainService, autoSaveEnabled = false, gridSizeManager = null) {
     this.storageService = storageService
     this.blockchainService = blockchainService
     // this.webSocketService = webSocketService; // Disabled for single-user MVP
@@ -32,6 +32,7 @@ export class SpreadsheetEngine {
     this.spreadsheetId = `sheet-${Date.now()}`
     this.lastSaveTimestamp = null // Track when last successful save occurred
     this.autoSaveEnabled = autoSaveEnabled // Track auto-save state
+    this.gridSizeManager = gridSizeManager // Grid capacity manager for large imports
 
     // Circuit breaker for auto-save using shared utility
     this.autoSaveCircuitBreaker = new CircuitBreaker({
@@ -916,7 +917,14 @@ export class SpreadsheetEngine {
   }
 
   /**
-   * Save current state
+   * Save current state (BLOCKCHAIN-FIRST MODE)
+   *
+   * New save flow (RAM-only + blockchain):
+   * 1. CHECK: Wallet must be connected (mandatory)
+   * 2. SAVE: Blockchain/Walrus save (primary, mandatory)
+   * 3. CACHE: Store in RAM memory only (no browser persistence)
+   *
+   * Data is LOST on page refresh unless blockchain save succeeds first.
    */
   async save(title = null, epochs = null) {
     logger.startTimer('spreadsheet_save');
@@ -924,11 +932,12 @@ export class SpreadsheetEngine {
     // Use default or provided epochs for Walrus storage
     const epochsToUse = epochs || 50;
 
-    logger.info(LogComponent.SPREADSHEET_ENGINE, 'save_start', `Starting spreadsheet save operation`, {
+    logger.info(LogComponent.SPREADSHEET_ENGINE, 'save_start', `Starting BLOCKCHAIN-FIRST save operation`, {
       editCount: this.editCount,
       pendingEdits: this.pendingEdits.size,
       walletConnected: this.blockchainService?.isWalletConnected() || false,
-      epochs: epochsToUse
+      epochs: epochsToUse,
+      mode: 'blockchain-first'
     });
 
     // Set flag to indicate save in progress
@@ -936,6 +945,12 @@ export class SpreadsheetEngine {
 
     // Use circuit breaker to execute the save operation
     return await this.autoSaveCircuitBreaker.execute(async () => {
+      // STEP 1: Check wallet connection (MANDATORY)
+      if (!this.blockchainService?.isWalletConnected()) {
+        logger.error(LogComponent.SPREADSHEET_ENGINE, 'save_blocked', `Save blocked: Wallet not connected (required for blockchain-first mode)`);
+        throw new Error('❌ Wallet must be connected to save. In RAM-only mode, blockchain saves are mandatory.');
+      }
+
       // Collect spreadsheet data
       const data = this.collectSpreadsheetData(title)
       logger.debug(LogComponent.SPREADSHEET_ENGINE, 'data_collected', `Spreadsheet data collected for save`, {
@@ -945,86 +960,66 @@ export class SpreadsheetEngine {
         epochs: epochsToUse
       });
 
-      // Save to local storage
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'storage_save', `Saving to local storage`);
-      await this.storageService.saveData(data)
-      logger.info(LogComponent.SPREADSHEET_ENGINE, 'storage_save', `Successfully saved to local storage`);
-
-      // Save to blockchain if connected
-      if (this.blockchainService?.isWalletConnected()) {
-        logger.info(LogComponent.SPREADSHEET_ENGINE, 'blockchain_save', `Attempting blockchain save with ${epochsToUse} epochs`);
-        const blockchainResult = await this.blockchainService.saveToBlockchain(data, { epochs: epochsToUse })
+      // STEP 2: Save to blockchain FIRST (PRIMARY, MANDATORY)
+      logger.info(LogComponent.SPREADSHEET_ENGINE, 'blockchain_save', `[BLOCKCHAIN-FIRST] Attempting blockchain save with ${epochsToUse} epochs`);
+      const blockchainResult = await this.blockchainService.saveToBlockchain(data, { epochs: epochsToUse })
         
-        if (!blockchainResult.success) {
-          logger.warn(LogComponent.SPREADSHEET_ENGINE, 'blockchain_save_failed', `Blockchain save failed`, {
-            error: blockchainResult.error,
-            reason: blockchainResult.reason,
-            message: typeof blockchainResult.message === 'string' ? blockchainResult.message : blockchainResult.message || 'Unknown blockchain error',
-            walrusOnly: blockchainResult.walrusOnly,
-            fallbackMethod: blockchainResult.method || 'unknown'
-          });
+      // STEP 3: Check blockchain result (MANDATORY SUCCESS)
+      if (!blockchainResult.success) {
+        logger.error(LogComponent.SPREADSHEET_ENGINE, 'blockchain_save_failed', `[BLOCKCHAIN-FIRST] Blockchain save FAILED - data NOT saved`, {
+          error: blockchainResult.error,
+          reason: blockchainResult.reason,
+          message: typeof blockchainResult.message === 'string' ? blockchainResult.message : blockchainResult.message || 'Unknown error',
+          critical: 'NO FALLBACK - data exists in RAM only and will be lost on refresh'
+        });
 
-          // Handle different failure scenarios with user-visible messages
-          if (blockchainResult.walrusOnly) {
-            // Walrus succeeded but blockchain failed - show warning with guidance
-            console.warn('⚠️  PARTIAL SAVE: Your data is stored in Walrus but not confirmed on Sui blockchain', {
-              issue: (typeof blockchainResult.message === 'string' ? blockchainResult.message : blockchainResult.message || 'Unknown error') || (typeof blockchainResult.error === 'string' ? blockchainResult.error : blockchainResult.error || 'Unknown error'),
-              impact: 'Data is safely stored in decentralized storage but not linked on-chain',
-              recommendation: blockchainResult.reason === 'insufficient_balance' ?
-                'Add more SUI tokens to your wallet and try saving again' :
-                'Try saving again to complete the blockchain confirmation',
-              status: 'Queued for retry when possible'
-            });
-          } else {
-            // Complete failure - show error with actionable guidance
-            const errorMessage = (typeof blockchainResult.message === 'string' ? blockchainResult.message : blockchainResult.message || 'Unknown error') || (typeof blockchainResult.error === 'string' ? blockchainResult.error : blockchainResult.error || 'Unknown error');
-            const actionNeeded = blockchainResult.reason === 'insufficient_balance' ?
-              'Please add SUI tokens to your wallet' :
-              blockchainResult.reason === 'wallet_rejected' ?
-                'Please approve the transaction in your wallet' :
-                'Please check your connection and try again';
+        // Determine error reason and provide guidance
+        const errorMessage = (typeof blockchainResult.message === 'string' ? blockchainResult.message : blockchainResult.message) ||
+                            (typeof blockchainResult.error === 'string' ? blockchainResult.error : blockchainResult.error) ||
+                            'Unknown error';
+        const actionNeeded = blockchainResult.reason === 'insufficient_balance' ?
+          'Please add SUI tokens to your wallet and try again' :
+          blockchainResult.reason === 'wallet_rejected' ?
+            'Please approve the transaction in your wallet' :
+            'Check your connection and try again';
 
-            console.error('❌ SAVE FAILED: Unable to save to blockchain or decentralized storage', {
-              error: errorMessage,
-              action: actionNeeded,
-              reason: blockchainResult.reason,
-              backup: 'Your work is safe in browser localStorage'
-            });
-          }
+        const criticalError = `❌ SAVE FAILED: Blockchain save required but failed. Your unsaved work is in RAM only and will be lost on page refresh.\n\nError: ${errorMessage}\nAction: ${actionNeeded}`;
+        console.error(criticalError);
 
-          // Throw error for circuit breaker to handle
-          throw new Error(blockchainResult.error || 'Blockchain save failed');
-        } else {
-          logger.info(LogComponent.SPREADSHEET_ENGINE, 'blockchain_save', `Blockchain save completed successfully`, {
-            method: blockchainResult.method,
-            blobId: blockchainResult.blobId,
-            transactionId: blockchainResult.transactionId,
-            walrusSuccess: blockchainResult.walrusSuccess,
-            blockchainSuccess: blockchainResult.blockchainSuccess
-          });
-
-          // Show user-visible success message only when both blockchain and Walrus succeed
-          if (blockchainResult.walrusSuccess && blockchainResult.blockchainSuccess) {
-            const successMessage = {
-              suiTransaction: blockchainResult.transactionId,
-              walrusBlobId: blockchainResult.walrusBlobId,
-              method: blockchainResult.method,
-              durability: 'Your data is now permanently accessible on the decentralized web'
-            };
-
-            // Include latest version info if available
-            if (blockchainResult.latestVersion) {
-              successMessage.onChainVersion = `v${blockchainResult.latestVersion.versionNumber}`;
-              successMessage.savedAt = blockchainResult.latestVersion.timestampFormatted;
-              successMessage.cells = blockchainResult.latestVersion.cellCount;
-            }
-
-            console.log('🎉 FULL SUCCESS: Your data is now stored on both Sui blockchain AND Walrus decentralized storage!', successMessage);
-          }
-        }
-      } else {
-        logger.debug(LogComponent.SPREADSHEET_ENGINE, 'blockchain_save_skipped', `Blockchain save skipped - wallet not connected`);
+        // Throw error for circuit breaker to handle - THIS IS CRITICAL
+        throw new Error(blockchainResult.error || 'Blockchain save failed - no fallback available');
       }
+
+      // STEP 4: Blockchain success - now cache to RAM memory
+      logger.info(LogComponent.SPREADSHEET_ENGINE, 'blockchain_save_success', `[BLOCKCHAIN-FIRST] Blockchain save succeeded - caching to RAM`, {
+        method: blockchainResult.method,
+        blobId: blockchainResult.blobId,
+        transactionId: blockchainResult.transactionId,
+        walrusSuccess: blockchainResult.walrusSuccess,
+        blockchainSuccess: blockchainResult.blockchainSuccess
+      });
+
+      // Cache data to RAM (StorageAdapter now uses in-memory only)
+      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'ram_cache_save', `Caching spreadsheet data to RAM`);
+      await this.storageService.saveData(data);
+      logger.info(LogComponent.SPREADSHEET_ENGINE, 'ram_cache_save', `Successfully cached to RAM (blockchain save was primary)`);
+
+      // Show user-visible success message
+      const successMessage = {
+        suiTransaction: blockchainResult.transactionId,
+        walrusBlobId: blockchainResult.walrusBlobId || blockchainResult.blobId,
+        method: blockchainResult.method,
+        durability: 'Your data is now permanently stored on the decentralized web'
+      };
+
+      // Include latest version info if available
+      if (blockchainResult.latestVersion) {
+        successMessage.onChainVersion = `v${blockchainResult.latestVersion.versionNumber}`;
+        successMessage.savedAt = blockchainResult.latestVersion.timestampFormatted;
+        successMessage.cells = blockchainResult.latestVersion.cellCount;
+      }
+
+      console.log('🎉 [BLOCKCHAIN-FIRST] SUCCESS: Data saved to Sui blockchain AND Walrus storage!', successMessage);
 
       // Reset edit tracking and update hash for dirty checking
       const previousEditCount = this.editCount;
@@ -1164,74 +1159,19 @@ export class SpreadsheetEngine {
   }
 
   /**
-   * Save to Walrus only (for auto-save without wallet prompts)
+   * Save to Walrus + Blockchain (blockchain-first mode)
+   *
+   * In RAM-only mode, ALL saves must go through blockchain.
+   * This method is maintained for compatibility but now routes to main save().
    */
   async saveToWalrusOnly(title = null) {
-    logger.info(LogComponent.SPREADSHEET_ENGINE, 'walrus_save_triggered', `Walrus-only save triggered`);
+    logger.warn(LogComponent.SPREADSHEET_ENGINE, 'walrus_only_deprecated', `saveToWalrusOnly called - redirecting to blockchain-first save()`, {
+      note: 'In RAM-only mode, all saves go through blockchain'
+    });
 
-    if (this.isSaveInProgress) {
-      return { success: false, error: 'Save already in progress' };
-    }
-
-    this.saveStatus = 'saving_walrus';
-
-    try {
-      const data = this.collectSpreadsheetData(title);
-
-      // Save to localStorage first
-      await this.storageService.saveData(data);
-
-      // Save to Walrus only
-      if (this.blockchainService?.walrusService) {
-        const walrusResult = await this.blockchainService.walrusService.storeBlob(data, {
-          manualSave: true,
-          spreadsheetId: this.spreadsheetId
-        });
-
-        if (walrusResult.success) {
-          this.lastWalrusSaveTimestamp = Date.now();
-          this.pendingWalrusSaves.push({
-            blobId: walrusResult.blobId,
-            timestamp: Date.now(),
-            data: data
-          });
-
-          // Keep only last 10 pending saves
-          if (this.pendingWalrusSaves.length > 10) {
-            this.pendingWalrusSaves.shift();
-          }
-
-          this.saveStatus = 'saved_walrus';
-          this.editCount = 0;
-          this.pendingEdits.clear();
-
-          return {
-            success: true,
-            method: 'walrus',
-            blobId: walrusResult.blobId,
-            needsBlockchainSync: true
-          };
-        } else {
-          throw new Error(walrusResult.error || 'Walrus save failed');
-        }
-      } else {
-        this.saveStatus = 'ready';
-        return {
-          success: true,
-          method: 'localStorage',
-          message: 'Saved locally - Walrus not available'
-        };
-      }
-    } catch (error) {
-      this.saveStatus = 'error';
-      logger.error(LogComponent.SPREADSHEET_ENGINE, 'walrus_save_error', 'Walrus-only save failed', {
-        error: typeof error === 'string' ? error : error.message || 'Unknown error'
-      });
-      return {
-        success: false,
-        error: typeof error === 'string' ? error : error.message || 'Unknown error'
-      };
-    }
+    // In blockchain-first mode, redirect to main save() method
+    // which ensures blockchain persistence
+    return await this.save(title);
   }
 
   /**

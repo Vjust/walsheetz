@@ -62,7 +62,7 @@ export const ImportButton = ({
       <input
         ref={fileInputRef}
         type="file"
-        accept=".xlsx,.xls"
+        accept=".xlsx,.xls,.csv"
         onChange={handleFileChange}
         style={{ display: 'none' }}
         aria-hidden="true"

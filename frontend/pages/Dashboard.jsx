@@ -159,6 +159,19 @@ export function Dashboard() {
       setShowCreateModal(false);
       logger.logUserAction('dashboard_create_new', { title });
 
+      // Create optimistic sheet entry
+      const optimisticId = `temp-${Date.now()}`;
+      const optimisticSheet = {
+        objectId: optimisticId,
+        title: title,
+        created_at: new Date().toISOString(),
+        last_modified: new Date().toISOString(),
+        isOptimistic: true
+      };
+
+      // Show optimistic update immediately
+      setSpreadsheets(prev => [optimisticSheet, ...prev]);
+
       const result = await createNewSpreadsheet(title);
 
       if (result.success) {
@@ -167,9 +180,20 @@ export function Dashboard() {
           title
         });
 
+        // Replace optimistic entry with real data
+        setSpreadsheets(prev =>
+          prev.map(s =>
+            s.objectId === optimisticId
+              ? { ...s, objectId: result.spreadsheetId, isOptimistic: false }
+              : s
+          )
+        );
+
         // Navigate to the new spreadsheet
         navigate(`/spreadsheet/${result.spreadsheetId}`);
       } else {
+        // Rollback optimistic update on failure
+        setSpreadsheets(prev => prev.filter(s => s.objectId !== optimisticId));
         setError(`Failed to create spreadsheet: ${result.error}`);
         logger.error(LogComponent.UI_COMPONENT, 'dashboard_create_error', 'Failed to create spreadsheet', {
           error: result.error
@@ -246,13 +270,40 @@ export function Dashboard() {
   const handleDelete = async (spreadsheetId, title) => {
     if (!deleteSpreadsheet) return;
 
-    const result = await deleteSpreadsheet(spreadsheetId, title);
-    if (result.success) {
-      loadSpreadsheets(); // Refresh list
-    } else {
-      setError(`Failed to delete: ${result.error}`);
+    // Store previous state for rollback
+    const previousSpreadsheets = [...spreadsheets];
+
+    // Optimistic removal from UI
+    setSpreadsheets(prev => prev.filter(s => s.objectId !== spreadsheetId));
+    logger.logUserAction('dashboard_delete_optimistic', { spreadsheetId, title });
+
+    try {
+      const result = await deleteSpreadsheet(spreadsheetId, title);
+      if (result.success) {
+        logger.info(LogComponent.UI_COMPONENT, 'dashboard_delete_success', 'Spreadsheet deleted successfully', {
+          spreadsheetId,
+          title
+        });
+      } else {
+        // Rollback optimistic deletion on failure
+        setSpreadsheets(previousSpreadsheets);
+        setError(`Failed to delete: ${result.error}`);
+        logger.error(LogComponent.UI_COMPONENT, 'dashboard_delete_error', 'Failed to delete spreadsheet', {
+          error: result.error,
+          spreadsheetId
+        });
+      }
+      return result;
+    } catch (error) {
+      // Rollback on exception
+      setSpreadsheets(previousSpreadsheets);
+      setError(`Error deleting spreadsheet: ${error.message}`);
+      logger.error(LogComponent.UI_COMPONENT, 'dashboard_delete_exception', 'Exception deleting spreadsheet', {
+        error: error.message,
+        spreadsheetId
+      });
+      return { success: false, error: error.message };
     }
-    return result;
   };
 
   const handleMigrate = (spreadsheet) => {

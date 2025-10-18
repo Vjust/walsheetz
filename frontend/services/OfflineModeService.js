@@ -46,28 +46,34 @@ class OfflineModeService {
   }
 
   // Load persisted data from localStorage
+  // RAM-only mode: No browser persistence
   loadPersistedData() {
     try {
+      // RAM-only, no browser persistence - localStorage.getItem disabled
       // Load pending operations
-      const pendingOps = localStorage.getItem(this.PENDING_OPERATIONS_KEY);
+      // const pendingOps = localStorage.getItem(this.PENDING_OPERATIONS_KEY);
+      const pendingOps = null;
       if (pendingOps) {
         this.pendingOperations = JSON.parse(pendingOps);
       }
 
       // Load local data store
-      const localData = localStorage.getItem(this.LOCAL_DATA_KEY);
+      // const localData = localStorage.getItem(this.LOCAL_DATA_KEY);
+      const localData = null;
       if (localData) {
         const parsed = JSON.parse(localData);
         this.localDataStore = new Map(Object.entries(parsed));
       }
 
       // Load sync queue
-      const syncQueue = localStorage.getItem(this.SYNC_QUEUE_KEY);
+      // const syncQueue = localStorage.getItem(this.SYNC_QUEUE_KEY);
+      const syncQueue = null;
       if (syncQueue) {
         this.syncQueue = JSON.parse(syncQueue);
       }
 
-      logger.info(LogComponent.PERFORMANCE, 'data_loaded', 'Persisted data loaded', {
+      console.log('OfflineModeService: RAM-only mode, no browser persistence');
+      logger.info(LogComponent.PERFORMANCE, 'data_loaded', 'Persisted data loaded (RAM-only)', {
         pendingOperations: this.pendingOperations.length,
         localDataItems: this.localDataStore.size,
         syncQueueItems: this.syncQueue.length
@@ -81,17 +87,21 @@ class OfflineModeService {
   }
 
   // Persist data to localStorage
+  // RAM-only mode: No browser persistence
   persistData() {
     try {
+      // RAM-only, no browser persistence - localStorage.setItem disabled
       // Save pending operations
-      localStorage.setItem(this.PENDING_OPERATIONS_KEY, JSON.stringify(this.pendingOperations));
+      // localStorage.setItem(this.PENDING_OPERATIONS_KEY, JSON.stringify(this.pendingOperations));
 
       // Save local data store
-      const localDataObj = Object.fromEntries(this.localDataStore);
-      localStorage.setItem(this.LOCAL_DATA_KEY, JSON.stringify(localDataObj));
+      // const localDataObj = Object.fromEntries(this.localDataStore);
+      // localStorage.setItem(this.LOCAL_DATA_KEY, JSON.stringify(localDataObj));
 
       // Save sync queue
-      localStorage.setItem(this.SYNC_QUEUE_KEY, JSON.stringify(this.syncQueue));
+      // localStorage.setItem(this.SYNC_QUEUE_KEY, JSON.stringify(this.syncQueue));
+
+      console.log('OfflineModeService: RAM-only mode, no browser persistence');
 
     } catch (error) {
       logger.error(LogComponent.STORAGE_SERVICE, 'data_persist_error', 'Failed to persist data', {
@@ -367,17 +377,23 @@ class OfflineModeService {
   }
 
   // Get storage usage
+  // RAM-only mode: No browser persistence
   getStorageUsage() {
     try {
-      const localData = localStorage.getItem(this.LOCAL_DATA_KEY) || '';
-      const pendingOps = localStorage.getItem(this.PENDING_OPERATIONS_KEY) || '';
-      const syncQueue = localStorage.getItem(this.SYNC_QUEUE_KEY) || '';
+      // RAM-only, no browser persistence - localStorage.getItem disabled
+      // const localData = localStorage.getItem(this.LOCAL_DATA_KEY) || '';
+      // const pendingOps = localStorage.getItem(this.PENDING_OPERATIONS_KEY) || '';
+      // const syncQueue = localStorage.getItem(this.SYNC_QUEUE_KEY) || '';
+      const localData = '';
+      const pendingOps = '';
+      const syncQueue = '';
 
       return {
         localData: localData.length,
         pendingOperations: pendingOps.length,
         syncQueue: syncQueue.length,
-        total: localData.length + pendingOps.length + syncQueue.length
+        total: localData.length + pendingOps.length + syncQueue.length,
+        ramOnly: true
       };
     } catch (error) {
       return { error: error.message };
@@ -385,17 +401,20 @@ class OfflineModeService {
   }
 
   // Clear offline data
+  // RAM-only mode: No browser persistence
   clearOfflineData() {
     this.localDataStore.clear();
     this.pendingOperations = [];
     this.syncQueue = [];
 
+    // RAM-only, no browser persistence - localStorage.removeItem disabled
     // Clear from localStorage
-    localStorage.removeItem(this.PENDING_OPERATIONS_KEY);
-    localStorage.removeItem(this.LOCAL_DATA_KEY);
-    localStorage.removeItem(this.SYNC_QUEUE_KEY);
+    // localStorage.removeItem(this.PENDING_OPERATIONS_KEY);
+    // localStorage.removeItem(this.LOCAL_DATA_KEY);
+    // localStorage.removeItem(this.SYNC_QUEUE_KEY);
 
-    logger.info(LogComponent.STORAGE_SERVICE, 'offline_data_cleared', 'All offline data cleared');
+    console.log('OfflineModeService: RAM-only mode, offline data cleared from memory');
+    logger.info(LogComponent.STORAGE_SERVICE, 'offline_data_cleared', 'All offline data cleared (RAM-only)');
   }
 
   // Export offline data for backup

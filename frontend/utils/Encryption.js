@@ -90,33 +90,27 @@ export class EncryptionUtility {
   }
 
   /**
-   * Get wallet address from various sources
+   * Get wallet address from various sources (no browser storage)
    */
   getWalletAddress() {
-    // Try to get from session storage first
-    const sessionWallet = sessionStorage.getItem('walsheetz_wallet_address');
-    if (sessionWallet) return sessionWallet;
-
-    // Try local storage as fallback
-    const localWallet = localStorage.getItem('walsheetz_wallet_address');
-    if (localWallet) return localWallet;
-
-    // Try to get from global wallet connection
+    // Try to get from global wallet connection (RAM-based)
     if (typeof window !== 'undefined' && window.walletConnection?.address) {
       return window.walletConnection.address;
     }
 
+    // RAM-only mode: sessionStorage disabled
+    // Fallback to generating a session key
     return null;
   }
 
   /**
-   * Generate a session-based key for fallback encryption
+   * Generate a session-based key for fallback encryption (RAM-only)
    */
   generateSessionKey() {
-    const sessionId = sessionStorage.getItem('walsheetz_session_id') ||
+    // Generate unique session ID in memory
+    const sessionId = this._sessionId ||
                       `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-    sessionStorage.setItem('walsheetz_session_id', sessionId);
+    this._sessionId = sessionId;
     return sessionId;
   }
 
@@ -129,13 +123,12 @@ export class EncryptionUtility {
       const encoder = new TextEncoder();
       const keyData = encoder.encode(keyMaterial);
 
-      // Generate salt if not exists
-      let salt = sessionStorage.getItem('walsheetz_encryption_salt');
+      // Generate salt in memory (no browser persistence)
+      let salt = this._encryptionSalt;
       if (!salt) {
         salt = crypto.getRandomValues(new Uint8Array(this.saltLength));
-        sessionStorage.setItem('walsheetz_encryption_salt', Array.from(salt).join(','));
-      } else {
-        salt = new Uint8Array(salt.split(',').map(Number));
+        // Store in memory, not sessionStorage
+        this._encryptionSalt = salt;
       }
 
       // Import key material
@@ -335,7 +328,8 @@ export class EncryptionUtility {
    */
   async resetEncryptionKey() {
     this.encryptionKey = null;
-    sessionStorage.removeItem('walsheetz_encryption_salt');
+    this._encryptionSalt = null;
+    this._sessionId = null;
     await this.initializeEncryptionKey();
   }
 }

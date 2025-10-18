@@ -371,6 +371,168 @@
   box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
 }
 
+/* Testnet Warning Box for WAL Coin Errors */
+.testnet-warning-box {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(99, 102, 241, 0.05));
+  border: 2px solid rgba(59, 130, 246, 0.3);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.testnet-warning-box .warning-header {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  align-items: flex-start;
+}
+
+.testnet-warning-box .warning-icon {
+  font-size: 2rem;
+  min-width: 2.5rem;
+}
+
+.testnet-warning-box .warning-icon + div h4 {
+  margin: 0 0 0.5rem 0;
+  color: #1e3a8a;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.testnet-warning-box .warning-message {
+  margin: 0;
+  color: #3b82f6;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.testnet-limitations {
+  background: rgba(255, 255, 255, 0.7);
+  border-left: 3px solid #3b82f6;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.testnet-limitations h5 {
+  margin: 0 0 0.75rem 0;
+  color: #1e3a8a;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.limitations-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.limitations-list li {
+  padding: 0.5rem 0;
+  color: #475569;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+.limitations-list li:before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: #3b82f6;
+  font-weight: bold;
+}
+
+.mainnet-suggestion {
+  background: rgba(16, 185, 129, 0.05);
+  border-left: 3px solid #10b981;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.mainnet-suggestion h5 {
+  margin: 0 0 0.75rem 0;
+  color: #065f46;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.mainnet-suggestion p {
+  margin: 0 0 0.5rem 0;
+  color: #047857;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.mainnet-suggestion p:last-child {
+  margin-bottom: 0;
+}
+
+.reload-notice {
+  font-size: 0.8125rem;
+  color: #7c3aed;
+  font-style: italic;
+  background: rgba(124, 58, 237, 0.1);
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.testnet-warning-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.retry-later-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #3b82f6;
+  border: 2px solid rgba(59, 130, 246, 0.3);
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.retry-later-btn:hover {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.6);
+  color: #1e40af;
+  transform: translateY(-1px);
+}
+
+.mainnet-switch-btn {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: 2px solid transparent;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 160px;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.mainnet-switch-btn:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.mainnet-switch-btn:active {
+  transform: translateY(0);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .create-modal {
@@ -427,5 +589,38 @@
   .success-button {
     width: 100%;
     justify-content: center;
+  }
+
+  .testnet-warning-box {
+    padding: 1rem;
+  }
+
+  .testnet-warning-box .warning-header {
+    gap: 0.75rem;
+  }
+
+  .testnet-warning-box .warning-icon {
+    font-size: 1.5rem;
+    min-width: 2rem;
+  }
+
+  .testnet-warning-box .warning-icon + div h4 {
+    font-size: 1rem;
+  }
+
+  .testnet-limitations,
+  .mainnet-suggestion {
+    padding: 0.75rem;
+  }
+
+  .testnet-warning-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .retry-later-btn,
+  .mainnet-switch-btn {
+    width: 100%;
+    min-width: auto;
   }
 }

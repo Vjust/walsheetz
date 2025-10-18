@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { SpreadsheetEngine } from '../core/SpreadsheetEngine.js';
 import { BlockchainAdapter } from '../adapters/BlockchainAdapter.js';
 import { StorageAdapter } from '../adapters/StorageAdapter.js';
+import { GridSizeManager } from '../services/GridSizeManager.js';
 // WebSocket service disabled for single-user MVP
 // import { webSocketService } from '../services/WebSocketService.js';
 import { useWalletConnectionFactory } from '../hooks/useWalletConnectionFactory.ts';
@@ -44,6 +45,7 @@ export function useSpreadsheet() {
   const engineRef = useRef(null);
   const blockchainRef = useRef(null);
   const storageRef = useRef(null);
+  const gridSizeManagerRef = useRef(null);
   // WebSocket disabled for single-user MVP
   const webSocketRef = useRef(null);
   const servicesInitializedRef = useRef(false);
@@ -195,8 +197,13 @@ export function useSpreadsheet() {
                   // Don't retry on certain critical errors
                   if (attemptError.message.includes('Wallet disconnected') ||
                       attemptError.message.includes('not ready') ||
+                      attemptError.message.includes('not found') ||
                       attemptError.message.includes('channel closed')) {
-                    console.warn('💥 Critical error detected, skipping retries');
+                    console.warn('💥 Non-retryable error detected, aborting retries:', {
+                      error: attemptError.message,
+                      isWalletIssue: attemptError.message.includes('Wallet'),
+                      isNotFoundIssue: attemptError.message.includes('not found')
+                    });
                     break;
                   }
 
@@ -472,11 +479,15 @@ export function useSpreadsheet() {
           blockchainRef.current = new BlockchainAdapter(storageRef.current);
         }
 
+        console.log('📐 Creating GridSizeManager...');
+        gridSizeManagerRef.current = new GridSizeManager();
+
         console.log('🧮 Creating SpreadsheetEngine...');
         engineRef.current = new SpreadsheetEngine(
           storageRef.current,
           blockchainRef.current,
-          autoSaveEnabled
+          autoSaveEnabled,
+          gridSizeManagerRef.current
         );
 
         // Initialize engine
@@ -777,15 +788,45 @@ export function useSpreadsheet() {
         if (spreadsheetId && blockchainRef.current?.suiService?.validateSpreadsheetObjectExists) {
           const existsCheck = await blockchainRef.current.suiService.validateSpreadsheetObjectExists(spreadsheetId);
           if (!existsCheck.exists) {
-            console.warn('Pre-save: stale spreadsheetId detected, clearing session and forcing create path', existsCheck);
+            console.warn('⚠️ Pre-save: stale spreadsheetId detected, clearing session and forcing create path', existsCheck);
+
             // Clear the stale ID so adapter will create a new spreadsheet
-            try { storageRef.current?.setCurrentSpreadsheetId?.(null) } catch {}
+            try {
+              storageRef.current?.setCurrentSpreadsheetId?.(null);
+            } catch (clearIdError) {
+              console.error('Failed to clear stale spreadsheetId:', clearIdError);
+            }
+
             // Also clear adapter cache if exposed
-            try { blockchainRef.current.spreadsheetObjectId = null } catch {}
+            try {
+              blockchainRef.current.spreadsheetObjectId = null;
+            } catch (clearAdapterError) {
+              console.error('Failed to clear adapter cache:', clearAdapterError);
+            }
+
+            // Show user-friendly error message
+            setLoadingState({
+              isLoading: false,
+              message: 'Spreadsheet not found on blockchain',
+              details: 'This may have been deleted or moved. Creating a new save...',
+              type: 'warning'
+            });
+
+            // Log the issue for debugging
+            console.log('📋 Stale ID recovery details:', {
+              spreadsheetId: spreadsheetId.substring(0, 10) + '...',
+              wasCleared: true,
+              timestamp: new Date().toISOString()
+            });
+
+            // Clear the warning message after a short delay
+            setTimeout(() => {
+              setLoadingState({ isLoading: false, message: '', details: '' });
+            }, 2000);
           }
         }
       } catch (precheckError) {
-        console.warn('Pre-save verification skipped due to error:', precheckError?.message);
+        console.warn('⚠️ Pre-save verification skipped due to error:', precheckError?.message);
       }
 
       setSaveStatus('saving');
@@ -1056,8 +1097,19 @@ export function useSpreadsheet() {
 
     // Check if any load is in progress
     if (loadingOperationRef.current) {
-      console.log(`⚠️ Another spreadsheet (${loadingOperationRef.current}) is loading, cancelling current load of ${spreadsheetId}`);
-      return { success: false, error: 'Another load operation is in progress' };
+      console.log(`⚠️ Another spreadsheet (${loadingOperationRef.current}) is loading, queuing current load of ${spreadsheetId}`);
+      // If a session restoration or another load is ongoing, wait briefly for it to finish
+      const timeoutMs = 12000;
+      const start = Date.now();
+      while (loadingOperationRef.current && Date.now() - start < timeoutMs) {
+        // If the current operation is a session restoration for the same spreadsheet, just wait
+        await new Promise(resolve => setTimeout(resolve, 150));
+      }
+      // If still loading after timeout, fail fast
+      if (loadingOperationRef.current) {
+        return { success: false, error: 'Another load operation is in progress' };
+      }
+      // Otherwise proceed to load normally
     }
 
     // Mark this operation as in progress
@@ -1074,14 +1126,87 @@ export function useSpreadsheet() {
     try {
       // Update loading state for blockchain query
       setLoadingState(prev => ({ ...prev, details: 'Fetching spreadsheet metadata...' }));
-      
+
       // Create progress callback
       const onProgress = (message, details) => {
         setLoadingState(prev => ({ ...prev, message, details }));
       };
-      
-      // Load spreadsheet data from blockchain and Walrus
-      const result = await blockchainRef.current.loadSpreadsheet(spreadsheetId, onProgress);
+
+      // Load spreadsheet data from blockchain and Walrus with retry logic
+      // Retry specifically for Walrus/network errors with exponential backoff
+      const WALRUS_MAX_RETRIES = 2;
+      const WALRUS_RETRY_DELAY_MS = 1000; // 1 second base delay
+      let lastError = null;
+      let result = null;
+
+      for (let attempt = 0; attempt <= WALRUS_MAX_RETRIES; attempt++) {
+        try {
+          if (attempt > 0) {
+            // Calculate exponential backoff delay: 1s, 2s, 4s, etc.
+            const delayMs = WALRUS_RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+            console.log(`🔄 Walrus fetch retry ${attempt}/${WALRUS_MAX_RETRIES} after ${delayMs}ms delay`);
+
+            // Update progress with retry info
+            onProgress(
+              `Retrying Walrus fetch (attempt ${attempt + 1}/${WALRUS_MAX_RETRIES + 1})...`,
+              'Network issue detected, retrying with exponential backoff...'
+            );
+
+            // Wait with backoff
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+
+            // Verify wallet still connected before retry
+            if (!walletConnection.isConnected) {
+              throw new Error('Wallet disconnected during retry');
+            }
+          }
+
+          // Attempt load
+          result = await blockchainRef.current.loadSpreadsheet(spreadsheetId, onProgress);
+
+          if (result && result.success) {
+            console.log(`✅ Load successful on attempt ${attempt + 1}`);
+            break; // Success, exit retry loop
+          } else if (result && result.error) {
+            lastError = new Error(result.error);
+            // Check if error is retryable (Walrus/network related)
+            if ((result.error.includes('Walrus') || result.error.includes('fetch') || result.error.includes('network'))
+                && attempt < WALRUS_MAX_RETRIES) {
+              console.warn(`⚠️ Walrus-related error on attempt ${attempt + 1}, will retry: ${result.error}`);
+              continue; // Retry
+            } else {
+              // Non-retryable error or max retries reached
+              throw lastError;
+            }
+          }
+        } catch (attemptError) {
+          lastError = attemptError;
+
+          // Only retry on Walrus/network/fetch related errors
+          const isRetryableError = attemptError.message && (
+            attemptError.message.includes('Walrus') ||
+            attemptError.message.includes('fetch') ||
+            attemptError.message.includes('network') ||
+            attemptError.message.includes('timeout') ||
+            attemptError.message.includes('ECONNREFUSED')
+          );
+
+          if (isRetryableError && attempt < WALRUS_MAX_RETRIES) {
+            console.warn(`⚠️ Walrus fetch failed (attempt ${attempt + 1}), will retry: ${attemptError.message}`);
+            continue; // Retry
+          } else if (!isRetryableError) {
+            console.warn(`💥 Non-retryable error detected, skipping retries: ${attemptError.message}`);
+            throw attemptError; // Don't retry non-retryable errors
+          } else {
+            console.warn(`⚠️ Max retries reached (${WALRUS_MAX_RETRIES}), giving up`);
+            throw lastError; // Max retries reached
+          }
+        }
+      }
+
+      if (!result) {
+        throw lastError || new Error('Load failed after all retry attempts');
+      }
       
       if (result.success) {
         // Update loading state for data loading
@@ -1153,6 +1278,15 @@ export function useSpreadsheet() {
         if (result.error === 'Wallet not connected') {
           errorMessage = 'Please connect your wallet to load spreadsheets from the blockchain';
           errorType = 'wallet_required';
+        } else if (result.error && result.error.includes('Walrus')) {
+          errorMessage = 'Failed to retrieve data from Walrus storage. The blob may have expired.';
+          errorType = 'storage_error';
+        } else if (result.error && result.error.includes('Sui')) {
+          errorMessage = 'Failed to query blockchain data. Check your network connection.';
+          errorType = 'blockchain_error';
+        } else if (result.error && result.error.includes('not found')) {
+          errorMessage = 'Spreadsheet not found. It may have been deleted.';
+          errorType = 'not_found';
         }
 
         setLoadingState({
@@ -1160,7 +1294,8 @@ export function useSpreadsheet() {
           message: '',
           details: '',
           error: errorMessage,
-          errorType
+          errorType,
+          technicalError: result.error // Store technical error for debugging
         });
         setSaveStatus('error');
 

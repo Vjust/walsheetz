@@ -429,11 +429,17 @@ class BlobLineageTracker {
 
   /**
    * Load lineage data from localStorage
+   * RAM-only mode: No browser persistence
    */
   loadFromStorage() {
     try {
-      const stored = localStorage.getItem(this.storageKey);
-      if (!stored) return;
+      // RAM-only, no browser persistence - localStorage.getItem disabled
+      // const stored = localStorage.getItem(this.storageKey);
+      const stored = null;
+      if (!stored) {
+        console.log('BlobLineageTracker: RAM-only mode, no browser persistence');
+        return;
+      }
 
       const data = JSON.parse(stored);
 
@@ -470,19 +476,20 @@ class BlobLineageTracker {
 
   /**
    * Save lineage data to localStorage
+   * RAM-only mode: No browser persistence
    */
   saveToStorage() {
     try {
-      const data = {
-        version: this.storageVersion,
-        lineages: Object.fromEntries(this.lineages),
-        blobToObject: Object.fromEntries(this.blobToObject),
-        lastUpdated: Date.now()
-      };
-
-      localStorage.setItem(this.storageKey, JSON.stringify(data));
-
-      logger.debug(LogComponent.STORAGE, 'lineage_saved', 'Lineage data saved to storage');
+      // RAM-only, no browser persistence - localStorage.setItem disabled
+      // const data = {
+      //   version: this.storageVersion,
+      //   lineages: Object.fromEntries(this.lineages),
+      //   blobToObject: Object.fromEntries(this.blobToObject),
+      //   lastUpdated: Date.now()
+      // };
+      // localStorage.setItem(this.storageKey, JSON.stringify(data));
+      console.log('BlobLineageTracker: RAM-only mode, no browser persistence');
+      logger.debug(LogComponent.STORAGE, 'lineage_saved', 'Lineage data saved to storage (RAM-only)');
 
     } catch (error) {
       logger.error(LogComponent.STORAGE, 'lineage_save_error', 'Failed to save lineage data', {
