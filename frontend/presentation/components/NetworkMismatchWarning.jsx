@@ -39,7 +39,7 @@ export function NetworkMismatchWarning({ walletChain }) {
         <div className="warning-message">
           <strong>Network Configuration Mismatch</strong>
           <p>
-            You selected <strong>{network}</strong> but services are using{' '}
+            You selected <strong>{network}</strong> but wallet is on{' '}
             <strong>{configuredNetwork}</strong>.
           </p>
           <p>Please reload the page to apply network changes.</p>
