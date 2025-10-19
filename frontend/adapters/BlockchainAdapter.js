@@ -3264,8 +3264,9 @@ export class BlockchainAdapter extends IBlockchainService {
         dataSize: fallbackData.length
       });
 
-      // Attempt to save to blockchain using existing save method
-      const saveResult = await this.save(data.title, 50);
+      // Attempt to save the cached fallback data to blockchain
+      // Use saveToBlockchain directly with the cached payload, not the current in-memory sheet
+      const saveResult = await this.saveToBlockchain(data, { epochs: 50 });
 
       if (saveResult.success) {
         // Delete the fallback key on success
@@ -3335,12 +3336,12 @@ export class BlockchainAdapter extends IBlockchainService {
     try {
       // Wait for wallet to be ready (max 5 seconds)
       let attempts = 0;
-      while (!this.isWalletConnected && attempts < 50) {
+      while (!this.isWalletConnected() && attempts < 50) {
         await new Promise(resolve => setTimeout(resolve, 100));
         attempts++;
       }
 
-      if (!this.isWalletConnected) {
+      if (!this.isWalletConnected()) {
         logger.warn(LogComponent.BLOCKCHAIN_ADAPTER, 'startup_retry_no_wallet', 'Wallet not connected - skipping auto-retry');
         return;
       }

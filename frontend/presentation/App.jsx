@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { NetworkProvider } from '../providers/NetworkProvider.jsx'
 import { WalletProviders } from '../providers/WalletProviders.jsx'
@@ -9,6 +9,8 @@ import { NetworkSelector, NetworkConfirmDialog } from './components/NetworkSelec
 import { NetworkMismatchWarning } from './components/NetworkMismatchWarning.jsx'
 import RateLimiterStatus from '../components/RateLimiterStatus.jsx'
 import { TestModeBanner } from './components/TestModeBanner.jsx'
+import { SaveStatusBanner } from './components/SaveStatusBanner.jsx'
+import { StaleFallbackCleanupModal } from './components/StaleFallbackCleanupModal.jsx'
 import { Dashboard } from '../pages/Dashboard.jsx'
 import { SpreadsheetEditor } from '../pages/SpreadsheetEditor.jsx'
 import { BlobCatalog } from './pages/BlobCatalog.jsx'
@@ -92,6 +94,83 @@ function App() {
     };
   }, []);
 
+  // State for stale fallback cleanup modal
+  const [staleFallbacks, setStaleFallbacks] = useState([]);
+  const [showCleanupModal, setShowCleanupModal] = useState(false);
+
+  // Listen for stale fallback detection event
+  useEffect(() => {
+    const handleStaleFallbacks = (event) => {
+      const { staleFallbacks: stale } = event.detail || {};
+      if (stale && stale.length > 0) {
+        setStaleFallbacks(stale);
+        setShowCleanupModal(true);
+
+        logger.info(LogComponent.UI_COMPONENT, 'stale_modal_triggered', 'Stale fallback cleanup modal triggered', {
+          count: stale.length
+        });
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('stale:fallbacks-found', handleStaleFallbacks);
+      return () => window.removeEventListener('stale:fallbacks-found', handleStaleFallbacks);
+    }
+  }, []);
+
+  // Handler to export fallback as JSON
+  const handleExportFallback = async (key) => {
+    try {
+      if (window.walSheetzBlockchainAdapter?.exportFallbackAsJSON) {
+        const json = window.walSheetzBlockchainAdapter.exportFallbackAsJSON(key);
+        if (json) {
+          // Download as file
+          const blob = new Blob([json], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `fallback-backup-${Date.now()}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+
+          logger.info(LogComponent.UI_COMPONENT, 'fallback_exported', 'Fallback exported as JSON', { key });
+        }
+      }
+    } catch (e) {
+      logger.error(LogComponent.UI_COMPONENT, 'export_error', 'Error exporting fallback', {
+        key,
+        error: e.message
+      });
+    }
+  };
+
+  // Handler to delete stale fallbacks
+  const handleDeleteFallbacks = (keys) => {
+    try {
+      if (window.walSheetzBlockchainAdapter?.deleteStaleFallbacks) {
+        const result = window.walSheetzBlockchainAdapter.deleteStaleFallbacks(keys);
+        if (result.success) {
+          logger.info(LogComponent.UI_COMPONENT, 'stale_deleted', 'Stale fallbacks deleted', {
+            count: keys.length
+          });
+        }
+      }
+      setShowCleanupModal(false);
+      setStaleFallbacks([]);
+    } catch (e) {
+      logger.error(LogComponent.UI_COMPONENT, 'delete_error', 'Error deleting fallbacks', {
+        error: e.message
+      });
+    }
+  };
+
+  // Handler to keep fallbacks (dismiss modal)
+  const handleKeepFallbacks = () => {
+    logger.debug(LogComponent.UI_COMPONENT, 'stale_keep', 'User chose to keep stale fallbacks');
+    setShowCleanupModal(false);
+    setStaleFallbacks([]);
+  };
+
   return (
     <div data-testid="walsheetz-app">
       <ErrorBoundary>
@@ -115,11 +194,20 @@ function App() {
                     <NetworkMismatchWarning />
                     <NetworkConfirmDialog />
                     <TestModeBanner />
+                    <SaveStatusBanner />
                     {showWalrusStatus && (
                       <WalrusStatus position="bottom-right" minimized={true} />
                     )}
                     {showRateLimiterStatus && (
                       <RateLimiterStatus show={true} position="bottom-right" />
+                    )}
+                    {showCleanupModal && (
+                      <StaleFallbackCleanupModal
+                        staleFallbacks={staleFallbacks}
+                        onConfirmDelete={handleDeleteFallbacks}
+                        onExport={handleExportFallback}
+                        onKeep={handleKeepFallbacks}
+                      />
                     )}
                   </ErrorBoundary>
                 </SpreadsheetProvider>
