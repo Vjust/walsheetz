@@ -12,6 +12,17 @@ export function NetworkProvider({ children }) {
   // SYNC: Uses NetworkLock to prevent race conditions with ConfigLoader
   const [network, setNetwork] = useState(() => {
     try {
+      // Check URL parameter first (for network switches from window.location.replace)
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search)
+        const urlNetwork = urlParams.get('network')
+        if (urlNetwork && ['testnet', 'mainnet', 'devnet'].includes(urlNetwork)) {
+          console.log(`[NetworkProvider] 🌐 Network from URL param: ${urlNetwork}`)
+          return urlNetwork
+        }
+      }
+
+      // Fall back to localStorage preference
       const saved = localStorage.getItem('walsheetz_network')
       return saved || 'testnet'
     } catch (e) {
@@ -54,7 +65,9 @@ export function NetworkProvider({ children }) {
     } else {
       // Either testnet switch (safe) or confirmation skipped (programmatic)
       setNetwork(newNetwork)
-      window.location.reload() // Reload to reinitialize services
+      // Navigate to root with network param to avoid 404 on transient Vercel routes
+      // ConfigLoader will prioritize the URL param over localStorage
+      window.location.replace(`/?network=${newNetwork}`)
     }
   }
 
@@ -63,7 +76,9 @@ export function NetworkProvider({ children }) {
       setNetwork(pendingNetwork)
       setIsConfirmDialogOpen(false)
       setPendingNetwork(null)
-      window.location.reload() // Reload to reinitialize services
+      // Navigate to root with network param to avoid 404 on transient Vercel routes
+      // ConfigLoader will prioritize the URL param over localStorage
+      window.location.replace(`/?network=${pendingNetwork}`)
     }
   }
 
