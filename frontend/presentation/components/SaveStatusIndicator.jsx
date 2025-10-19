@@ -15,7 +15,8 @@ export function SaveStatusIndicator({
   poaStatus = null, // PoA certificate status: 'certified', 'uncertified', 'pending', 'expired', 'unknown'
   blobId = null, // Current blob ID
   onSaveToBlockchain = null, // Callback to open save to blockchain modal
-  onManageStorage = null // Callback to open storage management modal
+  onManageStorage = null, // Callback to open storage management modal
+  onViewDetails = null // Callback to open save details modal
 }) {
   const formatTimeAgo = (timestamp) => {
     if (!timestamp) return null;
@@ -111,6 +112,15 @@ export function SaveStatusIndicator({
       <div className="status-main">
         <span className="status-icon">{statusInfo.icon}</span>
         <span className="status-text">{statusInfo.text}</span>
+        {blobId && onViewDetails && (
+          <button
+            className="view-details-button"
+            onClick={onViewDetails}
+            title="View save details and explorer links"
+          >
+            View Details
+          </button>
+        )}
         {statusInfo.showSync && onSyncNow && (
           <button
             className="sync-now-button"

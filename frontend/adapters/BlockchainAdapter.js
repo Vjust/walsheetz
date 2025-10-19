@@ -1025,13 +1025,26 @@ export class BlockchainAdapter extends IBlockchainService {
         walletPrompts: 1 // Previously was 2!
       });
 
+      // Calculate expiry timestamp from epochs
+      const expiryTimestamp = walrusResult.endEpoch ?
+        new Date(walrusResult.endEpoch * 1000).getTime() :
+        Date.now() + defaultEpochs * 86400000; // Default to epochs in milliseconds
+
       return {
         success: true,
         spreadsheetId: this.spreadsheetObjectId,
+        blobId: walrusResult.blobId,
         walrusBlobId: walrusResult.blobId,
         title,
         data: spreadsheetData,
+        transactionDigest: combinedResult.digest,
         transactionId: combinedResult.digest, // Single transaction ID
+        contentHash: walrusResult.contentHash?.hash || walrusResult.contentHash || 'unknown',
+        storageStatus: walrusResult.storageStatus || 'newly_created',
+        expiryTimestamp,
+        endEpoch: walrusResult.endEpoch,
+        method: 'blockchain',
+        storageStrategy: 'standard',
         timestamp: Date.now(),
         optimized: true,
         ultraOptimized: true, // NEW FLAG!
@@ -1320,6 +1333,11 @@ export class BlockchainAdapter extends IBlockchainService {
       // Extract transaction digest from result (format differs for new vs existing spreadsheets)
       const transactionDigest = executeResult.digest || executeResult.saveTransactionDigest || executeResult.createTransactionDigest;
 
+      // Calculate expiry timestamp from endEpoch
+      const expiryTimestamp = walrusResult.endEpoch ?
+        new Date(walrusResult.endEpoch * 1000).getTime() :
+        Date.now() + (enhancedOptions.epochs || 50) * 86400000;
+
       logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'save_enhanced_success', '🎉 Enhanced blockchain save completed', {
         saveId,
         strategy: storageStrategy,
@@ -1336,9 +1354,14 @@ export class BlockchainAdapter extends IBlockchainService {
         method: 'enhanced',
         storageStrategy,
         blobId: walrusResult.blobId || walrusResult.primaryBlobId,
+        walrusBlobId: walrusResult.blobId || walrusResult.primaryBlobId,
         redundantBlobIds: walrusResult.allBlobIds?.slice(1) || [],
         compressionInfo: walrusResult.compressionInfo,
         transactionDigest,
+        contentHash: walrusResult.contentHash?.hash || walrusResult.contentHash || 'unknown',
+        storageStatus: walrusResult.storageStatus || 'newly_created',
+        expiryTimestamp,
+        endEpoch: walrusResult.endEpoch,
         spreadsheetObjectId: this.spreadsheetObjectId,
         duration: totalDuration,
         enhancedFeatures: {
@@ -1512,6 +1535,11 @@ export class BlockchainAdapter extends IBlockchainService {
           }
         }
 
+        // Calculate expiry timestamp from epochs
+        const expiryTimestamp = walrusResult.endEpoch ?
+          new Date(walrusResult.endEpoch * 1000).getTime() :
+          Date.now() + (options.epochs || 50) * 86400000; // Fallback to epochs in milliseconds
+
         logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'save_completed', 'Parallel save operation completed successfully', {
           duration: logger.endTimer('blockchain_save'),
           walrusSuccess: walrusResult.success,
@@ -1521,11 +1549,18 @@ export class BlockchainAdapter extends IBlockchainService {
 
         return {
           success: true,
+          blobId: walrusResult.blobId,
           walrusBlobId: walrusResult.blobId,
+          transactionDigest: blockchainResult.blockchainResult?.digest,
           transactionId: blockchainResult.blockchainResult?.digest,
+          contentHash: walrusResult.contentHash?.hash || walrusResult.contentHash || 'unknown',
+          storageStatus: walrusResult.storageStatus || 'newly_created',
+          expiryTimestamp,
+          endEpoch: walrusResult.endEpoch,
           spreadsheetId: this.spreadsheetObjectId,
           timestamp: Date.now(),
-          method: 'parallel_atomic_processing',
+          method: 'blockchain',
+          storageStrategy: options.storageStrategy || 'standard',
           blockchainSuccess: blockchainResult.success,
           walrusSuccess: walrusResult.success,
           atomicOperationId: atomicResult.operationId,
@@ -2288,18 +2323,44 @@ export class BlockchainAdapter extends IBlockchainService {
     }
 
     try {
+      // First validate that the spreadsheet object exists on-chain
+      if (onProgress) onProgress('Loading spreadsheet...', 'Validating spreadsheet existence...');
+
+      const existenceCheck = await this.suiService.validateSpreadsheetExists(spreadsheetId);
+      if (!existenceCheck.exists || !existenceCheck.isCorrectType) {
+        logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'spreadsheet_not_found',
+          `Spreadsheet object does not exist or is not valid: ${existenceCheck.error}`, {
+          spreadsheetId,
+          existenceCheck
+        });
+
+        // Clear the invalid spreadsheet from session storage
+        this.storageAdapter.clearInvalidSpreadsheetSession();
+
+        return {
+          success: false,
+          error: `Spreadsheet not found on-chain: ${existenceCheck.error}. The spreadsheet object may not have been created on this network.`,
+          metadata: {
+            spreadsheetId,
+            exists: existenceCheck.exists,
+            isCorrectType: existenceCheck.isCorrectType,
+            actualType: existenceCheck.actualType
+          }
+        };
+      }
+
       // Connect to Walrus if not already connected
       if (onProgress) onProgress('Loading spreadsheet...', 'Connecting to Walrus storage...');
       await this.walrusService.connect();
 
       // Load spreadsheet data with progress callback
       if (onProgress) onProgress('Loading spreadsheet...', 'Fetching version history...');
-      
+
       console.log(`[${loadId}] 🔗 Fetching spreadsheet data from blockchain`, {
         spreadsheetId,
         timestamp: new Date().toISOString()
       });
-      
+
       const fetchStartTime = Date.now();
       const result = await this.suiService.getSpreadsheetData(spreadsheetId, this.walrusService, onProgress);
       const fetchDuration = Date.now() - fetchStartTime;

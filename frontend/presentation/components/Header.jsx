@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useSpreadsheetContext } from './SpreadsheetProvider.jsx'
 import { WalletModal } from './WalletModal.jsx'
 import { SaveStatusIndicator } from './SaveStatusIndicator.jsx'
+import { SaveDetailsModal } from './SaveDetailsModal.jsx'
 import { ImportButton } from './ImportButton.jsx'
 import { ExportButton } from './ExportButton.jsx'
 import { ImportPreviewModal } from './ImportPreviewModal.jsx'
@@ -10,12 +11,14 @@ import { logger, LogComponent } from '../../utils/Logger.js'
 import luckysheetApi from '../../services/luckysheetApi.js'
 import SpreadsheetImportExportService from '../../services/SpreadsheetImportExportService.js'
 import { gridSizeManager } from '../../services/GridSizeManager.js'
+import { configLoader } from '../../utils/ConfigLoader.js'
 import '../styles/wallet-modal.css'
 
 export function Header() {
   const navigate = useNavigate()
   const [documentName, setDocumentName] = useState('Untitled Spreadsheet')
   const [showWalletModal, setShowWalletModal] = useState(false)
+  const [showSaveDetails, setShowSaveDetails] = useState(false)
   const [activeMenu, setActiveMenu] = useState(null)
   const [formatting, setFormatting] = useState({
     bold: false,
@@ -51,6 +54,7 @@ export function Header() {
     saveToBlockchain,
     saveReminder,
     autoSaveEnabled,
+    lastSaveInfo,
     dismissSaveReminder,
     toggleAutoSave,
     syncToBlockchain,
@@ -60,7 +64,9 @@ export function Header() {
     snoozeCommitPrompt,
     suppressCommitPrompts,
     smartSaveStatus,
-    queryDatasets
+    queryDatasets,
+    storageAdapter,
+    updateLastSaveInfo
   } = useSpreadsheetContext()
 
   // Debug helper to check available Luckysheet methods
@@ -266,6 +272,17 @@ export function Header() {
   useEffect(() => {
     void queryDatasets;
   }, [queryDatasets])
+
+  // Auto-open SaveDetailsModal on first save
+  useEffect(() => {
+    if (lastSaveInfo && lastSaveInfo.isFirstSave) {
+      const hasShownFirstSave = localStorage.getItem('walsheetz_first_save_shown');
+      if (!hasShownFirstSave) {
+        setShowSaveDetails(true);
+        localStorage.setItem('walsheetz_first_save_shown', 'true');
+      }
+    }
+  }, [lastSaveInfo])
 
   const formatAddress = (address) => {
     if (!address) return ''
@@ -1270,6 +1287,8 @@ export function Header() {
                 renewalWarningDays={smartSaveStatus.chunkMetadata?.renewalWarningDays || 7}
                 onRemindLater={snoozeCommitPrompt}
                 onSuppressPrompts={suppressCommitPrompts}
+                blobId={lastSaveInfo?.blobId}
+                onViewDetails={() => setShowSaveDetails(true)}
               />
             )}
 
@@ -1435,6 +1454,19 @@ export function Header() {
       <WalletModal
         isOpen={showWalletModal}
         onClose={() => setShowWalletModal(false)}
+      />
+
+      {/* Save Details Modal */}
+      <SaveDetailsModal
+        isOpen={showSaveDetails}
+        onClose={() => setShowSaveDetails(false)}
+        saveInfo={lastSaveInfo}
+        network={configLoader.config?.currentNetwork || 'testnet'}
+        storageAdapter={storageAdapter}
+        onExpiryUpdate={(updates) => {
+          // Update parent state via exposed hook method
+          updateLastSaveInfo(updates);
+        }}
       />
     </header>
   )

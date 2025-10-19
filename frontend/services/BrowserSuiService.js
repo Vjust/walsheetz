@@ -1494,30 +1494,34 @@ class BrowserSuiService {
         }
       }
 
-      // Parse spreadsheet metadata from the fetched objects  
+      // Parse spreadsheet metadata from the fetched objects
       const spreadsheets = spreadsheetObjects
         .filter(item => {
           // Ensure we have content and basic required fields
           const content = item.content;
           const fields = content?.fields;
-          
-          // Validate this is actually a spreadsheet object
+          const objectType = item.type || '';
+
+          // Validate this is actually a spreadsheet object (not a registry)
+          const isSpreadsheet = objectType.includes('::spreadsheet::Spreadsheet') && !objectType.includes('Registry');
           const hasRequiredFields = fields && (
             fields.title !== undefined ||
             fields.version_count !== undefined ||
             fields.cell_locks !== undefined
           );
-          
-          if (!hasRequiredFields) {
-            console.log('[BrowserSuiService] Skipping invalid object:', {
+
+          if (!hasRequiredFields || !isSpreadsheet) {
+            console.log('[BrowserSuiService] ⚠️ Skipping invalid object:', {
               objectId: item.objectId?.slice(0, 16) + '...',
-              type: item.type?.slice(-30),
+              type: item.type?.slice(-40),
+              isSpreadsheet,
               hasContent: !!content,
+              hasRequiredFields,
               fields: fields ? Object.keys(fields) : []
             });
           }
-          
-          return hasRequiredFields;
+
+          return hasRequiredFields && isSpreadsheet;
         })
         .map(item => {
           const content = item.content;
@@ -1594,14 +1598,88 @@ class BrowserSuiService {
     }
   }
 
+  /**
+   * Validate that a spreadsheet object exists and is the correct type
+   */
+  async validateSpreadsheetExists(spreadsheetId) {
+    try {
+      console.log('[BrowserSuiService] 🔍 Validating spreadsheet object existence:', spreadsheetId);
+
+      const result = await this.client.getObject({
+        id: spreadsheetId,
+        options: {
+          showContent: true,
+          showOwner: true,
+          showType: true
+        }
+      });
+
+      if (!result.data) {
+        console.error('[BrowserSuiService] ❌ Spreadsheet object not found on-chain:', spreadsheetId);
+        return {
+          exists: false,
+          isCorrectType: false,
+          error: 'Object does not exist on-chain'
+        };
+      }
+
+      // Check if it's actually a Spreadsheet object (not a Registry or other type)
+      const objectType = result.data.type || '';
+      const isSpreadsheet = objectType.includes('::spreadsheet::Spreadsheet') && !objectType.includes('Registry');
+      const hasRequiredFields = result.data.content?.fields && (
+        result.data.content.fields.title !== undefined ||
+        result.data.content.fields.version_history !== undefined ||
+        result.data.content.fields.cell_locks !== undefined
+      );
+
+      if (!isSpreadsheet || !hasRequiredFields) {
+        console.error('[BrowserSuiService] ❌ Object exists but is not a valid Spreadsheet:', {
+          objectId: spreadsheetId,
+          type: objectType,
+          isSpreadsheet,
+          hasRequiredFields
+        });
+        return {
+          exists: true,
+          isCorrectType: false,
+          error: `Object is ${objectType}, not a Spreadsheet`,
+          actualType: objectType
+        };
+      }
+
+      console.log('[BrowserSuiService] ✅ Spreadsheet object is valid:', {
+        objectId: spreadsheetId,
+        title: result.data.content.fields.title,
+        type: objectType
+      });
+
+      return {
+        exists: true,
+        isCorrectType: true,
+        data: result.data
+      };
+    } catch (error) {
+      console.error('[BrowserSuiService] ❌ Error validating spreadsheet existence:', error);
+      return {
+        exists: false,
+        isCorrectType: false,
+        error: typeof error === 'string' ? error : (error?.message || 'Unknown error')
+      };
+    }
+  }
+
   // Get spreadsheet versions for a specific spreadsheet using version_history from the spreadsheet object
   async getSpreadsheetVersions(spreadsheetId) {
     try {
       console.log('[BrowserSuiService] 📝 Fetching versions for spreadsheet:', spreadsheetId);
 
-      // First, get the spreadsheet object to access its version_history field
-      console.log('[BrowserSuiService] Getting spreadsheet object to access version_history...');
-      
+      // First, validate the spreadsheet object exists
+      const validation = await this.validateSpreadsheetExists(spreadsheetId);
+      if (!validation.exists || !validation.isCorrectType) {
+        throw new Error(validation.error || 'Spreadsheet object validation failed');
+      }
+
+      // Now fetch the data we already validated
       const spreadsheetResult = await this.client.getObject({
         id: spreadsheetId,
         options: {

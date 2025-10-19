@@ -133,34 +133,49 @@ describe('SaveStatusBanner Event Handling', () => {
     it('should show success confirmation message', async () => {
       render(<SaveStatusBanner />);
 
-      // First add a fallback so the banner is visible
+      // Add TWO fallbacks so the banner stays visible after one is marked as success
+      // (retryMessage is nested inside banner which returns null if no fallbacks exist)
       act(() => {
         window.dispatchEvent(new CustomEvent('save:fallback', {
           detail: {
-            message: 'Test data',
-            localKey: 'walsheetz_fallback_test',
+            message: 'Test data 1',
+            localKey: 'walsheetz_fallback_test_1',
+            timestamp: Date.now()
+          }
+        }));
+        window.dispatchEvent(new CustomEvent('save:fallback', {
+          detail: {
+            message: 'Test data 2',
+            localKey: 'walsheetz_fallback_test_2',
             timestamp: Date.now()
           }
         }));
       });
 
-      await waitFor(() => {
-        expect(screen.getByText('Test data')).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText('Test data 1')).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
 
-      // Now trigger success which will show the success message
+      // Now trigger success on first one, which will show the success message
+      // Banner stays visible because second fallback still exists
       act(() => {
         window.dispatchEvent(new CustomEvent('save:retry-success', {
           detail: {
-            localKey: 'walsheetz_fallback_test',
+            localKey: 'walsheetz_fallback_test_1',
             timestamp: Date.now()
           }
         }));
       });
 
-      await waitFor(() => {
-        expect(screen.getByText(/✅ Save synced/)).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/✅ Save synced to blockchain/)).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
     });
   });
 
@@ -297,7 +312,8 @@ describe('SaveStatusBanner Event Handling', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/⏳ 2 saves still pending/)).toBeInTheDocument();
+        // Component renders concatenated message: "✅ 2 of 4 saves synced during startup; 2 still pending"
+        expect(screen.getByText(/2 still pending/)).toBeInTheDocument();
       });
     });
   });
@@ -306,7 +322,10 @@ describe('SaveStatusBanner Event Handling', () => {
     it('should emit save:retry-fallbacks event on button click', async () => {
       render(<SaveStatusBanner />);
 
-      // Add fallback
+      // CRITICAL: Add fallback BOTH to component state AND to localStorage
+      // Component shows banner from state, but handleRetryAllSaves looks in localStorage
+      localStorage.setItem('walsheetz_fallback_btn_test', JSON.stringify({ data: 'test' }));
+
       act(() => {
         window.dispatchEvent(new CustomEvent('save:fallback', {
           detail: {
@@ -344,46 +363,62 @@ describe('SaveStatusBanner Event Handling', () => {
     it('should auto-dismiss success message after 2 seconds', async () => {
       render(<SaveStatusBanner />);
 
-      // First add a fallback so the banner is visible
+      // Add TWO fallbacks so the banner stays visible for dismissing the success message
       act(() => {
         window.dispatchEvent(new CustomEvent('save:fallback', {
           detail: {
-            message: 'Saved locally',
-            localKey: 'walsheetz_fallback_dismiss_test',
+            message: 'Saved locally 1',
+            localKey: 'walsheetz_fallback_dismiss_test_1',
+            timestamp: Date.now()
+          }
+        }));
+        window.dispatchEvent(new CustomEvent('save:fallback', {
+          detail: {
+            message: 'Saved locally 2',
+            localKey: 'walsheetz_fallback_dismiss_test_2',
             timestamp: Date.now()
           }
         }));
       });
 
-      await waitFor(() => {
-        expect(screen.getByText('Saved locally')).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText('Saved locally 1')).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
 
       // Now trigger success which will show the success message
       act(() => {
         window.dispatchEvent(new CustomEvent('save:retry-success', {
           detail: {
-            localKey: 'walsheetz_fallback_dismiss_test',
+            localKey: 'walsheetz_fallback_dismiss_test_1',
             timestamp: Date.now()
           }
         }));
       });
 
-      await waitFor(() => {
-        expect(screen.getByText(/✅ Save synced/)).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/✅ Save synced to blockchain/)).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
 
       // Wait for auto-dismiss with a reasonable timeout
-      await waitFor(() => {
-        expect(screen.queryByText(/✅ Save synced/)).toBeNull();
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          expect(screen.queryByText(/✅ Save synced to blockchain/)).toBeNull();
+        },
+        { timeout: 3000 }
+      );
     });
 
     it('should auto-dismiss error message after 5 seconds', async () => {
       render(<SaveStatusBanner />);
 
       // First add a fallback so the banner is visible
-      act(() => {
+      await act(async () => {
         window.dispatchEvent(new CustomEvent('save:fallback', {
           detail: {
             message: 'Error test data',
@@ -398,7 +433,7 @@ describe('SaveStatusBanner Event Handling', () => {
       });
 
       // Now trigger failure which will show the error message
-      act(() => {
+      await act(async () => {
         window.dispatchEvent(new CustomEvent('save:retry-failed', {
           detail: {
             localKey: 'walsheetz_fallback_error_dismiss',

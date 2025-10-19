@@ -39,6 +39,7 @@ export function useSpreadsheet() {
   });
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
   const [walletSyncReady, setWalletSyncReady] = useState(false);
+  const [lastSaveInfo, setLastSaveInfo] = useState(null); // Track metadata from last save (for UI confirmation)
 
   // Use the wallet connection factory (returns mock in test mode)
   const walletConnection = useWalletConnectionFactory();
@@ -884,6 +885,11 @@ export function useSpreadsheet() {
           setTimeout(() => setSaveStatus('ready'), 3000);
         } else {
           // Normal blockchain save path
+          // Capture save metadata for UI confirmation
+          if (result.saveInfo) {
+            setLastSaveInfo(result.saveInfo);
+          }
+
           // Update loading state for blockchain update
           setLoadingState(prev => ({
             ...prev,
@@ -963,6 +969,22 @@ export function useSpreadsheet() {
       };
     }
   }, [updateSyncStatus]);
+
+  /**
+   * Update lastSaveInfo metadata (e.g., after blob renewal)
+   * Allows external components to refresh save metadata without full save
+   * @param {Object} updates - Partial updates to merge into lastSaveInfo
+   */
+  const updateLastSaveInfo = useCallback((updates) => {
+    setLastSaveInfo(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        ...updates,
+        timestamp: Date.now() // Always update timestamp when metadata changes
+      };
+    });
+  }, []);
 
   // Store saveToBlockchain function in ref for use in auto-save
   useEffect(() => {
@@ -1658,6 +1680,7 @@ export function useSpreadsheet() {
     spreadsheetData,
     saveReminder,
     autoSaveEnabled,
+    lastSaveInfo,
     smartSaveStatus: getStatus?.(),
 
     // Actions
@@ -1672,6 +1695,7 @@ export function useSpreadsheet() {
     forceSave,
     saveToWalrusOnly,
     syncToBlockchain,
+    updateLastSaveInfo,
     clearData,
     dismissSaveReminder,
     toggleAutoSave,

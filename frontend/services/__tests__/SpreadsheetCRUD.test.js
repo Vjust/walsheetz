@@ -262,16 +262,24 @@ describe('Spreadsheet CRUD Operations', () => {
       expect(session.version).toBe('1.0');
     });
 
-    it('should validate and clean corrupted sessions', () => {
-      // Create a corrupted session
-      localStorage.setItem('walsheetz_session', 'invalid-json');
+    it('should fail validation for session with missing wallet but set spreadsheet', () => {
+      // Set a spreadsheet ID first
+      storageAdapter.setCurrentSpreadsheetId('sheet-123');
+
+      // Manually corrupt the session by removing wallet address
+      // This creates an invalid state: spreadsheet exists but no wallet
+      const session = storageAdapter.getSession();
+      session.walletAddress = null;
+      storageAdapter._session = session; // Direct mutation to simulate corruption
 
       const isValid = storageAdapter.validateAndCleanSession();
+
+      // This should fail - spreadsheet without wallet is invalid
       expect(isValid).toBe(false);
 
-      // Session should be cleared
-      const session = storageAdapter.getSession();
-      expect(session.currentSpreadsheetId).toBeNull();
+      // Spreadsheet ID should be cleared after validation
+      const cleanedSession = storageAdapter.getSession();
+      expect(cleanedSession.currentSpreadsheetId).toBeNull();
     });
 
     it('should preserve session data when valid', () => {

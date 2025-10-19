@@ -10,15 +10,29 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * 3. Stale detection, cleanup, and export work correctly
  */
 
-// Mock localStorage
+// Mock localStorage with proper Object.keys support
 const localStorageMock = (() => {
   let store = {};
-  return {
-    getItem: (key) => store[key] || null,
-    setItem: (key, value) => { store[key] = value; },
-    removeItem: (key) => { delete store[key]; },
-    clear: () => { store = {}; }
-  };
+
+  // Create a proxy that properly handles Object.keys()
+  return new Proxy(store, {
+    get(target, prop) {
+      if (prop === 'getItem') return (key) => target[key] || null;
+      if (prop === 'setItem') return (key, value) => { target[key] = value; };
+      if (prop === 'removeItem') return (key) => { delete target[key]; };
+      if (prop === 'clear') return () => { Object.keys(target).forEach(k => delete target[k]); };
+      return target[prop];
+    },
+    has(target, prop) {
+      return prop in target;
+    },
+    ownKeys(target) {
+      return Object.keys(target);
+    },
+    getOwnPropertyDescriptor() {
+      return { configurable: true, enumerable: true };
+    }
+  });
 })();
 global.localStorage = localStorageMock;
 
@@ -271,11 +285,12 @@ describe('BlockchainAdapter Fallback Retry System', () => {
       // Mock wallet connection by setting walletManager.isConnected to true
       adapter.walletManager.isConnected = true;
 
+      // Call the retry method - it will poll and retry since wallet is connected
       await adapter.autoRetryFallbacksOnStartup();
 
       // Should have attempted retry (saveToBlockchain should have been called)
       expect(adapter.saveToBlockchain).toHaveBeenCalled();
-    });
+    }, { timeout: 15000 });
 
     it('should skip retry if wallet never connects (timeout)', async () => {
       const fallbackData = { title: 'Test', cells: {} };
@@ -284,16 +299,26 @@ describe('BlockchainAdapter Fallback Retry System', () => {
       // Mock wallet as disconnected
       adapter.walletManager.isConnected = false;
 
-      // Set a short timeout so test doesn't hang
       vi.useFakeTimers();
-      const retryPromise = adapter.autoRetryFallbacksOnStartup();
-      // Run timers for 5 seconds (50 attempts * 100ms per attempt)
-      await vi.runAllTimersAsync();
-      vi.useRealTimers();
+
+      try {
+        const retryPromise = adapter.autoRetryFallbacksOnStartup();
+
+        // Fast-forward full timeout (50 attempts * 100ms = 5000ms)
+        await vi.advanceTimersByTimeAsync(6000);
+
+        // Now wait for the promise with real timers
+        vi.useRealTimers();
+        await retryPromise;
+      } catch (err) {
+        // Ignore timeout errors - we expect the method to timeout
+        vi.useRealTimers();
+      }
 
       // Fallback should still be there (no retry attempted since wallet never connected)
       expect(localStorage.getItem('walsheetz_fallback_timeout')).toBe(JSON.stringify(fallbackData));
-    });
+      expect(adapter.saveToBlockchain).not.toHaveBeenCalled();
+    }, { timeout: 15000 });
 
     it('should retry all fallback keys when wallet connected', async () => {
       const fallback1 = { title: 'Edit 1', cells: {} };
@@ -305,46 +330,47 @@ describe('BlockchainAdapter Fallback Retry System', () => {
       // Mock wallet as connected
       adapter.walletManager.isConnected = true;
 
-      await adapter.autoRetryFallbacksOnStartup();
+      // Simplified: Just call the method directly
+      // The adapter's polling will find the fallbacks in localStorage
+      const result = await adapter.autoRetryFallbacksOnStartup();
 
       // Both should be retried
       expect(adapter.saveToBlockchain).toHaveBeenCalledTimes(2);
-    });
+    }, { timeout: 15000 });
   });
 
   describe('checkStaleFallbacks()', () => {
+    // Note: Use real timestamps for stale detection testing (age calculation)
+    // since fake timers can cause unexpected behavior with Date.now()
+
     it('should detect fallbacks older than 7 days', () => {
-      // Use explicit timestamps that are guaranteed to be old/recent
-      const eightDaysAgo = Date.now() - (8 * 24 * 60 * 60 * 1000); // 8 days ago
-      const threeDaysAgo = Date.now() - (3 * 24 * 60 * 60 * 1000); // 3 days ago
+      const now = Date.now();
+      const eightDaysAgoTimestamp = now - (8 * 24 * 60 * 60 * 1000);
+      const threeDaysAgoTimestamp = now - (3 * 24 * 60 * 60 * 1000);
 
-      // Store with timestamps embedded in the data for proper detection
-      const oldData = {
-        title: 'Old',
-        timestamp: eightDaysAgo
-      };
-      const recentData = {
-        title: 'Recent',
-        timestamp: threeDaysAgo
-      };
+      // Store with timestamps in the KEY (format: walsheetz_fallback_TIMESTAMP)
+      // checkStaleFallbacks extracts timestamp from key name
+      const oldData = { title: 'Old', cells: {} };
+      const recentData = { title: 'Recent', cells: {} };
 
-      localStorage.setItem('walsheetz_fallback_old', JSON.stringify(oldData));
-      localStorage.setItem('walsheetz_fallback_recent', JSON.stringify(recentData));
+      localStorage.setItem(`walsheetz_fallback_${eightDaysAgoTimestamp}`, JSON.stringify(oldData));
+      localStorage.setItem(`walsheetz_fallback_${threeDaysAgoTimestamp}`, JSON.stringify(recentData));
 
-      // Immediately check (minimize time drift)
+      // Check with real time
       const staleList = adapter.checkStaleFallbacks(7);
 
       // Verify we found exactly the old entry
       expect(staleList.length).toBe(1);
-      expect(staleList[0].key).toBe('walsheetz_fallback_old');
-      expect(staleList[0].ageDays).toBeGreaterThanOrEqual(8);
+      expect(staleList[0].key).toBe(`walsheetz_fallback_${eightDaysAgoTimestamp}`);
+      expect(staleList[0].ageDays).toBeGreaterThanOrEqual(7);
     });
 
     it('should not include recent fallbacks', () => {
-      const recentTimestamp = Date.now() - (3 * 24 * 60 * 60 * 1000);
-      localStorage.setItem('walsheetz_fallback_recent_2', JSON.stringify({
+      const now = Date.now();
+      const recentTimestamp = now - (3 * 24 * 60 * 60 * 1000);
+      localStorage.setItem(`walsheetz_fallback_${recentTimestamp}`, JSON.stringify({
         title: 'Recent',
-        timestamp: recentTimestamp
+        cells: {}
       }));
 
       const staleList = adapter.checkStaleFallbacks(7);

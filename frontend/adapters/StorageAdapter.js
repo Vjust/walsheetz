@@ -308,6 +308,25 @@ export class StorageAdapter extends IStorageService {
     return { ...this._session };
   }
 
+  /**
+   * Clear invalid spreadsheet session data when the spreadsheet doesn't exist on-chain
+   */
+  clearInvalidSpreadsheetSession() {
+    try {
+      console.log('[StorageAdapter] 🧹 Clearing invalid spreadsheet session data');
+      this._session.currentSpreadsheetId = null;
+      this._session.spreadsheetTitle = null;
+      this._session.lastSaveTimestamp = null;
+      this._session.lastWalrusBlobId = null;
+      this._session.lastUpdated = Date.now();
+      console.log('[StorageAdapter] ✅ Invalid spreadsheet session cleared');
+      return true;
+    } catch (error) {
+      console.error('[StorageAdapter] ❌ Failed to clear invalid session:', error);
+      return false;
+    }
+  }
+
   createEmptySession() {
     return {
       currentSpreadsheetId: null,
@@ -462,6 +481,95 @@ export class StorageAdapter extends IStorageService {
     } catch (error) {
       console.error('Failed to get Walrus epoch preference:', error);
       return null;
+    }
+  }
+
+  /**
+   * Store blob expiry information for tracking renewal status
+   * @param {string} blobId - Walrus blob ID
+   * @param {Object} expiryInfo - Expiry information {timestamp, epochs, endEpoch}
+   * @returns {boolean} Success status
+   */
+  setWalrusBlobExpiry(blobId, expiryInfo) {
+    try {
+      if (!blobId) {
+        console.warn('Cannot set blob expiry: no blob ID provided');
+        return false;
+      }
+
+      if (!this._session.blobExpiry) {
+        this._session.blobExpiry = {};
+      }
+
+      this._session.blobExpiry[blobId] = {
+        ...expiryInfo,
+        lastUpdated: Date.now()
+      };
+
+      console.log(`Blob expiry information stored for ${blobId}:`, this._session.blobExpiry[blobId]);
+      return true;
+    } catch (error) {
+      console.error('Failed to store blob expiry information:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get blob expiry information
+   * @param {string} blobId - Walrus blob ID
+   * @returns {Object|null} Expiry information or null
+   */
+  getWalrusBlobExpiry(blobId) {
+    try {
+      if (!blobId) {
+        return null;
+      }
+
+      if (!this._session.blobExpiry) {
+        return null;
+      }
+
+      return this._session.blobExpiry[blobId] || null;
+    } catch (error) {
+      console.error('Failed to get blob expiry information:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get all tracked blob expiry information
+   * @returns {Object} Map of blobId -> expiryInfo
+   */
+  getAllBlobExpiry() {
+    try {
+      return this._session.blobExpiry || {};
+    } catch (error) {
+      console.error('Failed to get all blob expiry information:', error);
+      return {};
+    }
+  }
+
+  /**
+   * Check if blob is approaching expiry
+   * @param {string} blobId - Walrus blob ID
+   * @param {number} warningDays - Number of days before expiry to warn (default 7)
+   * @returns {boolean} True if blob expiry is approaching
+   */
+  isBlobExpiryApproaching(blobId, warningDays = 7) {
+    try {
+      const expiryInfo = this.getWalrusBlobExpiry(blobId);
+      if (!expiryInfo || !expiryInfo.timestamp) {
+        return false;
+      }
+
+      const now = Date.now();
+      const warningMs = warningDays * 86400000; // Convert to milliseconds
+      const timeUntilExpiry = expiryInfo.timestamp - now;
+
+      return timeUntilExpiry > 0 && timeUntilExpiry < warningMs;
+    } catch (error) {
+      console.error('Failed to check blob expiry status:', error);
+      return false;
     }
   }
 }

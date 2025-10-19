@@ -1713,6 +1713,82 @@ class BrowserWalrusService {
   }
 
   /**
+   * Extend Walrus blob storage by renewing its epochs
+   * Reuses existing blob without re-uploading data
+   * @param {string} blobId - Blob ID to extend
+   * @param {number} additionalEpochs - Number of epochs to add (default 10)
+   * @returns {Promise<Object>} Result with updated expiry info
+   */
+  async extendBlobStorage(blobId, additionalEpochs = 10) {
+    console.log(`[BrowserWalrusService] Extending blob ${blobId} storage by ${additionalEpochs} epochs...`);
+
+    try {
+      if (!blobId) {
+        throw new Error('Blob ID is required');
+      }
+
+      if (additionalEpochs <= 0 || additionalEpochs > 365) {
+        throw new Error('Additional epochs must be between 1 and 365');
+      }
+
+      // Get aggregator URL using ConfigLoader (matches pattern from lines 1166-1167, 2446-2447)
+      const config = await this.configLoader.getConfig();
+      const aggregatorUrl = await config.resolveHealthyServiceUrl(
+        'walrus-aggregator',
+        '/v1/api',
+        { suppressErrors: true }
+      );
+
+      if (!aggregatorUrl) {
+        throw new Error('No healthy Walrus aggregator available');
+      }
+
+      // Call PUT endpoint to extend blob storage
+      // This renews the blob's certification without re-uploading
+      const url = `${aggregatorUrl}/v1/blobs/${blobId}`;
+
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          epochs: additionalEpochs
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to extend blob storage: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      const extensionResult = {
+        success: true,
+        blobId,
+        status: 'already_certified',
+        additionalEpochs,
+        endEpoch: result.endEpoch || result.end_epoch,
+        remainingEpochs: result.remainingEpochs || result.remaining_epochs,
+        expiryTimestamp: result.endEpoch ? new Date(result.endEpoch * 1000).getTime() : null,
+        timestamp: Date.now()
+      };
+
+      console.log(`[BrowserWalrusService] Blob storage extended successfully:`, extensionResult);
+
+      return extensionResult;
+
+    } catch (error) {
+      console.error(`[BrowserWalrusService] Failed to extend blob storage for ${blobId}:`, error);
+      return {
+        success: false,
+        error: typeof error === 'string' ? error : error.message || 'Unknown error'
+      };
+    }
+  }
+
+  /**
    * Stream blob data chunks to grid engine
    * @param {string} blobId - Blob ID to stream
    * @param {number} startRow - Starting row in grid

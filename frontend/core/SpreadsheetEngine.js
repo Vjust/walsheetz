@@ -68,6 +68,9 @@ export class SpreadsheetEngine {
       snoozeUntil: null
     };
 
+    // Store metadata from last successful save (for UI confirmation)
+    this._lastSaveInfo = null;
+
     // Offline queue for disconnected saves
     this.offlineQueue = [];
     this.isOnline = navigator.onLine;
@@ -1049,10 +1052,25 @@ export class SpreadsheetEngine {
 
       const saveDuration = logger.endTimer('spreadsheet_save');
 
+      // Capture metadata from blockchain result for UI confirmation
+      this._lastSaveInfo = {
+        blobId: blockchainResult.blobId || blockchainResult.walrusBlobId,
+        transactionDigest: blockchainResult.transactionDigest || blockchainResult.transactionId,
+        contentHash: blockchainResult.contentHash,
+        storageStatus: blockchainResult.storageStatus,
+        expiryTimestamp: blockchainResult.expiryTimestamp,
+        endEpoch: blockchainResult.endEpoch,
+        method: blockchainResult.method,
+        storageStrategy: blockchainResult.storageStrategy,
+        timestamp: Date.now(),
+        isFirstSave: !this._lastSaveInfo // Track if this is first save (for modal auto-open)
+      };
+
       // Return success (wallet is guaranteed to be connected; throws earlier if disconnected)
       const saveResult = {
         success: true,
-        method: 'blockchain'
+        method: 'blockchain',
+        saveInfo: this._lastSaveInfo
       };
 
       logger.info(LogComponent.SPREADSHEET_ENGINE, 'save_completed', `Spreadsheet save completed successfully (blockchain)`, {
@@ -1060,8 +1078,17 @@ export class SpreadsheetEngine {
         previousPendingEdits,
         saveDuration,
         success: true,
-        method: saveResult.method
+        method: saveResult.method,
+        blobId: this._lastSaveInfo.blobId,
+        transactionDigest: this._lastSaveInfo.transactionDigest
       });
+
+      // Emit save details event for UI listeners and devtools
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('save:details-update', {
+          detail: this._lastSaveInfo
+        }));
+      }
 
       return saveResult
     }, async (error) => {
@@ -1078,8 +1105,13 @@ export class SpreadsheetEngine {
     });
   }
 
-
-
+  /**
+   * Get metadata from last successful save (for UI confirmation)
+   * Returns null if no save has been completed yet
+   */
+  getLastSaveInfo() {
+    return this._lastSaveInfo;
+  }
 
   /**
    * Check if spreadsheet data has changed since last save

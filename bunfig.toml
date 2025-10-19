@@ -1,0 +1,22 @@
+# Bun Configuration
+# See: https://bun.sh/docs/runtime/bunfig
+
+[test]
+# Preload happy-dom setup before running tests
+# This makes DOM globals (document, window, etc.) available in Bun's test runner
+preload = ["./tests/bun-setup.js"]
+
+# Set test timeout to match vitest config (10 seconds)
+timeout = 10000
+
+# Enable verbose output for debugging
+# Set via environment: BUN_DEBUG_TEST=1
+verbose = false
+
+# Test file patterns (optional - Bun auto-discovers .test.* files)
+# Matches vitest patterns
+root = "."
+
+[test.define]
+# Make test globals available without imports
+# (Bun already provides test, describe, it, expect, beforeEach, etc.)
