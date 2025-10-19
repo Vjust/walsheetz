@@ -32,6 +32,7 @@ export function Header() {
   const [previewFileName, setPreviewFileName] = useState('')
   const [pendingImportFile, setPendingImportFile] = useState(null)
   const [isImporting, setIsImporting] = useState(false)
+  const [importProgress, setImportProgress] = useState({ processed: 0, total: 0 })
 
   const { spreadsheetData } = useSpreadsheetContext()
 
@@ -829,6 +830,7 @@ export function Header() {
   const handleImport = async (file) => {
     try {
       setImportError(null)
+      setImportProgress({ processed: 0, total: 0 })
       logger.startTimer('import_action')
 
       logger.logUserAction('import_file_start', {
@@ -837,8 +839,15 @@ export function Header() {
       })
 
       // Read and convert file
+      // For large CSV files, this will provide progress feedback
       const importedData = await importExportService.importFromExcel(file, {
-        title: documentName
+        title: documentName,
+        onProgress: (processed, total) => {
+          // Only update state for significant progress changes to avoid excessive re-renders
+          if (total > 0 && processed % Math.max(1, Math.floor(total / 100)) === 0) {
+            setImportProgress({ processed, total })
+          }
+        }
       })
 
       // Store for later use and show preview
@@ -846,6 +855,7 @@ export function Header() {
       setPreviewData(importedData)
       setPreviewFileName(file.name)
       setPreviewModalOpen(true)
+      setImportProgress({ processed: 0, total: 0 })
 
       logger.info(LogComponent.UI_COMPONENT, 'import_preview_shown', 'Import preview displayed', {
         fileName: file.name,
@@ -854,6 +864,7 @@ export function Header() {
     } catch (error) {
       const errorMsg = error?.message || 'Failed to import file'
       setImportError(errorMsg)
+      setImportProgress({ processed: 0, total: 0 })
 
       logger.error(LogComponent.UI_COMPONENT, 'import_failed', 'File import failed', {
         error: errorMsg
@@ -895,8 +906,24 @@ export function Header() {
           });
         }
 
-        // Destroy existing instance before loading new data (prevents addEventListener error)
+        // Destroy existing instance before loading new data
+        // This ensures all DOM elements and canvas contexts are properly cleaned up
+        // especially important for large datasets (>50K rows) to avoid canvas errors
+        logger.debug(LogComponent.UI_COMPONENT, 'import_destroy_start', 'Starting Luckysheet destruction for reimport');
         await luckysheetApi.destroy()
+
+        // Add extra safeguard: wait a bit for container to be fully cleared
+        // This prevents "Cannot read properties of undefined (reading 'getContext')" errors
+        // when Luckysheet tries to reinitialize too quickly
+        await new Promise(resolve => setTimeout(resolve, 100))
+
+        logger.debug(LogComponent.UI_COMPONENT, 'import_destroy_complete', 'Luckysheet destruction and cleanup complete');
+
+        // Verify the container exists and is empty before creating new instance
+        const container = document.getElementById('luckysheet') || document.getElementById('luckysheet-container')
+        if (!container) {
+          throw new Error('Luckysheet container not found in DOM');
+        }
 
         // Load the data with pre-allocated capacity
         window.luckysheet.create({
@@ -927,7 +954,8 @@ export function Header() {
       setImportError(errorMsg)
 
       logger.error(LogComponent.UI_COMPONENT, 'import_confirm_failed', 'File import confirmation failed', {
-        error: errorMsg
+        error: errorMsg,
+        stackTrace: error?.stack
       })
 
       alert(`❌ Import failed: ${errorMsg}`)

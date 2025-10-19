@@ -97,12 +97,16 @@ vi.mock('../services/ProgressiveEnhancementService.js', () => ({
 
 vi.mock('../services/OfflineModeService.js', () => ({
   offlineModeService: {
+    isOnline: true,
     createOfflineSpreadsheet: vi.fn().mockResolvedValue({ success: true, spreadsheetId: 'offline123' }),
     saveOfflineSpreadsheet: vi.fn().mockResolvedValue({ success: true }),
     loadOfflineSpreadsheet: vi.fn().mockResolvedValue({ success: true, data: {} }),
     getOfflineSpreadsheets: vi.fn().mockReturnValue([]),
     processPendingOperations: vi.fn().mockResolvedValue([]),
-    getOfflineStatus: vi.fn().mockReturnValue({ isOffline: false })
+    getOfflineStatus: vi.fn().mockReturnValue({ isOffline: false }),
+    // Prevent constructor from running and accessing window
+    setupOfflineDetection: vi.fn(),
+    loadPersistedData: vi.fn()
   }
 }));
 

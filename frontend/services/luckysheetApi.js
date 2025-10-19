@@ -142,18 +142,61 @@ class LuckysheetApi {
 
   /**
    * Destroy the current Luckysheet instance
+   * Properly cleans up DOM elements and waits for cleanup to complete
    * @returns {Promise<void>}
    */
   async destroy() {
-    if (window.luckysheet && typeof window.luckysheet.destroy === 'function') {
-      try {
-        window.luckysheet.destroy()
-      } catch (error) {
-        console.warn('Error destroying Luckysheet:', error)
+    try {
+      // Call Luckysheet destroy if available
+      if (window.luckysheet && typeof window.luckysheet.destroy === 'function') {
+        try {
+          window.luckysheet.destroy()
+        } catch (error) {
+          console.warn('Error destroying Luckysheet:', error)
+        }
       }
+
+      // Clear any canvas elements that may still exist
+      const containers = document.querySelectorAll('[id^="luckysheet"], canvas')
+      containers.forEach(el => {
+        if (el && el.parentNode) {
+          // For canvas elements, clear the context
+          if (el.tagName === 'CANVAS') {
+            const ctx = el.getContext('2d')
+            if (ctx) {
+              ctx.clearRect(0, 0, el.width, el.height)
+            }
+          }
+        }
+      })
+
+      // Clear the main container
+      const container = document.getElementById('luckysheet') || document.getElementById('luckysheet-container')
+      if (container) {
+        container.innerHTML = ''
+      }
+
+      // Reset state
+      this.isReady = false
+      this.readyPromise = null
+
+      // Wait for DOM to settle before returning
+      // This ensures all cleanup is complete before next operation
+      await new Promise(resolve => {
+        if (typeof requestAnimationFrame !== 'undefined') {
+          requestAnimationFrame(() => {
+            setTimeout(resolve, 0)
+          })
+        } else {
+          setTimeout(resolve, 10)
+        }
+      })
+    } catch (error) {
+      console.warn('Error during destroy cleanup:', error)
+      // Don't throw - allow cleanup to continue even with errors
+      this.isReady = false
+      this.readyPromise = null
     }
-    this.isReady = false
-    this.readyPromise = null
   }
 
   /**

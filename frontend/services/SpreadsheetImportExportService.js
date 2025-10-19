@@ -33,7 +33,7 @@ export class SpreadsheetImportExportService {
   /**
    * Import Excel file and convert to Luckysheet format
    * @param {File} file - The Excel file to import
-   * @param {Object} options - Import options
+   * @param {Object} options - Import options { title, onProgress }
    * @returns {Promise<Object>} Luckysheet data structure
    */
   async importFromExcel(file, options = {}) {
@@ -88,7 +88,12 @@ export class SpreadsheetImportExportService {
           const text = new TextDecoder('utf-8').decode(arrayBuffer)
           const parsed = parseCSV(text, {})
 
-          const sheet = await this._convertParsedCSVToLuckysheetSheet(parsed, options.title || (file.name.replace(/\.[^.]+$/, '')))
+          // Pass onProgress callback to CSV conversion for large files
+          const sheet = await this._convertParsedCSVToLuckysheetSheet(
+            parsed,
+            options.title || (file.name.replace(/\.[^.]+$/, '')),
+            options.onProgress
+          )
 
           const exportJson = {
             info: { name: options.title || (file.name.replace(/\.[^.]+$/, '')) },
