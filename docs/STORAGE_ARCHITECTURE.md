@@ -175,6 +175,98 @@ The following use browser localStorage **with explicit justification**:
 
 ---
 
+## Fallback Retry System
+
+The system automatically retries fallback saves on app startup and allows manual retries via UI:
+
+### Auto-Retry on Startup
+1. App initializes (App.jsx useEffect)
+2. BlockchainAdapter.setupRetryEventListeners() - Sets up listeners for manual retries
+3. After 2-second delay: BlockchainAdapter.autoRetryFallbacksOnStartup()
+   - Waits for wallet connection (max 5 seconds)
+   - Retries each fallback sequentially with 500ms delays
+   - Emits `save:startup-retry-complete` event with summary
+   - Checks for stale fallbacks (>7 days old)
+
+### Manual Retry via Button
+1. User clicks "Retry Save" in SaveStatusBanner
+2. SaveStatusBanner emits `save:retry-fallbacks` event
+3. BlockchainAdapter.setupRetryEventListeners() listens for this event
+4. Calls BlockchainAdapter.retryFallbackSave() for each key
+5. Emits `save:retry-success` or `save:retry-failed` event
+6. SaveStatusBanner listens and updates UI accordingly
+
+### Retry Success Flow
+```
+Fallback exists in localStorage
+↓
+Parse JSON data
+↓
+BlockchainAdapter.save() called
+↓
+Success: Delete localStorage key
+↓
+Emit save:retry-success
+↓
+SaveStatusBanner removes from UI
+```
+
+### Stale Fallback Cleanup
+After auto-retry completes, the system checks for stale fallbacks (>7 days old):
+
+1. BlockchainAdapter.checkStaleFallbacks(maxAgeDays=7)
+   - Scans all `walsheetz_fallback_*` keys
+   - Extracts timestamp from key
+   - Returns array of stale items with: key, age, size, ageInDays
+
+2. If stale fallbacks found:
+   - App.jsx emits `stale:fallbacks-found` event
+   - UI shows StaleFallbackCleanupModal
+   - User options:
+     - **Export as JSON**: Downloads backup of fallback data
+     - **Keep Trying**: Keeps fallback for next auto-retry
+     - **Delete Selected**: Removes stale keys from localStorage
+
+3. User Actions:
+   - BlockchainAdapter.exportFallbackAsJSON(key) - Downloads JSON
+   - BlockchainAdapter.deleteStaleFallbacks(keys) - Removes from storage
+
+---
+
+## Network Preference Synchronization
+
+The system uses NetworkLock to prevent race conditions between NetworkProvider and ConfigLoader:
+
+### NetworkLock Utility
+- **File**: `frontend/utils/NetworkLock.js`
+- Simple async lock with queue system
+- Methods:
+  - `acquireLock()`: Blocks if lock held, queues if contention
+  - `releaseLock()`: Wakes next queued callback
+  - `withLock(callback)`: Atomic read-modify-write
+  - `isLocked()`: Check current state
+  - `getQueueSize()`: Debugging info
+
+### NetworkProvider Usage
+```javascript
+// Wraps localStorage write with lock
+networkLock.withLock(async () => {
+  localStorage.setItem('walsheetz_network', network);
+});
+```
+
+### ConfigLoader Usage
+```javascript
+// In config.switchNetwork()
+await networkLock.withLock(async () => {
+  localStorage.setItem('walsheetz_network', networkName);
+});
+```
+
+**Key Point**: Initialization read in `_detectCurrentNetwork()` does NOT use lock because it runs before NetworkProvider starts.
+
+---
+
 ## Error Scenarios & Recovery
 
 ### Scenario 1: Network Outage During Save
@@ -183,20 +275,24 @@ User edits → Auto-save triggered → Network unavailable
 ↓
 Fallback to localStorage (walsheetz_fallback_*)
 ↓
-Show banner: "Network disconnected - saved locally"
+Show SaveStatusBanner: "Network disconnected - saved locally"
 ↓
-User clicks "Retry Save" when online
+User clicks "Retry Save" button (or app auto-retries on reload)
 ↓
 Blockchain save succeeds → Clear fallback
+↓
+SaveStatusBanner shows "✅ Save synced to blockchain"
 ```
 
 ### Scenario 2: Page Refresh Before Blockchain Save
 ```
 User edits → Auto-save triggered
 ↓
-Page refresh (⚠️ unsaved edits lost, unless fallback exists)
+Page refresh (warning shown if pendingEdits exist via useUnloadWarning)
 ↓
-If fallback exists: auto-retry on next load
+If fallback exists: auto-retry on startup via autoRetryFallbacksOnStartup()
+↓
+If retry succeeds: fallback cleared, data synced
 ↓
 If no fallback: data is gone
 ```
@@ -212,6 +308,32 @@ Save fails immediately (no fallback)
 Show error: "Connect wallet to save"
 ↓
 User connects wallet → retry
+```
+
+---
+
+## Unload Warning System
+
+Prevents accidental data loss by warning users before leaving with unsaved edits:
+
+### Implementation
+- **Hook**: `frontend/presentation/hooks/useUnloadWarning.js`
+- **Usage**: `frontend/pages/SpreadsheetEditor.jsx`
+- Shows browser's native "Are you sure?" dialog when:
+  - `window.spreadsheetEngine.pendingEdits.size > 0`
+  - User tries to navigate away or close tab/window
+
+### Flow
+1. SpreadsheetEditor checks pendingEdits every 500ms
+2. If `pendingEdits.size > 0`, calls `useUnloadWarning(true)`
+3. useUnloadWarning adds `beforeunload` event listener
+4. Browser shows native confirmation dialog
+5. User can choose to stay or leave
+
+### Message
+```
+"You have unsaved changes in your spreadsheet.
+Your edits will sync to blockchain when saved."
 ```
 
 ---
@@ -301,19 +423,34 @@ if (blockchainFailed) {
 ### Metrics to Track
 - **Blockchain save success rate** - Should be >99%
 - **Fallback save frequency** - Should be <1% (rare network issues)
-- **Fallback retry success** - Most should eventually sync
+- **Fallback retry success rate** - Most should eventually sync to blockchain
+- **Auto-retry on startup results** - Successful/failed/pending counts
+- **Stale fallback detection rate** - How often >7 day old fallbacks found
+- **Stale cleanup actions** - Export/Keep/Delete counts by users
 - **Network preference changes** - Normal usage pattern
 - **Migration resumptions** - Indicates crashes during migrations
+- **Unload warnings shown** - User behavior with pending edits
 
-### Logging
-All storage operations are logged with `LogComponent.SPREADSHEET_ENGINE`:
+### Logging Events
+All storage operations logged with `LogComponent.BLOCKCHAIN_ADAPTER`:
+
+**Fallback Retry Events:**
 ```javascript
-logger.info('save_completed', 'Spreadsheet save completed', {
-  method: 'blockchain' | 'local_fallback',
-  duration: ms,
-  dataSize: bytes
-});
+logger.info('retry_start', 'Starting fallback retry', { localKey, dataSize });
+logger.info('retry_success', 'Fallback retry succeeded', { localKey });
+logger.warn('retry_failed', 'Fallback retry failed', { localKey, error });
+logger.info('startup_retry_complete', 'Auto-retry complete', { successCount, failureCount, total });
 ```
+
+**Stale Cleanup Events:**
+```javascript
+logger.info('stale_check_complete', 'Stale fallback check complete', { staleCount, totalFallbacks });
+logger.debug('stale_deleted', 'Deleted stale fallback', { key });
+logger.info('stale_cleanup_complete', 'Stale cleanup complete', { deletedCount, errorCount });
+```
+
+**Network Lock Events:**
+- Both NetworkProvider and ConfigLoader log lock operations for debugging
 
 ---
 
@@ -332,6 +469,37 @@ A: Yes, in these cases:
 3. Browser crashes/closes without fallback created
 
 Best practice: **Save frequently** to blockchain by ensuring wallet stays connected.
+
+**Q: What happens to fallback saves?**
+A: Fallback saves are automatically retried in three ways:
+1. **Manual retry**: User clicks "Retry Save" in SaveStatusBanner
+2. **Auto-retry on startup**: App automatically retries all fallbacks when it loads
+3. **Manual delete**: User can export as JSON or delete from cleanup modal
+
+**Q: How are stale fallbacks handled?**
+A: After app startup, the system checks for fallbacks older than 7 days:
+- If found, shows StaleFallbackCleanupModal to user
+- User can: Export as JSON (backup), Keep Trying (retry later), or Delete
+- Prevents localStorage from filling up with old data
+
+**Q: Does the app warn me if I leave with unsaved edits?**
+A: Yes. The useUnloadWarning hook shows a browser confirmation dialog if:
+- You have pending edits (pendingEdits.size > 0)
+- You try to navigate away or close the tab/window
+- Message: "You have unsaved changes in your spreadsheet..."
+
+**Q: What if network preference gets corrupted?**
+A: NetworkLock prevents race conditions between NetworkProvider and ConfigLoader:
+- Both components use `networkLock.withLock()` for safe read-modify-write
+- If corruption detected, app defaults to 'testnet'
+- Users can manually switch networks without conflicts
+
+**Q: How do I monitor fallback/retry behavior in production?**
+A: Use the logging events:
+- `startup_retry_complete` event shows success/failure counts
+- `stale_check_complete` event shows stale fallback detection
+- Browser console logs all retry operations (check logger calls)
+- Metrics dashboard can track from LogComponent.BLOCKCHAIN_ADAPTER logs
 
 **Q: How do migrations work with this model?**
 A: Migration state is stored in localStorage as exception. If interrupted, migration resumes on next page load (with mainnet wallet connected).

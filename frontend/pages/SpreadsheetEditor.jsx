@@ -4,6 +4,7 @@ import { useSpreadsheetContext } from '../presentation/components/SpreadsheetPro
 import { MainLayout } from '../presentation/components/MainLayout.jsx';
 import { LoadingOverlay } from '../presentation/components/LoadingOverlay.jsx';
 import { BreadcrumbNavigation } from '../components/BreadcrumbNavigation.jsx';
+import { useUnloadWarning } from '../presentation/hooks/useUnloadWarning.js';
 import { logger, LogComponent } from '../utils/Logger.js';
 import './styles/spreadsheet-editor.css';
 
@@ -56,6 +57,38 @@ export function SpreadsheetEditor() {
       setSpreadsheetTitle(title);
     }
   }, [spreadsheetData]);
+
+  // Show unload warning if there are unsaved edits
+  // Checks if pendingEdits exist in SpreadsheetEngine
+  const [hasPendingEdits, setHasPendingEdits] = useState(false);
+
+  useEffect(() => {
+    const checkPendingEdits = () => {
+      try {
+        if (typeof window !== 'undefined' && window.spreadsheetEngine) {
+          const pendingEditsSize = window.spreadsheetEngine.pendingEdits?.size || 0;
+          setHasPendingEdits(pendingEditsSize > 0);
+        }
+      } catch (e) {
+        // Silently ignore errors when checking for pending edits
+        console.debug('[SpreadsheetEditor] Error checking pending edits:', e.message);
+      }
+    };
+
+    // Check on mount
+    checkPendingEdits();
+
+    // Check periodically (every 500ms) to catch all edits
+    const interval = setInterval(checkPendingEdits, 500);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Show warning when user tries to leave with unsaved edits
+  useUnloadWarning(
+    hasPendingEdits,
+    'You have unsaved changes in your spreadsheet. Your edits will sync to blockchain when saved.'
+  );
 
   const loadSpreadsheetById = async (spreadsheetId) => {
     if (!loadSpreadsheet) {
