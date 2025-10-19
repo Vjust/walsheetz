@@ -34,6 +34,7 @@ export function Dashboard() {
 
   const {
     walletConnected,
+    walletSyncReady,
     walletAutoConnecting,
     walletAddress,
     connectWallet,
@@ -53,8 +54,8 @@ export function Dashboard() {
 
   // Load spreadsheets when component mounts or wallet connects
   useEffect(() => {
-    // Only load spreadsheets when wallet is fully connected and auto-connect is complete
-    if (walletConnected && !walletAutoConnecting) {
+    // Only load spreadsheets when wallet is fully connected, blockchain adapter is synced, and auto-connect is complete
+    if (walletConnected && walletSyncReady && !walletAutoConnecting) {
       logger.info(LogComponent.UI_COMPONENT, 'dashboard_load_trigger', 'Loading spreadsheets after wallet connection');
       loadSpreadsheets();
     } else if (!walletConnected && !walletAutoConnecting) {
@@ -62,7 +63,7 @@ export function Dashboard() {
       setSpreadsheets([]);
       setFilteredSpreadsheets([]);
     }
-  }, [walletConnected, walletAutoConnecting]);
+  }, [walletConnected, walletSyncReady, walletAutoConnecting]);
 
   // Update recent spreadsheets when spreadsheets change
   useEffect(() => {

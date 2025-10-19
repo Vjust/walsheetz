@@ -38,6 +38,7 @@ export function useSpreadsheet() {
     lastChecked: Date.now()
   });
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
+  const [walletSyncReady, setWalletSyncReady] = useState(false);
 
   // Use the wallet connection factory (returns mock in test mode)
   const walletConnection = useWalletConnectionFactory();
@@ -401,6 +402,14 @@ export function useSpreadsheet() {
   // Sync wallet connection with browserWalletManager and handle session restoration
   useEffect(() => {
     browserWalletManager.setWalletConnection(walletConnection);
+
+    // Mark wallet sync as ready now that browserWalletManager has been updated
+    // This ensures BlockchainAdapter can access the wallet connection
+    if (walletConnection.isConnected && walletConnection.address) {
+      setWalletSyncReady(true);
+    } else {
+      setWalletSyncReady(false);
+    }
 
     // Skip operations during auto-connect phase to prevent race conditions
     if (walletConnection.isAutoConnecting) {
@@ -1639,6 +1648,7 @@ export function useSpreadsheet() {
     saveStatus,
     loadingState,
     walletConnected: walletConnection.isConnected,
+    walletSyncReady,
     walletAutoConnecting: walletConnection.isAutoConnecting,
     walletAddress: walletConnection.address,
     walletBalance: walletConnection.balance,
