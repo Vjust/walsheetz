@@ -164,7 +164,12 @@ export function LoadingOverlay({
               <small>💡 Connect your wallet to access blockchain features and save data securely</small>
             </div>
           )}
-          {error && errorType === 'error' && errorType !== 'wallet_required' && (
+          {error && errorType === 'save_failed' && (
+            <div className="type-info error-info">
+              <small>💡 Your changes are saved locally. Retry saving or check your wallet/network connection.</small>
+            </div>
+          )}
+          {error && errorType === 'error' && errorType !== 'wallet_required' && errorType !== 'save_failed' && (
             <div className="type-info error-info">
               <small>⚠️ An unexpected error occurred. Please try again.</small>
             </div>

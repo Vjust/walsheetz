@@ -11,6 +11,7 @@ import { parseCellRef } from '../utils/cellUtils.js';
 import luckysheetApi from '../services/luckysheetApi.js';
 import { TestModeAdapter } from '../services/testing/TestModeAdapter.js';
 import { isAuthBypassed } from '../utils/testMode.js';
+import { getTemplateData } from '../utils/templateData.js';
 
 /**
  * React hook for spreadsheet business logic
@@ -765,11 +766,115 @@ export function useSpreadsheet() {
 
   // Save to blockchain
   const saveToBlockchain = useCallback(async (title = null, epochs = null) => {
-    if (!engineRef.current) {
+    if (!engineRef.current || !blockchainRef.current) {
       return { success: false, error: 'Engine not initialized' };
     }
 
-    // Get epoch preference if not explicitly provided
+    // Detect first save (local spreadsheet with no blockchain ID)
+    const currentId = storageRef.current?.getCurrentSpreadsheetId();
+    const isFirstSave = !currentId;
+
+    if (isFirstSave) {
+      // First save: publish to blockchain
+      setLoadingState({
+        isLoading: true,
+        message: 'Publishing spreadsheet to blockchain...',
+        details: 'Creating your first save...',
+        type: 'blockchain',
+        steps: ['Preparing data', 'Storing to Walrus', 'Creating blockchain record', 'Confirming'],
+        currentStep: 0,
+        showProgress: true
+      });
+
+      try {
+        setSaveStatus('saving');
+
+        // Get current data from engine
+        const currentData = await engineRef.current.exportData();
+        const spreadsheetTitle = title || storageRef.current.getSpreadsheetTitle() || 'Untitled';
+
+        logger.info(LogComponent.BUSINESS_LOGIC, 'first_save_start', 'Publishing local spreadsheet', {
+          title: spreadsheetTitle
+        });
+
+        // Progress updates
+        setLoadingState(prev => ({ ...prev, currentStep: 1 }));
+
+        // Create spreadsheet with current data
+        const result = await blockchainRef.current.createNewSpreadsheetOptimized(
+          spreadsheetTitle,
+          currentData
+        );
+
+        if (result.success) {
+          // Update session with real blockchain ID
+          storageRef.current.setCurrentSpreadsheetId(result.spreadsheetId);
+          if (result.walrusBlobId) {
+            storageRef.current.setLastWalrusBlobId(result.walrusBlobId);
+          }
+
+          // Replace URL if currently showing local ID
+          const currentPath = window.location.pathname;
+          if (currentPath.includes('/spreadsheet/local-')) {
+            const newPath = `/spreadsheet/${result.spreadsheetId}`;
+            window.history.replaceState({}, '', newPath);
+            logger.info(LogComponent.BUSINESS_LOGIC, 'url_replaced', 'Updated URL', {
+              from: currentPath,
+              to: newPath
+            });
+          }
+
+          setLoadingState(prev => ({ ...prev, currentStep: 3, message: 'Published successfully!' }));
+          setSaveStatus('saved');
+          setEditCount(0);
+
+          setTimeout(() => {
+            setLoadingState({ isLoading: false, message: '', details: '' });
+          }, 1000);
+
+          setTimeout(() => setSaveStatus('ready'), 2000);
+
+          logger.info(LogComponent.BUSINESS_LOGIC, 'first_save_success', 'Spreadsheet published', {
+            spreadsheetId: result.spreadsheetId
+          });
+
+          return { success: true, ...result, isFirstSave: true };
+        } else {
+          // Keep editor open on error
+          setSaveStatus('error');
+          setLoadingState({
+            isLoading: false,
+            message: 'Save failed',
+            details: result.error,
+            error: result.error,
+            errorType: 'save_failed'
+          });
+
+          setTimeout(() => {
+            setLoadingState({ isLoading: false, message: '', details: '' });
+            setSaveStatus('ready');
+          }, 5000);
+
+          return result;
+        }
+      } catch (error) {
+        setSaveStatus('error');
+        setLoadingState({
+          isLoading: false,
+          error: error.message,
+          errorType: 'save_failed'
+        });
+
+        setTimeout(() => {
+          setLoadingState({ isLoading: false, message: '', details: '' });
+          setSaveStatus('ready');
+        }, 5000);
+
+        return { success: false, error: error.message };
+      }
+    }
+
+    // Normal save path for existing spreadsheets
     let epochsToUse = epochs;
     if (!epochsToUse) {
       epochsToUse = getWalrusEpochPreference();
@@ -1588,6 +1693,62 @@ export function useSpreadsheet() {
     }
   }, [updateSyncStatus]);
 
+  // Initialize local spreadsheet with template
+  const initializeLocalSpreadsheet = useCallback(async ({ title, template }) => {
+    if (!engineRef.current || !storageRef.current) {
+      return { success: false, error: 'Services not initialized' };
+    }
+
+    try {
+      // Get template data from pure utility
+      const templateConfig = getTemplateData(template);
+
+      // Create data structure in format engine expects
+      const localData = {
+        data: {
+          version: `v${Date.now()}-local`,
+          createdAt: Date.now(),
+          savedAt: Date.now(),
+          title,
+          celldata: templateConfig.celldata || [],
+          edits: [],
+          metadata: {
+            title,
+            rows: templateConfig.rows || 100,
+            cols: templateConfig.cols || 26,
+            sheets: templateConfig.sheets || [{ name: 'Sheet1', index: 0, order: 0, status: 1 }],
+            template,
+            isLocal: true
+          }
+        }
+      };
+
+      // Clear current data and load template
+      await storageRef.current.clearData();
+      await engineRef.current.loadData(localData);
+
+      // Update storage adapter state
+      storageRef.current.setCurrentSpreadsheetId(null); // Signal local-only
+      storageRef.current.setSpreadsheetTitle(title);
+
+      // Update component state
+      setSpreadsheetData(localData);
+      setEditCount(0);
+      setSaveStatus('ready');
+
+      logger.info(LogComponent.BUSINESS_LOGIC, 'local_init_success', 'Local spreadsheet initialized', {
+        title, template
+      });
+
+      return { success: true, title, isLocal: true };
+    } catch (error) {
+      logger.error(LogComponent.BUSINESS_LOGIC, 'local_init_error', 'Local init failed', {
+        error: error.message
+      });
+      return { success: false, error: error.message };
+    }
+  }, []);
+
   // Delete a spreadsheet permanently
   const deleteSpreadsheet = useCallback(async (spreadsheetId, title) => {
     if (!blockchainRef.current) return { success: false, error: 'Blockchain adapter not initialized' };
@@ -1723,6 +1884,7 @@ export function useSpreadsheet() {
     getUserSpreadsheets,
     loadSpreadsheet,
     createNewSpreadsheet,
+    initializeLocalSpreadsheet,
     renameSpreadsheet,
     makeSpreadsheetPublic,
     makeSpreadsheetPrivate,

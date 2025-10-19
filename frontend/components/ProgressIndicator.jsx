@@ -107,7 +107,7 @@ export function ProgressIndicator({
             {showDetails && (
               <p className="progress-subtitle">
                 {status === 'success' ? 'Operation completed successfully' :
-                 status === 'error' ? 'Something went wrong during the process' :
+                 status === 'error' ? 'Save failed - your spreadsheet is still open locally' :
                  steps[currentStep]?.description || 'Please wait while we process your request'}
               </p>
             )}

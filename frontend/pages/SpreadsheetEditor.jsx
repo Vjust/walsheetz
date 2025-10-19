@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useSpreadsheetContext } from '../presentation/components/SpreadsheetProvider.jsx';
 import { MainLayout } from '../presentation/components/MainLayout.jsx';
 import { LoadingOverlay } from '../presentation/components/LoadingOverlay.jsx';
@@ -11,17 +11,20 @@ import './styles/spreadsheet-editor.css';
 export function SpreadsheetEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [spreadsheetTitle, setSpreadsheetTitle] = useState('');
   const [connectingWallet, setConnectingWallet] = useState(false);
+  const [isLocalSpreadsheet, setIsLocalSpreadsheet] = useState(false);
 
   const {
     walletConnected,
     connectWallet,
     loadSpreadsheet,
     spreadsheetData,
-    getCurrentSpreadsheetId
+    getCurrentSpreadsheetId,
+    initializeLocalSpreadsheet
   } = useSpreadsheetContext();
 
   const [lastWalletState, setLastWalletState] = useState(walletConnected);
@@ -59,7 +62,7 @@ export function SpreadsheetEditor() {
   }, [spreadsheetData]);
 
   // Show unload warning if there are unsaved edits
-  // Checks if pendingEdits exist in SpreadsheetEngine
+  // Checks if pendingEdits exist in SpreadsheetEngine or if spreadsheet is local-only
   const [hasPendingEdits, setHasPendingEdits] = useState(false);
 
   useEffect(() => {
@@ -67,7 +70,11 @@ export function SpreadsheetEditor() {
       try {
         if (typeof window !== 'undefined' && window.spreadsheetEngine) {
           const pendingEditsSize = window.spreadsheetEngine.pendingEdits?.size || 0;
-          setHasPendingEdits(pendingEditsSize > 0);
+          const currentId = getCurrentSpreadsheetId?.();
+          const isLocal = !currentId || currentId === null;
+
+          setIsLocalSpreadsheet(isLocal);
+          setHasPendingEdits(pendingEditsSize > 0 || isLocal);
         }
       } catch (e) {
         // Silently ignore errors when checking for pending edits
@@ -82,15 +89,46 @@ export function SpreadsheetEditor() {
     const interval = setInterval(checkPendingEdits, 500);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [getCurrentSpreadsheetId]);
 
   // Show warning when user tries to leave with unsaved edits
   useUnloadWarning(
     hasPendingEdits,
-    'You have unsaved changes in your spreadsheet. Your edits will sync to blockchain when saved.'
+    isLocalSpreadsheet
+      ? 'This spreadsheet has not been saved to blockchain yet. Your work will be lost if you leave.'
+      : 'You have unsaved changes in your spreadsheet. Your edits will sync to blockchain when saved.'
   );
 
   const loadSpreadsheetById = async (spreadsheetId) => {
+    // Detect local creation
+    if (spreadsheetId.startsWith('local-')) {
+      const { title, template } = location.state || { title: 'Untitled', template: 'blank' };
+
+      setLoading(true);
+      setError(null);
+
+      logger.info(LogComponent.UI_COMPONENT, 'editor_local_init', 'Initializing local spreadsheet', {
+        title,
+        template
+      });
+
+      const result = await initializeLocalSpreadsheet({ title, template });
+
+      if (result.success) {
+        setSpreadsheetTitle(title);
+        logger.info(LogComponent.UI_COMPONENT, 'editor_local_success', 'Local spreadsheet initialized');
+      } else {
+        setError(result.error);
+        logger.error(LogComponent.UI_COMPONENT, 'editor_local_error', 'Local init failed', {
+          error: result.error
+        });
+      }
+
+      setLoading(false);
+      return;
+    }
+
+    // Normal blockchain load path
     if (!loadSpreadsheet) {
       setError('Spreadsheet loading not available');
       setLoading(false);

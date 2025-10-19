@@ -153,53 +153,38 @@ export function Dashboard() {
     navigate(`/spreadsheet/${spreadsheetId}`);
   };
 
-  const handleCreateNew = async (title) => {
-    if (!createNewSpreadsheet) return;
+  const handleCreateNew = async (creationRequest) => {
+    const { title, template } = creationRequest;
 
     try {
       setShowCreateModal(false);
-      logger.logUserAction('dashboard_create_new', { title });
+      logger.logUserAction('dashboard_create_new', { title, template });
 
-      // Create optimistic sheet entry
-      const optimisticId = `temp-${Date.now()}`;
+      // Generate temporary ID for local-only state
+      const tempId = `local-${Date.now()}`;
+
+      // Optimistic UI update - show the new sheet in the list
       const optimisticSheet = {
-        objectId: optimisticId,
+        objectId: tempId,
         title: title,
         created_at: new Date().toISOString(),
         last_modified: new Date().toISOString(),
-        isOptimistic: true
+        isOptimistic: true,
+        isLocal: true
       };
 
-      // Show optimistic update immediately
       setSpreadsheets(prev => [optimisticSheet, ...prev]);
 
-      const result = await createNewSpreadsheet(title);
+      logger.info(LogComponent.UI_COMPONENT, 'dashboard_create_local_navigate', 'Navigating to new local spreadsheet', {
+        tempId, title, template
+      });
 
-      if (result.success) {
-        logger.info(LogComponent.UI_COMPONENT, 'dashboard_create_success', 'New spreadsheet created', {
-          spreadsheetId: result.spreadsheetId,
-          title
-        });
+      // Navigate immediately with state
+      navigate(`/spreadsheet/${tempId}`, {
+        state: { title, template, isLocal: true }
+      });
 
-        // Replace optimistic entry with real data
-        setSpreadsheets(prev =>
-          prev.map(s =>
-            s.objectId === optimisticId
-              ? { ...s, objectId: result.spreadsheetId, isOptimistic: false }
-              : s
-          )
-        );
-
-        // Navigate to the new spreadsheet
-        navigate(`/spreadsheet/${result.spreadsheetId}`);
-      } else {
-        // Rollback optimistic update on failure
-        setSpreadsheets(prev => prev.filter(s => s.objectId !== optimisticId));
-        setError(`Failed to create spreadsheet: ${result.error}`);
-        logger.error(LogComponent.UI_COMPONENT, 'dashboard_create_error', 'Failed to create spreadsheet', {
-          error: result.error
-        });
-      }
+      // NO call to createNewSpreadsheet - workflow deferred to first save
     } catch (error) {
       setError(`Error creating spreadsheet: ${error.message}`);
       logger.error(LogComponent.UI_COMPONENT, 'dashboard_create_exception', 'Exception creating spreadsheet', {
