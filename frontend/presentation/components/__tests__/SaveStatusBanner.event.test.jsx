@@ -1,3 +1,5 @@
+/// <reference types="vitest" />
+/// <reference types="@vitest/environment-happy-dom" />
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
@@ -157,7 +159,7 @@ describe('SaveStatusBanner Event Handling', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/Save synced to blockchain/)).toBeInTheDocument();
+        expect(screen.getByText(/✅ Save synced/)).toBeInTheDocument();
       });
     });
   });
@@ -260,7 +262,7 @@ describe('SaveStatusBanner Event Handling', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/3 of 4 saves synced/)).toBeInTheDocument();
+        expect(screen.getByText(/✅ 3 of 4 saves synced/)).toBeInTheDocument();
       });
     });
 
@@ -295,7 +297,7 @@ describe('SaveStatusBanner Event Handling', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/2 saves still pending/)).toBeInTheDocument();
+        expect(screen.getByText(/⏳ 2 saves still pending/)).toBeInTheDocument();
       });
     });
   });
@@ -368,12 +370,12 @@ describe('SaveStatusBanner Event Handling', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/Save synced/)).toBeInTheDocument();
+        expect(screen.getByText(/✅ Save synced/)).toBeInTheDocument();
       });
 
       // Wait for auto-dismiss with a reasonable timeout
       await waitFor(() => {
-        expect(screen.queryByText(/Save synced/)).toBeNull();
+        expect(screen.queryByText(/✅ Save synced/)).toBeNull();
       }, { timeout: 3000 });
     });
 

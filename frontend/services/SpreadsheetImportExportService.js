@@ -321,9 +321,9 @@ export class SpreadsheetImportExportService {
 
         // Try to get sheet from Luckysheet's live state
         if (typeof window !== 'undefined' && window.luckysheet) {
-          try {
-            // Try primary getter (Phase 2 lifecycle)
-            if (typeof window.luckysheet.getluckysheetfile === 'function') {
+          // Try primary getter (Phase 2 lifecycle)
+          if (!sheet && typeof window.luckysheet.getluckysheetfile === 'function') {
+            try {
               const allSheets = window.luckysheet.getluckysheetfile();
               if (Array.isArray(allSheets) && allSheets.length > 0) {
                 sheet = allSheets[0];
@@ -331,10 +331,16 @@ export class SpreadsheetImportExportService {
                   sheetName: sheet?.name
                 });
               }
+            } catch (fallbackError) {
+              logger.warn(LogComponent.UI_COMPONENT, 'csv_export_fallback_error', 'Error calling getluckysheetfile()', {
+                error: fallbackError?.message
+              });
             }
+          }
 
-            // Second fallback: try getAllSheets
-            if (!sheet && typeof window.luckysheet.getAllSheets === 'function') {
+          // Second fallback: try getAllSheets
+          if (!sheet && typeof window.luckysheet.getAllSheets === 'function') {
+            try {
               const allSheets = window.luckysheet.getAllSheets(true);
               if (Array.isArray(allSheets) && allSheets.length > 0) {
                 sheet = allSheets[0];
@@ -342,11 +348,11 @@ export class SpreadsheetImportExportService {
                   sheetName: sheet?.name
                 });
               }
+            } catch (fallbackError) {
+              logger.warn(LogComponent.UI_COMPONENT, 'csv_export_fallback_error', 'Error calling getAllSheets()', {
+                error: fallbackError?.message
+              });
             }
-          } catch (fallbackError) {
-            logger.warn(LogComponent.UI_COMPONENT, 'csv_export_fallback_error', 'Error accessing Luckysheet live state', {
-              error: fallbackError?.message
-            });
           }
         }
 
