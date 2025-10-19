@@ -71,6 +71,9 @@ export class SpreadsheetEngine {
     // Store metadata from last successful save (for UI confirmation)
     this._lastSaveInfo = null;
 
+    // Store partial save info (Walrus succeeded, blockchain failed)
+    this._partialSaveInfo = null;
+
     // Offline queue for disconnected saves
     this.offlineQueue = [];
     this.isOnline = navigator.onLine;
@@ -148,13 +151,25 @@ export class SpreadsheetEngine {
         hasData: !!data,
         source: sessionInfo.hasWalrusBlobId ? 'walrus' : 'localStorage'
       });
-      
+
+      // Load partial save info from storage adapter (Walrus succeeded, blockchain failed)
+      if (this.storageService?.getPartialSaveInfo) {
+        this._partialSaveInfo = this.storageService.getPartialSaveInfo();
+        if (this._partialSaveInfo) {
+          logger.info(LogComponent.SPREADSHEET_ENGINE, 'partial_save_restored',
+            'Restored partial save from session', {
+              blobId: this._partialSaveInfo.blobId,
+              status: this._partialSaveInfo.status
+            });
+        }
+      }
+
       // Initialize last edit timestamp as null - will be set only when actual edits occur
       // this.lastEditTimestamp remains null until first edit
 
       // WebSocket collaboration disabled for single-user MVP
       logger.info(LogComponent.SPREADSHEET_ENGINE, 'websocket_connect', 'WebSocket collaboration disabled for single-user MVP');
-      
+
       // Setup smart auto-save after successful initialization (only if enabled)
       if (this.autoSaveEnabled) {
         this.setupSmartAutoSave();
@@ -2608,6 +2623,26 @@ export class SpreadsheetEngine {
   suppressCommitPrompts() {
     this.commitPromptState.visible = false;
     this.commitPromptState.suppressed = true;
+  }
+
+  /**
+   * Get pending partial save info (Walrus succeeded, blockchain failed)
+   * @returns {Object|null} Partial save info or null if none pending
+   */
+  getPartialSaveInfo() {
+    return this._partialSaveInfo;
+  }
+
+  /**
+   * Clear partial save info after successful retry
+   */
+  clearPartialSaveInfo() {
+    this._partialSaveInfo = null;
+    if (this.storageService?.clearPartialSaveInfo) {
+      this.storageService.clearPartialSaveInfo();
+    }
+    logger.info(LogComponent.SPREADSHEET_ENGINE, 'partial_save_cleared',
+      'Partial save info cleared');
   }
 
   async getDatasets(filter = {}) {

@@ -572,4 +572,48 @@ export class StorageAdapter extends IStorageService {
       return false;
     }
   }
+
+  /**
+   * Store partial save information (Walrus succeeded, blockchain failed)
+   * @param {Object} info - Partial save info with blobId, error details, etc.
+   */
+  setPartialSaveInfo(info) {
+    try {
+      this._session.partialSave = {
+        ...info,
+        timestamp: Date.now()
+      };
+      console.log('[StorageAdapter] 📦 Partial save info stored to session', {
+        blobId: info.blobId,
+        status: info.status
+      });
+    } catch (error) {
+      console.error('[StorageAdapter] Failed to save partial save info:', error);
+    }
+  }
+
+  /**
+   * Retrieve partial save information
+   * @returns {Object|null} Partial save info or null
+   */
+  getPartialSaveInfo() {
+    try {
+      return this._session.partialSave || null;
+    } catch (error) {
+      console.error('[StorageAdapter] Failed to get partial save info:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Clear partial save information after successful retry
+   */
+  clearPartialSaveInfo() {
+    try {
+      delete this._session.partialSave;
+      console.log('[StorageAdapter] 🧹 Partial save info cleared from session');
+    } catch (error) {
+      console.error('[StorageAdapter] Failed to clear partial save info:', error);
+    }
+  }
 }

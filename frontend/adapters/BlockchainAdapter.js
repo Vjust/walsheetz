@@ -3611,6 +3611,75 @@ export class BlockchainAdapter extends IBlockchainService {
       logger.debug(LogComponent.BLOCKCHAIN_ADAPTER, 'retry_listeners_setup', 'Fallback retry event listeners setup');
     }
   }
+
+  /**
+   * Retry blockchain commit for a partial save (Walrus succeeded, blockchain failed)
+   * Uses stored blob data to avoid re-uploading to Walrus
+   * @returns {Object} Retry result with success status and details
+   */
+  async retryBlockchainCommit() {
+    logger.startTimer('blockchain_retry');
+    logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'retry_blockchain_start', 'Starting blockchain commit retry (no Walrus re-upload)');
+
+    try {
+      // Get pending partial save data from storage adapter
+      const pendingData = this.storageAdapter?.getPartialSaveInfo()?.pendingBlockchainData;
+      if (!pendingData) {
+        throw new Error('No pending blockchain data to retry');
+      }
+
+      logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'retry_blockchain_pending_data', 'Retrieved pending blockchain data', {
+        walrusBlobId: pendingData.walrusBlobId,
+        spreadsheetObjectId: pendingData.spreadsheetObjectId
+      });
+
+      // Create storage transaction with existing blob ID (no Walrus upload)
+      const tx = await this.suiService.createStorageTransaction(pendingData);
+
+      logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'retry_blockchain_transaction_created', 'Storage transaction created for retry');
+
+      // Execute the transaction
+      const result = await this.suiService.executeTransaction(tx);
+
+      if (result.success) {
+        // Clear partial save state now that blockchain succeeded
+        this.storageAdapter?.clearPartialSaveInfo();
+
+        // Emit success event
+        transactionEventBus.emit('save:retry-success', {
+          transactionDigest: result.digest,
+          blobId: pendingData.walrusBlobId,
+          timestamp: Date.now()
+        });
+
+        const duration = logger.endTimer('blockchain_retry');
+        logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'retry_blockchain_success', '✅ Blockchain commit retry succeeded', {
+          transactionDigest: result.digest,
+          duration,
+          blobId: pendingData.walrusBlobId
+        });
+
+        return {
+          success: true,
+          digest: result.digest,
+          blobId: pendingData.walrusBlobId,
+          duration
+        };
+      } else {
+        throw new Error(result.error || 'Blockchain execution failed');
+      }
+    } catch (error) {
+      logger.endTimer('blockchain_retry');
+      logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'retry_blockchain_failed', 'Blockchain commit retry failed', {
+        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error'
+      });
+
+      return {
+        success: false,
+        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error'
+      };
+    }
+  }
 }
 
 // Export for global debugging (development only)
