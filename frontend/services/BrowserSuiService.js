@@ -937,9 +937,6 @@ class BrowserSuiService {
       }
 
       console.log('[BrowserSuiService] ✅ Wallet verified, passing Transaction to wallet...');
-      
-      // Pass Transaction object directly to wallet (do NOT build/serialize)
-      // The wallet will handle building internally per Sui documentation
       console.log('[BrowserSuiService] 📝 Requesting wallet signature for Transaction...');
       console.error('🚀 DEBUG: About to call wallet signAndExecuteTransaction', {
         hasWalletManager: !!this.walletManager,
@@ -947,16 +944,19 @@ class BrowserSuiService {
         transactionType: transaction.constructor.name
       });
       
-      // Use wallet to sign and execute the transaction object directly
-      const result = await this.walletManager.signAndExecuteTransaction({
-        transaction: transaction,  // Use standardized 'transaction' property name
-        options: {
-          showEffects: true,
-          showEvents: true,
-          showObjectChanges: true,
-          showBalanceChanges: true
-        }
-      });
+      const walletOptions = {
+        showEffects: true,
+        showEvents: true,
+        showObjectChanges: true,
+        showBalanceChanges: true
+      };
+
+      const hasSignAndExecuteTransactionBlock = typeof this.walletManager.walletConnection?.signAndExecuteTransactionBlock === 'function';
+      const payload = hasSignAndExecuteTransactionBlock
+        ? { transactionBlock: transaction, options: walletOptions }
+        : { transaction, options: walletOptions };
+
+      const result = await this.walletManager.signAndExecuteTransaction(payload);
       
       console.log('[BrowserSuiService] ✅ Transaction executed successfully:', {
         digest: result.digest,
@@ -1061,15 +1061,41 @@ class BrowserSuiService {
       };
       
     } catch (error) {
+      const errorMsg = typeof error === 'string' ? error : (error && error.message) || 'Unknown error';
+
+      // Enhanced error messaging for parameter count mismatches
+      let enhancedError = errorMsg;
+      let debugHint = '';
+
+      if (errorMsg.includes('Incorrect number of arguments') || errorMsg.includes('wrong number of arguments')) {
+        console.error('[BrowserSuiService] 🔴 CRITICAL: Parameter count mismatch detected');
+        console.error('[BrowserSuiService] This typically indicates a clock parameter is missing from the transaction');
+        console.error('[BrowserSuiService] Debugging steps:');
+        console.error('[BrowserSuiService] 1. Check console for "[ABI] save_version signature detected" log');
+        console.error('[BrowserSuiService] 2. If not found, ABI detection failed - check RPC connectivity');
+        console.error('[BrowserSuiService] 3. Fallback to config: check app-config.json clockInSave setting');
+        console.error('[BrowserSuiService] 4. Clear browser cache and reload page to force fresh ABI detection');
+        console.error('[BrowserSuiService] 5. Check network: mainnet requires clock=true, testnet requires clock=true');
+
+        enhancedError = `${errorMsg} - Transaction argument mismatch. This usually means the clock object is missing. See console for debugging steps.`;
+        debugHint = 'parameter_count_mismatch';
+      } else if (errorMsg.includes('Abort') || errorMsg.includes('abort')) {
+        enhancedError = `${errorMsg} - Wallet signature request was rejected or cancelled`;
+        debugHint = 'user_abort';
+      }
+
       console.error('[BrowserSuiService] ❌ Transaction execution failed:', {
-        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
+        error: enhancedError,
+        debugHint,
+        originalError: errorMsg,
         stack: error.stack,
         walletConnected: this.walletManager.getWalletInfo()?.connected || false
       });
-      
+
       return {
         success: false,
-        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
+        error: enhancedError,
+        debugHint,
         details: {
           walletConnected: this.walletManager.getWalletInfo()?.connected || false,
           timestamp: new Date().toISOString()

@@ -674,6 +674,78 @@ class LuckysheetApi {
       cols: window.luckysheetfile[0].column || 26
     };
   }
+
+  /**
+   * Check for required Luckysheet methods
+   * Useful for diagnosing CDN version issues
+   * @returns {Object} { available, missing }
+   */
+  checkRequiredMethods() {
+    const requiredMethods = [
+      'create', 'destroy', 'undo', 'redo', 'refresh', 'refreshFormula',
+      'copy', 'paste', 'cut', 'zoom', 'getAllSheets'
+    ];
+
+    const available = [];
+    const missing = [];
+
+    if (!window.luckysheet) {
+      return { available: [], missing: requiredMethods, error: 'Luckysheet not loaded' };
+    }
+
+    requiredMethods.forEach(method => {
+      if (typeof window.luckysheet[method] === 'function') {
+        available.push(method);
+      } else {
+        missing.push(method);
+      }
+    });
+
+    const result = { available, missing };
+
+    if (missing.length > 0) {
+      console.warn('[LuckysheetApi] Missing methods:', missing);
+    } else {
+      console.log('[LuckysheetApi] ✅ All required methods are available');
+    }
+
+    return result;
+  }
+
+  /**
+   * Verify CDN version by checking Script tag
+   * @returns {Object} { version, scriptSrc, cdnProvider }
+   */
+  verifyCDNVersion() {
+    if (!window.luckysheet) {
+      return { error: 'Luckysheet not loaded' };
+    }
+
+    const scripts = Array.from(document.querySelectorAll('script'));
+    const luckysheetScript = scripts.find(s => s.src && s.src.includes('luckysheet'));
+
+    if (!luckysheetScript) {
+      return { warning: 'Could not find Luckysheet script tag' };
+    }
+
+    // Parse version from CDN URL (e.g., luckysheet@2.1.13)
+    const versionMatch = luckysheetScript.src.match(/luckysheet@([\d.]+)/);
+    const version = versionMatch ? versionMatch[1] : 'unknown';
+
+    // Detect CDN provider
+    let cdnProvider = 'unknown';
+    if (luckysheetScript.src.includes('jsdelivr')) cdnProvider = 'jsDelivr';
+    if (luckysheetScript.src.includes('unpkg')) cdnProvider = 'unpkg';
+    if (luckysheetScript.src.includes('cdnjs')) cdnProvider = 'cdnjs';
+
+    console.log('[LuckysheetApi] CDN Info:', { version, cdnProvider, scriptSrc: luckysheetScript.src });
+
+    return {
+      version,
+      scriptSrc: luckysheetScript.src,
+      cdnProvider
+    };
+  }
 }
 
 // Create singleton instance

@@ -433,10 +433,18 @@ class ValidationGuards {
       const bothConnected = results.aggregator.connected && results.publisher.connected;
       const anyConnected = results.aggregator.connected || results.publisher.connected;
 
+      // Capture specific errors for better diagnostics
+      const aggregatorError = results.aggregator.error || (results.aggregator.connected ? 'OK' : `HTTP ${results.aggregator.status}`);
+      const publisherError = results.publisher.error || (results.publisher.connected ? 'OK' : `HTTP ${results.publisher.status}`);
+
       if (!anyConnected) {
         return {
           status: 'failed',
           error: 'Neither Walrus aggregator nor publisher are reachable',
+          errorDetails: {
+            aggregator: aggregatorError,
+            publisher: publisherError
+          },
           details: results
         };
       }
@@ -446,13 +454,18 @@ class ValidationGuards {
         return {
           status: 'warning',
           error: `Walrus ${failed} is not reachable but ${failed === 'aggregator' ? 'publisher' : 'aggregator'} works`,
+          errorDetails: {
+            aggregator: aggregatorError,
+            publisher: publisherError
+          },
           details: results
         };
       }
 
       return {
         status: 'passed',
-        details: results
+        details: results,
+        errorDetails: { aggregator: 'OK', publisher: 'OK' }
       };
 
     } catch (error) {

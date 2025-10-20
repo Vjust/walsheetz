@@ -2,10 +2,6 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { fileURLToPath, URL } from 'url'
 
-// Additional configuration for handling CommonJS modules
-import { createRequire } from 'module'
-const require = createRequire(import.meta.url)
-
 // Conditional proxy logging - set VITE_VERBOSE_PROXY=true for detailed logs
 const VERBOSE_PROXY = process.env.VITE_VERBOSE_PROXY === 'true'
 
@@ -204,6 +200,8 @@ export default defineConfig({
         manualChunks: undefined
       }
     },
+    // Enable source maps for debugging module issues
+    sourcemap: 'hidden',
     // Ensure blockchain directory is accessible during build
     outDir: 'dist',
     emptyOutDir: true

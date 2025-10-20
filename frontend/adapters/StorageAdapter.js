@@ -285,6 +285,25 @@ export class StorageAdapter extends IStorageService {
     }
   }
 
+  setVersionMetadata(metadata) {
+    try {
+      this._session.versionMetadata = metadata;
+      this._session.lastUpdated = Date.now();
+      console.log('Version metadata saved to session:', metadata?.latestVersion?.versionNumber || metadata?.versionNumber || 'unknown');
+    } catch (error) {
+      console.error('Failed to save version metadata:', error);
+    }
+  }
+
+  getVersionMetadata() {
+    try {
+      return this._session.versionMetadata || null;
+    } catch (error) {
+      console.error('Failed to get version metadata:', error);
+      return null;
+    }
+  }
+
   setAutoSaveEnabled(enabled) {
     try {
       this._session.autoSaveEnabled = !!enabled;

@@ -27,7 +27,7 @@
   },
   "features": {
     "contentHashInSave": true,
-    "clockInSave": false,
+    "clockInSave": true,
     "autoSave": { "enabled": true, "intervalMs": 5000 },
     "collaboration": { "enabled": true },
     "gasManagement": { "bufferPercent": 25 },

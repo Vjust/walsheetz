@@ -3,7 +3,7 @@ import { getCurrentConfig } from '../../blockchain/config.js';
 import { configLoader } from '../utils/ConfigLoader.js';
 import RateLimiter from '../utils/RateLimiter.js';
 import { encryptionUtility } from '../utils/Encryption.js';
-import { WalrusSdkClient } from './WalrusSdkClient.js';
+import { loadWalrusSdkClient, getCachedWalrusSdkClient } from './WalrusSdkClientLoader.js';
 
 class BrowserWalrusService {
   constructor() {
@@ -83,17 +83,11 @@ class BrowserWalrusService {
       this.rateLimiterEnabled = false;
     }
 
-    // Initialize SDK client if SDK features are enabled
+    // Initialize SDK client lazily (deferred to when first needed)
+    // This prevents @mysten/walrus from being eagerly loaded into the browser bundle
     this.sdkClient = null;
-    try {
-      if (config.walrus?.features?.useSdk) {
-        this.sdkClient = new WalrusSdkClient();
-        console.log('[BrowserWalrusService] Walrus SDK client initialized');
-      }
-    } catch (sdkError) {
-      console.warn('[BrowserWalrusService] Failed to initialize SDK client, will use HTTP fallback:', sdkError.message);
-      this.sdkClient = null;
-    }
+    this.sdkClientLoadingPromise = null;
+    this.sdkLoadAttempted = false;
 
     const currentNetwork = config.environment || 'testnet';
     console.log(`[BrowserWalrusService] Initialized with ${currentNetwork} endpoints:`, {
@@ -151,6 +145,65 @@ class BrowserWalrusService {
       consecutiveFailures: 0,
       lastSuccessfulOperation: null
     };
+  }
+
+  /**
+   * Lazily load and initialize the Walrus SDK client when first needed
+   * This defers loading @mysten/walrus until it's actually required
+   * @private
+   */
+  async _ensureSdkClientReady() {
+    // Return cached client if already loaded successfully
+    if (this.sdkClient !== null) {
+      return this.sdkClient;
+    }
+
+    // Return in-progress promise if already loading
+    if (this.sdkClientLoadingPromise) {
+      return this.sdkClientLoadingPromise;
+    }
+
+    // Prevent retry if already attempted and failed
+    if (this.sdkLoadAttempted && this.sdkClient === null) {
+      return null;
+    }
+
+    // Start loading
+    this.sdkClientLoadingPromise = (async () => {
+      try {
+        const config = getCurrentConfig();
+
+        if (config.walrus?.features?.useSdk !== true) {
+          console.debug('[BrowserWalrusService] Walrus SDK not enabled in config');
+          this.sdkClient = null;
+          this.sdkLoadAttempted = true;
+          return null;
+        }
+
+        const client = await loadWalrusSdkClient();
+        this.sdkClient = client;
+        this.sdkLoadAttempted = true;
+
+        if (this.sdkClient) {
+          console.info('[BrowserWalrusService] ✅ Walrus SDK client loaded successfully');
+        } else {
+          console.warn('[BrowserWalrusService] Walrus SDK returned null, will use HTTP fallback');
+        }
+
+        return this.sdkClient;
+      } catch (error) {
+        console.warn('[BrowserWalrusService] Failed to load Walrus SDK client, will use HTTP fallback:',
+          typeof error === 'string' ? error : error?.message || 'Unknown error'
+        );
+        this.sdkClient = null;
+        this.sdkLoadAttempted = true;
+        return null;
+      } finally {
+        this.sdkClientLoadingPromise = null;
+      }
+    })();
+
+    return this.sdkClientLoadingPromise;
   }
 
   // Connect to Walrus network (test connectivity)
@@ -886,6 +939,12 @@ class BrowserWalrusService {
     console.log(`[BrowserWalrusService:${requestId}] Using Walrus SDK path`);
 
     try {
+      // Ensure SDK client is ready before using it
+      const sdkClient = await this._ensureSdkClientReady();
+      if (!sdkClient) {
+        throw new Error('Walrus SDK client failed to load, cannot use SDK path');
+      }
+
       // Prepare enhanced data (same as HTTP path)
       const enhancedData = {
         ...dataToStore,
@@ -904,7 +963,7 @@ class BrowserWalrusService {
       console.log(`[BrowserWalrusService:${requestId}] Content hash calculated: ${contentHash.hash.substring(0, 16)}...`);
 
       // Create blob for SDK
-      const { encodedBlob, registerTx } = await this.sdkClient.writeJsonBlob({
+      const { encodedBlob, registerTx } = await sdkClient.writeJsonBlob({
         json: enhancedData,
         identifier: options.identifier || 'walsheetz-v1.json',
         tags: {
@@ -918,8 +977,9 @@ class BrowserWalrusService {
 
       console.log(`[BrowserWalrusService:${requestId}] SDK encoded blob created, register transaction ready`);
 
-      // We need a wallet manager to sign transactions - this should be injected or available globally
-      const walletManager = this.getWalletManager();
+      // Use browserWalletManager singleton for transaction signing
+      // This is the same wallet manager used throughout the app
+      const walletManager = browserWalletManager;
       if (!walletManager) {
         throw new Error('Wallet manager not available for SDK transaction signing');
       }
@@ -934,7 +994,7 @@ class BrowserWalrusService {
 
       // Complete upload and certification
       console.log(`[BrowserWalrusService:${requestId}] Starting upload and certification`);
-      const { blobId, certifyResult } = await this.sdkClient.completeUploadAndCertify(
+      const { blobId, certifyResult } = await sdkClient.completeUploadAndCertify(
         encodedBlob,
         (tx) => walletManager.signAndExecuteTransaction(tx.transactionBlock)
       );
@@ -1010,17 +1070,22 @@ class BrowserWalrusService {
 
   // Get wallet manager instance (should be injected or available globally)
   getWalletManager() {
-    // Check if wallet manager is available globally
+    // Return the browserWalletManager singleton
+    // This is the primary wallet manager used throughout the app
+    if (browserWalletManager) {
+      return browserWalletManager;
+    }
+
+    // Fallback to window globals (legacy support)
     if (typeof window !== 'undefined' && window.walletManager) {
       return window.walletManager;
     }
 
-    // Or check for it in the app context
     if (typeof window !== 'undefined' && window.appContext?.walletManager) {
       return window.appContext.walletManager;
     }
 
-    console.warn('[BrowserWalrusService] No wallet manager found - SDK path will fail');
+    console.warn('[BrowserWalrusService] No wallet manager found - SDK operations will fail');
     return null;
   }
 

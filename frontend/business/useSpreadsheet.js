@@ -543,6 +543,32 @@ export function useSpreadsheet() {
         // Start save reminder checking
         startSaveReminderMonitoring();
 
+        // Proactive ABI detection to catch config mismatches early
+        try {
+          console.log('🔍 Running proactive ABI detection for save_version...');
+          const { detectSaveVersionSignature } = await import('../utils/AbiHelpers.js');
+          const sig = await detectSaveVersionSignature();
+
+          if (sig.debug?.reason === 'abi_missing_function' || sig.debug?.reason === 'detection_error') {
+            console.warn('[useSpreadsheet] ⚠️ ABI detection used fallback - ensure config flags match deployed contract');
+            console.warn('[useSpreadsheet] Detected signature:', {
+              expectsContentHash: sig.expectsContentHash,
+              expectsClock: sig.expectsClock,
+              reason: sig.debug?.reason,
+              error: sig.debug?.error
+            });
+          } else {
+            console.log('[useSpreadsheet] ✅ ABI detection successful:', {
+              expectsContentHash: sig.expectsContentHash,
+              expectsClock: sig.expectsClock,
+              paramCount: sig.params.length
+            });
+          }
+        } catch (error) {
+          console.error('[useSpreadsheet] ❌ Proactive ABI detection failed:', error.message);
+          console.warn('[useSpreadsheet] This may indicate RPC connectivity issues - transactions may fail if config is incorrect');
+        }
+
         // Clear timeout on successful initialization
         clearTimeout(initializationTimeout);
         console.log('🎉 Service initialization completed successfully!');
@@ -771,6 +797,35 @@ export function useSpreadsheet() {
       return { success: false, error: 'Engine not initialized' };
     }
 
+    // Check for fallback config and warn user
+    const config = await blockchainRef.current.configLoader?.getConfig?.();
+    if (config?.isFallback) {
+      logger.warn(LogComponent.BUSINESS_LOGIC, 'fallback_config_in_use', 'Using fallback config - endpoints may be stale');
+
+      // Block save if critical fields are missing from fallback config
+      const requiredFields = ['packageId', 'registryObjectId'];
+      const networkConfig = config.getCurrentNetwork?.();
+      const missingFields = requiredFields.filter(field => !networkConfig?.[field]);
+
+      if (missingFields.length > 0) {
+        const errorMsg = `Cannot save: fallback configuration is missing critical fields (${missingFields.join(', ')}). Please check your network configuration.`;
+        setLoadingState({
+          isLoading: false,
+          message: 'Configuration Error',
+          details: errorMsg,
+          type: 'error',
+          errorType: 'config_failed'
+        });
+
+        logger.error(LogComponent.BUSINESS_LOGIC, 'config_missing_fields', 'Fallback config missing critical fields', {
+          missingFields,
+          availableFields: Object.keys(networkConfig || {})
+        });
+
+        return { success: false, error: errorMsg, stage: 'config' };
+      }
+    }
+
     // Detect first save (local spreadsheet with no blockchain ID)
     const currentId = storageRef.current?.getCurrentSpreadsheetId();
     const isFirstSave = !currentId;
@@ -792,6 +847,7 @@ export function useSpreadsheet() {
 
         // NEW: Preflight - Check Walrus health before expensive operations
         logger.info(LogComponent.BUSINESS_LOGIC, 'first_save_preflight', 'Checking Walrus health before first save');
+        logger.info(LogComponent.BUSINESS_LOGIC, 'telemetry:stage', 'Starting walrus_store stage for first save');
 
         const walrusHealth = await blockchainRef.current.checkWalrusHealth?.();
         if (walrusHealth && !walrusHealth.ok) {
@@ -827,9 +883,20 @@ export function useSpreadsheet() {
 
         logger.info(LogComponent.BUSINESS_LOGIC, 'walrus_health_ok', 'Walrus health check passed, proceeding with first save');
 
-        // Get current data from engine
-        const currentData = await engineRef.current.exportData();
+        // Get spreadsheet title first
         const spreadsheetTitle = title || storageRef.current.getSpreadsheetTitle() || 'Untitled';
+
+        // Get current data from engine
+        console.log('🔍 [First Save] Collecting data from engine...');
+        let currentData;
+        try {
+          // collectSpreadsheetData is a synchronous method that gathers current spreadsheet state
+          currentData = engineRef.current.collectSpreadsheetData(spreadsheetTitle);
+          console.log('🔍 [First Save] Data collected successfully, size:', JSON.stringify(currentData).length);
+        } catch (dataCollectionError) {
+          console.error('❌ [First Save] collectSpreadsheetData failed:', dataCollectionError);
+          throw new Error(`Failed to collect spreadsheet data: ${dataCollectionError?.message || String(dataCollectionError)}`);
+        }
 
         logger.info(LogComponent.BUSINESS_LOGIC, 'first_save_start', 'Publishing local spreadsheet', {
           title: spreadsheetTitle,
@@ -847,17 +914,66 @@ export function useSpreadsheet() {
         // Progress updates
         setLoadingState(prev => ({ ...prev, currentStep: 1 }));
 
+        // Log before blockchain operation
+        console.log('🔍 [First Save] About to call createNewSpreadsheetOptimized with:', {
+          spreadsheetTitle,
+          currentDataSize: JSON.stringify(currentData).length,
+          hasBlockchainAdapter: !!blockchainRef.current,
+          adapterType: blockchainRef.current?.constructor?.name
+        });
+
         // Create spreadsheet with current data
         const result = await blockchainRef.current.createNewSpreadsheetOptimized(
           spreadsheetTitle,
           currentData
         );
 
+        console.log('🔍 [First Save] createNewSpreadsheetOptimized returned:', {
+          success: result?.success,
+          hasSpreadsheetId: !!result?.spreadsheetId,
+          hasBlobId: !!result?.walrusBlobId,
+          resultKeys: result ? Object.keys(result) : []
+        });
+
         if (result.success) {
+          // Telemetry for successful save stages
+          logger.info(LogComponent.BUSINESS_LOGIC, 'telemetry:stage', 'walrus_store completed', {
+            blobId: result.walrusBlobId,
+            size: result.data ? JSON.stringify(result.data).length : 0
+          });
+
+          logger.info(LogComponent.BUSINESS_LOGIC, 'telemetry:stage', 'create_tx and save_tx completed', {
+            spreadsheetId: result.spreadsheetId,
+            transactionDigest: result.transactionDigest
+          });
+
+          // Capture save metadata for UI confirmation (matching normal save flow)
+          if (result.saveInfo) {
+            setLastSaveInfo(result.saveInfo);
+          }
+
           // Update session with real blockchain ID
           storageRef.current.setCurrentSpreadsheetId(result.spreadsheetId);
           if (result.walrusBlobId) {
             storageRef.current.setLastWalrusBlobId(result.walrusBlobId);
+          }
+
+          // Try to get and persist latest version metadata
+          try {
+            if (blockchainRef.current?.suiService?.getLatestVersionMetadata) {
+              const versionMetadata = await blockchainRef.current.suiService.getLatestVersionMetadata(result.spreadsheetId);
+              if (versionMetadata && storageRef.current?.setVersionMetadata) {
+                storageRef.current.setVersionMetadata(versionMetadata);
+                logger.info(LogComponent.BUSINESS_LOGIC, 'version_metadata_persisted', 'Version metadata saved for Save Details modal', {
+                  version: versionMetadata.version,
+                  digest: versionMetadata.transactionDigest
+                });
+              }
+            }
+          } catch (e) {
+            logger.warn(LogComponent.BUSINESS_LOGIC, 'version_metadata_failed', 'Could not fetch version metadata', {
+              error: typeof e === 'string' ? e : e?.message
+            });
           }
 
           // Replace URL if currently showing local ID
@@ -882,7 +998,9 @@ export function useSpreadsheet() {
           setTimeout(() => setSaveStatus('ready'), 2000);
 
           logger.info(LogComponent.BUSINESS_LOGIC, 'first_save_success', 'Spreadsheet published', {
-            spreadsheetId: result.spreadsheetId
+            spreadsheetId: result.spreadsheetId,
+            blobId: result.walrusBlobId,
+            transactionDigest: result.transactionDigest
           });
 
           return { success: true, ...result, isFirstSave: true };
@@ -890,27 +1008,44 @@ export function useSpreadsheet() {
           // Keep editor open on error with detailed message
           const errorMessage = result.error || result.message || 'Unknown error occurred';
           const errorDetails = result.technical || result.details || '';
+          const errorStage = result.stage || 'unknown';
+
+          // Map error stage to descriptive error type
+          let errorType = 'first_save_failed';
+          if (errorStage === 'walrus') {
+            errorType = 'walrus_unavailable';
+          } else if (errorStage === 'createTx') {
+            errorType = 'wallet_required';
+          } else if (errorStage === 'config') {
+            errorType = 'config_failed';
+          }
 
           logger.error(LogComponent.BUSINESS_LOGIC, 'first_save_failed', 'First save failed', {
             error: errorMessage,
             details: errorDetails,
+            stage: errorStage,
+            errorType: errorType,
             fullResult: result,
             resultKeys: result ? Object.keys(result) : [],
             technical: result?.technical,
             preflight: result?.preflight,
             hasBlockchainAdapter: !!blockchainRef.current,
-            hasEngine: !!engineRef.current
+            hasEngine: !!engineRef.current,
+            blobId: result?.blobId
           });
 
           console.error('❌ [First Save] Failed:', {
             error: errorMessage,
             details: errorDetails,
+            stage: errorStage,
+            errorType: errorType,
             fullResult: result,
             resultKeys: result ? Object.keys(result) : [],
             resultValues: result,
             hasBlockchainAdapter: !!blockchainRef.current,
             hasEngine: !!engineRef.current,
-            spreadsheetTitle: spreadsheetTitle
+            spreadsheetTitle: spreadsheetTitle,
+            blobId: result?.blobId
           });
 
           setSaveStatus('error');
@@ -919,7 +1054,8 @@ export function useSpreadsheet() {
             message: 'Save failed',
             details: errorMessage + (errorDetails ? ` (${errorDetails})` : ''),
             error: errorMessage,
-            errorType: 'first_save_failed'
+            errorType: errorType,
+            blobId: result?.blobId
           });
 
           // Keep error visible longer (8s) for user to read
@@ -931,21 +1067,36 @@ export function useSpreadsheet() {
           return { success: false, error: errorMessage, details: errorDetails };
         }
       } catch (error) {
-        const errorMessage = error.message || 'Unknown error occurred';
+        // Enhanced error logging to capture actual error details
+        console.error('❌ [First Save] Raw error object:', error);
+        console.error('❌ [First Save] Error stringified:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+        console.error('❌ [First Save] Error type:', typeof error);
+        console.error('❌ [First Save] Error constructor:', error?.constructor?.name);
+        console.error('❌ [First Save] Error keys:', Object.keys(error || {}));
+        console.error('❌ [First Save] Error entries:', Object.entries(error || {}));
+
+        // Extract message from various possible error formats
+        const errorMessage =
+          error?.message ||
+          error?.error ||
+          error?.details ||
+          (typeof error === 'string' ? error : null) ||
+          'Unknown error occurred';
 
         logger.error(LogComponent.BUSINESS_LOGIC, 'first_save_exception', 'Exception during first save', {
           error: errorMessage,
-          stack: error.stack,
-          errorType: error.constructor.name,
+          stack: error?.stack,
+          errorType: error?.constructor?.name,
           errorKeys: error ? Object.keys(error) : [],
+          fullError: JSON.stringify(error),
           hasBlockchainAdapter: !!blockchainRef.current,
           hasEngine: !!engineRef.current
         });
 
         console.error('❌ [First Save] Exception:', {
           message: errorMessage,
-          stack: error.stack,
-          errorType: error.constructor.name,
+          stack: error?.stack,
+          errorType: error?.constructor?.name,
           completeError: error,
           hasBlockchainAdapter: !!blockchainRef.current,
           hasEngine: !!engineRef.current

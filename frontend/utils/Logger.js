@@ -17,7 +17,8 @@ export const LogComponent = {
   WALLET_MANAGER: 'WalletManager',
   STORAGE_SERVICE: 'StorageService',
   COLLABORATION: 'Collaboration',
-  PERFORMANCE: 'Performance'
+  PERFORMANCE: 'Performance',
+  BUSINESS_LOGIC: 'BusinessLogic' // Business logic layer (useSpreadsheet hooks, business rules)
 };
 
 export const ErrorCategory = {

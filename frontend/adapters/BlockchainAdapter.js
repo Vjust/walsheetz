@@ -935,10 +935,10 @@ export class BlockchainAdapter extends IBlockchainService {
       // Step 2: Store data to Walrus first (faster, no wallet interaction)
       logger.startTimer('walrus_storage_optimized');
 
-      // Get default epochs from config
-      const { getCurrentConfig } = require('../blockchain/config.js');
-      const config = getCurrentConfig();
-      const defaultEpochs = config.walrus?.features?.epochsDefault || 50;
+      // Get default epochs from config via configLoader
+      const runtimeConfig = await this.configLoader.getConfig();
+      const networkConfig = runtimeConfig.getCurrentNetwork();
+      const defaultEpochs = networkConfig.walrus?.features?.epochsDefault || 50;
 
       logger.info(LogComponent.STORAGE_SERVICE, 'walrus_store_optimized', `Storing spreadsheet data in Walrus with ${defaultEpochs} epochs`);
 
@@ -951,7 +951,11 @@ export class BlockchainAdapter extends IBlockchainService {
 
       if (!walrusResult.success) {
         logger.endTimer('walrus_storage_optimized');
-        throw new Error(`Walrus storage failed: ${walrusResult.error}`);
+        throw {
+          stage: 'walrus',
+          message: `Walrus storage failed: ${walrusResult.error}`,
+          details: walrusResult
+        };
       }
 
       logger.endTimer('walrus_storage_optimized');
@@ -959,6 +963,20 @@ export class BlockchainAdapter extends IBlockchainService {
         blobId: walrusResult.blobId,
         size: walrusResult.size
       });
+
+      // Immediately persist blob ID to storage to avoid losing it if blockchain transaction fails
+      if (this.storageAdapter && walrusResult.blobId) {
+        try {
+          this.storageAdapter.setLastWalrusBlobId(walrusResult.blobId);
+          logger.info(LogComponent.STORAGE_SERVICE, 'blob_persisted', 'Blob ID persisted to storage', {
+            blobId: walrusResult.blobId
+          });
+        } catch (e) {
+          logger.warn(LogComponent.STORAGE_SERVICE, 'blob_persist_failed', 'Failed to persist blob ID', {
+            error: typeof e === 'string' ? e : e?.message
+          });
+        }
+      }
 
       // Step 3: Create SINGLE combined transaction (NEW APPROACH)
       logger.startTimer('combined_transaction_create');
@@ -969,23 +987,43 @@ export class BlockchainAdapter extends IBlockchainService {
       
       // Execute the two separate transactions (createSpreadsheetWithInitialVersion handles this now)
       logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'wallet_prompt_combined', 'Two wallet prompts: Create spreadsheet + save initial version');
-      
-      const combinedResult = await this.suiService.createSpreadsheetWithInitialVersion(
-        title,
-        walrusResult.blobId,
-        walrusResult.contentHash?.hash,
-        cellCount,
-        description
-      );
+
+      let combinedResult;
+      try {
+        combinedResult = await this.suiService.createSpreadsheetWithInitialVersion(
+          title,
+          walrusResult.blobId,
+          walrusResult.contentHash?.hash,
+          cellCount,
+          description
+        );
+      } catch (txError) {
+        // Extract module name from stack trace for better diagnostics
+        const stack = typeof txError === 'string' ? '' : txError?.stack || '';
+        const moduleName = stack.match(/at ([^(]+)/)?.[1] || 'createSpreadsheetWithInitialVersion';
+
+        logger.endTimer('combined_transaction_create');
+        throw {
+          stage: 'createTx',
+          message: `Failed in ${moduleName}: ${typeof txError === 'string' ? txError : (txError?.message || 'Unknown error')}`,
+          stack,
+          details: txError,
+          moduleName
+        };
+      }
 
       if (!combinedResult.success) {
         logger.endTimer('combined_transaction_create');
-        throw new Error(`Failed to create spreadsheet with initial version: ${combinedResult.error || 'Unknown error'}`);
+        throw {
+          stage: 'createTx',
+          message: `Failed to create spreadsheet with initial version: ${combinedResult.error || 'Unknown error'}`,
+          details: combinedResult
+        };
       }
 
       // Extract spreadsheet object ID from the result
       const spreadsheetObjectId = combinedResult.spreadsheetObjectId;
-      
+
       // Debug logging to see actual transaction results
       console.log('📊 Debug - two-transaction results:', {
         spreadsheetObjectId,
@@ -997,10 +1035,28 @@ export class BlockchainAdapter extends IBlockchainService {
 
       if (!spreadsheetObjectId) {
         logger.endTimer('combined_transaction_create');
-        throw new Error(`Failed to get spreadsheet object ID from two-transaction result`);
+        throw {
+          stage: 'createTx',
+          message: `Failed to get spreadsheet object ID from two-transaction result`,
+          details: { combinedResult }
+        };
       }
 
       this.spreadsheetObjectId = spreadsheetObjectId;
+
+      // Persist to storage immediately so UI has reference even if something fails later
+      if (this.storageAdapter) {
+        try {
+          this.storageAdapter.setCurrentSpreadsheetId(spreadsheetObjectId);
+          logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'spreadsheet_persisted', 'Spreadsheet ID persisted to storage', {
+            spreadsheetId: spreadsheetObjectId
+          });
+        } catch (e) {
+          logger.warn(LogComponent.BLOCKCHAIN_ADAPTER, 'spreadsheet_persist_failed', 'Failed to persist spreadsheet ID', {
+            error: typeof e === 'string' ? e : e?.message
+          });
+        }
+      }
       logger.endTimer('combined_transaction_create');
       logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'two_transaction_success', 'Two transactions executed successfully - spreadsheet created AND initial version saved!', {
         objectId: this.spreadsheetObjectId,
@@ -1030,6 +1086,22 @@ export class BlockchainAdapter extends IBlockchainService {
         new Date(walrusResult.endEpoch * 1000).getTime() :
         Date.now() + defaultEpochs * 86400000; // Default to epochs in milliseconds
 
+      // Build saveInfo object matching SpreadsheetEngine format for UI confirmation
+      const saveInfo = {
+        blobId: walrusResult.blobId,
+        walrusBlobId: walrusResult.blobId,
+        transactionDigest: combinedResult.saveTransactionDigest,
+        createTransactionDigest: combinedResult.createTransactionDigest,
+        contentHash: walrusResult.contentHash?.hash || walrusResult.contentHash || 'unknown',
+        storageStatus: walrusResult.storageStatus || 'newly_created',
+        expiryTimestamp,
+        endEpoch: walrusResult.endEpoch,
+        method: 'blockchain',
+        storageStrategy: 'standard',
+        timestamp: Date.now(),
+        isFirstSave: true
+      };
+
       return {
         success: true,
         spreadsheetId: this.spreadsheetObjectId,
@@ -1037,8 +1109,9 @@ export class BlockchainAdapter extends IBlockchainService {
         walrusBlobId: walrusResult.blobId,
         title,
         data: spreadsheetData,
-        transactionDigest: combinedResult.digest,
-        transactionId: combinedResult.digest, // Single transaction ID
+        transactionDigest: combinedResult.saveTransactionDigest,
+        transactionId: combinedResult.saveTransactionDigest,
+        createTransactionDigest: combinedResult.createTransactionDigest,
         contentHash: walrusResult.contentHash?.hash || walrusResult.contentHash || 'unknown',
         storageStatus: walrusResult.storageStatus || 'newly_created',
         expiryTimestamp,
@@ -1047,21 +1120,37 @@ export class BlockchainAdapter extends IBlockchainService {
         storageStrategy: 'standard',
         timestamp: Date.now(),
         optimized: true,
-        ultraOptimized: true, // NEW FLAG!
-        walletPrompts: 1, // Reduced from 2 to 1!
-        // Gas usage metrics not available for two-transaction path here; omit for now
+        ultraOptimized: true,
+        walletPrompts: 1,
+        saveInfo
       };
 
     } catch (error) {
       logger.endTimer('create_optimized_spreadsheet');
+
+      // Handle structured error format from different stages
+      const errorStage = error?.stage || 'unknown';
+      const errorMessage = error?.message || (typeof error === 'string' ? error : (error && error.message) || 'Unknown error');
+      const moduleName = error?.moduleName || (error?.stack?.match(/at ([^(]+)/) ? error.stack.match(/at ([^(]+)/)[1] : 'unknown');
+      const stack = error?.stack || '';
+
       logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'create_optimized_failed', 'Optimized spreadsheet creation failed', {
-        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
-        stack: error.stack
+        stage: errorStage,
+        error: errorMessage,
+        moduleName,
+        stack: stack.substring(0, 500), // Limit stack trace to 500 chars for logging
+        details: error?.details || {}
       });
 
       return {
         success: false,
-        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error'
+        error: errorMessage,
+        stage: errorStage,
+        moduleName,
+        stack,
+        details: error?.details || {},
+        // Include blob ID if we got that far (for potential recovery)
+        blobId: error?.details?.blobId || undefined
       };
     }
   }

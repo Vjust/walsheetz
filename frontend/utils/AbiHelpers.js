@@ -13,6 +13,14 @@ export async function detectSaveVersionSignature() {
     const func = abi?.functions?.['spreadsheet::save_version']
     if (!func?.parameters) {
       console.warn('[ABI] Function not found in ABI, using fallback config')
+
+      // Warn if we're on mainnet but ABI detection failed
+      if (cfg.currentNetwork === 'mainnet') {
+        console.error('[ABI] ⚠️ CRITICAL: Mainnet selected but ABI detection failed')
+        console.error('[ABI] This will likely cause "Incorrect number of arguments" errors on save')
+        console.error('[ABI] Check RPC connectivity: curl https://fullnode.mainnet.sui.io')
+      }
+
       return {
         expectsContentHash: cfg.getFeature('contentHashInSave', true),
         expectsClock: cfg.getFeature('clockInSave', false),
@@ -21,7 +29,8 @@ export async function detectSaveVersionSignature() {
           reason: 'abi_missing_function',
           fallbackFeatureContentHash: cfg.getFeature('contentHashInSave', true),
           fallbackFeatureClock: cfg.getFeature('clockInSave', false),
-          packageId: net.packageId
+          packageId: net.packageId,
+          currentNetwork: cfg.currentNetwork
         }
       }
     }
@@ -57,6 +66,18 @@ export async function detectSaveVersionSignature() {
       typeof p === 'string' && clockTypes.some(t => p.includes(t))
     )
 
+    // Validate parameter count matches network expectations
+    const paramCount = params.length
+    if (cfg.currentNetwork === 'mainnet' && paramCount !== 7) {
+      console.error(`[ABI] ⚠️ NETWORK MISMATCH: Mainnet should have 7 parameters but detected ${paramCount}`)
+      console.error('[ABI] This indicates the detected package is not the mainnet package')
+      console.error('[ABI] Expected:', { expectsContentHash, expectsClock, paramCount: 7 })
+      console.error('[ABI] Actual:', { expectsContentHash, expectsClock, paramCount })
+    }
+    if (cfg.currentNetwork === 'testnet' && paramCount > 7) {
+      console.warn(`[ABI] PARAM COUNT MISMATCH: Testnet detected ${paramCount} parameters (expected ≤ 6)`)
+    }
+
     // Keep feature flags aligned but never flip them off at runtime
     try {
       const currentContentHash = cfg.getFeature('contentHashInSave', true)
@@ -82,6 +103,7 @@ export async function detectSaveVersionSignature() {
     }
 
     const debug = {
+      network: cfg.currentNetwork,
       packageId: net.packageId,
       stringCountBeforeU64,
       firstU64Idx,
@@ -94,6 +116,15 @@ export async function detectSaveVersionSignature() {
     }
 
     console.log('[ABI] save_version signature detected:', debug)
+
+    // Warn if detected ABI doesn't match config
+    const configClock = cfg.getFeature('clockInSave', false)
+    const configHash = cfg.getFeature('contentHashInSave', true)
+    if (expectsClock !== configClock || expectsContentHash !== configHash) {
+      console.warn('[ABI] ⚠️ Config flags do not match detected ABI')
+      console.warn('[ABI] Detected: clock=' + expectsClock + ', hash=' + expectsContentHash)
+      console.warn('[ABI] Config:   clock=' + configClock + ', hash=' + configHash)
+    }
 
     return {
       expectsContentHash,
@@ -132,6 +163,27 @@ export async function buildSaveVersionArgs(tx, data) {
   const includeHash = !!sig.expectsContentHash
   const includeClock = !!sig.expectsClock
 
+  // Validation: Check if we're on mainnet without clock
+  try {
+    const cfg = await configLoader.getConfig()
+    const net = cfg.getCurrentNetwork()
+    const isMainnet = cfg.currentNetwork === 'mainnet'
+
+    if (isMainnet && !includeClock) {
+      console.warn('[AbiHelpers] ⚠️ WARNING: Mainnet deployment detected but clock parameter is disabled')
+      console.warn('[AbiHelpers] This mismatch will cause "Incorrect number of arguments" error')
+      console.warn('[AbiHelpers] Detected signature:', {
+        expectsClock: includeClock,
+        currentNetwork: cfg.currentNetwork,
+        fallbackReason: sig.debug?.reason,
+        packageId: net.packageId
+      })
+      console.warn('[AbiHelpers] If this is a false alarm, verify that the deployed contract on mainnet really does not need a clock parameter')
+    }
+  } catch (e) {
+    // Silently continue if we can't verify network
+  }
+
   // Build base arguments
   const args = [
     tx.object(data.spreadsheetId || data.spreadsheetObjectId),
@@ -150,7 +202,18 @@ export async function buildSaveVersionArgs(tx, data) {
   // Add clock if expected by ABI
   if (includeClock) {
     args.push(tx.object('0x6')) // Clock object
+    console.log('[AbiHelpers] ✅ Clock object included in transaction arguments')
   }
+
+  // Log final argument count for debugging
+  console.log('[AbiHelpers] Transaction arguments built:', {
+    argumentCount: args.length,
+    expectedParameterCount: (includeHash ? 2 : 1) + 2 + (includeClock ? 1 : 0) + 2, // Spreadsheet + walrus blob + content_hash (if) + cell_count + description + clock (if) + ctx (not counted in user args)
+    includeHash,
+    includeClock,
+    spreadsheetId: !!data.spreadsheetId || !!data.spreadsheetObjectId,
+    walrusBlobId: !!data.walrusBlobId
+  })
 
   return { args, signature: sig }
 }

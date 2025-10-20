@@ -435,19 +435,40 @@ class BrowserWalletManager {
           console.log('[BrowserWalletManager] Using legacy transaction format, adding default options');
         }
 
-        // Use the hook's signAndExecute method which properly handles the dapp-kit API
-        if (!this.walletConnection.signAndExecute) {
-          throw new Error('Wallet connection does not have signAndExecute method - check hook integration');
+        const hasSignAndExecuteTransactionBlock = typeof this.walletConnection.signAndExecuteTransactionBlock === 'function';
+        const hasSignAndExecuteTransaction = typeof this.walletConnection.signAndExecuteTransaction === 'function';
+        const hasSignAndExecute = typeof this.walletConnection.signAndExecute === 'function';
+
+        if (!hasSignAndExecuteTransactionBlock && !hasSignAndExecuteTransaction && !hasSignAndExecute) {
+          throw new Error('Wallet connection does not expose a compatible sign-and-execute method');
         }
 
-        console.log('🚀 DEBUG: About to call wallet.signAndExecute', {
+        console.log('🚀 DEBUG: About to call wallet transaction method', {
           attempt,
-          hasSignAndExecute: !!this.walletConnection.signAndExecute,
+          hasSignAndExecuteTransactionBlock,
+          hasSignAndExecuteTransaction,
+          hasSignAndExecute,
           walletType: this.walletConnection.name || 'unknown',
           optionsKeys: Object.keys(options)
         });
 
-        const result = await this.walletConnection.signAndExecute(transaction, options);
+        let result;
+        if (hasSignAndExecuteTransactionBlock) {
+          console.log('[BrowserWalletManager] Using signAndExecuteTransactionBlock method');
+          result = await this.walletConnection.signAndExecuteTransactionBlock({
+            transactionBlock: transaction,
+            options
+          });
+        } else if (hasSignAndExecuteTransaction) {
+          console.log('[BrowserWalletManager] Using signAndExecuteTransaction method');
+          result = await this.walletConnection.signAndExecuteTransaction({
+            transaction,
+            options
+          });
+        } else {
+          console.log('[BrowserWalletManager] Using signAndExecute method');
+          result = await this.walletConnection.signAndExecute(transaction, options);
+        }
 
         console.log('[BrowserWalletManager] ✅ Transaction signed and executed successfully:', {
           attempt,

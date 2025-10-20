@@ -1,4 +1,5 @@
 import { networkLock } from './NetworkLock.js';
+import { transactionExperienceManager } from './TransactionExperience.js';
 
 // Runtime configuration loader with cache-busting and ABI detection
 class ConfigLoader {
@@ -10,6 +11,8 @@ class ConfigLoader {
     this.loadingPromise = null;
     this.abiCache = new Map();
     this.networkValidationCache = new Map();
+    this.isFallback = false; // Track if we're using fallback config
+    this.fallbackAttemptCount = 0; // Prevent retry spam on 404
 
     console.log('[ConfigLoader] Initialized with cache-busting enabled');
   }
@@ -44,64 +47,80 @@ class ConfigLoader {
     }
   }
 
-  // Internal config loading with cache-busting
+  // Internal config loading with cache-busting and improved dev build support
   async _loadConfig() {
     try {
-      console.log('[ConfigLoader] 🔄 Loading runtime config with cache-busting...');
+      console.log('[ConfigLoader] 🔄 Loading runtime config...');
 
-      const timestamp = Date.now();
-      const configUrl = `/app-config.json?t=${timestamp}&bust=${Math.random()}`;
-      console.log('[ConfigLoader] 🌐 Fetching from:', configUrl);
+      // Try to resolve config URL with BASE_URL support for dev builds
+      let configUrl = '/app-config.json';
 
-      const response = await fetch(configUrl);
-
-      if (!response.ok) {
-        // DIAGNOSTIC: Enhanced logging for all non-OK responses
-        console.error('❌ [ConfigLoader] Config fetch failed:', {
-          status: response.status,
-          statusText: response.statusText,
-          url: response.url,
-          headers: {
-            contentType: response.headers.get('content-type'),
-            contentLength: response.headers.get('content-length')
-          },
-          timestamp: new Date().toISOString(),
-          configUrl: configUrl
-        });
-
-        // Suppress logging for expected 404 errors during initial startup or cache misses
-        if (response.status === 404) {
-          console.debug('[ConfigLoader] ℹ️ Config file not found (expected during startup or in development), falling back to embedded config');
-        }
-        throw new Error(`Config fetch failed: ${response.status} ${response.statusText}`);
+      // In dev/Vite, use BASE_URL to resolve correct path
+      if (import.meta?.env?.BASE_URL && import.meta.env.BASE_URL !== '/') {
+        const baseUrl = import.meta.env.BASE_URL;
+        configUrl = `${baseUrl.replace(/\/$/, '')}/app-config.json`;
+        console.log('[ConfigLoader] ℹ️ Using BASE_URL-resolved path:', configUrl);
       }
 
-      console.log('[ConfigLoader] ✅ Config fetched successfully:', { url: response.url, status: response.status });
-      
-      const config = await response.json();
-      
-      // Validate config structure
-      this._validateConfig(config);
-      
-      // Detect current network from environment or default to testnet
-      const currentNetwork = this._detectCurrentNetwork(config);
-      config.currentNetwork = currentNetwork;
-      
-      // Add runtime methods
-      this._addRuntimeMethods(config);
-      
-      this.config = config;
-      this.lastFetch = Date.now();
-      
-      console.log('[ConfigLoader] ✅ Runtime config loaded successfully:', {
-        version: config.version,
-        network: currentNetwork,
-        timestamp: new Date(config.timestamp).toISOString(),
-        features: Object.keys(config.features)
+      // First attempt: without cache-busting (let server handle caching)
+      console.log('[ConfigLoader] 🌐 Fetching from:', configUrl);
+
+      const response = await fetch(configUrl, {
+        method: 'GET',
+        headers: { 'Cache-Control': 'no-cache' }
       });
-      
-      return config;
-      
+
+      if (response.ok) {
+        console.log('[ConfigLoader] ✅ Config fetched successfully:', { url: response.url, status: response.status });
+
+        const config = await response.json();
+
+        // Validate config structure
+        this._validateConfig(config);
+
+        // Detect current network from environment or default to testnet
+        const currentNetwork = this._detectCurrentNetwork(config);
+        config.currentNetwork = currentNetwork;
+        config.isFallback = false; // Mark as loaded from source
+
+        // Add runtime methods
+        this._addRuntimeMethods(config);
+
+        this.config = config;
+        this.lastFetch = Date.now();
+        this.isFallback = false;
+        this.fallbackAttemptCount = 0; // Reset on success
+
+        console.log('[ConfigLoader] ✅ Runtime config loaded successfully:', {
+          version: config.version,
+          network: currentNetwork,
+          timestamp: new Date(config.timestamp).toISOString(),
+          features: Object.keys(config.features)
+        });
+
+        return config;
+      }
+
+      // Handle 404 - treat as fallback trigger without retry spam
+      if (response.status === 404) {
+        console.debug('[ConfigLoader] ℹ️ Config file not found (404), falling back to embedded config');
+        throw new Error(`Config not found: 404`);
+      }
+
+      // Handle other errors
+      console.error('❌ [ConfigLoader] Config fetch failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url,
+        headers: {
+          contentType: response.headers.get('content-type'),
+          contentLength: response.headers.get('content-length')
+        },
+        timestamp: new Date().toISOString()
+      });
+
+      throw new Error(`Config fetch failed: ${response.status} ${response.statusText}`);
+
     } catch (error) {
       // DIAGNOSTIC: Enhanced logging for config loading errors
       const errorMsg = typeof error === 'string' ? error : error?.message || 'Unknown error';
@@ -109,20 +128,27 @@ class ConfigLoader {
       console.error('❌ [ConfigLoader] Config loading error:', {
         errorMessage: errorMsg,
         errorType: error?.constructor?.name,
-        errorStack: error?.stack,
-        is404: errorMsg.includes('404'),
-        timestamp: new Date().toISOString(),
-        fallbackUsed: true
+        timestamp: new Date().toISOString()
       });
-
-      if (!errorMsg.includes('404')) {
-        console.warn('[ConfigLoader] ⚠️  Failed to load runtime config:', errorMsg);
-      } else {
-        console.debug('[ConfigLoader] ℹ️  Using fallback config (could not load /app-config.json)');
-      }
 
       // Return fallback config if main config fails
       const fallbackConfig = this._getFallbackConfig();
+
+      // Mark as using fallback
+      this.isFallback = true;
+      this.config = fallbackConfig;
+      this.lastFetch = Date.now();
+
+      // Emit warning event for UI to display to user
+      if (typeof window !== 'undefined') {
+        console.warn('[ConfigLoader] ⚠️  Using fallback config - endpoints may be stale');
+        transactionExperienceManager.emitTransactionEvent('config:fallback', {
+          reason: errorMsg,
+          isFallback: true,
+          timestamp: new Date().toISOString()
+        });
+      }
+
       console.log('[ConfigLoader] ℹ️  Fallback config loaded successfully');
       return fallbackConfig;
     }
@@ -376,6 +402,7 @@ class ConfigLoader {
       version: '1.0.0-fallback',
       timestamp: new Date().toISOString(),
       currentNetwork: 'testnet',
+      isFallback: true, // Mark as fallback config
       networks: {
         testnet: {
           rpcUrl: 'https://fullnode.testnet.sui.io:443',
@@ -385,17 +412,38 @@ class ConfigLoader {
             aggregatorUrl: 'https://aggregator.walrus-testnet.walrus.space',
             publisherUrl: 'https://publisher.walrus-testnet.walrus.space',
             maxRetries: 3,
+            retryDelay: 1000,
+            // Epochs feature config
+            features: {
+              epochsDefault: 12
+            }
+          }
+        },
+        mainnet: {
+          rpcUrl: 'https://fullnode.mainnet.sui.io:443',
+          packageId: '0x991454976a4ef8535ed3572bb1c500dcd565855d49a51f1fadc7f70a316c9631',
+          registryObjectId: '0x66f68bfb639dbc7f24519bcdbbfdb376057d87c6d508ea7a8d67746a11721ca5',
+          walrus: {
+            aggregatorUrl: 'https://aggregator.walrus.space',
+            publisherUrl: 'https://publisher.walrus.space',
+            maxRetries: 3,
             retryDelay: 1000
           }
         }
       },
       features: {
-        // ABI compatibility flag: deployed contracts expect content_hash in save_version on testnet
+        // ABI compatibility flags - mainnet requires both content_hash and clock
         contentHashInSave: true,
+        clockInSave: true,
         autoSave: { enabled: true, intervalMs: 5000 },
         collaboration: { enabled: true },
         gasManagement: { bufferPercent: 20 },
-        storage: { preferWalrus: true, fallbackToLocal: true }
+        storage: { preferWalrus: true, fallbackToLocal: true },
+        // Wallet and transaction features
+        walletFeatures: {
+          supportsTransactionBlock: true, // Support for TransactionBlock from @mysten/sui/transactions
+          supportsSignAndExecute: true
+        }
       },
       ui: {
         theme: 'light',
@@ -680,6 +728,54 @@ class ConfigLoader {
         keys: Array.from(this.networkValidationCache.keys())
       }
     };
+  }
+
+  // Persist forced feature flag to localStorage to prevent re-toggling
+  persistForcedFeature(featurePath, value) {
+    try {
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        const key = `walsheetz_forced_feature_${featurePath}`;
+        localStorage.setItem(key, JSON.stringify({ value, timestamp: Date.now() }));
+        console.log(`[ConfigLoader] ✅ Persisted forced feature: ${featurePath} = ${value}`);
+      }
+    } catch (e) {
+      console.warn(`[ConfigLoader] Failed to persist forced feature ${featurePath}:`, e);
+    }
+  }
+
+  // Get persisted forced feature from localStorage
+  getForcedFeature(featurePath) {
+    try {
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        const key = `walsheetz_forced_feature_${featurePath}`;
+        const stored = localStorage.getItem(key);
+        if (stored) {
+          const { value } = JSON.parse(stored);
+          console.log(`[ConfigLoader] ℹ️ Retrieved forced feature from storage: ${featurePath} = ${value}`);
+          return value;
+        }
+      }
+    } catch (e) {
+      console.warn(`[ConfigLoader] Failed to retrieve forced feature ${featurePath}:`, e);
+    }
+    return null;
+  }
+
+  // Clear all persisted forced features
+  clearForcedFeatures() {
+    try {
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+          if (key.startsWith('walsheetz_forced_feature_')) {
+            localStorage.removeItem(key);
+          }
+        });
+        console.log('[ConfigLoader] 🧹 Cleared all persisted forced features');
+      }
+    } catch (e) {
+      console.warn('[ConfigLoader] Failed to clear forced features:', e);
+    }
   }
 }
 
