@@ -12,6 +12,7 @@ import luckysheetApi from '../services/luckysheetApi.js';
 import { TestModeAdapter } from '../services/testing/TestModeAdapter.js';
 import { isAuthBypassed } from '../utils/testMode.js';
 import { getTemplateData } from '../utils/templateData.js';
+import { logger, LogComponent } from '../utils/Logger.js';
 
 /**
  * React hook for spreadsheet business logic
