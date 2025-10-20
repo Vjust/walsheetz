@@ -107,7 +107,6 @@ export function CreateDocumentModal({ isOpen, onClose, onCreate, blockchainAdapt
           <button
             className="close-button"
             onClick={handleClose}
-            disabled={isLoading}
             title="Close"
           >
             ✕
