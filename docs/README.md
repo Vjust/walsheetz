@@ -524,6 +524,97 @@ Encryption will be reintroduced when Walrus Seal support is available, providing
 - `RATE_LIMITER_ENABLED=true` - Enable rate limiting
 
 ### Common Issues
+
+#### CORS Errors with Walrus Endpoints
+**Symptom**: Browser console shows CORS errors like "No 'Access-Control-Allow-Origin' header" or "Multiple CORS header values"
+
+**Root Cause**:
+- Frontend requests hitting remote Walrus endpoints directly instead of through localhost proxy
+- Remote endpoint has malformed CORS headers (multiple `Access-Control-Allow-Origin` values)
+
+**Resolution**:
+1. **Verify ConfigLoader is using proxy paths in dev mode**:
+   ```js
+   // In browser console (localhost dev only):
+   const config = await configLoader.getConfig();
+   console.log(config.getWalrusServiceBase('publisher'));
+   // Should log: "/walrus-publisher" (not absolute URL)
+   ```
+
+2. **Check endpoint CORS headers**:
+   ```bash
+   # Check for duplicate or malformed headers
+   bun scripts/verify-walrus-endpoints.js testnet
+   ```
+
+3. **Verify app-config.json endpoints match vite.config.js proxy targets**:
+   - `app-config.json` walrus URLs must match what `vite.config.js` forwards to
+   - Both should use clean, CORS-compliant endpoints (e.g., `publisher.walrus-testnet.walrus.space`)
+
+4. **Clear browser cache and reload**:
+   ```js
+   localStorage.setItem('walsheetz_network', 'testnet');
+   sessionStorage.clear();
+   location.reload();
+   ```
+
+5. **If issues persist**:
+   - Check browser Network tab: requests should go to `localhost:3005/walrus-publisher/v1/api`, not remote domain
+   - Enable proxy logging: `VITE_VERBOSE_PROXY=true bun run dev`
+   - Check bridge logs: `BRIDGE_LOG_LEVEL=DEBUG bun run bridge`
+
+---
+
+#### Configuration Maintenance
+
+**Why config alignment matters**:
+- `public/app-config.json` is fetched by the browser at runtime and used by ConfigLoader
+- `blockchain/config.js` is used by the Node.js WebSocket-gRPC bridge
+- Both must point to the same Walrus endpoints to avoid CORS issues and service mismatches
+
+**When to update configuration**:
+1. After updating Walrus endpoint URLs
+2. Before testing with new endpoints
+
+**How to maintain alignment**:
+
+1. **Edit configuration files**:
+   - Update both `public/app-config.json` and `blockchain/config.js`
+   - Use the official walrus.space endpoints (they have clean CORS headers):
+     - Testnet: `publisher.walrus-testnet.walrus.space`, `aggregator.walrus-testnet.walrus.space`
+     - Mainnet: `publisher.walrus-mainnet.walrus.space`, `aggregator.walrus-mainnet.walrus.space`
+
+2. **Validate alignment**:
+   ```bash
+   # Check both config files are synchronized
+   bun run validate:config
+   # Expected output: ✓ All configs are aligned!
+
+   # Verify endpoints are reachable and have clean CORS headers
+   bun run validate:walrus
+   # Expected output: ✓ All checks passed!
+   ```
+
+3. **Run tests after config changes**:
+   ```bash
+   # Run unit tests
+   bun run test:run
+
+   # Run specific service tests
+   bun run test:services
+
+   # Run all validation
+   bun run validate:config && bun run validate:walrus
+   ```
+
+**If alignment check fails**:
+- Review the mismatch details in the error output
+- Ensure both `app-config.json` and `blockchain/config.js` use identical endpoint URLs
+- Run validation again to confirm changes
+
+---
+
+#### Other Common Issues
 1. **Bridge won't start**: Check port 8081 with `bun run cleanup`
 2. **Wallet won't connect**: Verify network match (testnet/mainnet)
 3. **Save fails**: Check Walrus publisher availability, run `bun run diagnose:save`

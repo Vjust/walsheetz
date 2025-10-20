@@ -94,6 +94,8 @@ export default defineConfig({
       },
       
       // Walrus Publisher proxy with proper API path handling
+      // IMPORTANT: Target must match app-config.json walrus.publisherUrl to ensure
+      // the proxy can strip/normalize any CORS headers from the remote endpoint
       '/walrus-publisher': {
         target: 'https://publisher.walrus-testnet.walrus.space',
         changeOrigin: true,
@@ -126,6 +128,8 @@ export default defineConfig({
       },
       
       // Walrus Aggregator proxy with proper API path handling
+      // IMPORTANT: Target must match app-config.json walrus.aggregatorUrl to ensure
+      // the proxy can strip/normalize any CORS headers from the remote endpoint
       '/walrus-aggregator': {
         target: 'https://aggregator.walrus-testnet.walrus.space',
         changeOrigin: true,

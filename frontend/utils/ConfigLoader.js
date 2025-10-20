@@ -339,14 +339,32 @@ class ConfigLoader {
     config.getWalrusServiceBase = function(service) {
       const network = this.getCurrentNetwork();
       const proxyUrl = this.getProxyUrl(service);
+      let result;
 
       if (service === 'publisher') {
-        return proxyUrl || network.walrus.publisherUrl;
+        result = proxyUrl || network.walrus.publisherUrl;
       } else if (service === 'aggregator') {
-        return proxyUrl || network.walrus.aggregatorUrl;
+        result = proxyUrl || network.walrus.aggregatorUrl;
       } else {
         throw new Error(`Unknown Walrus service: ${service}`);
       }
+
+      // Diagnostic logging to help debug proxy vs absolute URL issues
+      const isDev = typeof window !== 'undefined' && (
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        window.location.hostname.includes('.local')
+      );
+
+      if (isDev) {
+        const isProxy = result.startsWith('/');
+        console.log(`[ConfigLoader] getWalrusServiceBase: service=${service}, using=${isProxy ? 'PROXY' : 'ABSOLUTE'}, url=${result}`);
+        if (!isProxy) {
+          console.warn(`[ConfigLoader] ⚠️ Expected proxy URL in dev but got absolute URL. This may cause CORS issues. URL: ${result}`);
+        }
+      }
+
+      return result;
     };
 
     // Resolve healthy service URL with proxy→absolute fallback

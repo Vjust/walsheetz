@@ -72,21 +72,22 @@ export const config = {
     testnet: {
       // Primary endpoints - use absolute if forced or not in dev runtime
       // Note: Base URLs are just the host. Code appends /v1/blobs or /v1/api as needed
-      publisherUrl: (isDevRuntime && !forceAbsoluteEndpoints) ? '/walrus-publisher' : 'https://wal-publisher-testnet.staketab.org',
-      aggregatorUrl: (isDevRuntime && !forceAbsoluteEndpoints) ? '/walrus-aggregator' : 'https://wal-aggregator-testnet.staketab.org',
-      blobUrl: 'https://wal-aggregator-testnet.staketab.org/v1/blobs',
+      // Using walrus.space official endpoints (have clean CORS headers)
+      publisherUrl: (isDevRuntime && !forceAbsoluteEndpoints) ? '/walrus-publisher' : 'https://publisher.walrus-testnet.walrus.space',
+      aggregatorUrl: (isDevRuntime && !forceAbsoluteEndpoints) ? '/walrus-aggregator' : 'https://aggregator.walrus-testnet.walrus.space',
+      blobUrl: 'https://aggregator.walrus-testnet.walrus.space/v1/blobs',
 
       // Multiple endpoints for redundancy (arrays)
       publishers: (isDevRuntime && !forceAbsoluteEndpoints) ?
         ['/walrus-publisher'] :
         [
-          'https://wal-publisher-testnet.staketab.org',
+          'https://publisher.walrus-testnet.walrus.space',
           // Add more publisher endpoints as they become available
         ],
       aggregators: (isDevRuntime && !forceAbsoluteEndpoints) ?
         ['/walrus-aggregator'] :
         [
-          'https://wal-aggregator-testnet.staketab.org',
+          'https://aggregator.walrus-testnet.walrus.space',
           // Add more aggregator endpoints as they become available
         ],
       
@@ -125,17 +126,18 @@ export const config = {
     },
     mainnet: {
       // Primary endpoints (base URLs only, code appends /v1/blobs or /v1/api as needed)
-      publisherUrl: 'https://walrus-mainnet-publisher-1.staketab.org',
-      aggregatorUrl: 'https://wal-aggregator-mainnet.staketab.org',
-      blobUrl: 'https://wal-aggregator-mainnet.staketab.org/v1/blobs',
+      // Using walrus.space official endpoints (have clean CORS headers)
+      publisherUrl: 'https://publisher.walrus-mainnet.walrus.space',
+      aggregatorUrl: 'https://aggregator.walrus-mainnet.walrus.space',
+      blobUrl: 'https://aggregator.walrus-mainnet.walrus.space/v1/blobs',
 
       // Multiple endpoints for redundancy
       publishers: [
-        'https://walrus-mainnet-publisher-1.staketab.org',
+        'https://publisher.walrus-mainnet.walrus.space',
         // Add more publisher endpoints as they become available
       ],
       aggregators: [
-        'https://wal-aggregator-mainnet.staketab.org',
+        'https://aggregator.walrus-mainnet.walrus.space',
         // Add more aggregator endpoints as they become available
       ],
       

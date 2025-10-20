@@ -5,14 +5,26 @@
  *
  * This script verifies that Walrus endpoints (publisher and aggregator) are:
  * 1. Reachable and responding
- * 2. Functional by publishing a test blob and retrieving it back
+ * 2. Free of CORS header misconfiguration (e.g., duplicate Access-Control-Allow-Origin)
+ * 3. Functional by publishing a test blob and retrieving it back
+ *
+ * Run this script:
+ * - After updating Walrus service URLs in app-config.json or blockchain/config.js
+ * - Before committing configuration changes (recommend adding to pre-commit hook)
+ * - During CI/CD for configuration validation
+ * - When diagnosing CORS or connectivity issues
  *
  * Usage:
  *   node scripts/verify-walrus-endpoints.js [testnet|mainnet]
+ *   bun scripts/verify-walrus-endpoints.js testnet
  *
  * Examples:
  *   node scripts/verify-walrus-endpoints.js testnet
- *   node scripts/verify-walrus-endpoints.js mainnet
+ *   bun scripts/verify-walrus-endpoints.js mainnet
+ *
+ * Exit codes:
+ *   0 = All checks passed
+ *   1 = One or more checks failed (see output for details)
  */
 
 // Color codes for terminal output
@@ -44,14 +56,15 @@ async function verifyEndpoints() {
   }
 
   // Blob storage endpoints (base URLs only, code appends /v1/blobs)
+  // NOTE: These endpoints must match those configured in app-config.json and vite.config.js
   const config = {
     testnet: {
-      publisher: 'https://wal-publisher-testnet.staketab.org',
-      aggregator: 'https://wal-aggregator-testnet.staketab.org',
+      publisher: 'https://publisher.walrus-testnet.walrus.space',
+      aggregator: 'https://aggregator.walrus-testnet.walrus.space',
     },
     mainnet: {
-      publisher: 'https://walrus-mainnet-publisher-1.staketab.org',
-      aggregator: 'https://wal-aggregator-mainnet.staketab.org',
+      publisher: 'https://publisher.walrus-mainnet.walrus.space',
+      aggregator: 'https://aggregator.walrus-mainnet.walrus.space',
     },
   };
 
@@ -67,9 +80,16 @@ async function verifyEndpoints() {
   if (publisherHealthCheck.ok) {
     log(`✓ Publisher is reachable at ${endpoints.publisher}`, 'green');
     log(`  Status: ${publisherHealthCheck.status}`, 'gray');
+    log(`  ${publisherHealthCheck.corsStatus}`, publisherHealthCheck.corsIssue ? 'red' : 'gray');
+    if (publisherHealthCheck.corsIssue) {
+      allPassed = false;
+    }
   } else {
     log(`✗ Publisher health check failed at ${endpoints.publisher}/v1/api`, 'red');
     log(`  Error: ${publisherHealthCheck.error}`, 'gray');
+    if (publisherHealthCheck.corsStatus) {
+      log(`  ${publisherHealthCheck.corsStatus}`, 'red');
+    }
     allPassed = false;
   }
 
@@ -79,19 +99,28 @@ async function verifyEndpoints() {
   if (aggregatorHealthCheck.ok) {
     log(`✓ Aggregator is reachable at ${endpoints.aggregator}`, 'green');
     log(`  Status: ${aggregatorHealthCheck.status}`, 'gray');
+    log(`  ${aggregatorHealthCheck.corsStatus}`, aggregatorHealthCheck.corsIssue ? 'red' : 'gray');
+    if (aggregatorHealthCheck.corsIssue) {
+      allPassed = false;
+    }
   } else {
     log(`✗ Aggregator health check failed at ${endpoints.aggregator}/v1/api`, 'red');
     log(`  Error: ${aggregatorHealthCheck.error}`, 'gray');
+    if (aggregatorHealthCheck.corsStatus) {
+      log(`  ${aggregatorHealthCheck.corsStatus}`, 'red');
+    }
     allPassed = false;
   }
 
   if (!allPassed) {
     logSection('VERIFICATION FAILED');
-    log('One or more endpoints are unreachable.', 'red');
+    log('One or more endpoints have issues.', 'red');
     log('Please check:', 'yellow');
     log('1. Network connectivity', 'gray');
     log('2. Endpoint URLs are correct', 'gray');
-    log('3. Firewall/proxy settings', 'gray');
+    log('3. CORS header configuration (check for duplicates)', 'gray');
+    log('4. Firewall/proxy settings', 'gray');
+    log('\nIf you see "Multiple Access-Control-Allow-Origin headers", contact the endpoint provider.', 'yellow');
     process.exit(1);
   }
 
@@ -178,16 +207,50 @@ async function checkEndpointHealth(url) {
       timeout: 10000,
     });
 
+    // Check for CORS header issues
+    const corsHeaders = [];
+    for (const [key, value] of response.headers.entries()) {
+      if (key.toLowerCase() === 'access-control-allow-origin') {
+        corsHeaders.push(value);
+      }
+    }
+
+    let corsIssueDetail = '';
+    let hasCorsIssue = false;
+
+    if (corsHeaders.length > 1) {
+      corsIssueDetail = `Multiple Access-Control-Allow-Origin headers (${corsHeaders.length}) found`;
+      hasCorsIssue = true;
+    } else if (corsHeaders.length === 1) {
+      // Check for malformed header values (e.g., "*, *" or multiple values in one header)
+      const headerValue = corsHeaders[0];
+      if (headerValue.includes(',')) {
+        corsIssueDetail = `Malformed Access-Control-Allow-Origin header value: "${headerValue}"`;
+        hasCorsIssue = true;
+      } else {
+        corsIssueDetail = `CORS: ${headerValue}`;
+      }
+    } else {
+      corsIssueDetail = 'No CORS headers found';
+    }
+
+    const corsWarning = hasCorsIssue
+      ? `⚠️ CORS issue detected: ${corsIssueDetail}`
+      : `✓ ${corsIssueDetail}`;
+
     if (response.ok) {
       return {
         ok: true,
         status: response.status,
+        corsStatus: corsWarning,
+        corsIssue: hasCorsIssue,
       };
     } else {
       return {
         ok: false,
         status: response.status,
         error: `HTTP ${response.status}`,
+        corsStatus: corsWarning,
       };
     }
   } catch (error) {
