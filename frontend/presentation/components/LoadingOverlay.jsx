@@ -166,7 +166,7 @@ export function LoadingOverlay({
           )}
           {error && errorType === 'save_failed' && (
             <div className="type-info error-info">
-              <small>💡 Your changes are saved locally. Retry saving or check your wallet/network connection.</small>
+              <small>💡 Save failed: {details || error || 'Unknown error'}. Your changes are saved locally - try again or check your wallet/network connection.</small>
             </div>
           )}
           {error && errorType === 'error' && errorType !== 'wallet_required' && errorType !== 'save_failed' && (

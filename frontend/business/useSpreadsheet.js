@@ -795,7 +795,16 @@ export function useSpreadsheet() {
         const spreadsheetTitle = title || storageRef.current.getSpreadsheetTitle() || 'Untitled';
 
         logger.info(LogComponent.BUSINESS_LOGIC, 'first_save_start', 'Publishing local spreadsheet', {
-          title: spreadsheetTitle
+          title: spreadsheetTitle,
+          dataSize: JSON.stringify(currentData).length,
+          hasBlockchainAdapter: !!blockchainRef.current
+        });
+
+        console.log('🔍 [First Save] Starting with:', {
+          title: spreadsheetTitle,
+          dataSize: JSON.stringify(currentData).length,
+          hasEngine: !!engineRef.current,
+          hasBlockchainAdapter: !!blockchainRef.current
         });
 
         // Progress updates
@@ -841,37 +850,68 @@ export function useSpreadsheet() {
 
           return { success: true, ...result, isFirstSave: true };
         } else {
-          // Keep editor open on error
+          // Keep editor open on error with detailed message
+          const errorMessage = result.error || result.message || 'Unknown error occurred';
+          const errorDetails = result.technical || result.details || '';
+
+          logger.error(LogComponent.BUSINESS_LOGIC, 'first_save_failed', 'First save failed', {
+            error: errorMessage,
+            details: errorDetails,
+            fullResult: result
+          });
+
+          console.error('❌ [First Save] Failed:', {
+            error: errorMessage,
+            details: errorDetails,
+            fullResult: result
+          });
+
           setSaveStatus('error');
           setLoadingState({
             isLoading: false,
             message: 'Save failed',
-            details: result.error,
-            error: result.error,
+            details: errorMessage + (errorDetails ? ` (${errorDetails})` : ''),
+            error: errorMessage,
             errorType: 'save_failed'
           });
 
+          // Keep error visible longer (8s) for user to read
           setTimeout(() => {
             setLoadingState({ isLoading: false, message: '', details: '' });
             setSaveStatus('ready');
-          }, 5000);
+          }, 8000);
 
-          return result;
+          return { success: false, error: errorMessage, details: errorDetails };
         }
       } catch (error) {
+        const errorMessage = error.message || 'Unknown error occurred';
+
+        logger.error(LogComponent.BUSINESS_LOGIC, 'first_save_exception', 'Exception during first save', {
+          error: errorMessage,
+          stack: error.stack
+        });
+
+        console.error('❌ [First Save] Exception:', {
+          message: errorMessage,
+          stack: error.stack
+        });
+
         setSaveStatus('error');
         setLoadingState({
           isLoading: false,
-          error: error.message,
+          message: 'Save failed',
+          details: errorMessage,
+          error: errorMessage,
           errorType: 'save_failed'
         });
 
+        // Keep error visible longer (8s) for user to read
         setTimeout(() => {
           setLoadingState({ isLoading: false, message: '', details: '' });
           setSaveStatus('ready');
-        }, 5000);
+        }, 8000);
 
-        return { success: false, error: error.message };
+        return { success: false, error: errorMessage };
       }
     }
 
