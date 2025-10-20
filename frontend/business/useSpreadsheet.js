@@ -13,6 +13,7 @@ import { TestModeAdapter } from '../services/testing/TestModeAdapter.js';
 import { isAuthBypassed } from '../utils/testMode.js';
 import { getTemplateData } from '../utils/templateData.js';
 import { logger, LogComponent } from '../utils/Logger.js';
+import { detectSaveVersionSignature } from '../utils/AbiHelpers.js';
 
 /**
  * React hook for spreadsheet business logic
@@ -546,7 +547,6 @@ export function useSpreadsheet() {
         // Proactive ABI detection to catch config mismatches early
         try {
           console.log('🔍 Running proactive ABI detection for save_version...');
-          const { detectSaveVersionSignature } = await import('../utils/AbiHelpers.js');
           const sig = await detectSaveVersionSignature();
 
           if (sig.debug?.reason === 'abi_missing_function' || sig.debug?.reason === 'detection_error') {

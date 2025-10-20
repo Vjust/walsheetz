@@ -2,6 +2,8 @@
  * Development tools utility functions
  */
 
+import { detectSaveVersionSignature } from './AbiHelpers.js';
+
 export const createDevTools = (spreadsheetHook) => {
   return {
     forceSave: () => spreadsheetHook.saveToBlockchain(),
@@ -103,7 +105,6 @@ export const createDevTools = (spreadsheetHook) => {
     },
     inspectSaveArgs: async () => {
       try {
-        const { detectSaveVersionSignature } = await import('./AbiHelpers.js')
         const sig = await detectSaveVersionSignature()
         const expectsHash = !!sig.expectsContentHash
         const cfg = window.browserSuiService?.config || null

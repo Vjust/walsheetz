@@ -1,6 +1,7 @@
 // WebSocket service disabled for single-user MVP
 // import { webSocketService } from '../services/WebSocketService.js';
 import { logger, LogComponent } from '../utils/Logger.js';
+import { defiStateManager } from '../services/DeFiStateManager.js';
 import { CircuitBreaker } from '../utils/CircuitBreaker.js';
 import luckysheetApi from '../services/luckysheetApi.js';
 import { getSuiBalance, getSuiGasPrice, getSuiEpoch } from '../services/formulas/SuiFunctions.js';
@@ -1716,14 +1717,7 @@ export class SpreadsheetEngine {
    */
   async evaluateWalSheetzFormulas(cellRef, cellData, formulaUpper, formula) {
     try {
-      // Import DeFiStateManager to check for loading states
-      let defiStateManager;
-      try {
-        const module = await import('../services/DeFiStateManager.js');
-        defiStateManager = module.defiStateManager;
-      } catch (error) {
-        console.warn('[SpreadsheetEngine] Could not import defiStateManager:', error);
-      }
+      // Check for loading states using static import of defiStateManager
 
       // Check for loading state and add visual indicator
       const addStatusIndicator = (cellData, adapterId = 'registry', method = 'unknown', args = [], status = 'ready') => {

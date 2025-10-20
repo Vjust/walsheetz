@@ -9,6 +9,8 @@
  * 2. Walrus SDK feature flag is enabled in config
  */
 
+import { configLoader } from '../utils/ConfigLoader.js';
+
 let cachedClient = null;
 let loadingPromise = null;
 
@@ -42,8 +44,7 @@ export async function loadWalrusSdkClient(options = {}) {
       // Check if SDK is enabled in config
       let config;
       try {
-        // Dynamically import config to avoid circular dependencies
-        const { configLoader } = await import('../utils/ConfigLoader.js');
+        // Load config to check if Walrus SDK is enabled
         config = await configLoader.getConfig();
       } catch (error) {
         console.warn('[WalrusSdkClientLoader] Failed to load config, disabling Walrus SDK:',

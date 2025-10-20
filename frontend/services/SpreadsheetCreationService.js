@@ -1,5 +1,6 @@
 import { logger, LogComponent } from '../utils/Logger.js';
 import { SpreadsheetValidation } from '../utils/spreadsheetValidation.js';
+import { getCurrentConfig } from '../../blockchain/config.js';
 
 /**
  * Centralized service for handling spreadsheet creation with enhanced UX
@@ -277,7 +278,6 @@ export class SpreadsheetCreationService {
     const templateData = this.getTemplateData(creation.template);
 
     // Get current network
-    const { getCurrentConfig } = await import('@blockchain/config.js');
     const config = getCurrentConfig();
     const network = config.environment;
 

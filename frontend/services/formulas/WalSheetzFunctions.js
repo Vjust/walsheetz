@@ -26,6 +26,13 @@
 import { contractRegistry } from '../../../blockchain/sui-contract-registry.js';
 import { defiStateManager } from '../DeFiStateManager.js';
 import { EventBus } from '../../utils/EventBus.js';
+import { browserWalletManager } from '../BrowserWalletManager.js';
+import { suiGraphQLService } from '../../../blockchain/sui-graphql-service.js';
+import { browserWalrusService } from '../BrowserWalrusService.js';
+import { browserSuiService } from '../BrowserSuiService.js';
+import { blobLineageTracker } from '../BlobLineageTracker.js';
+import { StorageAdapter } from '../../adapters/StorageAdapter.js';
+import { serializeRange } from '../../utils/BlobParser.js';
 
 class WalSheetzFormulaEngine {
   constructor() {
@@ -216,9 +223,6 @@ export async function WZ_CONTRACT_EXEC(adapterId, method, ...args) {
     defiStateManager.setLoading(cellRef, adapterId, method, parsedArgs);
 
     try {
-      // Import wallet manager dynamically
-      const { browserWalletManager } = await import('../BrowserWalletManager.js');
-
       // Check if wallet is connected
       if (!browserWalletManager.isConnected) {
         throw new Error('Wallet not connected. Please connect your wallet to execute transactions.');
@@ -645,9 +649,6 @@ export async function SUI_GQL(queryOrPreset, ...args) {
     await formulaEngine.ensureInitialized();
     formulaEngine.checkRateLimit(cellRef);
 
-    // Import GraphQL service dynamically
-    const { suiGraphQLService } = await import('../../../blockchain/sui-graphql-service.js');
-
     // Check if it's a preset query name or raw GraphQL
     const presets = {
       'getBlobsByOwner': (owner) => suiGraphQLService.getBlobsByOwner(owner),
@@ -693,7 +694,6 @@ export async function WALRUS_CERT(blobId) {
       'getPoACertificate',
       [blobId],
       async () => {
-        const { browserWalrusService } = await import('../BrowserWalrusService.js');
         const result = await browserWalrusService.getPoACertificate(blobId);
 
         if (!result.success) {
@@ -731,8 +731,6 @@ export async function WALRUS_READ(blobId, offset = null, length = null) {
     if (!blobId) {
       throw new Error('Blob ID required');
     }
-
-    const { browserWalrusService } = await import('../BrowserWalrusService.js');
 
     let result;
     if (offset !== null && length !== null) {
@@ -779,7 +777,6 @@ export async function WALRUS_MAP_BLOB_TO_OBJECT(blobId, targetRange) {
     const startCol = rangeMatch[1].charCodeAt(0) - 65;
     const startRow = parseInt(rangeMatch[2]) - 1;
 
-    const { browserWalrusService } = await import('../BrowserWalrusService.js');
     const result = await browserWalrusService.streamBlobToGrid(blobId, startRow, startCol);
 
     if (!result.success) {
@@ -851,7 +848,6 @@ export async function WALRUS_MAP_OBJECT_TO_BLOB(sourceRange, format = 'json') {
     }
 
     // Serialize data
-    const { serializeRange } = await import('../../utils/BlobParser.js');
     const result = await serializeRange(gridData, { format });
 
     if (!result.success) {
@@ -900,8 +896,6 @@ export async function WALRUS_PUT(sourceRange, metadata = {}) {
     defiStateManager.setLoading(cellRef, 'walrus', 'storeBlob', [sourceRange]);
 
     try {
-      const { browserWalrusService } = await import('../BrowserWalrusService.js');
-
       // Upload to Walrus - wrap serialized string in proper object structure
       const uploadResult = await browserWalrusService.storeBlob({
         content: serialized.data,
@@ -924,14 +918,13 @@ export async function WALRUS_PUT(sourceRange, metadata = {}) {
 
       // Track blob lineage
       try {
-        const { blobLineageTracker } = await import('../BlobLineageTracker.js');
-        const storageAdapter = new (await import('../../adapters/StorageAdapter.js')).StorageAdapter();
+        const storageAdapterInstance = new StorageAdapter();
 
         // Get current spreadsheet ID (object ID) from session
-        const objectId = storageAdapter.getCurrentSpreadsheetId();
+        const objectId = storageAdapterInstance.getCurrentSpreadsheetId();
 
         // Get parent blob ID (previous version)
-        const parentBlobId = storageAdapter.getLastWalrusBlobId();
+        const parentBlobId = storageAdapterInstance.getLastWalrusBlobId();
 
         if (objectId) {
           blobLineageTracker.trackVersion({
@@ -1008,9 +1001,6 @@ export async function SUI_TX(txType, ...args) {
     defiStateManager.setLoading(cellRef, 'sui', txType, parsedArgs);
 
     try {
-      // Import wallet manager dynamically
-      const { browserWalletManager } = await import('../BrowserWalletManager.js');
-
       // Check if wallet is connected
       if (!browserWalletManager.isConnected) {
         throw new Error('Wallet not connected. Please connect your wallet to execute transactions.');
@@ -1020,7 +1010,6 @@ export async function SUI_TX(txType, ...args) {
       let executionResult;
       switch (txType) {
         case 'certifyBlob':
-          const { browserSuiService } = await import('../BrowserSuiService.js');
           executionResult = await browserSuiService.certifyBlob(parsedArgs[0], browserWalletManager);
           break;
 

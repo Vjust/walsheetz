@@ -1,5 +1,7 @@
 // Browser-compatible wallet manager for WalSheetz
 // This acts as a bridge between the old API and the new dapp-kit hooks
+import { getCurrentConfig } from '../../blockchain/config.js';
+
 class BrowserWalletManager {
   constructor() {
     this.isConnected = false;
@@ -666,7 +668,6 @@ class BrowserWalletManager {
     try {
       // Import SUI client dynamically
       const { SuiClient } = await import('@mysten/sui/client');
-      const { getCurrentConfig } = await import('../../blockchain/config.js');
 
       const config = getCurrentConfig();
       const client = new SuiClient({ url: config.sui.rpcUrl });

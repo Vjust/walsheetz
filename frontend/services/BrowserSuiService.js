@@ -3,7 +3,12 @@ import { configLoader } from '../utils/ConfigLoader.js';
 import { browserWalletManager } from './BrowserWalletManager.js';
 import { SuiClient } from '@mysten/sui/client';
 import { Transaction } from '@mysten/sui/transactions';
-import { detectSaveVersionSignature } from '../utils/AbiHelpers.js';
+import {
+  detectSaveVersionSignature,
+  buildSaveVersionArgs,
+  detectModuleVersion,
+  checkSpreadsheetVersionCompatibility
+} from '../utils/AbiHelpers.js';
 import { logger, LogComponent, LogLevel } from '../utils/Logger.js';
 
 class BrowserSuiService {
@@ -268,7 +273,7 @@ class BrowserSuiService {
       // Probe on-chain ABI to override misconfigurations
       let detectedExpects = null
       try {
-        const sig = await (await import('../utils/AbiHelpers.js')).detectSaveVersionSignature()
+        const sig = await detectSaveVersionSignature()
         detectedExpects = !!sig.expectsContentHash
       } catch (e) {
         console.warn('[BrowserSuiService] ABI detection failed, using config flags only:', (typeof e === 'string' ? e : e?.message || 'Unknown error'))
@@ -473,7 +478,6 @@ class BrowserSuiService {
       }
 
       // Only enforce contentHash when ABI indicates it's expected
-      const { detectSaveVersionSignature } = await import('../utils/AbiHelpers.js');
       const abiCheck = await detectSaveVersionSignature();
       if (abiCheck.expectsContentHash && !data.contentHash) {
         throw new Error('Content hash is required by the deployed contract signature');
@@ -505,7 +509,6 @@ class BrowserSuiService {
       console.log('[BrowserSuiService] Content Hash:', data.contentHash);
 
       // Import and use buildSaveVersionArgs to construct arguments based on ABI detection
-      const { buildSaveVersionArgs } = await import('../utils/AbiHelpers.js');
       const { args, signature: sig } = await buildSaveVersionArgs(tx, {
         spreadsheetObjectId: data.spreadsheetObjectId,
         walrusBlobId: data.walrusBlobId,
@@ -682,7 +685,6 @@ class BrowserSuiService {
       saveTx.setSender(walletInfo.address);
       
       // Use ABI detection to build arguments dynamically
-      const { buildSaveVersionArgs } = await import('../utils/AbiHelpers.js');
       const { args: saveArgs, signature: sig } = await buildSaveVersionArgs(saveTx, {
         spreadsheetObjectId,
         walrusBlobId,
@@ -2864,8 +2866,6 @@ class BrowserSuiService {
    */
   async validateSpreadsheetVersion(spreadsheetId) {
     try {
-      const { detectModuleVersion, checkSpreadsheetVersionCompatibility } = await import('../utils/AbiHelpers.js');
-
       const versionCheck = await this.getSpreadsheetVersion(spreadsheetId);
       if (!versionCheck.success) {
         return {
