@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useNetwork } from '../providers/NetworkProvider.jsx';
 import './styles/create-document-modal.css';
 
-export function CreateDocumentModal({ isOpen, onClose, onCreate, blockchainAdapter, storageAdapter, spreadsheetEngine }) {
+export function CreateDocumentModal({ isOpen, onClose, onCreate }) {
   const [title, setTitle] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('blank');
-  const { switchNetwork, isTestnet } = useNetwork();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Template options
   const templates = [
@@ -53,6 +52,7 @@ export function CreateDocumentModal({ isOpen, onClose, onCreate, blockchainAdapt
     if (isOpen) {
       setTitle('');
       setSelectedTemplate('blank');
+      setIsSubmitting(false);
     }
   }, [isOpen]);
 
@@ -72,14 +72,16 @@ export function CreateDocumentModal({ isOpen, onClose, onCreate, blockchainAdapt
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!title.trim()) return;
+    if (!title.trim() || isSubmitting) return;
 
     try {
-      // Just validate and pass to parent
+      setIsSubmitting(true);
       await onCreate({ title: title.trim(), template: selectedTemplate });
       // Modal will be closed by parent component on success
     } catch (error) {
       console.error('Error creating document:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -107,6 +109,7 @@ export function CreateDocumentModal({ isOpen, onClose, onCreate, blockchainAdapt
           <button
             className="close-button"
             onClick={handleClose}
+            disabled={isSubmitting}
             title="Close"
           >
             ✕
@@ -166,7 +169,7 @@ export function CreateDocumentModal({ isOpen, onClose, onCreate, blockchainAdapt
             <button
               type="submit"
               className="create-button"
-              disabled={!title.trim()}
+              disabled={!title.trim() || isSubmitting}
             >
               <span>➕</span>
               Create Spreadsheet

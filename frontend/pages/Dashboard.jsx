@@ -616,9 +616,6 @@ export function Dashboard() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onCreate={handleCreateNew}
-        blockchainAdapter={blockchainAdapter}
-        storageAdapter={storageAdapter}
-        spreadsheetEngine={spreadsheetEngine}
       />
 
       {/* Migration Dialog */}
