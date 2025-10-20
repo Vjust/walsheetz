@@ -894,13 +894,23 @@ export function useSpreadsheet() {
           logger.error(LogComponent.BUSINESS_LOGIC, 'first_save_failed', 'First save failed', {
             error: errorMessage,
             details: errorDetails,
-            fullResult: result
+            fullResult: result,
+            resultKeys: result ? Object.keys(result) : [],
+            technical: result?.technical,
+            preflight: result?.preflight,
+            hasBlockchainAdapter: !!blockchainRef.current,
+            hasEngine: !!engineRef.current
           });
 
           console.error('❌ [First Save] Failed:', {
             error: errorMessage,
             details: errorDetails,
-            fullResult: result
+            fullResult: result,
+            resultKeys: result ? Object.keys(result) : [],
+            resultValues: result,
+            hasBlockchainAdapter: !!blockchainRef.current,
+            hasEngine: !!engineRef.current,
+            spreadsheetTitle: spreadsheetTitle
           });
 
           setSaveStatus('error');
@@ -925,12 +935,20 @@ export function useSpreadsheet() {
 
         logger.error(LogComponent.BUSINESS_LOGIC, 'first_save_exception', 'Exception during first save', {
           error: errorMessage,
-          stack: error.stack
+          stack: error.stack,
+          errorType: error.constructor.name,
+          errorKeys: error ? Object.keys(error) : [],
+          hasBlockchainAdapter: !!blockchainRef.current,
+          hasEngine: !!engineRef.current
         });
 
         console.error('❌ [First Save] Exception:', {
           message: errorMessage,
-          stack: error.stack
+          stack: error.stack,
+          errorType: error.constructor.name,
+          completeError: error,
+          hasBlockchainAdapter: !!blockchainRef.current,
+          hasEngine: !!engineRef.current
         });
 
         setSaveStatus('error');

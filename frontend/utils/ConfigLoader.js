@@ -50,15 +50,33 @@ class ConfigLoader {
       console.log('[ConfigLoader] 🔄 Loading runtime config with cache-busting...');
 
       const timestamp = Date.now();
-      const response = await fetch(`/app-config.json?t=${timestamp}&bust=${Math.random()}`);
+      const configUrl = `/app-config.json?t=${timestamp}&bust=${Math.random()}`;
+      console.log('[ConfigLoader] 🌐 Fetching from:', configUrl);
+
+      const response = await fetch(configUrl);
 
       if (!response.ok) {
+        // DIAGNOSTIC: Enhanced logging for all non-OK responses
+        console.error('❌ [ConfigLoader] Config fetch failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url,
+          headers: {
+            contentType: response.headers.get('content-type'),
+            contentLength: response.headers.get('content-length')
+          },
+          timestamp: new Date().toISOString(),
+          configUrl: configUrl
+        });
+
         // Suppress logging for expected 404 errors during initial startup or cache misses
         if (response.status === 404) {
           console.debug('[ConfigLoader] ℹ️ Config file not found (expected during startup or in development), falling back to embedded config');
         }
         throw new Error(`Config fetch failed: ${response.status} ${response.statusText}`);
       }
+
+      console.log('[ConfigLoader] ✅ Config fetched successfully:', { url: response.url, status: response.status });
       
       const config = await response.json();
       
@@ -85,8 +103,18 @@ class ConfigLoader {
       return config;
       
     } catch (error) {
-      // Only log as error if it's not a 404 (which is expected in dev/test environments)
+      // DIAGNOSTIC: Enhanced logging for config loading errors
       const errorMsg = typeof error === 'string' ? error : error?.message || 'Unknown error';
+
+      console.error('❌ [ConfigLoader] Config loading error:', {
+        errorMessage: errorMsg,
+        errorType: error?.constructor?.name,
+        errorStack: error?.stack,
+        is404: errorMsg.includes('404'),
+        timestamp: new Date().toISOString(),
+        fallbackUsed: true
+      });
+
       if (!errorMsg.includes('404')) {
         console.warn('[ConfigLoader] ⚠️  Failed to load runtime config:', errorMsg);
       } else {
@@ -94,7 +122,9 @@ class ConfigLoader {
       }
 
       // Return fallback config if main config fails
-      return this._getFallbackConfig();
+      const fallbackConfig = this._getFallbackConfig();
+      console.log('[ConfigLoader] ℹ️  Fallback config loaded successfully');
+      return fallbackConfig;
     }
   }
 
