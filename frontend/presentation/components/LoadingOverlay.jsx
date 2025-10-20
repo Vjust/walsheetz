@@ -169,7 +169,31 @@ export function LoadingOverlay({
               <small>💡 Save failed: {details || error || 'Unknown error'}. Your changes are saved locally - try again or check your wallet/network connection.</small>
             </div>
           )}
-          {error && errorType === 'error' && errorType !== 'wallet_required' && errorType !== 'save_failed' && (
+          {error && errorType === 'first_save_failed' && (
+            <div className="type-info error-info">
+              <div style={{ marginBottom: '8px' }}>
+                <strong>First save failed:</strong> {error}
+              </div>
+              <div style={{ fontSize: '12px', opacity: 0.9 }}>
+                <strong>Recovery steps:</strong>
+                <ol style={{ margin: '4px 0', paddingLeft: '20px', textAlign: 'left' }}>
+                  {error.includes('Wallet') && <li>Reconnect your Sui wallet</li>}
+                  {error.includes('Walrus') && <li>Check network connection</li>}
+                  {error.includes('configuration') && <li>Refresh the page</li>}
+                  {!error.includes('Wallet') && !error.includes('Walrus') && !error.includes('configuration') && (
+                    <li>Check console for error details</li>
+                  )}
+                  <li>Click "Save" again to retry</li>
+                </ol>
+              </div>
+            </div>
+          )}
+          {error && errorType === 'walrus_unavailable' && (
+            <div className="type-info error-info">
+              <small>💡 Walrus storage is temporarily unavailable. Check your network connection and try again in a few moments.</small>
+            </div>
+          )}
+          {error && errorType === 'error' && errorType !== 'wallet_required' && errorType !== 'save_failed' && errorType !== 'first_save_failed' && errorType !== 'walrus_unavailable' && (
             <div className="type-info error-info">
               <small>⚠️ An unexpected error occurred. Please try again.</small>
             </div>

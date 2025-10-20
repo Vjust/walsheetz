@@ -3192,7 +3192,17 @@ class BrowserWalrusService {
       });
       
       clearTimeout(timeout);
-      
+
+      // NEW: Check for 402 Payment Required using existing helper
+      if (response.status === 402) {
+        const errorText = 'Insufficient WAL tokens for storage operation';
+        // Use existing isWalCoinError helper for consistency
+        if (this.isWalCoinError(errorText)) {
+          throw new Error('Insufficient WAL tokens for storage operation. Please top up your Walrus account.');
+        }
+        throw new Error(`HTTP 402: ${response.statusText}`);
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }

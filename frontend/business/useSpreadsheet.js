@@ -790,6 +790,43 @@ export function useSpreadsheet() {
       try {
         setSaveStatus('saving');
 
+        // NEW: Preflight - Check Walrus health before expensive operations
+        logger.info(LogComponent.BUSINESS_LOGIC, 'first_save_preflight', 'Checking Walrus health before first save');
+
+        const walrusHealth = await blockchainRef.current.checkWalrusHealth?.();
+        if (walrusHealth && !walrusHealth.ok) {
+          const errorMsg = walrusHealth.error || 'Walrus storage unavailable';
+          logger.error(LogComponent.BUSINESS_LOGIC, 'walrus_health_failed', 'Walrus health check failed before first save', {
+            health: walrusHealth,
+            publisherAvailable: walrusHealth.publisherAvailable,
+            aggregatorAvailable: walrusHealth.aggregatorAvailable
+          });
+
+          setSaveStatus('error');
+          setLoadingState({
+            isLoading: true,
+            message: 'Storage Unavailable',
+            details: errorMsg,
+            type: 'error',
+            error: errorMsg,
+            errorType: 'walrus_unavailable'
+          });
+
+          setTimeout(() => {
+            setLoadingState({ isLoading: false });
+            setSaveStatus('ready');
+          }, 8000);
+
+          return {
+            success: false,
+            error: 'Walrus storage unavailable',
+            details: errorMsg,
+            technical: walrusHealth
+          };
+        }
+
+        logger.info(LogComponent.BUSINESS_LOGIC, 'walrus_health_ok', 'Walrus health check passed, proceeding with first save');
+
         // Get current data from engine
         const currentData = await engineRef.current.exportData();
         const spreadsheetTitle = title || storageRef.current.getSpreadsheetTitle() || 'Untitled';
@@ -872,7 +909,7 @@ export function useSpreadsheet() {
             message: 'Save failed',
             details: errorMessage + (errorDetails ? ` (${errorDetails})` : ''),
             error: errorMessage,
-            errorType: 'save_failed'
+            errorType: 'first_save_failed'
           });
 
           // Keep error visible longer (8s) for user to read
@@ -902,7 +939,7 @@ export function useSpreadsheet() {
           message: 'Save failed',
           details: errorMessage,
           error: errorMessage,
-          errorType: 'save_failed'
+          errorType: 'first_save_failed'
         });
 
         // Keep error visible longer (8s) for user to read

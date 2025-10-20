@@ -66,7 +66,8 @@ export function Header() {
     smartSaveStatus,
     queryDatasets,
     storageAdapter,
-    updateLastSaveInfo
+    updateLastSaveInfo,
+    walletSyncReady
   } = useSpreadsheetContext()
 
   // Debug helper to check available Luckysheet methods
@@ -1270,7 +1271,22 @@ export function Header() {
         <div className="header-right">
           {/* Save Button and Smart Save Status */}
           <div className="save-section">
-            <button onClick={handleSave} className="save-button">
+            <button
+              onClick={handleSave}
+              className="save-button"
+              disabled={!walletConnected || !walletSyncReady}
+              title={
+                !walletConnected
+                  ? "Connect wallet to save"
+                  : !walletSyncReady
+                    ? "Wallet syncing..."
+                    : "Save to blockchain"
+              }
+              style={{
+                opacity: (!walletConnected || !walletSyncReady) ? 0.5 : 1,
+                cursor: (!walletConnected || !walletSyncReady) ? 'not-allowed' : 'pointer'
+              }}
+            >
               💾 Save
             </button>
 

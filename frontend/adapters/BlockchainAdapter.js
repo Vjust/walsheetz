@@ -1497,6 +1497,63 @@ export class BlockchainAdapter extends IBlockchainService {
   async saveToBlockchain(data, options = {}) {
     logger.startTimer('blockchain_save');
     const saveId = `save-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // PREFLIGHT VALIDATION - Early error detection using actual adapter methods
+
+    // 1. Check wallet connection using actual method
+    if (!this.isWalletConnected()) {
+      logger.endTimer('blockchain_save');
+      logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'preflight_failed', 'Wallet not connected');
+      return {
+        success: false,
+        error: 'Wallet not connected',
+        details: 'Please connect your Sui wallet before saving',
+        preflight: true
+      };
+    }
+
+    // 2. Get runtime config using actual method
+    const config = await this.getRuntimeConfig();
+    if (!config) {
+      logger.endTimer('blockchain_save');
+      logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'preflight_failed', 'Configuration not loaded');
+      return {
+        success: false,
+        error: 'Configuration not loaded',
+        details: 'App configuration is missing. Try refreshing the page.',
+        preflight: true
+      };
+    }
+
+    // 3. Get network config and check Sui setup using actual method
+    const networkConfig = await this.getCurrentNetworkConfig();
+    if (!networkConfig?.packageId || !networkConfig?.registryObjectId) {
+      logger.endTimer('blockchain_save');
+      logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'preflight_failed', 'Sui not configured', {
+        network: networkConfig?.name || 'unknown',
+        hasPackageId: !!networkConfig?.packageId,
+        hasRegistryObjectId: !!networkConfig?.registryObjectId
+      });
+      return {
+        success: false,
+        error: 'Sui is not configured for the current network',
+        details: 'Set packageId and registryObjectId in app-config.json',
+        preflight: true
+      };
+    }
+
+    // 4. Check Walrus service is initialized
+    if (!this.walrusService) {
+      logger.endTimer('blockchain_save');
+      logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'preflight_failed', 'Walrus service not initialized');
+      return {
+        success: false,
+        error: 'Walrus storage service not available',
+        details: 'Storage service failed to initialize. Try refreshing the page.',
+        preflight: true
+      };
+    }
+
     // Normalize incoming data shape (engine vs UI producer)
     const normalizedData = this._normalizeSpreadsheetData(data)
     const rawDataSize = JSON.stringify(normalizedData).length;
@@ -3717,6 +3774,56 @@ export class BlockchainAdapter extends IBlockchainService {
         success: false,
         error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error'
       };
+    }
+  }
+
+  /**
+   * Check Walrus storage health
+   * Memoizes result for 30 seconds to avoid spamming endpoint
+   * @returns {Promise<{ok: boolean, error?: string, publisherAvailable?: boolean, aggregatorAvailable?: boolean}>}
+   */
+  async checkWalrusHealth() {
+    try {
+      if (!this.walrusService) {
+        return { ok: false, error: 'Walrus service not initialized' };
+      }
+
+      // Memoization: check if we have recent health data (< 30s old)
+      const now = Date.now();
+      if (this._cachedHealthCheck && (now - this._cachedHealthCheck.timestamp < 30000)) {
+        logger.debug(LogComponent.BLOCKCHAIN_ADAPTER, 'health_check_cached', 'Using cached Walrus health check', {
+          age: now - this._cachedHealthCheck.timestamp,
+          result: this._cachedHealthCheck.result
+        });
+        return this._cachedHealthCheck.result;
+      }
+
+      // Actually check health (calls browserWalrusService.checkHealth())
+      const health = await this.walrusService.checkHealth();
+
+      const result = {
+        ok: health.isHealthy,
+        publisherAvailable: health.publisherAvailable,
+        aggregatorAvailable: health.aggregatorAvailable,
+        error: health.lastError,
+        lastCheck: health.lastCheck
+      };
+
+      // Cache the result
+      this._cachedHealthCheck = {
+        timestamp: now,
+        result
+      };
+
+      logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'health_check_complete', 'Walrus health check completed', result);
+      return result;
+
+    } catch (error) {
+      logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'health_check_failed', 'Walrus health check threw exception', {
+        error: error.message,
+        stack: error.stack
+      });
+      return { ok: false, error: error.message };
     }
   }
 }
