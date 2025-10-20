@@ -334,6 +334,21 @@ class ConfigLoader {
       return baseUrl + (path ? (path.startsWith('/') ? path : '/' + path) : '');
     };
 
+    // Get Walrus service base URL (publisher or aggregator)
+    // Returns just the base URL for appending /v1/blobs or /v1/api as needed
+    config.getWalrusServiceBase = function(service) {
+      const network = this.getCurrentNetwork();
+      const proxyUrl = this.getProxyUrl(service);
+
+      if (service === 'publisher') {
+        return proxyUrl || network.walrus.publisherUrl;
+      } else if (service === 'aggregator') {
+        return proxyUrl || network.walrus.aggregatorUrl;
+      } else {
+        throw new Error(`Unknown Walrus service: ${service}`);
+      }
+    };
+
     // Resolve healthy service URL with proxy→absolute fallback
     config.resolveHealthyServiceUrl = async function(service, path = '/v1/api', opts = {}) {
       const base = this.getServiceUrl(service, ''); // proxy or absolute base, no path
@@ -409,8 +424,8 @@ class ConfigLoader {
           packageId: '0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7',
           registryObjectId: '0x9a6b94f79762fa608c5f0938d092744a8e5b69852f860eb17afa4ab11e24fe25',
           walrus: {
-            aggregatorUrl: 'https://aggregator.walrus-testnet.walrus.space',
-            publisherUrl: 'https://publisher.walrus-testnet.walrus.space',
+            aggregatorUrl: 'https://wal-aggregator-testnet.staketab.org',
+            publisherUrl: 'https://wal-publisher-testnet.staketab.org',
             maxRetries: 3,
             retryDelay: 1000,
             // Epochs feature config
@@ -424,8 +439,8 @@ class ConfigLoader {
           packageId: '0x991454976a4ef8535ed3572bb1c500dcd565855d49a51f1fadc7f70a316c9631',
           registryObjectId: '0x66f68bfb639dbc7f24519bcdbbfdb376057d87c6d508ea7a8d67746a11721ca5',
           walrus: {
-            aggregatorUrl: 'https://aggregator.walrus.space',
-            publisherUrl: 'https://publisher.walrus.space',
+            aggregatorUrl: 'https://wal-aggregator-mainnet.staketab.org',
+            publisherUrl: 'https://walrus-mainnet-publisher-1.staketab.org',
             maxRetries: 3,
             retryDelay: 1000
           }

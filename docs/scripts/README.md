@@ -306,6 +306,46 @@ node scripts/debug-spreadsheet-loading.js [spreadsheet-id]
 
 ## Verification Scripts
 
+### `verify-walrus-endpoints.js`
+**Purpose:** Verify Walrus publisher and aggregator endpoints are functional.
+
+**Usage:**
+```bash
+# Testnet verification
+node scripts/verify-walrus-endpoints.js testnet
+
+# Mainnet verification
+node scripts/verify-walrus-endpoints.js mainnet
+```
+
+**Checks Performed:**
+1. Publisher endpoint reachability
+2. Aggregator endpoint reachability
+3. Test blob publication
+4. Test blob retrieval
+5. End-to-end connectivity verification
+
+**Output:**
+- Endpoint health status
+- Blob ID (if published successfully)
+- Content verification results
+- Detailed error messages if any failures occur
+
+**When to Use:**
+- Before deploying to a new environment
+- Troubleshooting save failures
+- Verifying endpoint configuration
+- Pre-deployment validation
+- CI/CD endpoint health checks
+
+**Exit Codes:**
+- `0` - All checks passed
+- `1` - One or more checks failed
+
+**Related Docs:** [docs/SAVE_VERIFICATION_GUIDE.md](../SAVE_VERIFICATION_GUIDE.md)
+
+---
+
 ### `verify-websocket-fixes.js`
 **Purpose:** Verify WebSocket bridge fixes and connectivity.
 
@@ -539,15 +579,18 @@ bun run test:walrus     # Walrus integration
 bun run diagnose:save   # Debug save issues
 
 # Verification
-node scripts/verify-websocket-fixes.js     # Check WebSocket
-node scripts/verify-wz-formula-registration.js  # Check formulas
+node scripts/verify-walrus-endpoints.js testnet  # Check Walrus testnet
+node scripts/verify-walrus-endpoints.js mainnet  # Check Walrus mainnet
+node scripts/verify-websocket-fixes.js           # Check WebSocket
+node scripts/verify-wz-formula-registration.js   # Check formulas
 ```
 
 ### When Things Break
 1. **Bridge won't start:** `bun run cleanup`
-2. **Save failing:** `bun run diagnose:save`
-3. **Formulas missing:** `node scripts/verify-wz-formula-registration.js`
-4. **Connection errors:** `node scripts/test-graphql-fallback.js`
+2. **Save failing:** `bun run diagnose:save` or `node scripts/verify-walrus-endpoints.js testnet`
+3. **Walrus unreachable:** `node scripts/verify-walrus-endpoints.js testnet`
+4. **Formulas missing:** `node scripts/verify-wz-formula-registration.js`
+5. **Connection errors:** `node scripts/test-graphql-fallback.js`
 
 ---
 

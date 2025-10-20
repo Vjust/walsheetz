@@ -1,5 +1,58 @@
 import { configLoader } from './ConfigLoader.js'
 
+function normalizeMoveType(param) {
+  if (typeof param === 'string') {
+    return param
+  }
+
+  if (!param || typeof param !== 'object') {
+    return ''
+  }
+
+  const primitiveKeys = ['U8', 'U16', 'U32', 'U64', 'U128', 'U256', 'Bool', 'Address', 'Signer']
+  for (const key of primitiveKeys) {
+    if (param[key] !== undefined) {
+      return key.toLowerCase()
+    }
+  }
+
+  if (param.TypeParameter !== undefined) {
+    return `T${param.TypeParameter}`
+  }
+
+  if (param.MutableReference !== undefined) {
+    return `&mut ${normalizeMoveType(param.MutableReference)}`.trim()
+  }
+
+  if (param.Reference !== undefined) {
+    return `&${normalizeMoveType(param.Reference)}`.trim()
+  }
+
+  if (param.Vector !== undefined) {
+    return `vector<${normalizeMoveType(param.Vector)}>`
+  }
+
+  if (param.StructInstantiation) {
+    const base = normalizeMoveType({ Struct: param.StructInstantiation.struct })
+    const typeArgs = (param.StructInstantiation.typeArguments || []).map(normalizeMoveType)
+    return typeArgs.length ? `${base}<${typeArgs.join(', ')}>` : base
+  }
+
+  if (param.Struct) {
+    const { address, module, name, typeArguments } = param.Struct
+    const base = `${address || ''}::${module}::${name}`
+    const normalizedArgs = (typeArguments || []).map(normalizeMoveType)
+    return normalizedArgs.length ? `${base}<${normalizedArgs.join(', ')}>` : base
+  }
+
+  try {
+    return JSON.stringify(param)
+  } catch (error) {
+    console.warn('[ABI] Could not normalize Move type:', error?.message || error, param)
+    return ''
+  }
+}
+
 /**
  * Detect on-chain signature for spreadsheet::save_version and whether it expects content_hash and clock.
  * Returns { expectsContentHash: boolean, expectsClock: boolean, params: string[], debug: object }
@@ -35,22 +88,22 @@ export async function detectSaveVersionSignature() {
       }
     }
 
-    const params = func.parameters
+    const rawParams = func.parameters || []
+    const normalizedParams = rawParams.map(normalizeMoveType)
 
     // Improved string type detection that handles various formats
-    const stringTypes = ['String', 'string::String', 'std::string::String', '0x1::string::String']
     const isStringParam = (p) => {
       if (typeof p !== 'string') return false
-      return stringTypes.some(t => p.includes(t))
+      return /string::String/i.test(p)
     }
 
     // Find the first u64 parameter (cell_count)
-    const firstU64Idx = params.findIndex(p =>
-      typeof p === 'string' && (p.includes('::u64') || p.endsWith('u64'))
+    const firstU64Idx = normalizedParams.findIndex(p =>
+      typeof p === 'string' && p.toLowerCase().includes('u64')
     )
 
     // Count string parameters before the first u64
-    const beforeU64 = firstU64Idx === -1 ? params : params.slice(0, firstU64Idx)
+    const beforeU64 = firstU64Idx === -1 ? normalizedParams : normalizedParams.slice(0, firstU64Idx)
     const stringCountBeforeU64 = beforeU64.filter(isStringParam).length
 
     // With content hash and clock: [&mut Spreadsheet, String, String, u64, String, &Clock, &mut TxContext]
@@ -61,13 +114,13 @@ export async function detectSaveVersionSignature() {
     const expectsContentHash = stringCountBeforeU64 >= 2
 
     // Detect Clock parameter by checking for clock::Clock type references
-    const clockTypes = ['clock::Clock', '0x6::clock::Clock', '::clock::Clock', 'Clock']
-    const expectsClock = params.some(p =>
+    const clockTypes = ['clock::Clock', '0x6::clock::Clock', '0x2::clock::Clock', '::clock::Clock', 'Clock']
+    const expectsClock = normalizedParams.some(p =>
       typeof p === 'string' && clockTypes.some(t => p.includes(t))
     )
 
     // Validate parameter count matches network expectations
-    const paramCount = params.length
+    const paramCount = normalizedParams.length
     if (cfg.currentNetwork === 'mainnet' && paramCount !== 7) {
       console.error(`[ABI] ⚠️ NETWORK MISMATCH: Mainnet should have 7 parameters but detected ${paramCount}`)
       console.error('[ABI] This indicates the detected package is not the mainnet package')
@@ -107,12 +160,13 @@ export async function detectSaveVersionSignature() {
       packageId: net.packageId,
       stringCountBeforeU64,
       firstU64Idx,
-      paramCount: params.length,
+      paramCount: normalizedParams.length,
       expectsContentHash,
       expectsClock,
       stringParams: beforeU64.filter(isStringParam),
-      clockParams: params.filter(p => typeof p === 'string' && clockTypes.some(t => p.includes(t))),
-      allParams: params
+      clockParams: normalizedParams.filter(p => typeof p === 'string' && clockTypes.some(t => p.includes(t))),
+      rawParams,
+      normalizedParams
     }
 
     console.log('[ABI] save_version signature detected:', debug)
@@ -129,7 +183,7 @@ export async function detectSaveVersionSignature() {
     return {
       expectsContentHash,
       expectsClock,
-      params,
+      params: normalizedParams,
       debug
     }
 

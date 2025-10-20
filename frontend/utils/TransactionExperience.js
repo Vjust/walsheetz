@@ -63,7 +63,7 @@ export class TransactionExperienceManager {
       case 'save_version':
         return {
           description: `Save Spreadsheet "${info.spreadsheet.title}" (${info.spreadsheet.cellCount} cells)`,
-          explanation: 'This saves your spreadsheet data to decentralized storage and records it on the blockchain. Your data is encrypted and permanently accessible.',
+          explanation: 'This saves your spreadsheet data to decentralized storage and records it on the blockchain. Your data is permanently accessible.',
           estimatedTime: '8-15 seconds',
           requiresWallet: true,
           canBeBatched: true, // Can be batched with storage operations
@@ -73,7 +73,7 @@ export class TransactionExperienceManager {
       case 'combined_create_save':
         return {
           description: `Create & Save Spreadsheet "${info.spreadsheet.title}"`,
-          explanation: 'This creates your spreadsheet and saves your initial data in one efficient operation. Your data will be encrypted and stored on the decentralized web.',
+          explanation: 'This creates your spreadsheet and saves your initial data in one efficient operation. Your data will be stored on the decentralized web.',
           estimatedTime: '10-20 seconds',
           requiresWallet: true,
           canBeBatched: false, // Already combined

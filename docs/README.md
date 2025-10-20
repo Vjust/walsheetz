@@ -480,6 +480,33 @@ environment: 'testnet'  // or 'mainnet'
 
 ---
 
+## Security & Data Integrity
+
+### Note: Browser-Side Encryption Disabled
+
+As of this version, browser-side encryption has been **temporarily disabled** in `BrowserWalrusService.js`. Data is now stored in plaintext to Walrus.
+
+**Rationale:**
+- The current AES-GCM implementation via Web Crypto API provides limited security guarantees
+- Encryption keys derived from wallet addresses are predictable and not suitable for long-term data protection
+- Better security model will be implemented via [Walrus Seal](https://github.com/MystenLabs/walrus-sites) (end-to-end encryption at the protocol level)
+
+**Future:**
+Encryption will be reintroduced when Walrus Seal support is available, providing:
+- Server-side encryption with user-controlled keys
+- Cryptographic proofs of data integrity
+- Compliance with data retention policies
+
+**Impact:**
+- Spreadsheet data sent to Walrus is **not encrypted**
+- Data remains subject to access control via blob IDs (privacy through obscurity)
+- Integrity verification via content hashes still active
+- Redundant storage for availability still supported
+
+**For sensitive data:** Do not store highly confidential information until encryption is restored.
+
+---
+
 ## Quick Reference
 
 ### Port Map

@@ -2,7 +2,6 @@
 import { getCurrentConfig } from '../../blockchain/config.js';
 import { configLoader } from '../utils/ConfigLoader.js';
 import RateLimiter from '../utils/RateLimiter.js';
-import { encryptionUtility } from '../utils/Encryption.js';
 import { loadWalrusSdkClient, getCachedWalrusSdkClient } from './WalrusSdkClientLoader.js';
 
 class BrowserWalrusService {
@@ -89,8 +88,9 @@ class BrowserWalrusService {
     this.sdkClientLoadingPromise = null;
     this.sdkLoadAttempted = false;
 
-    const currentNetwork = config.environment || 'testnet';
+    const currentNetwork = config.currentNetwork || 'testnet';
     console.log(`[BrowserWalrusService] Initialized with ${currentNetwork} endpoints:`, {
+      network: currentNetwork,
       publisherUrl: this.publisherUrl,
       aggregatorUrl: this.aggregatorUrl,
       batchingEnabled: true,
@@ -226,8 +226,8 @@ class BrowserWalrusService {
       // Test publisher connectivity using /v1/api endpoint with healthy URL resolution
       console.log(`[BrowserWalrusService:${connectId}] Sending connectivity test to publisher...`);
       const config = await this.configLoader.getConfig();
-      const healthyPublisherBase = await config.resolveHealthyServiceUrl('walrus-publisher', '/v1/api', { suppressErrors: true });
-      const publisherResponse = await fetch(`${healthyPublisherBase}/v1/api`, {
+      const publisherBase = config.getWalrusServiceBase('publisher');
+      const publisherResponse = await fetch(`${publisherBase}/v1/api`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' }
       });
@@ -538,9 +538,14 @@ class BrowserWalrusService {
     const maxRetries = options.maxRetries || 3;
     const retryDelay = options.retryDelay || 1000;
     const requestId = `walrus-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
+
+    // Get current network for logging
+    const config = await this.configLoader.getConfig();
+    const network = config.currentNetwork || 'testnet';
+
     console.log('[BrowserWalrusService] Starting blob storage operation', {
       requestId,
+      network,
       hasSpreadsheetId: !!data.spreadsheetId,
       spreadsheetId: data.spreadsheetId,
       dataSize: JSON.stringify(data).length,
@@ -573,52 +578,8 @@ class BrowserWalrusService {
       };
     }
 
-    // Encrypt data before storing
+    // Store data without encryption
     let dataToStore = data;
-    let encryptionMetadata = null;
-
-    try {
-      console.log(`[BrowserWalrusService:${requestId}] Encrypting data for secure storage`);
-
-      // Check if encryption is enabled and initialized
-      const encryptionStatus = encryptionUtility.getEncryptionStatus();
-      if (encryptionStatus.initialized) {
-        // Encrypt the data
-        const encryptedData = await encryptionUtility.encrypt(data);
-        dataToStore = encryptedData;
-
-        encryptionMetadata = {
-          encrypted: true,
-          algorithm: encryptedData.algorithm,
-          encryptionTimestamp: encryptedData.timestamp
-        };
-
-        console.log(`[BrowserWalrusService:${requestId}] Data encrypted successfully`, {
-          originalSize: JSON.stringify(data).length,
-          encryptedSize: JSON.stringify(dataToStore).length,
-          algorithm: encryptedData.algorithm
-        });
-      } else {
-        console.warn(`[BrowserWalrusService:${requestId}] Encryption not initialized, storing data in plain text`);
-        encryptionMetadata = {
-          encrypted: false,
-          reason: 'encryption_not_initialized'
-        };
-      }
-    } catch (encryptionError) {
-      console.error(`[BrowserWalrusService:${requestId}] Encryption failed, storing data in plain text`, {
-        error: encryptionError.message
-      });
-
-      encryptionMetadata = {
-        encrypted: false,
-        reason: 'encryption_failed',
-        error: encryptionError.message
-      };
-
-      // Continue with unencrypted data rather than failing completely
-      dataToStore = data;
-    }
 
     if (!this.isConnected) {
       console.warn(`[BrowserWalrusService:${requestId}] Not connected, attempting to connect...`);
@@ -628,7 +589,7 @@ class BrowserWalrusService {
 
     // Branch to SDK path if enabled and available
     if (this.sdkClient) {
-      return await this.storeBlobWithSDK(dataToStore, options, requestId, encryptionMetadata);
+      return await this.storeBlobWithSDK(dataToStore, options, requestId);
     }
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -656,10 +617,10 @@ class BrowserWalrusService {
         // Default to 50 epochs (about 100 days on testnet)
         const epochs = options.epochs || 50;
 
-        // Use healthy URL resolver for upload (get base URL without path)
+        // Get publisher base URL for blob operations
         const config = await this.configLoader.getConfig();
-        const healthyPublisherBase = await config.resolveHealthyServiceUrl('walrus-publisher', '/v1/api', { suppressErrors: true });
-        const requestUrl = `${healthyPublisherBase}/v1/blobs?epochs=${epochs}`;
+        const publisherBase = config.getWalrusServiceBase('publisher');
+        const requestUrl = `${publisherBase}/v1/blobs?epochs=${epochs}`;
         console.log(`[BrowserWalrusService:${requestId}] Upload attempt ${attempt}/${maxRetries}:`, {
           size: blob.size,
           originalSize: encoded.originalSize,
@@ -770,13 +731,16 @@ class BrowserWalrusService {
         
         const blobId = result.newlyCreated?.blobObject?.blobId || result.alreadyCertified?.blobId;
         const status = result.newlyCreated ? 'newly_created' : 'already_certified';
-        
+
         console.log(`[BrowserWalrusService:${requestId}] Blob stored successfully:`, {
+          network,
           attempt,
           blobId,
           status,
           duration: requestDuration,
           epochs,
+          publisherUrl: this.publisherUrl,
+          aggregatorUrl: this.aggregatorUrl,
           totalOperationTime: Date.now() - startTime,
           timestamp: new Date().toISOString()
         });
@@ -935,7 +899,7 @@ class BrowserWalrusService {
   }
 
   // Store blob using Walrus SDK with register → upload → certify flow
-  async storeBlobWithSDK(dataToStore, options = {}, requestId, encryptionMetadata) {
+  async storeBlobWithSDK(dataToStore, options = {}, requestId) {
     console.log(`[BrowserWalrusService:${requestId}] Using Walrus SDK path`);
 
     try {
@@ -950,8 +914,7 @@ class BrowserWalrusService {
         ...dataToStore,
         metadata: {
           ...dataToStore.metadata,
-          client: 'walsheetz-browser-sdk',
-          encryptionMetadata
+          client: 'walsheetz-browser-sdk'
         }
       };
 
@@ -1227,28 +1190,28 @@ class BrowserWalrusService {
     const { normalizeToUI = true } = options || {};
     const startTime = Date.now();
 
-    // Resolve healthy aggregator URL for retrieval (get base URL without path)
+    // Get aggregator base URL for retrieval
     const config = await this.configLoader.getConfig();
-    const healthyAggregatorUrl = await config.resolveHealthyServiceUrl('walrus-aggregator', '/v1/api', { suppressErrors: true });
+    const aggregatorBase = config.getWalrusServiceBase('aggregator');
 
     console.log(`[BrowserWalrusService:${requestId}] 📥 Starting blob retrieval`, {
       blobId,
-      aggregatorUrl: healthyAggregatorUrl,
+      aggregatorUrl: aggregatorBase,
       timestamp: new Date().toISOString()
     });
-    
+
     try {
       // HEAD precheck with timeout
       console.log(`[BrowserWalrusService:${requestId}] 📡 Performing HEAD precheck...`);
       const headStartTime = Date.now();
-      
+
       try {
         // Wrap HEAD request with rate limiting if enabled
         let headResponse;
         if (this.rateLimiterEnabled && this.limiters.walrusAgg) {
           const key = `retrieve-head:${blobId}`;
           headResponse = await this.limiters.walrusAgg.schedule(key, async () => {
-            const resp = await fetch(`${healthyAggregatorUrl}/v1/blobs/${blobId}`, {
+            const resp = await fetch(`${aggregatorBase}/v1/blobs/${blobId}`, {
               method: 'HEAD',
               signal: AbortSignal.timeout(5000)
             });
@@ -1256,7 +1219,7 @@ class BrowserWalrusService {
             return resp;
           }, { ttlMs: 10000 }); // Cache HEAD for 10 seconds
         } else {
-          headResponse = await fetch(`${healthyAggregatorUrl}/v1/blobs/${blobId}`, {
+          headResponse = await fetch(`${aggregatorBase}/v1/blobs/${blobId}`, {
             method: 'HEAD',
             signal: AbortSignal.timeout(5000)
           });
@@ -1297,7 +1260,7 @@ class BrowserWalrusService {
       if (this.rateLimiterEnabled && this.limiters.walrusAgg) {
         const key = `retrieve:${blobId}`;
         response = await this.limiters.walrusAgg.schedule(key, async () => {
-          const resp = await fetch(`${healthyAggregatorUrl}/v1/blobs/${blobId}`, {
+          const resp = await fetch(`${aggregatorBase}/v1/blobs/${blobId}`, {
             method: 'GET',
             headers: {
               'Accept': 'application/octet-stream',
@@ -1307,7 +1270,7 @@ class BrowserWalrusService {
           return resp;
         }, { ttlMs: 5000 }); // Cache for 5 seconds
       } else {
-        response = await fetch(`${healthyAggregatorUrl}/v1/blobs/${blobId}`, {
+        response = await fetch(`${aggregatorBase}/v1/blobs/${blobId}`, {
           method: 'GET',
           headers: {
             'Accept': 'application/octet-stream',
@@ -1501,46 +1464,8 @@ class BrowserWalrusService {
         compressionRatio: parsedData?.compressionRatio || 'N/A'
       });
 
-      // Decrypt data if it was encrypted
-      let finalData = parsedData;
-      let decryptionMetadata = null;
-
-      if (encryptionUtility.isEncrypted(parsedData)) {
-        try {
-          console.log(`[BrowserWalrusService:${requestId}] Decrypting retrieved data`);
-
-          finalData = await encryptionUtility.decrypt(parsedData);
-          decryptionMetadata = {
-            decrypted: true,
-            algorithm: parsedData.algorithm,
-            decryptionTimestamp: Date.now()
-          };
-
-          console.log(`[BrowserWalrusService:${requestId}] Data decrypted successfully`, {
-            originalSize: JSON.stringify(parsedData).length,
-            decryptedSize: JSON.stringify(finalData).length
-          });
-        } catch (decryptionError) {
-          console.error(`[BrowserWalrusService:${requestId}] Decryption failed, returning encrypted data`, {
-            error: decryptionError.message
-          });
-
-          decryptionMetadata = {
-            decrypted: false,
-            reason: 'decryption_failed',
-            error: decryptionError.message
-          };
-
-          // Return encrypted data rather than failing completely
-          finalData = parsedData;
-        }
-      } else {
-        console.log(`[BrowserWalrusService:${requestId}] Data not encrypted, returning as-is`);
-        decryptionMetadata = {
-          decrypted: false,
-          reason: 'not_encrypted'
-        };
-      }
+      // Return data as-is (no decryption needed)
+      const finalData = parsedData;
 
       return {
         success: true,
@@ -1550,7 +1475,6 @@ class BrowserWalrusService {
         integrityVerified,
         correlationId,
         verificationPerformed: !!(expectedHash && isJson),
-        encryptionMetadata: decryptionMetadata,
         metadata: {
           blobId: blobId,
           size: blobData.length,
@@ -2463,11 +2387,11 @@ class BrowserWalrusService {
     const startTime = Date.now();
 
     try {
-      // Use ConfigLoader to resolve healthy URL with proper path handling
+      // Check publisher health endpoint
       const config = await this.configLoader.getConfig();
-      const healthyUrl = await config.resolveHealthyServiceUrl('walrus-publisher', '/v1/api', { suppressErrors: true });
+      const publisherBase = config.getWalrusServiceBase('publisher');
 
-      const response = await fetch(`${healthyUrl}/v1/api`, {
+      const response = await fetch(`${publisherBase}/v1/api`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
         signal: AbortSignal.timeout(10000) // 10 second timeout
@@ -2513,11 +2437,11 @@ class BrowserWalrusService {
     const startTime = Date.now();
 
     try {
-      // Use ConfigLoader to resolve healthy URL with proper path handling
+      // Check aggregator health endpoint
       const config = await this.configLoader.getConfig();
-      const healthyUrl = await config.resolveHealthyServiceUrl('walrus-aggregator', '/v1/api', { suppressErrors: true });
+      const aggregatorBase = config.getWalrusServiceBase('aggregator');
 
-      const response = await fetch(`${healthyUrl}/v1/api`, {
+      const response = await fetch(`${aggregatorBase}/v1/api`, {
         method: 'GET',
         signal: AbortSignal.timeout(10000) // 10 second timeout
       });

@@ -71,21 +71,22 @@ export const config = {
   walrus: {
     testnet: {
       // Primary endpoints - use absolute if forced or not in dev runtime
-      publisherUrl: (isDevRuntime && !forceAbsoluteEndpoints) ? '/walrus-publisher' : 'https://publisher.walrus-testnet.walrus.space',
-      aggregatorUrl: (isDevRuntime && !forceAbsoluteEndpoints) ? '/walrus-aggregator' : 'https://aggregator.walrus-testnet.walrus.space',
-      blobUrl: 'https://aggregator.walrus-testnet.walrus.space/v1/blobs',
+      // Note: Base URLs are just the host. Code appends /v1/blobs or /v1/api as needed
+      publisherUrl: (isDevRuntime && !forceAbsoluteEndpoints) ? '/walrus-publisher' : 'https://wal-publisher-testnet.staketab.org',
+      aggregatorUrl: (isDevRuntime && !forceAbsoluteEndpoints) ? '/walrus-aggregator' : 'https://wal-aggregator-testnet.staketab.org',
+      blobUrl: 'https://wal-aggregator-testnet.staketab.org/v1/blobs',
 
       // Multiple endpoints for redundancy (arrays)
       publishers: (isDevRuntime && !forceAbsoluteEndpoints) ?
         ['/walrus-publisher'] :
         [
-          'https://publisher.walrus-testnet.walrus.space',
+          'https://wal-publisher-testnet.staketab.org',
           // Add more publisher endpoints as they become available
         ],
       aggregators: (isDevRuntime && !forceAbsoluteEndpoints) ?
         ['/walrus-aggregator'] :
         [
-          'https://aggregator.walrus-testnet.walrus.space',
+          'https://wal-aggregator-testnet.staketab.org',
           // Add more aggregator endpoints as they become available
         ],
       
@@ -123,18 +124,18 @@ export const config = {
       }
     },
     mainnet: {
-      // Primary endpoints
-      publisherUrl: 'https://publisher.walrus.space',
-      aggregatorUrl: 'https://aggregator.walrus.space',
-      blobUrl: 'https://aggregator.walrus.space/v1/blobs',
-      
+      // Primary endpoints (base URLs only, code appends /v1/blobs or /v1/api as needed)
+      publisherUrl: 'https://walrus-mainnet-publisher-1.staketab.org',
+      aggregatorUrl: 'https://wal-aggregator-mainnet.staketab.org',
+      blobUrl: 'https://wal-aggregator-mainnet.staketab.org/v1/blobs',
+
       // Multiple endpoints for redundancy
       publishers: [
-        'https://publisher.walrus.space',
+        'https://walrus-mainnet-publisher-1.staketab.org',
         // Add more publisher endpoints as they become available
       ],
       aggregators: [
-        'https://aggregator.walrus.space',
+        'https://wal-aggregator-mainnet.staketab.org',
         // Add more aggregator endpoints as they become available
       ],
       
