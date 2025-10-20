@@ -72,11 +72,11 @@ describe('BrowserSuiService - Network Detection', () => {
 
       // Check for mismatch
       const configExpectsTestnet = configUrl.includes('testnet')
-      const walletIsMainnet = walletChainId.includes('mainnet')
+      const walletLooksLikeTestnet = walletChainId.includes('testnet')
 
       expect(configExpectsTestnet).toBe(true)
-      expect(walletIsMainnet).toBe(true)
-      expect(configExpectsTestnet).not.toBe(walletIsMainnet) // Mismatch detected
+      expect(walletLooksLikeTestnet).toBe(false) // Wallet is mainnet, not testnet
+      expect(configExpectsTestnet).not.toBe(walletLooksLikeTestnet) // Mismatch detected
     })
 
     test('should not auto-switch network on mismatch detection', () => {

@@ -1583,6 +1583,45 @@ export class BlockchainAdapter extends IBlockchainService {
       // Atomic operation failed with rollback
       logger.endTimer('blockchain_save');
 
+      // Capture partial save if Walrus succeeded but blockchain failed
+      const walrusResult = atomicResult.results?.find(r => r.name === 'walrus_storage');
+      const blockchainResult = atomicResult.results?.find(r => r.name === 'blockchain_execution');
+
+      if (walrusResult?.success && !blockchainResult?.success) {
+        const partialSaveInfo = {
+          status: 'walrus_only',
+          blobId: walrusResult.blobId,
+          contentHash: walrusResult.contentHash || walrusResult.contentHash?.hash,
+          size: walrusResult.size,
+          timestamp: Date.now(),
+          expiryTimestamp: walrusResult.expiryTimestamp,
+          endEpoch: walrusResult.endEpoch,
+          walrusSuccess: true,
+          blockchainSuccess: false,
+          blockchainError: atomicResult.error || 'Blockchain execution failed',
+          pendingBlockchainData: {
+            spreadsheetObjectId: this.spreadsheetObjectId,
+            walrusBlobId: walrusResult.blobId,
+            contentHash: walrusResult.contentHash || walrusResult.contentHash?.hash,
+            cellCount: Object.keys(normalizedData.cells || {}).length
+          }
+        }
+
+        logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'partial_save_captured',
+          'Partial save captured: Walrus succeeded, blockchain failed', {
+            blobId: walrusResult.blobId,
+            blockchainError: atomicResult.error
+          })
+
+        this.storageAdapter?.setPartialSaveInfo(partialSaveInfo)
+
+        return {
+          success: false,
+          partial: true,
+          ...partialSaveInfo
+        }
+      }
+
       // Use standardized error handler for consistent error processing
       const errorResult = await standardizedErrorHandler.processError(
         new Error(atomicResult.error),
