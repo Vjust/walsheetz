@@ -55,6 +55,30 @@ export function NetworkProvider({ children }) {
     }
   }, [network])
 
+  const navigateToNetwork = (newNetwork) => {
+    // Capture current location
+    const { pathname, search, hash } = window.location
+
+    // Strip existing network/redirect params from search
+    const params = new URLSearchParams(search)
+    params.delete('network')
+    params.delete('redirect')
+    const cleanSearch = params.toString() ? '?' + params.toString() : ''
+
+    // Only add redirect if not already on root with no params/hash
+    if (pathname === '/' && !cleanSearch && !hash) {
+      // Already on root, simple switch
+      console.log(`[NetworkProvider] 🌐 Switching network to ${newNetwork} from root`)
+      window.location.replace(`/?network=${newNetwork}`)
+    } else {
+      // Build redirect payload to preserve current route
+      const currentPath = pathname + cleanSearch + hash
+      const encodedRedirect = encodeURIComponent(currentPath)
+      console.log(`[NetworkProvider] 🌐 Switching network to ${newNetwork}, redirect to ${currentPath}`)
+      window.location.replace(`/?network=${newNetwork}&redirect=${encodedRedirect}`)
+    }
+  }
+
   const requestNetworkSwitch = (newNetwork, skipConfirmation = false) => {
     if (newNetwork === network) return
 
@@ -65,9 +89,8 @@ export function NetworkProvider({ children }) {
     } else {
       // Either testnet switch (safe) or confirmation skipped (programmatic)
       setNetwork(newNetwork)
-      // Navigate to root with network param to avoid 404 on transient Vercel routes
-      // ConfigLoader will prioritize the URL param over localStorage
-      window.location.replace(`/?network=${newNetwork}`)
+      // Use context-preserving navigation
+      navigateToNetwork(newNetwork)
     }
   }
 
@@ -76,9 +99,8 @@ export function NetworkProvider({ children }) {
       setNetwork(pendingNetwork)
       setIsConfirmDialogOpen(false)
       setPendingNetwork(null)
-      // Navigate to root with network param to avoid 404 on transient Vercel routes
-      // ConfigLoader will prioritize the URL param over localStorage
-      window.location.replace(`/?network=${pendingNetwork}`)
+      // Use context-preserving navigation
+      navigateToNetwork(pendingNetwork)
     }
   }
 

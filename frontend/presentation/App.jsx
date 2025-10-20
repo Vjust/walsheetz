@@ -7,6 +7,7 @@ import { ErrorBoundary } from './components/ErrorBoundary.jsx'
 import { WalrusStatus } from './components/WalrusStatus.jsx'
 import { NetworkSelector, NetworkConfirmDialog } from './components/NetworkSelector.jsx'
 import { NetworkMismatchWarning } from './components/NetworkMismatchWarning.jsx'
+import { NetworkRedirectHandler } from './components/NetworkRedirectHandler.jsx'
 import RateLimiterStatus from '../components/RateLimiterStatus.jsx'
 import { TestModeBanner } from './components/TestModeBanner.jsx'
 import { SaveStatusBanner } from './components/SaveStatusBanner.jsx'
@@ -176,6 +177,7 @@ function App() {
       <ErrorBoundary>
         <NetworkProvider>
           <Router>
+            <NetworkRedirectHandler />
             <WalletProviders>
               <ErrorBoundary>
                 <SpreadsheetProvider>
