@@ -46,6 +46,22 @@
       "destination": "/app-config.json"
     },
     {
+      "source": "/api/walrus-publisher-mainnet/:path*",
+      "destination": "/api/walrus-publisher-mainnet"
+    },
+    {
+      "source": "/api/walrus-aggregator-mainnet/:path*",
+      "destination": "/api/walrus-aggregator-mainnet"
+    },
+    {
+      "source": "/api/walrus-publisher-testnet/:path*",
+      "destination": "/api/walrus-publisher-testnet"
+    },
+    {
+      "source": "/api/walrus-aggregator-testnet/:path*",
+      "destination": "/api/walrus-aggregator-testnet"
+    },
+    {
       "source": "/:path((?!api/).*)",
       "destination": "/index.html"
     }
