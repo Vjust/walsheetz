@@ -1,59 +1,14 @@
 {
   "buildCommand": "bun run build",
   "outputDirectory": "dist",
-  "cleanUrls": true,
-  "trailingSlash": false,
   "routes": [
     { "src": "/api/walrus-publisher-mainnet(.*)", "dest": "/api/walrus-publisher-mainnet" },
     { "src": "/api/walrus-aggregator-mainnet(.*)", "dest": "/api/walrus-aggregator-mainnet" },
     { "src": "/api/walrus-publisher-testnet(.*)", "dest": "/api/walrus-publisher-testnet" },
-    { "src": "/api/walrus-aggregator-testnet(.*)", "dest": "/api/walrus-aggregator-testnet" }
-  ],
-  "headers": [
-    {
-      "source": "/app-config.json",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "max-age=60, must-revalidate"
-        }
-      ]
-    },
-    {
-      "source": "/assets/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "SAMEORIGIN"
-        },
-        {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
-        }
-      ]
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/app-config.json",
-      "destination": "/app-config.json"
-    },
-    {
-      "source": "/((?!api).*)",
-      "destination": "/index.html"
-    }
+    { "src": "/api/walrus-aggregator-testnet(.*)", "dest": "/api/walrus-aggregator-testnet" },
+    { "src": "/app-config.json", "headers": { "Cache-Control": "max-age=60, must-revalidate" }, "continue": true },
+    { "src": "/assets/(.*)", "headers": { "Cache-Control": "public, max-age=31536000, immutable" }, "continue": true },
+    { "src": "/(.*)", "headers": { "X-Content-Type-Options": "nosniff", "X-Frame-Options": "SAMEORIGIN", "X-XSS-Protection": "1; mode=block" }, "continue": true },
+    { "src": "/((?!api).*)", "dest": "/index.html" }
   ]
 }
