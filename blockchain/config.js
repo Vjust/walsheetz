@@ -71,19 +71,18 @@ export const config = {
   walrus: {
     testnet: {
       // Primary endpoints - use Vercel Edge proxies to ensure proper CORS headers
-      // Proxies route to actual Walrus endpoints based on X-Walrus-Network header
       // Note: Base URLs are just the host. Code appends /v1/blobs or /v1/api as needed
-      publisherUrl: '/api/walrus-publisher',
-      aggregatorUrl: '/api/walrus-aggregator',
-      blobUrl: 'https://aggregator.walrus-testnet.walrus.space/v1/blobs',
+      publisherUrl: '/api/walrus-publisher-testnet',
+      aggregatorUrl: '/api/walrus-aggregator-testnet',
+      blobUrl: '/api/walrus-aggregator-testnet/v1/blobs',
 
       // Multiple endpoints for redundancy (arrays) - all use proxies
       publishers: [
-        '/api/walrus-publisher',
+        '/api/walrus-publisher-testnet',
         // Add more publisher endpoints as they become available
       ],
       aggregators: [
-        '/api/walrus-aggregator',
+        '/api/walrus-aggregator-testnet',
         // Add more aggregator endpoints as they become available
       ],
       
@@ -122,20 +121,20 @@ export const config = {
     },
     mainnet: {
       // Primary endpoints - use Vercel Edge proxies to fix CORS issues
-      // Proxies route to Staketab community endpoints via X-Walrus-Network header
-      // TODO: Update proxy mapping when official Mysten/Walrus mainnet endpoints become available
+      // Proxies route to Staketab community endpoints for mainnet
+      // TODO: Update proxy targets when official Mysten/Walrus mainnet endpoints become available
       // Note: Base URLs are just the host. Code appends /v1/blobs or /v1/api as needed
-      publisherUrl: '/api/walrus-publisher',
-      aggregatorUrl: '/api/walrus-aggregator',
-      blobUrl: '/api/walrus-aggregator/v1/blobs',
+      publisherUrl: '/api/walrus-publisher-mainnet',
+      aggregatorUrl: '/api/walrus-aggregator-mainnet',
+      blobUrl: '/api/walrus-aggregator-mainnet/v1/blobs',
 
       // Multiple endpoints for redundancy - all use proxies
       publishers: [
-        '/api/walrus-publisher',
+        '/api/walrus-publisher-mainnet',
         // Add more publisher endpoints as they become available
       ],
       aggregators: [
-        '/api/walrus-aggregator',
+        '/api/walrus-aggregator-mainnet',
         // Add more aggregator endpoints as they become available
       ],
       

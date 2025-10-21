@@ -119,35 +119,6 @@ class BrowserWalrusService {
   }
 
   /**
-   * Get current network name for header injection
-   * @returns {string} Network name (e.g., 'testnet', 'mainnet')
-   * @private
-   */
-  _getCurrentNetwork() {
-    try {
-      const config = this.configLoader.getConfigSync();
-      return config.currentNetwork || 'testnet';
-    } catch (error) {
-      console.warn('[BrowserWalrusService] Failed to get current network, defaulting to testnet:', error);
-      return 'testnet';
-    }
-  }
-
-  /**
-   * Create fetch headers with network routing for Walrus proxy
-   * @param {Object} additionalHeaders - Additional headers to include
-   * @returns {Object} Headers object with X-Walrus-Network
-   * @private
-   */
-  _createWalrusHeaders(additionalHeaders = {}) {
-    const network = this._getCurrentNetwork();
-    return {
-      'X-Walrus-Network': network,
-      ...additionalHeaders
-    };
-  }
-
-  /**
    * Update endpoints when network changes (e.g., testnet to mainnet)
    * @private
    */
@@ -266,7 +237,7 @@ class BrowserWalrusService {
       const publisherBase = config.getWalrusServiceBase('publisher');
       const publisherResponse = await fetch(`${publisherBase}/v1/api`, {
         method: 'GET',
-        headers: this._createWalrusHeaders({ 'Accept': 'application/json' })
+        headers: { 'Accept': 'application/json' }
       });
       
       const testDuration = Date.now() - startTime;
@@ -711,9 +682,9 @@ class BrowserWalrusService {
             const resp = await fetch(requestUrl, {
               method: 'PUT',
               body: blob,
-              headers: this._createWalrusHeaders({
+              headers: {
                 'Content-Type': 'application/octet-stream',
-              })
+              }
             });
             // Handle rate limit responses
             this.limiters.walrusPub.onHttpResponse(resp);
@@ -723,9 +694,9 @@ class BrowserWalrusService {
           response = await fetch(requestUrl, {
             method: 'PUT',
             body: blob,
-            headers: this._createWalrusHeaders({
+            headers: {
               'Content-Type': 'application/octet-stream',
-            })
+            }
           });
         }
         
@@ -1277,7 +1248,6 @@ class BrowserWalrusService {
           headResponse = await this.limiters.walrusAgg.schedule(key, async () => {
             const resp = await fetch(`${aggregatorBase}/v1/blobs/${blobId}`, {
               method: 'HEAD',
-              headers: this._createWalrusHeaders(),
               signal: AbortSignal.timeout(5000)
             });
             this.limiters.walrusAgg.onHttpResponse(resp);
@@ -1286,7 +1256,6 @@ class BrowserWalrusService {
         } else {
           headResponse = await fetch(`${aggregatorBase}/v1/blobs/${blobId}`, {
             method: 'HEAD',
-            headers: this._createWalrusHeaders(),
             signal: AbortSignal.timeout(5000)
           });
         }
@@ -1328,9 +1297,9 @@ class BrowserWalrusService {
         response = await this.limiters.walrusAgg.schedule(key, async () => {
           const resp = await fetch(`${aggregatorBase}/v1/blobs/${blobId}`, {
             method: 'GET',
-            headers: this._createWalrusHeaders({
+            headers: {
               'Accept': 'application/octet-stream',
-            })
+            }
           });
           this.limiters.walrusAgg.onHttpResponse(resp);
           return resp;
@@ -1338,9 +1307,9 @@ class BrowserWalrusService {
       } else {
         response = await fetch(`${aggregatorBase}/v1/blobs/${blobId}`, {
           method: 'GET',
-          headers: this._createWalrusHeaders({
+          headers: {
             'Accept': 'application/octet-stream',
-          })
+          }
         });
       }
       
@@ -1731,8 +1700,7 @@ class BrowserWalrusService {
     try {
       // Use HEAD request to check if blob exists without downloading
       const response = await fetch(`${this.aggregatorUrl}/v1/blobs/${blobId}`, {
-        method: 'HEAD',
-        headers: this._createWalrusHeaders()
+        method: 'HEAD'
       });
       
       const exists = response.ok;
@@ -1788,9 +1756,9 @@ class BrowserWalrusService {
       // Note: This is a placeholder - actual PoA certificate API may differ
       const response = await fetch(`${this.aggregatorUrl}/v1/blobs/${blobId}/certificate`, {
         method: 'GET',
-        headers: this._createWalrusHeaders({
+        headers: {
           'Accept': 'application/json'
-        })
+        }
       });
 
       if (!response.ok) {
@@ -1921,9 +1889,9 @@ class BrowserWalrusService {
 
       const response = await fetch(url, {
         method: 'PUT',
-        headers: this._createWalrusHeaders({
+        headers: {
           'Content-Type': 'application/json'
-        }),
+        },
         body: JSON.stringify({
           epochs: additionalEpochs
         })
@@ -2051,9 +2019,9 @@ class BrowserWalrusService {
     try {
       const response = await fetch(`${this.aggregatorUrl}/v1/blobs/${blobId}`, {
         method: 'GET',
-        headers: this._createWalrusHeaders({
+        headers: {
           'Range': `bytes=${offset}-${offset + length - 1}`
-        })
+        }
       });
 
       if (!response.ok) {
@@ -2303,7 +2271,6 @@ class BrowserWalrusService {
     try {
       const response = await fetch(`${this.publisherUrl}/v1/api`, {
         method: 'GET',
-        headers: this._createWalrusHeaders(),
         signal: AbortSignal.timeout(5000) // 5 second timeout
       });
       return response.ok;
@@ -2614,7 +2581,7 @@ class BrowserWalrusService {
 
       const response = await fetch(`${publisherBase}/v1/api`, {
         method: 'GET',
-        headers: this._createWalrusHeaders({ 'Accept': 'application/json' }),
+        headers: { 'Accept': 'application/json' },
         signal: AbortSignal.timeout(10000) // 10 second timeout
       });
 
@@ -2699,7 +2666,6 @@ class BrowserWalrusService {
 
       const response = await fetch(`${aggregatorBase}/v1/api`, {
         method: 'GET',
-        headers: this._createWalrusHeaders(),
         signal: AbortSignal.timeout(10000) // 10 second timeout
       });
 
@@ -3478,9 +3444,9 @@ class BrowserWalrusService {
       const response = await fetch(url, {
         method: 'PUT',
         body: blob,
-        headers: this._createWalrusHeaders({
+        headers: {
           'Content-Type': 'application/octet-stream'
-        }),
+        },
         signal: controller.signal
       });
       
@@ -3691,7 +3657,6 @@ class BrowserWalrusService {
         try {
           const headResponse = await fetch(`${this.aggregatorUrl}/v1/blobs/${blobIds[0]}`, {
             method: 'HEAD',
-            headers: this._createWalrusHeaders(),
             signal: AbortSignal.timeout(5000)
           });
           
@@ -3718,7 +3683,6 @@ class BrowserWalrusService {
           // HEAD precheck with timeout
           const headResponse = await fetch(`${aggregatorUrl}/v1/blobs/${blobId}`, {
             method: 'HEAD',
-            headers: this._createWalrusHeaders(),
             signal: AbortSignal.timeout(5000)
           });
           
