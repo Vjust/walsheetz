@@ -73,10 +73,43 @@ class ConfigLoader {
       if (response.ok) {
         console.log('[ConfigLoader] ✅ Config fetched successfully:', { url: response.url, status: response.status });
 
-        const config = await response.json();
+        // Enhanced diagnostics for parse/validation failures
+        const contentType = response.headers.get('content-type');
+        console.log('[ConfigLoader] 📄 Response Content-Type:', contentType);
+
+        let responseText;
+        try {
+          responseText = await response.text();
+          console.log('[ConfigLoader] 📏 Response body length:', responseText.length, 'bytes');
+        } catch (textError) {
+          console.error('[ConfigLoader] ❌ Failed to read response body:', textError);
+          throw new Error(`Failed to read response: ${textError.message}`);
+        }
+
+        // Try to parse JSON
+        let config;
+        try {
+          config = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('[ConfigLoader] ❌ JSON parse error:', {
+            error: parseError.message,
+            position: parseError.message.match(/position (\d+)/)?.[1],
+            preview: responseText.substring(0, 200),
+            contentType
+          });
+          throw new Error(`JSON parse failed: ${parseError.message}`);
+        }
 
         // Validate config structure
-        this._validateConfig(config);
+        try {
+          this._validateConfig(config);
+        } catch (validationError) {
+          console.error('[ConfigLoader] ❌ Config validation error:', {
+            error: validationError.message,
+            configKeys: Object.keys(config)
+          });
+          throw validationError;
+        }
 
         // Detect current network from environment or default to testnet
         const currentNetwork = this._detectCurrentNetwork(config);
@@ -128,8 +161,21 @@ class ConfigLoader {
       console.error('❌ [ConfigLoader] Config loading error:', {
         errorMessage: errorMsg,
         errorType: error?.constructor?.name,
-        timestamp: new Date().toISOString()
+        errorStack: error?.stack?.split('\n').slice(0, 3).join('\n'),
+        timestamp: new Date().toISOString(),
+        configUrl: configUrl || '/app-config.json'
       });
+
+      // Log actionable suggestions based on error type
+      if (errorMsg.includes('JSON parse')) {
+        console.warn('[ConfigLoader] 💡 Suggestion: Check if app-config.json contains valid JSON. May be serving HTML error page.');
+      } else if (errorMsg.includes('validation')) {
+        console.warn('[ConfigLoader] 💡 Suggestion: Config structure mismatch. Check required fields: version, networks, features, ui, metadata');
+      } else if (errorMsg.includes('404') || errorMsg.includes('not found')) {
+        console.warn('[ConfigLoader] 💡 Suggestion: Config file not deployed or incorrect path. Using fallback config.');
+      } else if (errorMsg.includes('Failed to fetch')) {
+        console.warn('[ConfigLoader] 💡 Suggestion: Network error or CORS issue. Using fallback config.');
+      }
 
       // Return fallback config if main config fails
       const fallbackConfig = this._getFallbackConfig();
@@ -442,8 +488,9 @@ class ConfigLoader {
           packageId: '0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7',
           registryObjectId: '0x9a6b94f79762fa608c5f0938d092744a8e5b69852f860eb17afa4ab11e24fe25',
           walrus: {
-            aggregatorUrl: 'https://aggregator.walrus-testnet.walrus.space',
-            publisherUrl: 'https://publisher.walrus-testnet.walrus.space',
+            // Walrus requests routed through Vercel Edge proxies to fix CORS issues
+            aggregatorUrl: '/api/walrus-aggregator-testnet',
+            publisherUrl: '/api/walrus-publisher-testnet',
             maxRetries: 3,
             retryDelay: 1000,
             // Epochs feature config
@@ -458,10 +505,10 @@ class ConfigLoader {
           packageId: '0x991454976a4ef8535ed3572bb1c500dcd565855d49a51f1fadc7f70a316c9631',
           registryObjectId: '0x66f68bfb639dbc7f24519bcdbbfdb376057d87c6d508ea7a8d67746a11721ca5',
           walrus: {
-            // TODO: Replace with official Mysten/Walrus endpoints once available
-            // Using community-provided Staketab endpoints (https://staketab.org)
-            aggregatorUrl: 'https://wal-aggregator-mainnet.staketab.org',
-            publisherUrl: 'https://walrus-mainnet-publisher-1.staketab.org',
+            // Walrus requests routed through Vercel Edge proxies to fix CORS issues
+            // Proxies forward to community endpoints (Staketab)
+            aggregatorUrl: '/api/walrus-aggregator-mainnet',
+            publisherUrl: '/api/walrus-publisher-mainnet',
             maxRetries: 3,
             retryDelay: 1000
           }
