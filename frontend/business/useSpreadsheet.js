@@ -852,36 +852,29 @@ export function useSpreadsheet() {
         const walrusHealth = await blockchainRef.current.checkWalrusHealth?.();
         if (walrusHealth && !walrusHealth.ok) {
           const errorMsg = walrusHealth.error || 'Walrus storage unavailable';
-          logger.error(LogComponent.BUSINESS_LOGIC, 'walrus_health_failed', 'Walrus health check failed before first save', {
+
+          // Log degraded mode but continue with single attempt instead of aborting
+          logger.warn(LogComponent.BUSINESS_LOGIC, 'walrus_degraded_mode',
+            'Walrus health check failed - attempting save in degraded mode', {
             health: walrusHealth,
             publisherAvailable: walrusHealth.publisherAvailable,
-            aggregatorAvailable: walrusHealth.aggregatorAvailable
+            aggregatorAvailable: walrusHealth.aggregatorAvailable,
+            willRetry: false
           });
 
-          setSaveStatus('error');
+          // Show warning banner instead of error - let save attempt continue
           setLoadingState({
             isLoading: true,
-            message: 'Storage Unavailable',
-            details: errorMsg,
-            type: 'error',
-            error: errorMsg,
-            errorType: 'walrus_unavailable'
+            message: 'Storage Health Warning',
+            details: 'Decentralized storage may be temporarily unavailable. Attempting save...',
+            type: 'warning'
           });
 
-          setTimeout(() => {
-            setLoadingState({ isLoading: false });
-            setSaveStatus('ready');
-          }, 8000);
-
-          return {
-            success: false,
-            error: 'Walrus storage unavailable',
-            details: errorMsg,
-            technical: walrusHealth
-          };
+          // Continue to createNewSpreadsheetOptimized - let it fail gracefully if Walrus is truly unavailable
+          // Don't return early - fall through to the save attempt below
         }
 
-        logger.info(LogComponent.BUSINESS_LOGIC, 'walrus_health_ok', 'Walrus health check passed, proceeding with first save');
+        logger.info(LogComponent.BUSINESS_LOGIC, 'walrus_health_check_complete', 'Walrus health check complete, proceeding with first save');
 
         // Get spreadsheet title first
         const spreadsheetTitle = title || storageRef.current.getSpreadsheetTitle() || 'Untitled';

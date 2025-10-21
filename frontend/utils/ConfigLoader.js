@@ -458,8 +458,10 @@ class ConfigLoader {
           packageId: '0x991454976a4ef8535ed3572bb1c500dcd565855d49a51f1fadc7f70a316c9631',
           registryObjectId: '0x66f68bfb639dbc7f24519bcdbbfdb376057d87c6d508ea7a8d67746a11721ca5',
           walrus: {
-            aggregatorUrl: 'https://aggregator.walrus-mainnet.walrus.space',
-            publisherUrl: 'https://publisher.walrus-mainnet.walrus.space',
+            // TODO: Replace with official Mysten/Walrus endpoints once available
+            // Using community-provided Staketab endpoints (https://staketab.org)
+            aggregatorUrl: 'https://wal-aggregator-mainnet.staketab.org',
+            publisherUrl: 'https://walrus-mainnet-publisher-1.staketab.org',
             maxRetries: 3,
             retryDelay: 1000
           }

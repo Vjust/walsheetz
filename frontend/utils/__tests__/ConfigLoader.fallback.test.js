@@ -207,7 +207,7 @@ describe('ConfigLoader Fallback Logic', () => {
     expect(global.localStorage.removeItem).toHaveBeenCalled()
   })
 
-  test('fallback config should use walrus.space endpoints, not staketab.org', async () => {
+  test('fallback config should use valid Walrus endpoints', async () => {
     fetchMock.mockResolvedValueOnce({
       ok: false,
       status: 404,
@@ -217,16 +217,17 @@ describe('ConfigLoader Fallback Logic', () => {
 
     const config = await configLoader._loadConfig()
 
-    // Verify testnet uses walrus.space
+    // Verify testnet uses walrus.space official endpoints
     expect(config.networks.testnet.walrus.publisherUrl).toBe('https://publisher.walrus-testnet.walrus.space')
     expect(config.networks.testnet.walrus.aggregatorUrl).toBe('https://aggregator.walrus-testnet.walrus.space')
     expect(config.networks.testnet.walrus.publisherUrl).not.toContain('staketab')
     expect(config.networks.testnet.walrus.aggregatorUrl).not.toContain('staketab')
 
-    // Verify mainnet uses walrus.space
-    expect(config.networks.mainnet.walrus.publisherUrl).toBe('https://publisher.walrus-mainnet.walrus.space')
-    expect(config.networks.mainnet.walrus.aggregatorUrl).toBe('https://aggregator.walrus-mainnet.walrus.space')
-    expect(config.networks.mainnet.walrus.publisherUrl).not.toContain('staketab')
-    expect(config.networks.mainnet.walrus.aggregatorUrl).not.toContain('staketab')
+    // Verify mainnet uses Staketab community endpoints (until official .wal.app endpoints are confirmed)
+    // TODO: Update to official endpoints once available from Mysten/Walrus
+    expect(config.networks.mainnet.walrus.publisherUrl).toBe('https://walrus-mainnet-publisher-1.staketab.org')
+    expect(config.networks.mainnet.walrus.aggregatorUrl).toBe('https://wal-aggregator-mainnet.staketab.org')
+    expect(config.networks.mainnet.walrus.publisherUrl).toContain('staketab')
+    expect(config.networks.mainnet.walrus.aggregatorUrl).toContain('staketab')
   })
 })

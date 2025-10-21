@@ -2495,12 +2495,24 @@ class BrowserWalrusService {
       const duration = Date.now() - startTime;
       const errorMessage = typeof error === 'string' ? error : error.message || '';
 
-      // Detect CORS-specific failures
-      const isCorsBlocked = errorMessage.includes('CORS') ||
-                           errorMessage.includes('Failed to fetch') ||
-                           error.name === 'TypeError';
+      // Detect DNS resolution failures (ERR_NAME_NOT_RESOLVED, ENOTFOUND)
+      const isDnsError = errorMessage.includes('ERR_NAME_NOT_RESOLVED') ||
+                        errorMessage.includes('getaddrinfo ENOTFOUND') ||
+                        errorMessage.includes('Failed to fetch') && error.name === 'TypeError';
 
-      if (isCorsBlocked) {
+      // Detect CORS-specific failures (but not DNS errors)
+      const isCorsBlocked = !isDnsError && (
+        errorMessage.includes('CORS') ||
+        error.name === 'TypeError'
+      );
+
+      if (isDnsError) {
+        const config = await this.configLoader.getConfig();
+        const publisherBase = config.getWalrusServiceBase('publisher');
+        console.error(`[BrowserWalrusService:${checkId}] ⚠️  Publisher DNS resolution failed`);
+        console.error(`[BrowserWalrusService:${checkId}] Endpoint: ${publisherBase}`);
+        console.error(`[BrowserWalrusService:${checkId}] Please verify mainnet Walrus endpoints in app-config.json`);
+      } else if (isCorsBlocked) {
         console.warn(`[BrowserWalrusService:${checkId}] ⚠️ Publisher CORS blocked - endpoint may have header issues:`, {
           error: errorMessage,
           duration
@@ -2515,7 +2527,7 @@ class BrowserWalrusService {
 
       return {
         available: false,
-        error: errorMessage,
+        error: isDnsError ? `DNS resolution failed: endpoint not found` : errorMessage,
         corsBlocked: isCorsBlocked,
         duration
       };
@@ -2557,12 +2569,24 @@ class BrowserWalrusService {
       const duration = Date.now() - startTime;
       const errorMessage = typeof error === 'string' ? error : error.message || '';
 
-      // Detect CORS-specific failures
-      const isCorsBlocked = errorMessage.includes('CORS') ||
-                           errorMessage.includes('Failed to fetch') ||
-                           error.name === 'TypeError';
+      // Detect DNS resolution failures (ERR_NAME_NOT_RESOLVED, ENOTFOUND)
+      const isDnsError = errorMessage.includes('ERR_NAME_NOT_RESOLVED') ||
+                        errorMessage.includes('getaddrinfo ENOTFOUND') ||
+                        errorMessage.includes('Failed to fetch') && error.name === 'TypeError';
 
-      if (isCorsBlocked) {
+      // Detect CORS-specific failures (but not DNS errors)
+      const isCorsBlocked = !isDnsError && (
+        errorMessage.includes('CORS') ||
+        error.name === 'TypeError'
+      );
+
+      if (isDnsError) {
+        const config = await this.configLoader.getConfig();
+        const aggregatorBase = config.getWalrusServiceBase('aggregator');
+        console.error(`[BrowserWalrusService:${checkId}] ⚠️  Aggregator DNS resolution failed`);
+        console.error(`[BrowserWalrusService:${checkId}] Endpoint: ${aggregatorBase}`);
+        console.error(`[BrowserWalrusService:${checkId}] Please verify mainnet Walrus endpoints in app-config.json`);
+      } else if (isCorsBlocked) {
         console.warn(`[BrowserWalrusService:${checkId}] ⚠️ Aggregator CORS blocked - endpoint may have header issues:`, {
           error: errorMessage,
           duration
@@ -2577,7 +2601,7 @@ class BrowserWalrusService {
 
       return {
         available: false,
-        error: errorMessage,
+        error: isDnsError ? `DNS resolution failed: endpoint not found` : errorMessage,
         corsBlocked: isCorsBlocked,
         duration
       };

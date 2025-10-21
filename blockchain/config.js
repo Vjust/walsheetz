@@ -126,18 +126,20 @@ export const config = {
     },
     mainnet: {
       // Primary endpoints (base URLs only, code appends /v1/blobs or /v1/api as needed)
-      // Using walrus.space official endpoints (have clean CORS headers)
-      publisherUrl: 'https://publisher.walrus-mainnet.walrus.space',
-      aggregatorUrl: 'https://aggregator.walrus-mainnet.walrus.space',
-      blobUrl: 'https://aggregator.walrus-mainnet.walrus.space/v1/blobs',
+      // TODO: Replace with official Mysten/Walrus endpoints once available
+      // Current endpoints are community-provided by Staketab (https://staketab.org)
+      // NOTE: publisher.walrus-mainnet.walrus.space currently fails DNS resolution
+      publisherUrl: 'https://walrus-mainnet-publisher-1.staketab.org',
+      aggregatorUrl: 'https://wal-aggregator-mainnet.staketab.org',
+      blobUrl: 'https://wal-aggregator-mainnet.staketab.org/v1/blobs',
 
       // Multiple endpoints for redundancy
       publishers: [
-        'https://publisher.walrus-mainnet.walrus.space',
+        'https://walrus-mainnet-publisher-1.staketab.org',
         // Add more publisher endpoints as they become available
       ],
       aggregators: [
-        'https://aggregator.walrus-mainnet.walrus.space',
+        'https://wal-aggregator-mainnet.staketab.org',
         // Add more aggregator endpoints as they become available
       ],
       
