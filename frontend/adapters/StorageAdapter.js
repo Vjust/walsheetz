@@ -50,6 +50,24 @@ export class StorageAdapter extends IStorageService {
         dataSize: JSON.stringify(saveData).length
       });
 
+      // SAFETY NET: Also persist to sessionStorage so data survives page reload
+      // This is a backup in case clearAllData() is called before blockchain save
+      try {
+        if (typeof sessionStorage !== 'undefined') {
+          const sessionBackupKey = 'walsheetz_session_backup';
+          const backupStart = Date.now();
+          sessionStorage.setItem(sessionBackupKey, JSON.stringify(saveData));
+          const backupDuration = Date.now() - backupStart;
+          console.log(`[StorageAdapter:${saveId}] 💾 Session backup saved`, {
+            duration: `${backupDuration}ms`,
+            backupSize: sessionStorage.getItem(sessionBackupKey).length
+          });
+        }
+      } catch (backupError) {
+        console.warn(`[StorageAdapter:${saveId}] ⚠️  Session storage backup failed (continuing anyway):`, backupError.message);
+        // Don't throw - backup is optional, don't fail the main save if session storage is full
+      }
+
       // Update history
       const historyStart = Date.now();
       await this.updateHistory(saveData);
@@ -88,7 +106,37 @@ export class StorageAdapter extends IStorageService {
       const fetchDuration = Date.now() - fetchStart;
 
       if (!data) {
-        console.log(`[StorageAdapter:${loadId}] 📭 No data in memory, returning default`, {
+        // RECOVERY: Check sessionStorage backup before returning default
+        // This restores data if RAM was cleared but sessionStorage backup survived
+        try {
+          if (typeof sessionStorage !== 'undefined') {
+            const sessionBackupKey = 'walsheetz_session_backup';
+            const backupData = sessionStorage.getItem(sessionBackupKey);
+            if (backupData) {
+              console.log(`[StorageAdapter:${loadId}] 🔄 RAM empty, restoring from session backup...`);
+              const restoreStart = Date.now();
+              const restoredData = JSON.parse(backupData);
+              const restoreDuration = Date.now() - restoreStart;
+
+              // Restore to RAM for subsequent loads
+              this._data = restoredData;
+
+              console.log(`[StorageAdapter:${loadId}] ✅ Data restored from session backup`, {
+                restoreDuration: `${restoreDuration}ms`,
+                dataSize: JSON.stringify(restoredData).length,
+                version: restoredData?.version,
+                savedAt: restoredData?.savedAt ? new Date(restoredData.savedAt).toISOString() : 'unknown'
+              });
+
+              return restoredData;
+            }
+          }
+        } catch (restoreError) {
+          console.warn(`[StorageAdapter:${loadId}] ⚠️  Session backup restore failed:`, restoreError.message);
+          // Fall through to default - backup restoration is best-effort
+        }
+
+        console.log(`[StorageAdapter:${loadId}] 📭 No data in memory or session, returning default`, {
           fetchDuration: `${fetchDuration}ms`,
           note: 'This is expected on first load or after refresh. Load from blockchain if available.'
         });

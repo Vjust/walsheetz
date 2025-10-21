@@ -74,7 +74,11 @@ class BrowserWalrusService {
     // Degraded mode tracking (CORS or transient failures without data loss)
     this.isDegraded = false;
     this.pendingSaves = []; // Queue saves when degraded instead of losing them
-    
+
+    // Consecutive failure threshold for data clearing (CRITICAL: prevents data loss on transient failures)
+    // Only clear data after N consecutive failures to avoid wiping on network hiccups
+    this.CONSECUTIVE_FAILURE_THRESHOLD = 3;
+
     // Auto health check interval (every 2 minutes) – disable in unit tests
     this.healthCheckInterval = null;
     if (!(typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test')) {
@@ -301,25 +305,39 @@ class BrowserWalrusService {
   async encodeSpreadsheetData(data, options = {}) {
     try {
       const config = getCurrentConfig();
-      const compressionThreshold = options.compressionThreshold || 
-                                   config.storage?.features?.compression?.threshold || 
+      const compressionThreshold = options.compressionThreshold ||
+                                   config.storage?.features?.compression?.threshold ||
                                    16384; // 16KB default
       const compressionEnabled = config.storage?.features?.compression?.enabled !== false;
-      
+
+      // FIX: Handle both nested and flat data structures
+      // collectSpreadsheetData returns: { data: { cells, metadata }, timestamp, version }
+      // But older code might pass flat structure: { cells, metadata, timestamp, version }
+      const flatData = data.data || data;  // Extract nested data if present
+      const cellsData = flatData.cells || {};  // Get cells from flat structure
+      const metadataData = flatData.metadata || {};  // Get metadata from flat structure
+
+      console.log('[BrowserWalrusService] Data structure check', {
+        hasNestedData: !!data.data,
+        hasFlatCells: !!data.cells,
+        cellsCount: Object.keys(cellsData).length,
+        title: metadataData.title || data.title || 'Untitled'
+      });
+
       // Create optimized data structure
       const optimizedData = {
         version: data.version || 1,
         timestamp: Date.now(),
         spreadsheetId: data.spreadsheetId,
         metadata: {
-          title: data.title || 'Untitled Spreadsheet',
-          createdAt: data.createdAt || Date.now(),
+          title: metadataData.title || data.title || 'Untitled Spreadsheet',
+          createdAt: metadataData.createdAt || data.createdAt || Date.now(),
           lastModified: Date.now(),
           format: 'walsheetz-v1',
-          chunk: this.buildWalrusChunkMetadata(data.metadata?.chunk, options)
+          chunk: this.buildWalrusChunkMetadata(metadataData.chunk || data.metadata?.chunk, options)
         },
         changes: data.changes || [],
-        cells: this.optimizeCellData(data.cells || {}),
+        cells: this.optimizeCellData(cellsData),
         sheets: data.sheets || []
       };
 
@@ -1384,12 +1402,24 @@ class BrowserWalrusService {
       try {
         parsedData = JSON.parse(blobText);
         const parseDuration = Date.now() - parseStartTime;
+        // ENHANCED DEBUG LOGGING: Verify cell data structure after retrieve (FIX VERIFICATION)
+        const cellsObj = parsedData?.cells || parsedData?.celldata || {};
+        const cellCount = typeof cellsObj === 'object' ? Object.keys(cellsObj).length : 0;
+
         console.log(`[BrowserWalrusService:${requestId}] ✅ JSON parsing successful`, {
           parseDuration: `${parseDuration}ms`,
           dataType: typeof parsedData,
           hasVersion: !!parsedData?.version,
+          hasCells: !!parsedData?.cells,
           hasCelldata: !!parsedData?.celldata,
-          celldataLength: parsedData?.celldata?.length || 0
+          cellCount: cellCount,  // FIX: Should be > 0 if data structure fix works
+          structure: Object.keys(parsedData || {}).slice(0, 5).join(', '),
+          metadata: {
+            title: parsedData?.metadata?.title,
+            format: parsedData?.metadata?.format,
+            timestamp: parsedData?.timestamp ? new Date(parsedData.timestamp).toISOString() : 'unknown'
+          },
+          dataSize: JSON.stringify(parsedData).length
         });
       } catch (parseError) {
         console.warn(`[BrowserWalrusService:${requestId}] ⚠️ JSON parsing failed, returning raw data`, {
@@ -2357,8 +2387,15 @@ class BrowserWalrusService {
         this.isDegraded = false; // Recovered from degraded mode
       } else {
         this.healthStatus.consecutiveFailures++;
-        // Only clear data for real failures, not CORS issues
-        this.clearAllData();
+
+        // CRITICAL FIX: Only clear data after persistent failures, not transient ones
+        // This prevents data loss from network hiccups, timeouts, temporary 500s
+        if (this.healthStatus.consecutiveFailures >= this.CONSECUTIVE_FAILURE_THRESHOLD) {
+          console.warn(`[BrowserWalrusService:${checkId}] ⚠️ Persistent health failures detected (${this.healthStatus.consecutiveFailures} consecutive), clearing stale data`);
+          this.clearAllData();
+        } else {
+          console.warn(`[BrowserWalrusService:${checkId}] ⚠️ Transient health failure (${this.healthStatus.consecutiveFailures}/${this.CONSECUTIVE_FAILURE_THRESHOLD}), preserving local data for recovery`);
+        }
       }
 
       const healthDuration = Date.now() - startTime;
