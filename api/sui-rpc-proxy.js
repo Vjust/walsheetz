@@ -48,14 +48,18 @@ export default async function handler(req) {
     // Forward X-Sui-Network header for tracing
     proxyHeaders.set('X-Sui-Network', network)
 
-    // Proxy the request to the target RPC endpoint
+    // Proxy the request to the target RPC endpoint with proper timeout using AbortController
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000)
+
     const response = await fetch(targetUrl, {
       method: req.method,
       body: bodyText || undefined,
       headers: proxyHeaders,
-      // Use reasonable timeout for edge functions
-      timeout: 30000
+      signal: controller.signal
     })
+
+    clearTimeout(timeoutId)
 
     // Read response body
     const responseBody = await response.text()
@@ -75,6 +79,11 @@ export default async function handler(req) {
       headers: responseHeaders
     })
   } catch (error) {
+    // Clear timeout on error to prevent memory leaks
+    if (typeof timeoutId !== 'undefined') {
+      clearTimeout(timeoutId)
+    }
+
     // Return error response with CORS headers
     const errorResponse = {
       jsonrpc: '2.0',

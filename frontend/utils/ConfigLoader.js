@@ -434,7 +434,6 @@ class ConfigLoader {
     const fallbackConfig = {
       version: '1.0.0-fallback',
       timestamp: new Date().toISOString(),
-      currentNetwork: 'testnet',
       isFallback: true, // Mark as fallback config
       networks: {
         testnet: {
@@ -489,6 +488,9 @@ class ConfigLoader {
         appVersion: '1.0.0-fallback'
       }
     };
+
+    // Detect current network from URL/localStorage/hostname instead of hardcoding testnet
+    fallbackConfig.currentNetwork = this._detectCurrentNetwork(fallbackConfig);
 
     // Add all runtime methods to fallback config
     this._addRuntimeMethods(fallbackConfig);

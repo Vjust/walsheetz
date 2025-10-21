@@ -21,7 +21,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const PROJECT_ROOT = resolve(__dirname, '..');
-const CONFIG_PATH = resolve(PROJECT_ROOT, 'app-config.json');
+const CONFIG_PATH = resolve(PROJECT_ROOT, 'public/app-config.json');
 const TYPES_DIR = resolve(PROJECT_ROOT, 'frontend/types');
 const ABI_JSON_PATH = resolve(TYPES_DIR, 'abi.json');
 const ABI_DTS_PATH = resolve(TYPES_DIR, 'abi.d.ts');

@@ -977,7 +977,14 @@ class BrowserSuiService {
         : { transaction, options: walletOptions };
 
       const result = await this.walletManager.signAndExecuteTransaction(payload);
-      
+
+      // Validate that we got a digest back from the wallet
+      if (!result || !result.digest) {
+        const errorMsg = result?.error || result?.message || 'No digest returned from wallet';
+        console.error('[BrowserSuiService] ❌ Transaction failed:', errorMsg);
+        throw new Error(`Transaction failed: ${errorMsg}`);
+      }
+
       console.log('[BrowserSuiService] ✅ Transaction executed successfully:', {
         digest: result.digest,
         hasObjectChanges: !!result.objectChanges,
