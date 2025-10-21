@@ -1,13 +1,19 @@
 /**
  * Vercel Edge Function - Walrus Publisher Proxy (Mainnet)
- * Proxies requests to Walrus mainnet publisher endpoint with proper CORS headers
+ * Catch-all routing to handle all subpaths like /v1/api, /v1/blobs, etc.
  */
 
 export const config = { runtime: 'edge' }
 
 const TARGET_BASE = 'https://walrus-mainnet-publisher-1.staketab.org'
 
-export default async function handler(req) {
+export default async function handler(req, ctx) {
+  const { params } = ctx
+  const pathSegments = params?.path ?? []
+  const upstreamPath = '/' + pathSegments.join('/')
+  const url = new URL(req.url)
+  const upstream = TARGET_BASE + upstreamPath + url.search
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, {
@@ -16,17 +22,13 @@ export default async function handler(req) {
     })
   }
 
-  const { pathname, search } = new URL(req.url)
-  const upstreamPath = pathname.replace('/api/walrus-publisher-mainnet', '')
-  const upstream = TARGET_BASE + upstreamPath + search
-
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 30000)
 
   try {
     // Read body for PUT/POST, skip for GET/HEAD
-    let body = undefined
-    if (req.method === 'PUT' || req.method === 'POST') {
+    let body
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
       body = await req.arrayBuffer()
     }
 
@@ -73,14 +75,14 @@ function stripDisallowedHeaders(headers) {
   const allowed = new Headers()
 
   for (const [key, value] of headers.entries()) {
-    const lowerKey = key.toLowerCase()
+    const lower = key.toLowerCase()
 
     // Skip problematic headers
     if (
-      lowerKey === 'host' ||
-      lowerKey === 'connection' ||
-      lowerKey === 'accept-encoding' ||
-      lowerKey.startsWith('access-control-')
+      lower === 'host' ||
+      lower === 'connection' ||
+      lower === 'accept-encoding' ||
+      lower.startsWith('access-control-')
     ) {
       continue
     }
