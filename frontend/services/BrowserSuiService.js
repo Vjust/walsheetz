@@ -1,7 +1,7 @@
 // Browser-compatible Sui service using real testnet integration
 import { configLoader } from '../utils/ConfigLoader.js';
 import { browserWalletManager } from './BrowserWalletManager.js';
-import { SuiClient } from '@mysten/sui/client';
+import { SuiClient, SuiHTTPTransport } from '@mysten/sui/client';
 import { Transaction } from '@mysten/sui/transactions';
 import {
   detectSaveVersionSignature,
@@ -57,11 +57,29 @@ class BrowserSuiService {
       this.config = await this.configLoader.getConfig();
       const networkConfig = this.config.getCurrentNetwork();
 
-      // Initialize SuiClient with ABSOLUTE URL (GraphQL client needs direct access, not proxy)
-      // The @mysten/sui v1.38.0 uses GraphQL internally, which doesn't work through the /sui-rpc proxy
-      this.client = new SuiClient({
-        url: networkConfig.rpcUrl
-      });
+      // Initialize SuiClient with RPC proxy to avoid CORS issues on mainnet
+      // The proxy at /api/sui-rpc-proxy sets Access-Control-Allow-Origin: * and routes based on X-Sui-Network header
+      // Use rpcProxy if available (from app-config.json), otherwise fall back to rpcUrl for direct access
+      const rpcUrl = networkConfig.rpcProxy || networkConfig.rpcUrl;
+      const isUsingProxy = !!networkConfig.rpcProxy;
+
+      // If using the proxy, set X-Sui-Network header to help proxy route to correct network
+      const clientOptions = isUsingProxy
+        ? {
+            transport: new SuiHTTPTransport({
+              url: rpcUrl,
+              rpc: {
+                headers: {
+                  'X-Sui-Network': this.config.currentNetwork
+                }
+              }
+            })
+          }
+        : {
+            url: rpcUrl
+          };
+
+      this.client = new SuiClient(clientOptions);
 
       logger.debug(LogComponent.BLOCKCHAIN_ADAPTER, 'config_loaded', 'Configuration loaded', {
         network: this.config.currentNetwork,
