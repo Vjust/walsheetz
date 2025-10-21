@@ -1,16 +1,16 @@
 /**
- * Vercel Edge Function - Walrus Publisher Proxy (Testnet)
- * Catch-all routing to handle all subpaths like /v1/api, /v1/blobs, etc.
+ * Vercel Edge Function - Walrus Aggregator Proxy (Testnet)
+ * Optional catch-all routing to handle base path and all subpaths
  */
 
 export const config = { runtime: 'edge' }
 
-const TARGET_BASE = 'https://publisher.walrus-testnet.walrus.space'
+const TARGET_BASE = 'https://aggregator.walrus-testnet.walrus.space'
 
 export default async function handler(req, ctx) {
   const { params } = ctx
   const pathSegments = params?.path ?? []
-  const upstreamPath = '/' + pathSegments.join('/')
+  const upstreamPath = pathSegments.length ? `/${pathSegments.join('/')}` : ''
   const url = new URL(req.url)
   const upstream = TARGET_BASE + upstreamPath + url.search
 
@@ -26,7 +26,7 @@ export default async function handler(req, ctx) {
   const timeoutId = setTimeout(() => controller.abort(), 30000)
 
   try {
-    // Read body for PUT/POST, skip for GET/HEAD
+    // Aggregator is primarily GET/HEAD, but handle POST/PUT just in case
     let body
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       body = await req.arrayBuffer()
@@ -67,7 +67,8 @@ function corsHeaders() {
   return {
     'Access-Control-Allow-Origin': 'https://walsheetz.vercel.app',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, HEAD, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Expose-Headers': 'Content-Type'
   }
 }
 
