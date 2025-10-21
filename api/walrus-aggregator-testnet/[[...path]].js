@@ -1,19 +1,17 @@
 /**
- * Vercel Edge Function - Walrus Publisher Proxy (Mainnet)
+ * Vercel Edge Function - Walrus Aggregator Proxy (Testnet)
  * Optional catch-all routing to handle base path and all subpaths
  */
 
 export const config = { runtime: 'edge' }
 
-const TARGET_BASE = 'https://walrus-mainnet-publisher-1.staketab.org'
+const TARGET_BASE = 'https://aggregator.walrus-testnet.walrus.space'
 
-export default async function handler(req) {
+export default async function handler(req, ctx) {
+  const { params } = ctx
+  const segments = params?.path ?? []
+  const upstreamPath = segments.length ? `/${segments.join('/')}` : ''
   const url = new URL(req.url)
-  // Extract subpath after /api/walrus-publisher-mainnet
-  const apiPath = '/api/walrus-publisher-mainnet'
-  const upstreamPath = url.pathname.startsWith(apiPath)
-    ? url.pathname.slice(apiPath.length)
-    : ''
   const upstream = TARGET_BASE + upstreamPath + url.search
 
   // Handle CORS preflight requests
@@ -28,7 +26,7 @@ export default async function handler(req) {
   const timeoutId = setTimeout(() => controller.abort(), 30000)
 
   try {
-    // Read body for PUT/POST, skip for GET/HEAD
+    // Aggregator is primarily GET/HEAD, but handle POST/PUT just in case
     let body
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       body = await req.arrayBuffer()
