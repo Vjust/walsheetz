@@ -1,15 +1,17 @@
 /**
- * @vitest-environment jsdom
+ * @vitest-environment node
  */
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest'
-import { ConfigLoader } from '../ConfigLoader.js'
+import { configLoader } from '../ConfigLoader.js'
 
 describe('ConfigLoader Fallback Logic', () => {
-  let configLoader
   let fetchMock
 
   beforeEach(() => {
-    configLoader = new ConfigLoader()
+    // Reset configLoader state between tests
+    configLoader.config = null
+    configLoader.isFallback = false
+    configLoader.fallbackAttemptCount = 0
     fetchMock = vi.fn()
     global.fetch = fetchMock
     global.window = {
@@ -203,5 +205,28 @@ describe('ConfigLoader Fallback Logic', () => {
 
     // Should call removeItem for matching keys
     expect(global.localStorage.removeItem).toHaveBeenCalled()
+  })
+
+  test('fallback config should use walrus.space endpoints, not staketab.org', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+      statusText: 'Not Found',
+      headers: new Map()
+    })
+
+    const config = await configLoader._loadConfig()
+
+    // Verify testnet uses walrus.space
+    expect(config.networks.testnet.walrus.publisherUrl).toBe('https://publisher.walrus-testnet.walrus.space')
+    expect(config.networks.testnet.walrus.aggregatorUrl).toBe('https://aggregator.walrus-testnet.walrus.space')
+    expect(config.networks.testnet.walrus.publisherUrl).not.toContain('staketab')
+    expect(config.networks.testnet.walrus.aggregatorUrl).not.toContain('staketab')
+
+    // Verify mainnet uses walrus.space
+    expect(config.networks.mainnet.walrus.publisherUrl).toBe('https://publisher.walrus-mainnet.walrus.space')
+    expect(config.networks.mainnet.walrus.aggregatorUrl).toBe('https://aggregator.walrus-mainnet.walrus.space')
+    expect(config.networks.mainnet.walrus.publisherUrl).not.toContain('staketab')
+    expect(config.networks.mainnet.walrus.aggregatorUrl).not.toContain('staketab')
   })
 })

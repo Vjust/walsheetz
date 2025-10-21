@@ -55,10 +55,12 @@
     "diagnose:save": "node scripts/diagnose-save-issues.js",
     "test:proxy": "node scripts/test-proxy.js",
     "ci:smoke": "npm run diagnose:save && npm run test:proxy",
-    "ci:validate": "npm run test:unit && npm run ci:smoke",
     "test:typescript": "node scripts/test-typescript.js",
     "validate:config": "bun scripts/validate-config-alignment.js",
-    "validate:walrus": "bun scripts/verify-walrus-endpoints.js testnet && bun scripts/verify-walrus-endpoints.js mainnet"
+    "validate:walrus": "bun scripts/verify-walrus-endpoints.js testnet && bun scripts/verify-walrus-endpoints.js mainnet",
+    "build:verify": "bun run build && bun scripts/verify-production-build.js",
+    "ci:build": "bun run build:verify",
+    "ci:validate": "bun run ci:build && bun run validate:config && bun run test:run"
   },
   "devDependencies": {
     "@playwright/test": "^1.47.0",

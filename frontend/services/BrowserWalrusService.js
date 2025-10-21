@@ -70,6 +70,10 @@ class BrowserWalrusService {
       consecutiveFailures: 0,
       lastSuccessfulOperation: null
     };
+
+    // Degraded mode tracking (CORS or transient failures without data loss)
+    this.isDegraded = false;
+    this.pendingSaves = []; // Queue saves when degraded instead of losing them
     
     // Auto health check interval (every 2 minutes) – disable in unit tests
     this.healthCheckInterval = null;
@@ -2311,13 +2315,33 @@ class BrowserWalrusService {
     try {
       // Check publisher health
       const publisherHealth = await this.checkPublisherHealth(checkId);
-      
+
       // Check aggregator health if requested
-      let aggregatorHealth = { available: true, error: null, duration: 0 };
+      let aggregatorHealth = { available: true, error: null, corsBlocked: false, duration: 0 };
       if (includeAggregator) {
         aggregatorHealth = await this.checkAggregatorHealth(checkId);
       }
-      
+
+      // CRITICAL: Detect CORS-specific failures and enter degraded mode
+      // In degraded mode, we preserve pending saves instead of clearing data
+      const hasCorsBlocked = publisherHealth.corsBlocked || aggregatorHealth.corsBlocked;
+
+      if (hasCorsBlocked) {
+        console.warn(`[BrowserWalrusService:${checkId}] ⚠️ CORS issues detected, operating in degraded mode`);
+        console.warn(`[BrowserWalrusService:${checkId}] Save queue preserved (${this.pendingSaves.length} pending saves) - will retry with config reload`);
+        this.isDegraded = true;
+        this.healthStatus.checkInProgress = false;
+
+        return {
+          ...this.healthStatus,
+          healthy: false,
+          degraded: true,
+          reason: 'cors_blocked',
+          corsBlockedPublisher: publisherHealth.corsBlocked,
+          corsBlockedAggregator: aggregatorHealth.corsBlocked
+        };
+      }
+
       // Update health status
       const wasHealthy = this.healthStatus.isHealthy;
       this.healthStatus.publisherAvailable = publisherHealth.available;
@@ -2326,16 +2350,19 @@ class BrowserWalrusService {
       this.healthStatus.lastCheck = Date.now();
       this.healthStatus.lastError = publisherHealth.error || aggregatorHealth.error;
       this.healthStatus.checkInProgress = false;
-      
+
       if (this.healthStatus.isHealthy) {
         this.healthStatus.consecutiveFailures = 0;
         this.isConnected = true;
+        this.isDegraded = false; // Recovered from degraded mode
       } else {
         this.healthStatus.consecutiveFailures++;
+        // Only clear data for real failures, not CORS issues
+        this.clearAllData();
       }
-      
+
       const healthDuration = Date.now() - startTime;
-      
+
       // Log results
       const healthResult = {
         checkId,
@@ -2348,7 +2375,7 @@ class BrowserWalrusService {
         consecutiveFailures: this.healthStatus.consecutiveFailures,
         statusChanged: wasHealthy !== this.healthStatus.isHealthy
       };
-      
+
       if (this.healthStatus.isHealthy) {
         console.log(`[BrowserWalrusService:${checkId}] ✅ Health check passed`, healthResult);
       } else {
@@ -2358,12 +2385,12 @@ class BrowserWalrusService {
           aggregatorError: aggregatorHealth.error
         });
       }
-      
+
       // Emit status change events for UI
       if (wasHealthy !== this.healthStatus.isHealthy) {
         this.emitHealthStatusChange(this.healthStatus.isHealthy, healthResult);
       }
-      
+
       return this.healthStatus;
       
     } catch (error) {
@@ -2410,23 +2437,36 @@ class BrowserWalrusService {
       return {
         available,
         error: available ? null : `HTTP ${response.status}: ${response.statusText}`,
+        corsBlocked: false,
         duration
       };
 
     } catch (error) {
       const duration = Date.now() - startTime;
-      // Reduce console noise for expected 404s during development
       const errorMessage = typeof error === 'string' ? error : error.message || '';
-      if (!errorMessage.includes('404')) {
+
+      // Detect CORS-specific failures
+      const isCorsBlocked = errorMessage.includes('CORS') ||
+                           errorMessage.includes('Failed to fetch') ||
+                           error.name === 'TypeError';
+
+      if (isCorsBlocked) {
+        console.warn(`[BrowserWalrusService:${checkId}] ⚠️ Publisher CORS blocked - endpoint may have header issues:`, {
+          error: errorMessage,
+          duration
+        });
+      } else if (!errorMessage.includes('404')) {
+        // Reduce console noise for expected 404s during development
         console.error(`[BrowserWalrusService:${checkId}] Publisher health check failed:`, {
-          error: typeof error === 'string' ? error : error.message || 'Unknown error',
+          error: errorMessage,
           duration
         });
       }
 
       return {
         available: false,
-        error: typeof error === 'string' ? error : error.message || 'Unknown error',
+        error: errorMessage,
+        corsBlocked: isCorsBlocked,
         duration
       };
     }
@@ -2459,23 +2499,36 @@ class BrowserWalrusService {
       return {
         available,
         error: available ? null : `HTTP ${response.status}: ${response.statusText}`,
+        corsBlocked: false,
         duration
       };
 
     } catch (error) {
       const duration = Date.now() - startTime;
-      // Reduce console noise for expected 404s during development
       const errorMessage = typeof error === 'string' ? error : error.message || '';
-      if (!errorMessage.includes('404')) {
+
+      // Detect CORS-specific failures
+      const isCorsBlocked = errorMessage.includes('CORS') ||
+                           errorMessage.includes('Failed to fetch') ||
+                           error.name === 'TypeError';
+
+      if (isCorsBlocked) {
+        console.warn(`[BrowserWalrusService:${checkId}] ⚠️ Aggregator CORS blocked - endpoint may have header issues:`, {
+          error: errorMessage,
+          duration
+        });
+      } else if (!errorMessage.includes('404')) {
+        // Reduce console noise for expected 404s during development
         console.error(`[BrowserWalrusService:${checkId}] Aggregator health check failed:`, {
-          error: typeof error === 'string' ? error : error.message || 'Unknown error',
+          error: errorMessage,
           duration
         });
       }
 
       return {
         available: false,
-        error: typeof error === 'string' ? error : error.message || 'Unknown error',
+        error: errorMessage,
+        corsBlocked: isCorsBlocked,
         duration
       };
     }
