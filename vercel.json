@@ -46,7 +46,7 @@
       "destination": "/app-config.json"
     },
     {
-      "source": "/((?!api).*)",
+      "source": "/:path((?!api/).*)",
       "destination": "/index.html"
     }
   ]
