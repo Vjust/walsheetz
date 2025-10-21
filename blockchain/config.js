@@ -70,26 +70,22 @@ export const config = {
   },
   walrus: {
     testnet: {
-      // Primary endpoints - use absolute if forced or not in dev runtime
+      // Primary endpoints - use Vercel Edge proxies to ensure proper CORS headers
+      // Proxies route to actual Walrus endpoints based on X-Walrus-Network header
       // Note: Base URLs are just the host. Code appends /v1/blobs or /v1/api as needed
-      // Using walrus.space official endpoints (have clean CORS headers)
-      publisherUrl: (isDevRuntime && !forceAbsoluteEndpoints) ? '/walrus-publisher' : 'https://publisher.walrus-testnet.walrus.space',
-      aggregatorUrl: (isDevRuntime && !forceAbsoluteEndpoints) ? '/walrus-aggregator' : 'https://aggregator.walrus-testnet.walrus.space',
+      publisherUrl: '/api/walrus-publisher',
+      aggregatorUrl: '/api/walrus-aggregator',
       blobUrl: 'https://aggregator.walrus-testnet.walrus.space/v1/blobs',
 
-      // Multiple endpoints for redundancy (arrays)
-      publishers: (isDevRuntime && !forceAbsoluteEndpoints) ?
-        ['/walrus-publisher'] :
-        [
-          'https://publisher.walrus-testnet.walrus.space',
-          // Add more publisher endpoints as they become available
-        ],
-      aggregators: (isDevRuntime && !forceAbsoluteEndpoints) ?
-        ['/walrus-aggregator'] :
-        [
-          'https://aggregator.walrus-testnet.walrus.space',
-          // Add more aggregator endpoints as they become available
-        ],
+      // Multiple endpoints for redundancy (arrays) - all use proxies
+      publishers: [
+        '/api/walrus-publisher',
+        // Add more publisher endpoints as they become available
+      ],
+      aggregators: [
+        '/api/walrus-aggregator',
+        // Add more aggregator endpoints as they become available
+      ],
       
       // Redundancy settings
       redundancy: {
@@ -125,21 +121,21 @@ export const config = {
       }
     },
     mainnet: {
-      // Primary endpoints (base URLs only, code appends /v1/blobs or /v1/api as needed)
-      // TODO: Replace with official Mysten/Walrus endpoints once available
-      // Current endpoints are community-provided by Staketab (https://staketab.org)
-      // NOTE: publisher.walrus-mainnet.walrus.space currently fails DNS resolution
-      publisherUrl: 'https://walrus-mainnet-publisher-1.staketab.org',
-      aggregatorUrl: 'https://wal-aggregator-mainnet.staketab.org',
-      blobUrl: 'https://wal-aggregator-mainnet.staketab.org/v1/blobs',
+      // Primary endpoints - use Vercel Edge proxies to fix CORS issues
+      // Proxies route to Staketab community endpoints via X-Walrus-Network header
+      // TODO: Update proxy mapping when official Mysten/Walrus mainnet endpoints become available
+      // Note: Base URLs are just the host. Code appends /v1/blobs or /v1/api as needed
+      publisherUrl: '/api/walrus-publisher',
+      aggregatorUrl: '/api/walrus-aggregator',
+      blobUrl: '/api/walrus-aggregator/v1/blobs',
 
-      // Multiple endpoints for redundancy
+      // Multiple endpoints for redundancy - all use proxies
       publishers: [
-        'https://walrus-mainnet-publisher-1.staketab.org',
+        '/api/walrus-publisher',
         // Add more publisher endpoints as they become available
       ],
       aggregators: [
-        'https://wal-aggregator-mainnet.staketab.org',
+        '/api/walrus-aggregator',
         // Add more aggregator endpoints as they become available
       ],
       

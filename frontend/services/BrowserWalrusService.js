@@ -119,6 +119,35 @@ class BrowserWalrusService {
   }
 
   /**
+   * Get current network name for header injection
+   * @returns {string} Network name (e.g., 'testnet', 'mainnet')
+   * @private
+   */
+  _getCurrentNetwork() {
+    try {
+      const config = this.configLoader.getConfigSync();
+      return config.currentNetwork || 'testnet';
+    } catch (error) {
+      console.warn('[BrowserWalrusService] Failed to get current network, defaulting to testnet:', error);
+      return 'testnet';
+    }
+  }
+
+  /**
+   * Create fetch headers with network routing for Walrus proxy
+   * @param {Object} additionalHeaders - Additional headers to include
+   * @returns {Object} Headers object with X-Walrus-Network
+   * @private
+   */
+  _createWalrusHeaders(additionalHeaders = {}) {
+    const network = this._getCurrentNetwork();
+    return {
+      'X-Walrus-Network': network,
+      ...additionalHeaders
+    };
+  }
+
+  /**
    * Update endpoints when network changes (e.g., testnet to mainnet)
    * @private
    */
@@ -237,7 +266,7 @@ class BrowserWalrusService {
       const publisherBase = config.getWalrusServiceBase('publisher');
       const publisherResponse = await fetch(`${publisherBase}/v1/api`, {
         method: 'GET',
-        headers: { 'Accept': 'application/json' }
+        headers: this._createWalrusHeaders({ 'Accept': 'application/json' })
       });
       
       const testDuration = Date.now() - startTime;
@@ -682,9 +711,9 @@ class BrowserWalrusService {
             const resp = await fetch(requestUrl, {
               method: 'PUT',
               body: blob,
-              headers: {
+              headers: this._createWalrusHeaders({
                 'Content-Type': 'application/octet-stream',
-              }
+              })
             });
             // Handle rate limit responses
             this.limiters.walrusPub.onHttpResponse(resp);
@@ -694,9 +723,9 @@ class BrowserWalrusService {
           response = await fetch(requestUrl, {
             method: 'PUT',
             body: blob,
-            headers: {
+            headers: this._createWalrusHeaders({
               'Content-Type': 'application/octet-stream',
-            }
+            })
           });
         }
         
@@ -1248,6 +1277,7 @@ class BrowserWalrusService {
           headResponse = await this.limiters.walrusAgg.schedule(key, async () => {
             const resp = await fetch(`${aggregatorBase}/v1/blobs/${blobId}`, {
               method: 'HEAD',
+              headers: this._createWalrusHeaders(),
               signal: AbortSignal.timeout(5000)
             });
             this.limiters.walrusAgg.onHttpResponse(resp);
@@ -1256,6 +1286,7 @@ class BrowserWalrusService {
         } else {
           headResponse = await fetch(`${aggregatorBase}/v1/blobs/${blobId}`, {
             method: 'HEAD',
+            headers: this._createWalrusHeaders(),
             signal: AbortSignal.timeout(5000)
           });
         }
@@ -1297,9 +1328,9 @@ class BrowserWalrusService {
         response = await this.limiters.walrusAgg.schedule(key, async () => {
           const resp = await fetch(`${aggregatorBase}/v1/blobs/${blobId}`, {
             method: 'GET',
-            headers: {
+            headers: this._createWalrusHeaders({
               'Accept': 'application/octet-stream',
-            }
+            })
           });
           this.limiters.walrusAgg.onHttpResponse(resp);
           return resp;
@@ -1307,9 +1338,9 @@ class BrowserWalrusService {
       } else {
         response = await fetch(`${aggregatorBase}/v1/blobs/${blobId}`, {
           method: 'GET',
-          headers: {
+          headers: this._createWalrusHeaders({
             'Accept': 'application/octet-stream',
-          }
+          })
         });
       }
       
@@ -1344,13 +1375,14 @@ class BrowserWalrusService {
             }
           }
 
-          // Emit blob missing event
+          // Emit blob missing event with recovery flag
           this.emitOperationEvent({
             type: 'blob_missing',
             message: `Blob not found: ${blobId}`,
             success: false,
             blobId,
-            requestId
+            requestId,
+            needsRecovery: true // Flag for auto-recovery
           });
 
           // Dispatch cache invalidation event
@@ -1359,12 +1391,16 @@ class BrowserWalrusService {
               detail: {
                 reason: 'walrus_blob_404',
                 blobId,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                needsRecovery: true
               }
             }));
           }
 
-          throw new Error(`Blob not found: ${blobId}`);
+          const error = new Error(`Blob not found: ${blobId}`);
+          error.needsRecovery = true;
+          error.blobId = blobId;
+          throw error;
         }
         // Don't read the response body here - clone it first if we need error text
         const errorText = response.statusText || 'Unknown error';
@@ -1589,6 +1625,105 @@ class BrowserWalrusService {
     }
   }
 
+  /**
+   * Auto-recover missing blob by re-uploading spreadsheet data
+   * Called when a blob ID exists in metadata but returns 404 from Walrus
+   * @param {string} spreadsheetId - Spreadsheet object ID on Sui
+   * @param {string} blobId - Missing blob ID that needs recovery
+   * @param {object} spreadsheetData - Current spreadsheet data to re-upload
+   * @returns {Promise<object>} Recovery result with new blob ID
+   */
+  async autoRecoverBlob(spreadsheetId, blobId, spreadsheetData) {
+    const recoveryId = `recovery_${Date.now()}`;
+    console.log(`[BrowserWalrusService:${recoveryId}] 🔄 Auto-recovering missing blob`, {
+      spreadsheetId,
+      oldBlobId: blobId,
+      timestamp: new Date().toISOString()
+    });
+
+    try {
+      // Emit recovery start event
+      this.emitOperationEvent({
+        type: 'blob_recovery_start',
+        message: `Starting auto-recovery for blob ${blobId}`,
+        blobId,
+        spreadsheetId,
+        recoveryId
+      });
+
+      // Re-upload the spreadsheet data to Walrus
+      console.log(`[BrowserWalrusService:${recoveryId}] Re-encoding and uploading spreadsheet data...`);
+      const uploadResult = await this.storeBlob(spreadsheetData, {
+        spreadsheetId,
+        description: `Auto-recovery for missing blob ${blobId}`,
+        epochs: 50 // Default epochs for recovery
+      });
+
+      if (!uploadResult.success) {
+        throw new Error(`Failed to re-upload blob: ${uploadResult.error}`);
+      }
+
+      const newBlobId = uploadResult.blobId;
+      console.log(`[BrowserWalrusService:${recoveryId}] ✅ Successfully re-uploaded blob`, {
+        oldBlobId: blobId,
+        newBlobId,
+        contentHash: uploadResult.contentHash
+      });
+
+      // Emit recovery success event
+      this.emitOperationEvent({
+        type: 'blob_recovery_success',
+        message: `Successfully recovered blob with new ID: ${newBlobId}`,
+        oldBlobId: blobId,
+        newBlobId,
+        spreadsheetId,
+        recoveryId,
+        success: true
+      });
+
+      // Notify UI to update blob reference
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('blob-recovered', {
+          detail: {
+            spreadsheetId,
+            oldBlobId: blobId,
+            newBlobId,
+            contentHash: uploadResult.contentHash,
+            timestamp: Date.now()
+          }
+        }));
+      }
+
+      return {
+        success: true,
+        oldBlobId: blobId,
+        newBlobId,
+        contentHash: uploadResult.contentHash,
+        needsSuiUpdate: true // Caller should update Sui metadata with new blob ID
+      };
+
+    } catch (error) {
+      console.error(`[BrowserWalrusService:${recoveryId}] ❌ Auto-recovery failed:`, error);
+
+      // Emit recovery failure event
+      this.emitOperationEvent({
+        type: 'blob_recovery_failure',
+        message: `Failed to recover blob: ${error.message}`,
+        blobId,
+        spreadsheetId,
+        recoveryId,
+        error: error.message,
+        success: false
+      });
+
+      return {
+        success: false,
+        error: error.message,
+        oldBlobId: blobId
+      };
+    }
+  }
+
   // Get blob info/status
   async getBlobInfo(blobId) {
     console.log(`[BrowserWalrusService] Getting blob info for ${blobId}...`);
@@ -1596,7 +1731,8 @@ class BrowserWalrusService {
     try {
       // Use HEAD request to check if blob exists without downloading
       const response = await fetch(`${this.aggregatorUrl}/v1/blobs/${blobId}`, {
-        method: 'HEAD'
+        method: 'HEAD',
+        headers: this._createWalrusHeaders()
       });
       
       const exists = response.ok;
@@ -1652,9 +1788,9 @@ class BrowserWalrusService {
       // Note: This is a placeholder - actual PoA certificate API may differ
       const response = await fetch(`${this.aggregatorUrl}/v1/blobs/${blobId}/certificate`, {
         method: 'GET',
-        headers: {
+        headers: this._createWalrusHeaders({
           'Accept': 'application/json'
-        }
+        })
       });
 
       if (!response.ok) {
@@ -1785,9 +1921,9 @@ class BrowserWalrusService {
 
       const response = await fetch(url, {
         method: 'PUT',
-        headers: {
+        headers: this._createWalrusHeaders({
           'Content-Type': 'application/json'
-        },
+        }),
         body: JSON.stringify({
           epochs: additionalEpochs
         })
@@ -1915,9 +2051,9 @@ class BrowserWalrusService {
     try {
       const response = await fetch(`${this.aggregatorUrl}/v1/blobs/${blobId}`, {
         method: 'GET',
-        headers: {
+        headers: this._createWalrusHeaders({
           'Range': `bytes=${offset}-${offset + length - 1}`
-        }
+        })
       });
 
       if (!response.ok) {
@@ -2167,6 +2303,7 @@ class BrowserWalrusService {
     try {
       const response = await fetch(`${this.publisherUrl}/v1/api`, {
         method: 'GET',
+        headers: this._createWalrusHeaders(),
         signal: AbortSignal.timeout(5000) // 5 second timeout
       });
       return response.ok;
@@ -2413,7 +2550,10 @@ class BrowserWalrusService {
 
       const healthDuration = Date.now() - startTime;
 
-      // Log results
+      // Detect if this is a CORS/proxy issue
+      const isCorsIssue = publisherHealth.corsBlocked || aggregatorHealth.corsBlocked;
+
+      // Log results with enhanced CORS detection
       const healthResult = {
         checkId,
         isHealthy: this.healthStatus.isHealthy,
@@ -2423,13 +2563,17 @@ class BrowserWalrusService {
         aggregatorDuration: aggregatorHealth.duration,
         totalDuration: healthDuration,
         consecutiveFailures: this.healthStatus.consecutiveFailures,
-        statusChanged: wasHealthy !== this.healthStatus.isHealthy
+        statusChanged: wasHealthy !== this.healthStatus.isHealthy,
+        isCorsIssue, // Add CORS flag for UI messaging
+        publisherCorsBlocked: publisherHealth.corsBlocked,
+        aggregatorCorsBlocked: aggregatorHealth.corsBlocked
       };
 
       if (this.healthStatus.isHealthy) {
         console.log(`[BrowserWalrusService:${checkId}] ✅ Health check passed`, healthResult);
       } else {
-        console.warn(`[BrowserWalrusService:${checkId}] ❌ Health check failed`, {
+        const failureType = isCorsIssue ? 'CORS/Proxy Issue' : 'Service Unavailable';
+        console.warn(`[BrowserWalrusService:${checkId}] ❌ Health check failed (${failureType})`, {
           ...healthResult,
           publisherError: publisherHealth.error,
           aggregatorError: aggregatorHealth.error
@@ -2470,7 +2614,7 @@ class BrowserWalrusService {
 
       const response = await fetch(`${publisherBase}/v1/api`, {
         method: 'GET',
-        headers: { 'Accept': 'application/json' },
+        headers: this._createWalrusHeaders({ 'Accept': 'application/json' }),
         signal: AbortSignal.timeout(10000) // 10 second timeout
       });
 
@@ -2497,13 +2641,13 @@ class BrowserWalrusService {
 
       // Detect DNS resolution failures (ERR_NAME_NOT_RESOLVED, ENOTFOUND)
       const isDnsError = errorMessage.includes('ERR_NAME_NOT_RESOLVED') ||
-                        errorMessage.includes('getaddrinfo ENOTFOUND') ||
-                        errorMessage.includes('Failed to fetch') && error.name === 'TypeError';
+                        errorMessage.includes('getaddrinfo ENOTFOUND');
 
-      // Detect CORS-specific failures (but not DNS errors)
-      const isCorsBlocked = !isDnsError && (
+      // Detect CORS or proxy configuration failures
+      // TypeError with "Failed to fetch" typically indicates CORS or network issues
+      const isCorsOrProxyIssue = !isDnsError && (
         errorMessage.includes('CORS') ||
-        error.name === 'TypeError'
+        (errorMessage.includes('Failed to fetch') && error.name === 'TypeError')
       );
 
       if (isDnsError) {
@@ -2512,8 +2656,16 @@ class BrowserWalrusService {
         console.error(`[BrowserWalrusService:${checkId}] ⚠️  Publisher DNS resolution failed`);
         console.error(`[BrowserWalrusService:${checkId}] Endpoint: ${publisherBase}`);
         console.error(`[BrowserWalrusService:${checkId}] Please verify mainnet Walrus endpoints in app-config.json`);
-      } else if (isCorsBlocked) {
-        console.warn(`[BrowserWalrusService:${checkId}] ⚠️ Publisher CORS blocked - endpoint may have header issues:`, {
+      } else if (isCorsOrProxyIssue) {
+        const config = await this.configLoader.getConfig();
+        const publisherBase = config.getWalrusServiceBase('publisher');
+        console.error(`[BrowserWalrusService:${checkId}] ⚠️ Publisher CORS or proxy configuration issue detected`);
+        console.error(`[BrowserWalrusService:${checkId}] Endpoint: ${publisherBase}`);
+        console.error(`[BrowserWalrusService:${checkId}] Possible causes:`);
+        console.error(`  - Walrus proxy not deployed or misconfigured on Vercel`);
+        console.error(`  - Invalid CORS headers from upstream Walrus endpoint`);
+        console.error(`  - Network connectivity issues`);
+        console.warn(`[BrowserWalrusService:${checkId}] Error details:`, {
           error: errorMessage,
           duration
         });
@@ -2527,8 +2679,10 @@ class BrowserWalrusService {
 
       return {
         available: false,
-        error: isDnsError ? `DNS resolution failed: endpoint not found` : errorMessage,
-        corsBlocked: isCorsBlocked,
+        error: isCorsOrProxyIssue
+          ? `CORS or proxy configuration issue - check Vercel proxy deployment`
+          : (isDnsError ? `DNS resolution failed: endpoint not found` : errorMessage),
+        corsBlocked: isCorsOrProxyIssue,
         duration
       };
     }
@@ -2545,6 +2699,7 @@ class BrowserWalrusService {
 
       const response = await fetch(`${aggregatorBase}/v1/api`, {
         method: 'GET',
+        headers: this._createWalrusHeaders(),
         signal: AbortSignal.timeout(10000) // 10 second timeout
       });
 
@@ -2571,13 +2726,13 @@ class BrowserWalrusService {
 
       // Detect DNS resolution failures (ERR_NAME_NOT_RESOLVED, ENOTFOUND)
       const isDnsError = errorMessage.includes('ERR_NAME_NOT_RESOLVED') ||
-                        errorMessage.includes('getaddrinfo ENOTFOUND') ||
-                        errorMessage.includes('Failed to fetch') && error.name === 'TypeError';
+                        errorMessage.includes('getaddrinfo ENOTFOUND');
 
-      // Detect CORS-specific failures (but not DNS errors)
-      const isCorsBlocked = !isDnsError && (
+      // Detect CORS or proxy configuration failures
+      // TypeError with "Failed to fetch" typically indicates CORS or network issues
+      const isCorsOrProxyIssue = !isDnsError && (
         errorMessage.includes('CORS') ||
-        error.name === 'TypeError'
+        (errorMessage.includes('Failed to fetch') && error.name === 'TypeError')
       );
 
       if (isDnsError) {
@@ -2586,8 +2741,16 @@ class BrowserWalrusService {
         console.error(`[BrowserWalrusService:${checkId}] ⚠️  Aggregator DNS resolution failed`);
         console.error(`[BrowserWalrusService:${checkId}] Endpoint: ${aggregatorBase}`);
         console.error(`[BrowserWalrusService:${checkId}] Please verify mainnet Walrus endpoints in app-config.json`);
-      } else if (isCorsBlocked) {
-        console.warn(`[BrowserWalrusService:${checkId}] ⚠️ Aggregator CORS blocked - endpoint may have header issues:`, {
+      } else if (isCorsOrProxyIssue) {
+        const config = await this.configLoader.getConfig();
+        const aggregatorBase = config.getWalrusServiceBase('aggregator');
+        console.error(`[BrowserWalrusService:${checkId}] ⚠️ Aggregator CORS or proxy configuration issue detected`);
+        console.error(`[BrowserWalrusService:${checkId}] Endpoint: ${aggregatorBase}`);
+        console.error(`[BrowserWalrusService:${checkId}] Possible causes:`);
+        console.error(`  - Walrus proxy not deployed or misconfigured on Vercel`);
+        console.error(`  - Invalid CORS headers from upstream Walrus endpoint`);
+        console.error(`  - Network connectivity issues`);
+        console.warn(`[BrowserWalrusService:${checkId}] Error details:`, {
           error: errorMessage,
           duration
         });
@@ -2601,8 +2764,10 @@ class BrowserWalrusService {
 
       return {
         available: false,
-        error: isDnsError ? `DNS resolution failed: endpoint not found` : errorMessage,
-        corsBlocked: isCorsBlocked,
+        error: isCorsOrProxyIssue
+          ? `CORS or proxy configuration issue - check Vercel proxy deployment`
+          : (isDnsError ? `DNS resolution failed: endpoint not found` : errorMessage),
+        corsBlocked: isCorsOrProxyIssue,
         duration
       };
     }
@@ -2620,9 +2785,21 @@ class BrowserWalrusService {
   getHealthSummary() {
     if (this.healthStatus.isHealthy) {
       return 'Walrus service is operational';
-    } else if (this.healthStatus.consecutiveFailures >= 3) {
-      return 'Walrus service appears to be down (multiple failures)';
+    }
+
+    // Check if the error is CORS-related
+    const isCorsError = this.healthStatus.lastError?.includes('CORS') ||
+                        this.healthStatus.lastError?.includes('proxy configuration');
+
+    if (this.healthStatus.consecutiveFailures >= 3) {
+      if (isCorsError) {
+        return 'Walrus storage connectivity issue - proxy configuration may need verification. Saves will retry automatically.';
+      }
+      return 'Walrus service temporarily unavailable - your work is preserved and will sync when service resumes.';
     } else if (this.healthStatus.lastError) {
+      if (isCorsError) {
+        return 'Walrus storage experiencing connectivity issues - saves may be delayed but will retry automatically.';
+      }
       return `Walrus service issue: ${this.healthStatus.lastError}`;
     } else {
       return 'Walrus service status unknown';
@@ -3301,9 +3478,9 @@ class BrowserWalrusService {
       const response = await fetch(url, {
         method: 'PUT',
         body: blob,
-        headers: {
+        headers: this._createWalrusHeaders({
           'Content-Type': 'application/octet-stream'
-        },
+        }),
         signal: controller.signal
       });
       
@@ -3514,6 +3691,7 @@ class BrowserWalrusService {
         try {
           const headResponse = await fetch(`${this.aggregatorUrl}/v1/blobs/${blobIds[0]}`, {
             method: 'HEAD',
+            headers: this._createWalrusHeaders(),
             signal: AbortSignal.timeout(5000)
           });
           
@@ -3540,6 +3718,7 @@ class BrowserWalrusService {
           // HEAD precheck with timeout
           const headResponse = await fetch(`${aggregatorUrl}/v1/blobs/${blobId}`, {
             method: 'HEAD',
+            headers: this._createWalrusHeaders(),
             signal: AbortSignal.timeout(5000)
           });
           
