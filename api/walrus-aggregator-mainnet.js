@@ -3,6 +3,8 @@
  * Optional catch-all routing to handle base path and all subpaths
  */
 
+import { corsHeaders, stripUpstreamCorsHeaders, stripDisallowedHeaders } from './_utils/cors.js'
+
 export const config = { runtime: 'edge' }
 
 const TARGET_BASE = 'https://wal-aggregator-mainnet.staketab.org'
@@ -44,7 +46,7 @@ export default async function handler(req) {
       status: response.status,
       statusText: response.statusText,
       headers: {
-        ...Object.fromEntries(response.headers),
+        ...stripUpstreamCorsHeaders(response.headers),
         ...corsHeaders()
       }
     })
@@ -60,35 +62,4 @@ export default async function handler(req) {
   } finally {
     clearTimeout(timeoutId)
   }
-}
-
-function corsHeaders() {
-  return {
-    'Access-Control-Allow-Origin': 'https://walsheetz.vercel.app',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, HEAD, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Expose-Headers': 'Content-Type'
-  }
-}
-
-function stripDisallowedHeaders(headers) {
-  const allowed = new Headers()
-
-  for (const [key, value] of headers.entries()) {
-    const lower = key.toLowerCase()
-
-    // Skip problematic headers
-    if (
-      lower === 'host' ||
-      lower === 'connection' ||
-      lower === 'accept-encoding' ||
-      lower.startsWith('access-control-')
-    ) {
-      continue
-    }
-
-    allowed.set(key, value)
-  }
-
-  return allowed
 }
