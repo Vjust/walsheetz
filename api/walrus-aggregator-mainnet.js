@@ -7,11 +7,10 @@ export const config = { runtime: 'edge' }
 
 const TARGET_BASE = 'https://wal-aggregator-mainnet.staketab.org'
 
-export default async function handler(req, ctx) {
-  const { params } = ctx
-  const segments = params?.path ?? []
-  const upstreamPath = segments.length ? `/${segments.join('/')}` : ''
+export default async function handler(req) {
   const url = new URL(req.url)
+  const basePath = '/api/walrus-aggregator-mainnet'
+  const upstreamPath = url.pathname.slice(basePath.length) || ''
   const upstream = TARGET_BASE + upstreamPath + url.search
 
   // Handle CORS preflight requests

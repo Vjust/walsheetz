@@ -3,6 +3,12 @@
   "outputDirectory": "dist",
   "cleanUrls": true,
   "trailingSlash": false,
+  "routes": [
+    { "src": "/api/walrus-publisher-mainnet(.*)", "dest": "/api/walrus-publisher-mainnet" },
+    { "src": "/api/walrus-aggregator-mainnet(.*)", "dest": "/api/walrus-aggregator-mainnet" },
+    { "src": "/api/walrus-publisher-testnet(.*)", "dest": "/api/walrus-publisher-testnet" },
+    { "src": "/api/walrus-aggregator-testnet(.*)", "dest": "/api/walrus-aggregator-testnet" }
+  ],
   "headers": [
     {
       "source": "/app-config.json",
