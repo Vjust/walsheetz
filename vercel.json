@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "bun run build",
   "outputDirectory": "dist",
   "cleanUrls": true,
   "trailingSlash": false,
@@ -41,6 +41,10 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/app-config.json",
+      "destination": "/app-config.json"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"

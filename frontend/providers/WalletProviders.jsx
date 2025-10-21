@@ -1,10 +1,10 @@
 import React from 'react';
-import { 
-  createNetworkConfig, 
-  SuiClientProvider, 
-  WalletProvider 
+import {
+  createNetworkConfig,
+  SuiClientProvider,
+  WalletProvider
 } from '@mysten/dapp-kit';
-import { getFullnodeUrl } from '@mysten/sui/client';
+import { SuiHTTPTransport } from '@mysten/sui/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@mysten/dapp-kit/dist/index.css';
 import { useNetwork } from './NetworkProvider.jsx';
@@ -21,30 +21,40 @@ const queryClient = new QueryClient({
   },
 });
 
+// Helper to create RPC proxy transport for mainnet/testnet (avoids CORS issues)
+const createProxyTransport = (network) => new SuiHTTPTransport({
+  url: '/api/sui-rpc-proxy',
+  rpc: {
+    headers: {
+      'X-Sui-Network': network
+    }
+  }
+});
+
 // Network configuration for Sui
 const { networkConfig } = createNetworkConfig({
-  testnet: { 
-    url: getFullnodeUrl('testnet'),
+  testnet: {
+    transport: createProxyTransport('testnet'),
     variables: {
       packageId: '0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7',
       registryObjectId: '0x9a6b94f79762fa608c5f0938d092744a8e5b69852f860eb17afa4ab11e24fe25',
     }
   },
-  mainnet: { 
-    url: getFullnodeUrl('mainnet'),
+  mainnet: {
+    transport: createProxyTransport('mainnet'),
     variables: {
       packageId: '0x991454976a4ef8535ed3572bb1c500dcd565855d49a51f1fadc7f70a316c9631',
       registryObjectId: '0x66f68bfb639dbc7f24519bcdbbfdb376057d87c6d508ea7a8d67746a11721ca5',
     }
   },
-  devnet: { 
-    url: getFullnodeUrl('devnet'),
+  devnet: {
+    url: 'https://fullnode.devnet.sui.io:443',
     variables: {
       packageId: null,
       registryObjectId: null,
     }
   },
-  localnet: { 
+  localnet: {
     url: 'http://127.0.0.1:9000',
     variables: {
       packageId: null,

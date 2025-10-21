@@ -439,6 +439,7 @@ class ConfigLoader {
       networks: {
         testnet: {
           rpcUrl: 'https://fullnode.testnet.sui.io:443',
+          rpcProxy: '/api/sui-rpc-proxy',
           packageId: '0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7',
           registryObjectId: '0x9a6b94f79762fa608c5f0938d092744a8e5b69852f860eb17afa4ab11e24fe25',
           walrus: {
@@ -454,6 +455,7 @@ class ConfigLoader {
         },
         mainnet: {
           rpcUrl: 'https://fullnode.mainnet.sui.io:443',
+          rpcProxy: '/api/sui-rpc-proxy',
           packageId: '0x991454976a4ef8535ed3572bb1c500dcd565855d49a51f1fadc7f70a316c9631',
           registryObjectId: '0x66f68bfb639dbc7f24519bcdbbfdb376057d87c6d508ea7a8d67746a11721ca5',
           walrus: {
