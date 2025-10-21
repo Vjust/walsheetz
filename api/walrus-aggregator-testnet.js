@@ -7,11 +7,13 @@ export const config = { runtime: 'edge' }
 
 const TARGET_BASE = 'https://aggregator.walrus-testnet.walrus.space'
 
-export default async function handler(req, ctx) {
-  const { params } = ctx
-  const pathSegments = params?.path ?? []
-  const upstreamPath = pathSegments.length ? `/${pathSegments.join('/')}` : ''
+export default async function handler(req) {
   const url = new URL(req.url)
+  // Extract subpath after /api/walrus-aggregator-testnet
+  const apiPath = '/api/walrus-aggregator-testnet'
+  const upstreamPath = url.pathname.startsWith(apiPath)
+    ? url.pathname.slice(apiPath.length)
+    : ''
   const upstream = TARGET_BASE + upstreamPath + url.search
 
   // Handle CORS preflight requests

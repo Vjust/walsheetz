@@ -1,17 +1,19 @@
 /**
- * Vercel Edge Function - Walrus Publisher Proxy (Testnet)
+ * Vercel Edge Function - Walrus Publisher Proxy (Mainnet)
  * Optional catch-all routing to handle base path and all subpaths
  */
 
 export const config = { runtime: 'edge' }
 
-const TARGET_BASE = 'https://publisher.walrus-testnet.walrus.space'
+const TARGET_BASE = 'https://walrus-mainnet-publisher-1.staketab.org'
 
-export default async function handler(req, ctx) {
-  const { params } = ctx
-  const pathSegments = params?.path ?? []
-  const upstreamPath = pathSegments.length ? `/${pathSegments.join('/')}` : ''
+export default async function handler(req) {
   const url = new URL(req.url)
+  // Extract subpath after /api/walrus-publisher-mainnet
+  const apiPath = '/api/walrus-publisher-mainnet'
+  const upstreamPath = url.pathname.startsWith(apiPath)
+    ? url.pathname.slice(apiPath.length)
+    : ''
   const upstream = TARGET_BASE + upstreamPath + url.search
 
   // Handle CORS preflight requests
