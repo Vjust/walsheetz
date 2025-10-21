@@ -626,7 +626,20 @@ class BrowserWalrusService {
             // timestamp will be added by encodeSpreadsheetData
           }
         };
-        
+
+        // DEBUG: Log data structure before encoding to catch structure mismatches early
+        // This helps verify collectSpreadsheetData() is passing correct shape
+        console.log(`[BrowserWalrusService:${requestId}] 🔍 Data before encode (attempt ${attempt}):`, {
+          hasTopLevelCells: !!enhancedData.cells,
+          hasNestedDataCells: !!enhancedData.data?.cells,
+          cellCount: Object.keys(enhancedData.cells || enhancedData.data?.cells || {}).length,
+          topLevelStructure: Object.keys(enhancedData).slice(0, 8).join(', '),
+          spreadsheetId: enhancedData.spreadsheetId,
+          hasMetadata: !!enhancedData.metadata,
+          hasNestedMetadata: !!enhancedData.data?.metadata,
+          timestamp: enhancedData.timestamp || 'none'
+        });
+
         // Use consistent encoding method (same as backend service)
         const encoded = await this.encodeSpreadsheetData(enhancedData);
         
