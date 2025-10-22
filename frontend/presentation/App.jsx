@@ -192,7 +192,6 @@ function App() {
                     </Routes>
 
                     {/* Global components */}
-                    <NetworkSelector position="top-left" />
                     <NetworkMismatchWarning />
                     <NetworkConfirmDialog />
                     <TestModeBanner />

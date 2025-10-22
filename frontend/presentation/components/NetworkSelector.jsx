@@ -2,7 +2,7 @@ import React from 'react'
 import { useNetwork } from '../../providers/NetworkProvider.jsx'
 import './styles/NetworkSelector.css'
 
-export function NetworkSelector({ position = 'top-right' }) {
+export function NetworkSelector({ position = 'top-right', inline = false }) {
   const { network, switchNetwork, isMainnet } = useNetwork()
 
   const handleToggle = () => {
@@ -18,7 +18,10 @@ export function NetworkSelector({ position = 'top-right' }) {
   }
 
   return (
-    <div className="network-selector" style={positionStyles[position]}>
+    <div
+      className={`network-selector ${inline ? 'inline' : ''}`}
+      style={inline ? {} : positionStyles[position]}
+    >
       <div className="network-selector-content">
         <span className={`network-label ${network}`}>
           <span className="network-dot" />

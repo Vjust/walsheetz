@@ -7,6 +7,7 @@ import { SaveDetailsModal } from './SaveDetailsModal.jsx'
 import { ImportButton } from './ImportButton.jsx'
 import { ExportButton } from './ExportButton.jsx'
 import { ImportPreviewModal } from './ImportPreviewModal.jsx'
+import { NetworkSelector } from './NetworkSelector.jsx'
 import { logger, LogComponent } from '../../utils/Logger.js'
 import luckysheetApi from '../../services/luckysheetApi.js'
 import SpreadsheetImportExportService from '../../services/SpreadsheetImportExportService.js'
@@ -1194,7 +1195,10 @@ export function Header() {
             </div>
             <span className="app-name">WalSheetz</span>
           </div>
-          
+
+          {/* Network Selector */}
+          <NetworkSelector inline={true} />
+
           <input
             type="text"
             value={documentName}
