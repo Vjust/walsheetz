@@ -6,9 +6,10 @@
     { "src": "/api/walrus-aggregator-mainnet(.*)", "dest": "/api/walrus-aggregator-mainnet" },
     { "src": "/api/walrus-publisher-testnet(.*)", "dest": "/api/walrus-publisher-testnet" },
     { "src": "/api/walrus-aggregator-testnet(.*)", "dest": "/api/walrus-aggregator-testnet" },
+    { "src": "/api/sui-rpc-proxy", "dest": "/api/sui-rpc-proxy" },
     { "src": "/app-config.json", "dest": "/app-config.json", "headers": { "Cache-Control": "max-age=60, must-revalidate" } },
     { "src": "/assets/(.*)", "dest": "/assets/$1", "headers": { "Cache-Control": "public, max-age=31536000, immutable" } },
-    { "src": "/.*", "headers": { "X-Content-Type-Options": "nosniff", "X-Frame-Options": "SAMEORIGIN", "X-XSS-Protection": "1; mode=block" }, "continue": true },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "/.*\\.html$", "headers": { "X-Content-Type-Options": "nosniff", "X-Frame-Options": "SAMEORIGIN", "X-XSS-Protection": "1; mode=block" }, "continue": true },
+    { "src": "/((?!api|assets).*)", "dest": "/index.html" }
   ]
 }
