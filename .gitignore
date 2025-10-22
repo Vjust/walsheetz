@@ -130,9 +130,6 @@ test-results/
 screenshots/
 videos/
 
-# Test files and directory
-tests/
-
 # Code fetch artifacts
 codefetch/
 

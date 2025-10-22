@@ -1,0 +1,1592 @@
+{
+  "config": {
+    "configFile": "/Users/angel/Projects/test/walsheetz/playwright.config.js",
+    "rootDir": "/Users/angel/Projects/test/walsheetz/tests/e2e",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "line",
+        null
+      ],
+      [
+        "html",
+        {
+          "outputFolder": "tests/e2e/reports/html",
+          "open": "on-failure"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "tests/e2e/reports/results.json"
+        }
+      ],
+      [
+        "junit",
+        {
+          "outputFile": "tests/e2e/reports/junit.xml"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/Users/angel/Projects/test/walsheetz/tests/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/Users/angel/Projects/test/walsheetz/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/.*\\.e2e\\.test\\.js$/"
+        ],
+        "timeout": 90000
+      },
+      {
+        "outputDir": "/Users/angel/Projects/test/walsheetz/tests/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "/Users/angel/Projects/test/walsheetz/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/.*\\.e2e\\.test\\.js$/"
+        ],
+        "timeout": 90000
+      },
+      {
+        "outputDir": "/Users/angel/Projects/test/walsheetz/tests/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "/Users/angel/Projects/test/walsheetz/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/.*\\.e2e\\.test\\.js$/"
+        ],
+        "timeout": 90000
+      },
+      {
+        "outputDir": "/Users/angel/Projects/test/walsheetz/tests/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "mobile-chrome",
+        "name": "mobile-chrome",
+        "testDir": "/Users/angel/Projects/test/walsheetz/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/.*\\.e2e\\.test\\.js$/"
+        ],
+        "timeout": 90000
+      },
+      {
+        "outputDir": "/Users/angel/Projects/test/walsheetz/tests/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "mobile-safari",
+        "name": "mobile-safari",
+        "testDir": "/Users/angel/Projects/test/walsheetz/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/.*\\.e2e\\.test\\.js$/"
+        ],
+        "timeout": 90000
+      },
+      {
+        "outputDir": "/Users/angel/Projects/test/walsheetz/tests/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "tablet",
+        "name": "tablet",
+        "testDir": "/Users/angel/Projects/test/walsheetz/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/.*\\.e2e\\.test\\.js$/"
+        ],
+        "timeout": 90000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.55.0",
+    "workers": 1,
+    "webServer": {
+      "command": "env VITE_TEST_AUTH_BYPASS=true bun run dev",
+      "url": "http://localhost:3005",
+      "reuseExistingServer": true,
+      "timeout": 120000,
+      "stdout": "pipe",
+      "stderr": "pipe",
+      "env": {
+        "VITE_TEST_AUTH_BYPASS": "true"
+      }
+    }
+  },
+  "suites": [
+    {
+      "title": "usability/spreadsheet-creation.e2e.test.js",
+      "file": "usability/spreadsheet-creation.e2e.test.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Spreadsheet Creation",
+          "file": "usability/spreadsheet-creation.e2e.test.js",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should load application homepage",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4498,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:05.818]\u001b[0m 🧪 \u001b[36mshould load application homepage\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:05.834]\u001b[0m   ⏱️ \u001b[90mStart:\u001b[0m 2025-10-15T03:33:05.837Z\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:05.838]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for page to load...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:05.840]\u001b[0m   🧭 \u001b[34mNavigate:\u001b[0m http://localhost:3005\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:07.588]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for React and application initialization...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:09.599]\u001b[0m   ✅ \u001b[32mLuckysheet detected on page\u001b[0m\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:09.599]\u001b[0m 📦 \u001b[1mTest Suite: Spreadsheet Creation\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:09.599]\u001b[0m   ℹ️ \u001b[37mTesting application homepage load\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:09.609]\u001b[0m   📊 \u001b[36mResult:\u001b[0m Page title\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:09.609]\u001b[0m     \u001b[2m\"WalSheetz - Arctic Spreadsheets\"\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:09.614]\u001b[0m   📊 \u001b[36mResult:\u001b[0m Current URL\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:09.615]\u001b[0m     \u001b[2m\"http://localhost:3005/\"\u001b[0m\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:09.618]\u001b[0m 📊 \u001b[37mSummary:\u001b[0m 0 passed, 0 failed, 0 total\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:09.619]\u001b[0m   ⏱️ \u001b[90mDuration:\u001b[0m 3.80s\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:09.619]\u001b[0m ✅ \u001b[32mPASS\u001b[0m \u001b[90m(3.80s)\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:09.619]\u001b[0m  \u001b[37m \u001b[0m\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-15T03:33:04.960Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "b7ab103efd9b03c37533-d430d8f8395882cc4857",
+              "file": "usability/spreadsheet-creation.e2e.test.js",
+              "line": 14,
+              "column": 3
+            },
+            {
+              "title": "should display create document button",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4571,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:09.974]\u001b[0m 🧪 \u001b[36mshould display create document button\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:09.974]\u001b[0m   ⏱️ \u001b[90mStart:\u001b[0m 2025-10-15T03:33:09.974Z\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:09.974]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for page to load...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:09.978]\u001b[0m   🧭 \u001b[34mNavigate:\u001b[0m http://localhost:3005\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:12.045]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for React and application initialization...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:14.067]\u001b[0m   ✅ \u001b[32mLuckysheet detected on page\u001b[0m\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:14.072]\u001b[0m 📦 \u001b[1mTest Suite: Spreadsheet Creation\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:14.073]\u001b[0m   ℹ️ \u001b[37mTesting create document button visibility\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:14.156]\u001b[0m   ✅ \u001b[32mCreate document button is visible\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:14.164]\u001b[0m     \u001b[32m✓\u001b[0m \u001b[32mCreate button is enabled\u001b[0m\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:14.165]\u001b[0m 📊 \u001b[37mSummary:\u001b[0m 0 passed, 0 failed, 0 total\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:14.166]\u001b[0m   ⏱️ \u001b[90mDuration:\u001b[0m 4.19s\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:14.166]\u001b[0m ✅ \u001b[32mPASS\u001b[0m \u001b[90m(4.19s)\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:14.167]\u001b[0m  \u001b[37m \u001b[0m\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-15T03:33:09.930Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "b7ab103efd9b03c37533-a60ac52344a3ef8914b8",
+              "file": "usability/spreadsheet-creation.e2e.test.js",
+              "line": 28,
+              "column": 3
+            },
+            {
+              "title": "should open create document modal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 9314,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:14.572]\u001b[0m 🧪 \u001b[36mshould open create document modal\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:14.572]\u001b[0m   ⏱️ \u001b[90mStart:\u001b[0m 2025-10-15T03:33:14.572Z\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:14.572]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for page to load...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:14.573]\u001b[0m   🧭 \u001b[34mNavigate:\u001b[0m http://localhost:3005\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:20.929]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for React and application initialization...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:22.937]\u001b[0m   ✅ \u001b[32mLuckysheet detected on page\u001b[0m\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:22.938]\u001b[0m 📦 \u001b[1mTest Suite: Spreadsheet Creation\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:22.938]\u001b[0m   ℹ️ \u001b[37mTesting create document modal\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:23.053]\u001b[0m   🖱️ \u001b[35mAction:\u001b[0m Clicked create document button\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:23.559]\u001b[0m   ✅ \u001b[32mCreate document modal opened\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:23.563]\u001b[0m   ✅ \u001b[32mDocument name input field is visible\u001b[0m\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:23.564]\u001b[0m 📊 \u001b[37mSummary:\u001b[0m 0 passed, 0 failed, 0 total\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:23.565]\u001b[0m   ⏱️ \u001b[90mDuration:\u001b[0m 8.99s\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:23.565]\u001b[0m ✅ \u001b[32mPASS\u001b[0m \u001b[90m(8.99s)\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:23.565]\u001b[0m  \u001b[37m \u001b[0m\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-15T03:33:14.511Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "b7ab103efd9b03c37533-d219703dd91db2479d6f",
+              "file": "usability/spreadsheet-creation.e2e.test.js",
+              "line": 43,
+              "column": 3
+            },
+            {
+              "title": "should create new spreadsheet with default name",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 22574,
+                      "error": {
+                        "message": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n",
+                        "stack": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n\n    at Module.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js:63:14)\n    at Object.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/fixtures/spreadsheet.js:88:41)\n    at /Users/angel/Projects/test/walsheetz/tests/e2e/usability/spreadsheet-creation.e2e.test.js:94:23",
+                        "location": {
+                          "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                          "column": 14,
+                          "line": 63
+                        },
+                        "snippet": "\u001b[90m   at \u001b[39mutils/SpreadsheetHelpers.js:63\n\n  61 |   e2eLogger.setup('Waiting for Luckysheet to initialize...');\n  62 |\n> 63 |   await page.waitForSelector('#luckysheet-container canvas', { timeout });\n     |              ^\n  64 |   await page.waitForTimeout(1000); // Additional wait for formula injection\n  65 |\n  66 |   e2eLogger.success('Luckysheet initialized');"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                            "column": 14,
+                            "line": 63
+                          },
+                          "message": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n\n\n   at utils/SpreadsheetHelpers.js:63\n\n  61 |   e2eLogger.setup('Waiting for Luckysheet to initialize...');\n  62 |\n> 63 |   await page.waitForSelector('#luckysheet-container canvas', { timeout });\n     |              ^\n  64 |   await page.waitForTimeout(1000); // Additional wait for formula injection\n  65 |\n  66 |   e2eLogger.success('Luckysheet initialized');\n    at Module.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js:63:14)\n    at Object.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/fixtures/spreadsheet.js:88:41)\n    at /Users/angel/Projects/test/walsheetz/tests/e2e/usability/spreadsheet-creation.e2e.test.js:94:23"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:23.903]\u001b[0m 🧪 \u001b[36mshould create new spreadsheet with default name\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:23.903]\u001b[0m   ⏱️ \u001b[90mStart:\u001b[0m 2025-10-15T03:33:23.903Z\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:23.903]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for page to load...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:23.904]\u001b[0m   🧭 \u001b[34mNavigate:\u001b[0m http://localhost:3005\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:25.473]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for React and application initialization...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:27.479]\u001b[0m   ✅ \u001b[32mLuckysheet detected on page\u001b[0m\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:27.479]\u001b[0m 📦 \u001b[1mTest Suite: Spreadsheet Creation\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:27.481]\u001b[0m   ℹ️ \u001b[37mTesting spreadsheet creation with default name\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:27.541]\u001b[0m   🖱️ \u001b[35mAction:\u001b[0m Clicked create document button\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:28.056]\u001b[0m   ⌨️ \u001b[35mAction:\u001b[0m Entered title: Test Sheet 1760499208043\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:28.132]\u001b[0m   🖱️ \u001b[35mAction:\u001b[0m Clicked create spreadsheet button\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:31.134]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for Luckysheet to initialize...\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:46.400]\u001b[0m 📊 \u001b[37mSummary:\u001b[0m 0 passed, 0 failed, 0 total\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:46.401]\u001b[0m   ⏱️ \u001b[90mDuration:\u001b[0m 22.50s\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:46.401]\u001b[0m ✅ \u001b[32mPASS\u001b[0m \u001b[90m(22.50s)\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:46.401]\u001b[0m  \u001b[37m \u001b[0m\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-15T03:33:23.838Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/angel/Projects/test/walsheetz/tests/e2e/test-results/usability-spreadsheet-crea-e0545-readsheet-with-default-name-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/angel/Projects/test/walsheetz/tests/e2e/test-results/usability-spreadsheet-crea-e0545-readsheet-with-default-name-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                        "column": 14,
+                        "line": 63
+                      }
+                    },
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 22610,
+                      "error": {
+                        "message": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n",
+                        "stack": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n\n    at Module.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js:63:14)\n    at Object.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/fixtures/spreadsheet.js:88:41)\n    at /Users/angel/Projects/test/walsheetz/tests/e2e/usability/spreadsheet-creation.e2e.test.js:94:23",
+                        "location": {
+                          "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                          "column": 14,
+                          "line": 63
+                        },
+                        "snippet": "\u001b[90m   at \u001b[39mutils/SpreadsheetHelpers.js:63\n\n  61 |   e2eLogger.setup('Waiting for Luckysheet to initialize...');\n  62 |\n> 63 |   await page.waitForSelector('#luckysheet-container canvas', { timeout });\n     |              ^\n  64 |   await page.waitForTimeout(1000); // Additional wait for formula injection\n  65 |\n  66 |   e2eLogger.success('Luckysheet initialized');"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                            "column": 14,
+                            "line": 63
+                          },
+                          "message": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n\n\n   at utils/SpreadsheetHelpers.js:63\n\n  61 |   e2eLogger.setup('Waiting for Luckysheet to initialize...');\n  62 |\n> 63 |   await page.waitForSelector('#luckysheet-container canvas', { timeout });\n     |              ^\n  64 |   await page.waitForTimeout(1000); // Additional wait for formula injection\n  65 |\n  66 |   e2eLogger.success('Luckysheet initialized');\n    at Module.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js:63:14)\n    at Object.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/fixtures/spreadsheet.js:88:41)\n    at /Users/angel/Projects/test/walsheetz/tests/e2e/usability/spreadsheet-creation.e2e.test.js:94:23"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:47.271]\u001b[0m 🧪 \u001b[36mshould create new spreadsheet with default name\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:47.287]\u001b[0m   ⏱️ \u001b[90mStart:\u001b[0m 2025-10-15T03:33:47.287Z\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:47.287]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for page to load...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:47.290]\u001b[0m   🧭 \u001b[34mNavigate:\u001b[0m http://localhost:3005\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:48.801]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for React and application initialization...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:50.813]\u001b[0m   ✅ \u001b[32mLuckysheet detected on page\u001b[0m\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:50.814]\u001b[0m 📦 \u001b[1mTest Suite: Spreadsheet Creation\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:50.815]\u001b[0m   ℹ️ \u001b[37mTesting spreadsheet creation with default name\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:50.931]\u001b[0m   🖱️ \u001b[35mAction:\u001b[0m Clicked create document button\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:51.443]\u001b[0m   ⌨️ \u001b[35mAction:\u001b[0m Entered title: Test Sheet 1760499231434\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:51.502]\u001b[0m   🖱️ \u001b[35mAction:\u001b[0m Clicked create spreadsheet button\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:33:54.505]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for Luckysheet to initialize...\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:09.785]\u001b[0m 📊 \u001b[37mSummary:\u001b[0m 0 passed, 0 failed, 0 total\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:09.786]\u001b[0m   ⏱️ \u001b[90mDuration:\u001b[0m 22.52s\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:09.786]\u001b[0m ✅ \u001b[32mPASS\u001b[0m \u001b[90m(22.52s)\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:09.786]\u001b[0m  \u001b[37m \u001b[0m\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2025-10-15T03:33:47.052Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/angel/Projects/test/walsheetz/tests/e2e/test-results/usability-spreadsheet-crea-e0545-readsheet-with-default-name-chromium-retry1/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/angel/Projects/test/walsheetz/tests/e2e/test-results/usability-spreadsheet-crea-e0545-readsheet-with-default-name-chromium-retry1/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                        "column": 14,
+                        "line": 63
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "b7ab103efd9b03c37533-458cfebe276db692e669",
+              "file": "usability/spreadsheet-creation.e2e.test.js",
+              "line": 67,
+              "column": 3
+            },
+            {
+              "title": "should create spreadsheet with custom name",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 22282,
+                      "error": {
+                        "message": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n",
+                        "stack": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n\n    at Module.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js:63:14)\n    at Object.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/fixtures/spreadsheet.js:88:41)\n    at /Users/angel/Projects/test/walsheetz/tests/e2e/usability/spreadsheet-creation.e2e.test.js:133:23",
+                        "location": {
+                          "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                          "column": 14,
+                          "line": 63
+                        },
+                        "snippet": "\u001b[90m   at \u001b[39mutils/SpreadsheetHelpers.js:63\n\n  61 |   e2eLogger.setup('Waiting for Luckysheet to initialize...');\n  62 |\n> 63 |   await page.waitForSelector('#luckysheet-container canvas', { timeout });\n     |              ^\n  64 |   await page.waitForTimeout(1000); // Additional wait for formula injection\n  65 |\n  66 |   e2eLogger.success('Luckysheet initialized');"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                            "column": 14,
+                            "line": 63
+                          },
+                          "message": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n\n\n   at utils/SpreadsheetHelpers.js:63\n\n  61 |   e2eLogger.setup('Waiting for Luckysheet to initialize...');\n  62 |\n> 63 |   await page.waitForSelector('#luckysheet-container canvas', { timeout });\n     |              ^\n  64 |   await page.waitForTimeout(1000); // Additional wait for formula injection\n  65 |\n  66 |   e2eLogger.success('Luckysheet initialized');\n    at Module.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js:63:14)\n    at Object.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/fixtures/spreadsheet.js:88:41)\n    at /Users/angel/Projects/test/walsheetz/tests/e2e/usability/spreadsheet-creation.e2e.test.js:133:23"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:10.817]\u001b[0m 🧪 \u001b[36mshould create spreadsheet with custom name\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:10.837]\u001b[0m   ⏱️ \u001b[90mStart:\u001b[0m 2025-10-15T03:34:10.837Z\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:10.837]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for page to load...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:10.840]\u001b[0m   🧭 \u001b[34mNavigate:\u001b[0m http://localhost:3005\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:12.005]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for React and application initialization...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:14.017]\u001b[0m   ✅ \u001b[32mLuckysheet detected on page\u001b[0m\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:14.017]\u001b[0m 📦 \u001b[1mTest Suite: Spreadsheet Creation\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:14.018]\u001b[0m   ℹ️ \u001b[37mTesting spreadsheet creation with custom name\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:14.018]\u001b[0m   \u001b[90mDEBUG:\u001b[0m Custom name\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:14.018]\u001b[0m     \u001b[2m{\n  \"name\": \"Test Spreadsheet 1760499254018\"\n}\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:14.648]\u001b[0m   ⌨️ \u001b[35mAction:\u001b[0m Entered name: Test Spreadsheet 1760499254018\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:14.742]\u001b[0m   🖱️ \u001b[35mAction:\u001b[0m Clicked create spreadsheet button\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:17.746]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for Luckysheet to initialize...\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:32.997]\u001b[0m 📊 \u001b[37mSummary:\u001b[0m 0 passed, 0 failed, 0 total\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:32.998]\u001b[0m   ⏱️ \u001b[90mDuration:\u001b[0m 22.18s\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:32.998]\u001b[0m ✅ \u001b[32mPASS\u001b[0m \u001b[90m(22.18s)\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:32.998]\u001b[0m  \u001b[37m \u001b[0m\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-15T03:34:10.563Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/angel/Projects/test/walsheetz/tests/e2e/test-results/usability-spreadsheet-crea-31811-preadsheet-with-custom-name-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/angel/Projects/test/walsheetz/tests/e2e/test-results/usability-spreadsheet-crea-31811-preadsheet-with-custom-name-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                        "column": 14,
+                        "line": 63
+                      }
+                    },
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 22277,
+                      "error": {
+                        "message": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n",
+                        "stack": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n\n    at Module.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js:63:14)\n    at Object.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/fixtures/spreadsheet.js:88:41)\n    at /Users/angel/Projects/test/walsheetz/tests/e2e/usability/spreadsheet-creation.e2e.test.js:133:23",
+                        "location": {
+                          "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                          "column": 14,
+                          "line": 63
+                        },
+                        "snippet": "\u001b[90m   at \u001b[39mutils/SpreadsheetHelpers.js:63\n\n  61 |   e2eLogger.setup('Waiting for Luckysheet to initialize...');\n  62 |\n> 63 |   await page.waitForSelector('#luckysheet-container canvas', { timeout });\n     |              ^\n  64 |   await page.waitForTimeout(1000); // Additional wait for formula injection\n  65 |\n  66 |   e2eLogger.success('Luckysheet initialized');"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                            "column": 14,
+                            "line": 63
+                          },
+                          "message": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n\n\n   at utils/SpreadsheetHelpers.js:63\n\n  61 |   e2eLogger.setup('Waiting for Luckysheet to initialize...');\n  62 |\n> 63 |   await page.waitForSelector('#luckysheet-container canvas', { timeout });\n     |              ^\n  64 |   await page.waitForTimeout(1000); // Additional wait for formula injection\n  65 |\n  66 |   e2eLogger.success('Luckysheet initialized');\n    at Module.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js:63:14)\n    at Object.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/fixtures/spreadsheet.js:88:41)\n    at /Users/angel/Projects/test/walsheetz/tests/e2e/usability/spreadsheet-creation.e2e.test.js:133:23"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:33.804]\u001b[0m 🧪 \u001b[36mshould create spreadsheet with custom name\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:33.822]\u001b[0m   ⏱️ \u001b[90mStart:\u001b[0m 2025-10-15T03:34:33.822Z\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:33.823]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for page to load...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:33.828]\u001b[0m   🧭 \u001b[34mNavigate:\u001b[0m http://localhost:3005\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:35.028]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for React and application initialization...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:37.034]\u001b[0m   ✅ \u001b[32mLuckysheet detected on page\u001b[0m\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:37.035]\u001b[0m 📦 \u001b[1mTest Suite: Spreadsheet Creation\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:37.035]\u001b[0m   ℹ️ \u001b[37mTesting spreadsheet creation with custom name\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:37.036]\u001b[0m   \u001b[90mDEBUG:\u001b[0m Custom name\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:37.036]\u001b[0m     \u001b[2m{\n  \"name\": \"Test Spreadsheet 1760499277035\"\n}\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:37.680]\u001b[0m   ⌨️ \u001b[35mAction:\u001b[0m Entered name: Test Spreadsheet 1760499277035\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:37.769]\u001b[0m   🖱️ \u001b[35mAction:\u001b[0m Clicked create spreadsheet button\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:40.771]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for Luckysheet to initialize...\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:55.996]\u001b[0m 📊 \u001b[37mSummary:\u001b[0m 0 passed, 0 failed, 0 total\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:55.997]\u001b[0m   ⏱️ \u001b[90mDuration:\u001b[0m 22.19s\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:55.997]\u001b[0m ✅ \u001b[32mPASS\u001b[0m \u001b[90m(22.19s)\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:55.997]\u001b[0m  \u001b[37m \u001b[0m\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2025-10-15T03:34:33.604Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/angel/Projects/test/walsheetz/tests/e2e/test-results/usability-spreadsheet-crea-31811-preadsheet-with-custom-name-chromium-retry1/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/angel/Projects/test/walsheetz/tests/e2e/test-results/usability-spreadsheet-crea-31811-preadsheet-with-custom-name-chromium-retry1/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                        "column": 14,
+                        "line": 63
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "b7ab103efd9b03c37533-17d124a8032fb1d8b9c8",
+              "file": "usability/spreadsheet-creation.e2e.test.js",
+              "line": 105,
+              "column": 3
+            },
+            {
+              "title": "should initialize with empty cells",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 22299,
+                      "error": {
+                        "message": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n",
+                        "stack": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n\n    at Module.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js:63:14)\n    at Object.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/fixtures/spreadsheet.js:88:41)\n    at /Users/angel/Projects/test/walsheetz/tests/e2e/usability/spreadsheet-creation.e2e.test.js:165:23",
+                        "location": {
+                          "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                          "column": 14,
+                          "line": 63
+                        },
+                        "snippet": "\u001b[90m   at \u001b[39mutils/SpreadsheetHelpers.js:63\n\n  61 |   e2eLogger.setup('Waiting for Luckysheet to initialize...');\n  62 |\n> 63 |   await page.waitForSelector('#luckysheet-container canvas', { timeout });\n     |              ^\n  64 |   await page.waitForTimeout(1000); // Additional wait for formula injection\n  65 |\n  66 |   e2eLogger.success('Luckysheet initialized');"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                            "column": 14,
+                            "line": 63
+                          },
+                          "message": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n\n\n   at utils/SpreadsheetHelpers.js:63\n\n  61 |   e2eLogger.setup('Waiting for Luckysheet to initialize...');\n  62 |\n> 63 |   await page.waitForSelector('#luckysheet-container canvas', { timeout });\n     |              ^\n  64 |   await page.waitForTimeout(1000); // Additional wait for formula injection\n  65 |\n  66 |   e2eLogger.success('Luckysheet initialized');\n    at Module.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js:63:14)\n    at Object.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/fixtures/spreadsheet.js:88:41)\n    at /Users/angel/Projects/test/walsheetz/tests/e2e/usability/spreadsheet-creation.e2e.test.js:165:23"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:56.760]\u001b[0m 🧪 \u001b[36mshould initialize with empty cells\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:56.782]\u001b[0m   ⏱️ \u001b[90mStart:\u001b[0m 2025-10-15T03:34:56.782Z\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:56.782]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for page to load...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:56.786]\u001b[0m   🧭 \u001b[34mNavigate:\u001b[0m http://localhost:3005\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:57.978]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for React and application initialization...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:59.987]\u001b[0m   ✅ \u001b[32mLuckysheet detected on page\u001b[0m\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:59.988]\u001b[0m 📦 \u001b[1mTest Suite: Spreadsheet Creation\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:34:59.992]\u001b[0m   ℹ️ \u001b[37mTesting initial cell state\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:03.683]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for Luckysheet to initialize...\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:18.947]\u001b[0m 📊 \u001b[37mSummary:\u001b[0m 0 passed, 0 failed, 0 total\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:18.948]\u001b[0m   ⏱️ \u001b[90mDuration:\u001b[0m 22.19s\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:18.948]\u001b[0m ✅ \u001b[32mPASS\u001b[0m \u001b[90m(22.19s)\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:18.948]\u001b[0m  \u001b[37m \u001b[0m\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-15T03:34:56.495Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/angel/Projects/test/walsheetz/tests/e2e/test-results/usability-spreadsheet-crea-fa507-initialize-with-empty-cells-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/angel/Projects/test/walsheetz/tests/e2e/test-results/usability-spreadsheet-crea-fa507-initialize-with-empty-cells-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                        "column": 14,
+                        "line": 63
+                      }
+                    },
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 22177,
+                      "error": {
+                        "message": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n",
+                        "stack": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n\n    at Module.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js:63:14)\n    at Object.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/fixtures/spreadsheet.js:88:41)\n    at /Users/angel/Projects/test/walsheetz/tests/e2e/usability/spreadsheet-creation.e2e.test.js:165:23",
+                        "location": {
+                          "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                          "column": 14,
+                          "line": 63
+                        },
+                        "snippet": "\u001b[90m   at \u001b[39mutils/SpreadsheetHelpers.js:63\n\n  61 |   e2eLogger.setup('Waiting for Luckysheet to initialize...');\n  62 |\n> 63 |   await page.waitForSelector('#luckysheet-container canvas', { timeout });\n     |              ^\n  64 |   await page.waitForTimeout(1000); // Additional wait for formula injection\n  65 |\n  66 |   e2eLogger.success('Luckysheet initialized');"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                            "column": 14,
+                            "line": 63
+                          },
+                          "message": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n\n\n   at utils/SpreadsheetHelpers.js:63\n\n  61 |   e2eLogger.setup('Waiting for Luckysheet to initialize...');\n  62 |\n> 63 |   await page.waitForSelector('#luckysheet-container canvas', { timeout });\n     |              ^\n  64 |   await page.waitForTimeout(1000); // Additional wait for formula injection\n  65 |\n  66 |   e2eLogger.success('Luckysheet initialized');\n    at Module.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js:63:14)\n    at Object.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/fixtures/spreadsheet.js:88:41)\n    at /Users/angel/Projects/test/walsheetz/tests/e2e/usability/spreadsheet-creation.e2e.test.js:165:23"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:19.772]\u001b[0m 🧪 \u001b[36mshould initialize with empty cells\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:19.786]\u001b[0m   ⏱️ \u001b[90mStart:\u001b[0m 2025-10-15T03:35:19.786Z\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:19.786]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for page to load...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:19.789]\u001b[0m   🧭 \u001b[34mNavigate:\u001b[0m http://localhost:3005\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:20.920]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for React and application initialization...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:22.933]\u001b[0m   ✅ \u001b[32mLuckysheet detected on page\u001b[0m\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:22.933]\u001b[0m 📦 \u001b[1mTest Suite: Spreadsheet Creation\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:22.934]\u001b[0m   ℹ️ \u001b[37mTesting initial cell state\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:26.606]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for Luckysheet to initialize...\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:41.845]\u001b[0m 📊 \u001b[37mSummary:\u001b[0m 0 passed, 0 failed, 0 total\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:41.846]\u001b[0m   ⏱️ \u001b[90mDuration:\u001b[0m 22.07s\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:41.846]\u001b[0m ✅ \u001b[32mPASS\u001b[0m \u001b[90m(22.07s)\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:41.846]\u001b[0m  \u001b[37m \u001b[0m\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2025-10-15T03:35:19.526Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/angel/Projects/test/walsheetz/tests/e2e/test-results/usability-spreadsheet-crea-fa507-initialize-with-empty-cells-chromium-retry1/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/angel/Projects/test/walsheetz/tests/e2e/test-results/usability-spreadsheet-crea-fa507-initialize-with-empty-cells-chromium-retry1/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                        "column": 14,
+                        "line": 63
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "b7ab103efd9b03c37533-0319b7a0304ed63fcd4e",
+              "file": "usability/spreadsheet-creation.e2e.test.js",
+              "line": 145,
+              "column": 3
+            },
+            {
+              "title": "should have canvas elements rendered",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 22386,
+                      "error": {
+                        "message": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n",
+                        "stack": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n\n    at Module.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js:63:14)\n    at Object.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/fixtures/spreadsheet.js:88:41)\n    at /Users/angel/Projects/test/walsheetz/tests/e2e/usability/spreadsheet-creation.e2e.test.js:207:23",
+                        "location": {
+                          "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                          "column": 14,
+                          "line": 63
+                        },
+                        "snippet": "\u001b[90m   at \u001b[39mutils/SpreadsheetHelpers.js:63\n\n  61 |   e2eLogger.setup('Waiting for Luckysheet to initialize...');\n  62 |\n> 63 |   await page.waitForSelector('#luckysheet-container canvas', { timeout });\n     |              ^\n  64 |   await page.waitForTimeout(1000); // Additional wait for formula injection\n  65 |\n  66 |   e2eLogger.success('Luckysheet initialized');"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                            "column": 14,
+                            "line": 63
+                          },
+                          "message": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n\n\n   at utils/SpreadsheetHelpers.js:63\n\n  61 |   e2eLogger.setup('Waiting for Luckysheet to initialize...');\n  62 |\n> 63 |   await page.waitForSelector('#luckysheet-container canvas', { timeout });\n     |              ^\n  64 |   await page.waitForTimeout(1000); // Additional wait for formula injection\n  65 |\n  66 |   e2eLogger.success('Luckysheet initialized');\n    at Module.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js:63:14)\n    at Object.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/fixtures/spreadsheet.js:88:41)\n    at /Users/angel/Projects/test/walsheetz/tests/e2e/usability/spreadsheet-creation.e2e.test.js:207:23"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:42.857]\u001b[0m 🧪 \u001b[36mshould have canvas elements rendered\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:42.888]\u001b[0m   ⏱️ \u001b[90mStart:\u001b[0m 2025-10-15T03:35:42.889Z\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:42.889]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for page to load...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:42.892]\u001b[0m   🧭 \u001b[34mNavigate:\u001b[0m http://localhost:3005\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:44.075]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for React and application initialization...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:46.084]\u001b[0m   ✅ \u001b[32mLuckysheet detected on page\u001b[0m\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:46.085]\u001b[0m 📦 \u001b[1mTest Suite: Spreadsheet Creation\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:46.086]\u001b[0m   ℹ️ \u001b[37mTesting canvas rendering\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:35:49.805]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for Luckysheet to initialize...\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:05.047]\u001b[0m 📊 \u001b[37mSummary:\u001b[0m 0 passed, 0 failed, 0 total\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:05.048]\u001b[0m   ⏱️ \u001b[90mDuration:\u001b[0m 22.19s\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:05.048]\u001b[0m ✅ \u001b[32mPASS\u001b[0m \u001b[90m(22.19s)\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:05.048]\u001b[0m  \u001b[37m \u001b[0m\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-15T03:35:42.384Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/angel/Projects/test/walsheetz/tests/e2e/test-results/usability-spreadsheet-crea-1d673-ve-canvas-elements-rendered-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/angel/Projects/test/walsheetz/tests/e2e/test-results/usability-spreadsheet-crea-1d673-ve-canvas-elements-rendered-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                        "column": 14,
+                        "line": 63
+                      }
+                    },
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 22388,
+                      "error": {
+                        "message": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n",
+                        "stack": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n\n    at Module.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js:63:14)\n    at Object.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/fixtures/spreadsheet.js:88:41)\n    at /Users/angel/Projects/test/walsheetz/tests/e2e/usability/spreadsheet-creation.e2e.test.js:207:23",
+                        "location": {
+                          "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                          "column": 14,
+                          "line": 63
+                        },
+                        "snippet": "\u001b[90m   at \u001b[39mutils/SpreadsheetHelpers.js:63\n\n  61 |   e2eLogger.setup('Waiting for Luckysheet to initialize...');\n  62 |\n> 63 |   await page.waitForSelector('#luckysheet-container canvas', { timeout });\n     |              ^\n  64 |   await page.waitForTimeout(1000); // Additional wait for formula injection\n  65 |\n  66 |   e2eLogger.success('Luckysheet initialized');"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                            "column": 14,
+                            "line": 63
+                          },
+                          "message": "TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#luckysheet-container canvas') to be visible\u001b[22m\n\n\n   at utils/SpreadsheetHelpers.js:63\n\n  61 |   e2eLogger.setup('Waiting for Luckysheet to initialize...');\n  62 |\n> 63 |   await page.waitForSelector('#luckysheet-container canvas', { timeout });\n     |              ^\n  64 |   await page.waitForTimeout(1000); // Additional wait for formula injection\n  65 |\n  66 |   e2eLogger.success('Luckysheet initialized');\n    at Module.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js:63:14)\n    at Object.waitForLuckysheet (/Users/angel/Projects/test/walsheetz/tests/e2e/fixtures/spreadsheet.js:88:41)\n    at /Users/angel/Projects/test/walsheetz/tests/e2e/usability/spreadsheet-creation.e2e.test.js:207:23"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:05.826]\u001b[0m 🧪 \u001b[36mshould have canvas elements rendered\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:05.845]\u001b[0m   ⏱️ \u001b[90mStart:\u001b[0m 2025-10-15T03:36:05.845Z\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:05.846]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for page to load...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:05.849]\u001b[0m   🧭 \u001b[34mNavigate:\u001b[0m http://localhost:3005\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:07.125]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for React and application initialization...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:09.139]\u001b[0m   ✅ \u001b[32mLuckysheet detected on page\u001b[0m\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:09.139]\u001b[0m 📦 \u001b[1mTest Suite: Spreadsheet Creation\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:09.141]\u001b[0m   ℹ️ \u001b[37mTesting canvas rendering\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:12.841]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for Luckysheet to initialize...\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:28.093]\u001b[0m 📊 \u001b[37mSummary:\u001b[0m 0 passed, 0 failed, 0 total\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:28.093]\u001b[0m   ⏱️ \u001b[90mDuration:\u001b[0m 22.27s\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:28.093]\u001b[0m ✅ \u001b[32mPASS\u001b[0m \u001b[90m(22.27s)\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:28.094]\u001b[0m  \u001b[37m \u001b[0m\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2025-10-15T03:36:05.549Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/angel/Projects/test/walsheetz/tests/e2e/test-results/usability-spreadsheet-crea-1d673-ve-canvas-elements-rendered-chromium-retry1/test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/angel/Projects/test/walsheetz/tests/e2e/test-results/usability-spreadsheet-crea-1d673-ve-canvas-elements-rendered-chromium-retry1/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/angel/Projects/test/walsheetz/tests/e2e/utils/SpreadsheetHelpers.js",
+                        "column": 14,
+                        "line": 63
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "b7ab103efd9b03c37533-09d775096cc931b094fa",
+              "file": "usability/spreadsheet-creation.e2e.test.js",
+              "line": 187,
+              "column": 3
+            },
+            {
+              "title": "should load with proper viewport",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 8,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4741,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:28.939]\u001b[0m 🧪 \u001b[36mshould load with proper viewport\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:28.956]\u001b[0m   ⏱️ \u001b[90mStart:\u001b[0m 2025-10-15T03:36:28.956Z\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:28.956]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for page to load...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:28.959]\u001b[0m   🧭 \u001b[34mNavigate:\u001b[0m http://localhost:3005\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:31.258]\u001b[0m   🔧 \u001b[34mSetup:\u001b[0m Waiting for React and application initialization...\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:33.272]\u001b[0m   ✅ \u001b[32mLuckysheet detected on page\u001b[0m\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:33.274]\u001b[0m 📦 \u001b[1mTest Suite: Spreadsheet Creation\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:33.274]\u001b[0m   ℹ️ \u001b[37mTesting viewport configuration\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:33.274]\u001b[0m   📊 \u001b[36mResult:\u001b[0m Viewport size\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:33.275]\u001b[0m     \u001b[2m{\n  \"width\": 1280,\n  \"height\": 720\n}\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:33.280]\u001b[0m   ✅ \u001b[32mViewport configured correctly\u001b[0m\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:33.281]\u001b[0m 📊 \u001b[37mSummary:\u001b[0m 0 passed, 0 failed, 0 total\n"
+                        },
+                        {
+                          "text": "\n"
+                        },
+                        {
+                          "text": "\u001b[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:33.281]\u001b[0m   ⏱️ \u001b[90mDuration:\u001b[0m 4.34s\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:33.281]\u001b[0m ✅ \u001b[32mPASS\u001b[0m \u001b[90m(4.34s)\u001b[0m\n"
+                        },
+                        {
+                          "text": "\u001b[90m[20:36:33.281]\u001b[0m  \u001b[37m \u001b[0m\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-15T03:36:28.683Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "b7ab103efd9b03c37533-c77595b5764fcb6b7e80",
+              "file": "usability/spreadsheet-creation.e2e.test.js",
+              "line": 238,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-10-15T03:33:02.331Z",
+    "duration": 211332.468,
+    "expected": 4,
+    "skipped": 0,
+    "unexpected": 4,
+    "flaky": 0
+  }
+}
