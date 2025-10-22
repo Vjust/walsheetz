@@ -6,6 +6,7 @@ import { SearchBar } from '../components/SearchBar.jsx';
 import { CreateDocumentModal } from '../components/CreateDocumentModal.jsx';
 import { LoadingOverlay } from '../presentation/components/LoadingOverlay.jsx';
 import { NetworkBadge } from '../presentation/components/NetworkBadge.jsx';
+import { NetworkSelector } from '../presentation/components/NetworkSelector.jsx';
 import { MigrationDialog } from '../presentation/components/MigrationDialog.jsx';
 import { useNetwork } from '../providers/NetworkProvider.jsx';
 import { logger, LogComponent } from '../utils/Logger.js';
@@ -444,6 +445,7 @@ export function Dashboard() {
             <span>🦭</span>
           </div>
           <h1>WalSheetz</h1>
+          <NetworkSelector inline={true} />
         </div>
 
         <div className="header-actions">
