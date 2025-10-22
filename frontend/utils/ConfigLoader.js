@@ -360,12 +360,13 @@ class ConfigLoader {
     config.getServiceUrl = function(service, path = '') {
       const network = this.getCurrentNetwork();
       const proxyUrl = this.getProxyUrl(service);
-      
+
       let baseUrl;
-      
+
       switch (service) {
         case 'sui-rpc':
-          baseUrl = proxyUrl || network.rpcUrl;
+          // Fallback chain: dev proxy → prod proxy → absolute URL
+          baseUrl = proxyUrl || network.rpcProxy || network.rpcUrl;
           break;
         case 'walrus-publisher':
           baseUrl = proxyUrl || network.walrus.publisherUrl;
@@ -376,7 +377,7 @@ class ConfigLoader {
         default:
           throw new Error(`Unknown service: ${service}`);
       }
-      
+
       return baseUrl + (path ? (path.startsWith('/') ? path : '/' + path) : '');
     };
 

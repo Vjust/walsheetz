@@ -1,6 +1,7 @@
 // Custom Sui blockchain functions for spreadsheet formulas
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
 import { getCurrentConfig } from '../../../blockchain/config.js';
+import { configLoader } from '../../utils/ConfigLoader.js';
 
 // In-memory cache with TTL
 const cache = new Map();
@@ -76,8 +77,9 @@ export async function getSuiBalance(address, rpcUrl) {
   let finalRpcUrl = rpcUrl;
   if (!finalRpcUrl) {
     try {
-      const config = getCurrentConfig();
-      finalRpcUrl = config.sui.rpcUrl;
+      // Use proxy-aware RPC URL (dev: /sui-rpc, prod: /api/sui-rpc-proxy)
+      const config = await configLoader.getConfig();
+      finalRpcUrl = config.getServiceUrl('sui-rpc');
     } catch (error) {
       // Fallback to testnet if config fails
       finalRpcUrl = getFullnodeUrl('testnet');
@@ -145,8 +147,9 @@ export async function getSuiGasPrice(rpcUrl) {
   let finalRpcUrl = rpcUrl;
   if (!finalRpcUrl) {
     try {
-      const config = getCurrentConfig();
-      finalRpcUrl = config.sui.rpcUrl;
+      // Use proxy-aware RPC URL (dev: /sui-rpc, prod: /api/sui-rpc-proxy)
+      const config = await configLoader.getConfig();
+      finalRpcUrl = config.getServiceUrl('sui-rpc');
     } catch (error) {
       finalRpcUrl = getFullnodeUrl('testnet');
     }
@@ -197,8 +200,9 @@ export async function getSuiEpoch(rpcUrl) {
   let finalRpcUrl = rpcUrl;
   if (!finalRpcUrl) {
     try {
-      const config = getCurrentConfig();
-      finalRpcUrl = config.sui.rpcUrl;
+      // Use proxy-aware RPC URL (dev: /sui-rpc, prod: /api/sui-rpc-proxy)
+      const config = await configLoader.getConfig();
+      finalRpcUrl = config.getServiceUrl('sui-rpc');
     } catch (error) {
       finalRpcUrl = getFullnodeUrl('testnet');
     }

@@ -57,11 +57,13 @@ class BrowserSuiService {
       this.config = await this.configLoader.getConfig();
       const networkConfig = this.config.getCurrentNetwork();
 
-      // Initialize SuiClient with RPC proxy to avoid CORS issues on mainnet
-      // The proxy at /api/sui-rpc-proxy sets Access-Control-Allow-Origin: * and routes based on X-Sui-Network header
-      // Use rpcProxy if available (from app-config.json), otherwise fall back to rpcUrl for direct access
-      const rpcUrl = networkConfig.rpcProxy || networkConfig.rpcUrl;
-      const isUsingProxy = !!networkConfig.rpcProxy;
+      // Initialize SuiClient with RPC proxy to avoid CORS issues
+      // getServiceUrl returns:
+      //   - Dev (localhost): /sui-rpc (Vite proxy)
+      //   - Prod (Vercel): /api/sui-rpc-proxy (Edge Function)
+      //   - Fallback: Direct RPC URL
+      const rpcUrl = this.config.getServiceUrl('sui-rpc');
+      const isUsingProxy = rpcUrl.startsWith('/');
 
       // If using the proxy, set X-Sui-Network header to help proxy route to correct network
       const clientOptions = isUsingProxy

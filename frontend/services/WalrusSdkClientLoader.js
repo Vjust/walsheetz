@@ -76,8 +76,12 @@ export async function loadWalrusSdkClient(options = {}) {
         throw new Error(`Failed to load Walrus SDK: ${typeof error === 'string' ? error : error?.message}`);
       }
 
-      // Initialize and cache the client
-      cachedClient = new WalrusSdkClient(options);
+      // Resolve RPC URL using config's proxy-aware getServiceUrl
+      // This ensures dev uses /sui-rpc and prod uses /api/sui-rpc-proxy
+      const rpcUrl = config.getServiceUrl('sui-rpc');
+
+      // Initialize and cache the client with resolved RPC URL
+      cachedClient = new WalrusSdkClient({ ...options, suiClientUrl: rpcUrl });
       console.info('[WalrusSdkClientLoader] ✅ WalrusSdkClient initialized and cached');
 
       return cachedClient;

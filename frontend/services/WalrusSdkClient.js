@@ -3,9 +3,13 @@ import { SuiClient } from '@mysten/sui/client'
 import { getCurrentConfig } from '../../blockchain/config.js'
 
 export class WalrusSdkClient {
-  constructor({ suiClient, network } = {}) {
+  constructor({ suiClient, suiClientUrl, network } = {}) {
     const cfg = getCurrentConfig()
-    this.suiClient = suiClient || new SuiClient({ url: cfg.sui.rpcUrl })
+
+    // Use provided suiClient, or create one with proxy-aware URL from loader
+    // suiClientUrl is passed by WalrusSdkClientLoader and uses config.getServiceUrl()
+    // which ensures dev uses /sui-rpc and prod uses /api/sui-rpc-proxy
+    this.suiClient = suiClient || new SuiClient({ url: suiClientUrl || cfg.sui.rpcUrl })
 
     // Determine network from config if not provided
     const sdkNetwork = network || cfg.walrus.features.sdkNetwork || (cfg.environment === 'mainnet' ? 'mainnet' : 'testnet')

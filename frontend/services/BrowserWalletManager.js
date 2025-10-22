@@ -1,6 +1,7 @@
 // Browser-compatible wallet manager for WalSheetz
 // This acts as a bridge between the old API and the new dapp-kit hooks
 import { getCurrentConfig } from '../../blockchain/config.js';
+import { configLoader } from '../utils/ConfigLoader.js';
 
 class BrowserWalletManager {
   constructor() {
@@ -669,8 +670,10 @@ class BrowserWalletManager {
       // Import SUI client dynamically
       const { SuiClient } = await import('@mysten/sui/client');
 
-      const config = getCurrentConfig();
-      const client = new SuiClient({ url: config.sui.rpcUrl });
+      // Use proxy-aware RPC URL (dev: /sui-rpc, prod: /api/sui-rpc-proxy)
+      const config = await configLoader.getConfig();
+      const rpcUrl = config.getServiceUrl('sui-rpc');
+      const client = new SuiClient({ url: rpcUrl });
 
       const gasCoins = await client.getCoins({
         owner: this.walletConnection.address,
