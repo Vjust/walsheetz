@@ -93,11 +93,50 @@ class BrowserSuiService {
       const chainId = await this.client.getChainIdentifier();
       logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'connection_success', `Connected to Sui network, chain ID: ${chainId}`);
 
-      // Best-effort network consistency check
+      // Network consistency check with blocking on critical mismatches
       try {
-        await this.checkNetworkAgainstConfig?.(chainId);
+        const networkCheck = await this.checkNetworkAgainstConfig(chainId);
+
+        if (networkCheck && networkCheck.mismatch) {
+          // Critical mismatch: Package doesn't exist on connected RPC
+          // This indicates wrong network configuration and should block initialization
+          if (networkCheck.packageCheckError && !networkCheck.packageExists) {
+            const criticalError = `Critical network mismatch: ${networkCheck.packageCheckError}. ` +
+              `Please verify you're connected to the correct network (${this.config.currentNetwork}).`;
+
+            logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'network_mismatch_critical', criticalError, {
+              environment: networkCheck.environment,
+              packageId: networkCheck.packageId,
+              chainIdentifier: networkCheck.chainIdentifier,
+              packageCheckError: networkCheck.packageCheckError
+            });
+
+            throw new Error(criticalError);
+          }
+
+          // Non-critical mismatch: Chain identifier heuristic mismatch
+          // Could be a false positive, so just warn but allow initialization
+          if (networkCheck.chainMismatch) {
+            logger.warn(LogComponent.BLOCKCHAIN_ADAPTER, 'network_check_warning', 'Chain identifier mismatch detected (non-blocking)', {
+              environment: networkCheck.environment,
+              chainIdentifier: networkCheck.chainIdentifier,
+              expectedTestnet: networkCheck.chainMismatch
+            });
+          }
+        } else if (networkCheck && !networkCheck.error) {
+          logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'network_check_pass', 'Network consistency validated', {
+            environment: networkCheck.environment,
+            packageExists: networkCheck.packageExists
+          });
+        }
       } catch (e) {
-        logger.warn(LogComponent.BLOCKCHAIN_ADAPTER, 'network_check', 'Network consistency check skipped/failed', {
+        // Re-throw critical errors
+        if (e.message && e.message.includes('Critical network mismatch')) {
+          throw e;
+        }
+
+        // Log non-critical check failures
+        logger.warn(LogComponent.BLOCKCHAIN_ADAPTER, 'network_check_failed', 'Network consistency check failed (non-blocking)', {
           error: typeof e === 'string' ? e : e?.message || 'Unknown error'
         });
       }
@@ -243,32 +282,98 @@ class BrowserSuiService {
     }
   }
 
-  // Best-effort network consistency check between configured environment and connected RPC
+  // Detect network from package ID by reverse-looking up in config
+  async _detectNetworkFromPackageId(packageId) {
+    try {
+      const config = await this.getRuntimeConfig();
+
+      // Normalize package ID (remove 0x prefix for comparison)
+      const normalizedPackageId = packageId.toLowerCase().replace(/^0x/, '');
+
+      // Check each network's package ID
+      for (const [networkName, networkConfig] of Object.entries(config.networks)) {
+        const networkPackageId = networkConfig.packageId.toLowerCase().replace(/^0x/, '');
+        if (networkPackageId === normalizedPackageId) {
+          return networkName;
+        }
+      }
+
+      // Package ID not recognized
+      return 'unknown';
+    } catch (error) {
+      console.warn('[BrowserSuiService] Failed to detect network from package ID:', error);
+      return 'unknown';
+    }
+  }
+
+  // Network consistency check between configured environment and connected RPC
+  // Validates both chain identifier and package ID existence
   async checkNetworkAgainstConfig(chainIdentifier) {
     try {
       const config = await this.getRuntimeConfig();
-      const env = config.currentNetwork?.name || config.currentNetwork?.id || 'unknown';
+      const env = config.currentNetwork;
       const rpcUrl = config.getServiceUrl('sui-rpc') || '';
       const cid = chainIdentifier || (await this.client.getChainIdentifier());
 
+      // Check 1: Chain identifier heuristic (testnet vs mainnet string matching)
       const expectsTestnet = (rpcUrl.includes('testnet') || env.toLowerCase().includes('test'));
       const looksLikeTestnet = typeof cid === 'string' && cid.toLowerCase().includes('test');
+      const chainMismatch = expectsTestnet !== looksLikeTestnet;
 
-      const mismatch = expectsTestnet !== looksLikeTestnet;
+      // Check 2: Verify package exists on the connected RPC
+      const packageId = await this.getPackageId();
+      let packageExists = false;
+      let packageCheckError = null;
+
+      try {
+        const packageResult = await this.client.getObject({
+          id: packageId,
+          options: { showType: true }
+        });
+
+        packageExists = !!packageResult?.data;
+
+        if (!packageExists) {
+          packageCheckError = `Package ${packageId} not found on connected RPC (${env})`;
+        }
+      } catch (pkgError) {
+        packageCheckError = `Failed to verify package: ${pkgError.message}`;
+        // Don't treat package check failures as hard errors (RPC might be slow)
+        console.warn('[BrowserSuiService] Package existence check failed:', pkgError);
+      }
+
+      const mismatch = chainMismatch || (packageCheckError !== null);
+
       if (mismatch) {
         console.warn('[BrowserSuiService] ⚠️ Network mismatch detected', {
           configuredRpcUrl: rpcUrl,
           environment: env,
-          chainIdentifier: cid
+          chainIdentifier: cid,
+          chainMismatch,
+          packageId: packageId.substring(0, 10) + '...',
+          packageExists,
+          packageCheckError
         });
       } else {
         console.log('[BrowserSuiService] ✅ Network appears consistent with configuration', {
           configuredRpcUrl: rpcUrl,
           environment: env,
-          chainIdentifier: cid
+          chainIdentifier: cid,
+          packageId: packageId.substring(0, 10) + '...',
+          packageExists
         });
       }
-      return { mismatch, chainIdentifier: cid, environment: env, rpcUrl };
+
+      return {
+        mismatch,
+        chainIdentifier: cid,
+        environment: env,
+        rpcUrl,
+        chainMismatch,
+        packageExists,
+        packageCheckError,
+        packageId
+      };
     } catch (error) {
       console.warn('[BrowserSuiService] Network consistency check failed:', typeof error === 'string' ? error : (error && error.message) || 'Unknown error');
       return { mismatch: false, error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error' };
@@ -1845,7 +1950,7 @@ class BrowserSuiService {
   async getSpreadsheetData(spreadsheetId, walrusService, onProgress = null) {
     const loadId = `sui-load-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const startTime = Date.now();
-    
+
     try {
       console.log(`[BrowserSuiService:${loadId}] 📊 Loading spreadsheet data`, {
         spreadsheetId,
@@ -1853,8 +1958,55 @@ class BrowserSuiService {
         timestamp: new Date().toISOString()
       });
 
+      // Validate spreadsheet object exists and check for network mismatch
+      console.log(`[BrowserSuiService:${loadId}] 🔍 Validating spreadsheet object...`);
+      const validation = await this.validateSpreadsheetObjectExists(spreadsheetId);
+
+      if (!validation.exists) {
+        const errorMsg = `Cannot load spreadsheet: ${validation.error || 'Object not found'}`;
+        console.error(`[BrowserSuiService:${loadId}] ❌ ${errorMsg}`);
+        throw new Error(errorMsg);
+      }
+
+      // Check if package ID matches current network to prevent cross-network loading
+      const currentPackageId = await this.getPackageId();
+      const objectType = validation.data.type || '';
+
+      // Extract package ID from object type (format: "0xPACKAGE_ID::spreadsheet::Spreadsheet")
+      const packageIdMatch = objectType.match(/^(0x[a-fA-F0-9]+)::/);
+
+      if (packageIdMatch) {
+        const spreadsheetPackageId = packageIdMatch[1];
+        const normalizedCurrent = currentPackageId.toLowerCase();
+        const normalizedSpreadsheet = spreadsheetPackageId.toLowerCase();
+
+        if (normalizedCurrent !== normalizedSpreadsheet) {
+          // Network mismatch detected - detect which network the spreadsheet belongs to
+          const spreadsheetNetwork = await this._detectNetworkFromPackageId(spreadsheetPackageId);
+          const currentNetwork = this.config.currentNetwork;
+
+          const errorMsg = spreadsheetNetwork !== 'unknown'
+            ? `Network mismatch: This spreadsheet was created on ${spreadsheetNetwork} but you're connected to ${currentNetwork}. Please switch to ${spreadsheetNetwork} network to load this spreadsheet.`
+            : `Network mismatch: This spreadsheet belongs to a different network (package: ${spreadsheetPackageId.substring(0, 10)}...). Current network: ${currentNetwork} (package: ${currentPackageId.substring(0, 10)}...).`;
+
+          console.error(`[BrowserSuiService:${loadId}] ❌ ${errorMsg}`, {
+            spreadsheetPackageId,
+            currentPackageId,
+            spreadsheetNetwork,
+            currentNetwork,
+            objectType
+          });
+
+          throw new Error(errorMsg);
+        }
+
+        console.log(`[BrowserSuiService:${loadId}] ✅ Package ID validated - spreadsheet belongs to current network (${this.config.currentNetwork})`);
+      } else {
+        console.warn(`[BrowserSuiService:${loadId}] ⚠️ Could not extract package ID from object type: ${objectType}`);
+      }
+
       if (onProgress) onProgress('Loading spreadsheet...', 'Getting version information...');
-      
+
       const versionFetchStart = Date.now();
       let versions = await this.getSpreadsheetVersions(spreadsheetId);
       const versionFetchDuration = Date.now() - versionFetchStart;

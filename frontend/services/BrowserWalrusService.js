@@ -1329,10 +1329,30 @@ class BrowserWalrusService {
       
       if (!response.ok) {
         if (response.status === 404) {
+          // Detect potential network mismatch
+          const config = await this.configLoader.getConfig();
+          const currentNetwork = config.currentNetwork;
+          const otherNetwork = currentNetwork === 'mainnet' ? 'testnet' : 'mainnet';
+
+          // Build helpful error message with network mismatch hint
+          let errorMessage = `Blob not found: ${blobId}`;
+          let networkMismatchHint = null;
+
+          // If we're on mainnet/testnet and blob is missing, suggest checking the other network
+          if (currentNetwork === 'mainnet' || currentNetwork === 'testnet') {
+            networkMismatchHint = `This blob may exist on Walrus ${otherNetwork}. ` +
+              `If this spreadsheet was created on ${otherNetwork}, please switch networks to load it.`;
+
+            errorMessage += `. ${networkMismatchHint}`;
+          }
+
           console.error(`[BrowserWalrusService:${requestId}] ❌ Blob not found`, {
             blobId,
             status: 404,
-            duration: `${Date.now() - startTime}ms`
+            duration: `${Date.now() - startTime}ms`,
+            currentNetwork,
+            networkMismatchHint,
+            aggregatorUrl: this.aggregatorUrl
           });
 
           // Clear session last blob id to prevent stale references
@@ -1344,14 +1364,17 @@ class BrowserWalrusService {
             }
           }
 
-          // Emit blob missing event with recovery flag
+          // Emit blob missing event with recovery flag and network hint
           this.emitOperationEvent({
             type: 'blob_missing',
-            message: `Blob not found: ${blobId}`,
+            message: errorMessage,
             success: false,
             blobId,
             requestId,
-            needsRecovery: true // Flag for auto-recovery
+            needsRecovery: true, // Flag for auto-recovery
+            networkMismatchHint,
+            currentNetwork,
+            suggestedNetwork: otherNetwork
           });
 
           // Dispatch cache invalidation event
@@ -1361,14 +1384,19 @@ class BrowserWalrusService {
                 reason: 'walrus_blob_404',
                 blobId,
                 timestamp: Date.now(),
-                needsRecovery: true
+                needsRecovery: true,
+                networkMismatchHint,
+                currentNetwork
               }
             }));
           }
 
-          const error = new Error(`Blob not found: ${blobId}`);
+          const error = new Error(errorMessage);
           error.needsRecovery = true;
           error.blobId = blobId;
+          error.networkMismatchHint = networkMismatchHint;
+          error.currentNetwork = currentNetwork;
+          error.suggestedNetwork = otherNetwork;
           throw error;
         }
         // Don't read the response body here - clone it first if we need error text
