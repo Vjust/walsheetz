@@ -642,7 +642,96 @@ class BrowserWalrusService {
 
         // Use consistent encoding method (same as backend service)
         const encoded = await this.encodeSpreadsheetData(enhancedData);
-        
+
+        // Validate encoded data size against configured limits
+        const sizeConfig = await this.configLoader.getConfig();
+        const currentNetwork = sizeConfig.getCurrentNetwork();
+        const maxOriginalSize = currentNetwork.walrus?.maxBlobSizeBytes || (256 * 1024 * 1024); // 256 MB default
+        const maxCompressedSize = currentNetwork.walrus?.maxCompressedBlobSizeBytes || (256 * 1024 * 1024); // 256 MB default
+
+        // Check original size
+        if (encoded.originalSize > maxOriginalSize) {
+          const errorMsg = `Data too large: original size ${encoded.originalSize} bytes exceeds limit of ${maxOriginalSize} bytes (${(maxOriginalSize / (1024 * 1024)).toFixed(0)} MB)`;
+          console.error(`[BrowserWalrusService:${requestId}] Size validation failed:`, {
+            originalSize: encoded.originalSize,
+            maxOriginalSize,
+            isCompressed: encoded.isCompressed,
+            compressedSize: encoded.compressedSize
+          });
+
+          this.emitOperationEvent({
+            type: 'size_validation_failed',
+            message: errorMsg,
+            success: false,
+            details: {
+              originalSize: encoded.originalSize,
+              maxOriginalSize,
+              isCompressed: encoded.isCompressed,
+              compressedSize: encoded.compressedSize,
+              requestId
+            }
+          });
+
+          return {
+            success: false,
+            error: errorMsg,
+            details: {
+              originalSize: encoded.originalSize,
+              maxOriginalSize,
+              isCompressed: encoded.isCompressed,
+              compressedSize: encoded.compressedSize
+            },
+            requestId,
+            timestamp: Date.now()
+          };
+        }
+
+        // Check compressed size if compression was applied
+        if (encoded.isCompressed && encoded.compressedSize > maxCompressedSize) {
+          const errorMsg = `Compressed data too large: ${encoded.compressedSize} bytes exceeds limit of ${maxCompressedSize} bytes (${(maxCompressedSize / (1024 * 1024)).toFixed(0)} MB)`;
+          console.error(`[BrowserWalrusService:${requestId}] Compressed size validation failed:`, {
+            originalSize: encoded.originalSize,
+            compressedSize: encoded.compressedSize,
+            maxCompressedSize,
+            compressionRatio: encoded.compressionRatio
+          });
+
+          this.emitOperationEvent({
+            type: 'size_validation_failed',
+            message: errorMsg,
+            success: false,
+            details: {
+              originalSize: encoded.originalSize,
+              compressedSize: encoded.compressedSize,
+              maxCompressedSize,
+              compressionRatio: encoded.compressionRatio,
+              requestId
+            }
+          });
+
+          return {
+            success: false,
+            error: errorMsg,
+            details: {
+              originalSize: encoded.originalSize,
+              compressedSize: encoded.compressedSize,
+              maxCompressedSize,
+              compressionRatio: encoded.compressionRatio
+            },
+            requestId,
+            timestamp: Date.now()
+          };
+        }
+
+        console.log(`[BrowserWalrusService:${requestId}] Size validation passed:`, {
+          originalSize: encoded.originalSize,
+          maxOriginalSize,
+          isCompressed: encoded.isCompressed,
+          compressedSize: encoded.compressedSize,
+          maxCompressedSize: encoded.isCompressed ? maxCompressedSize : 'N/A',
+          compressionRatio: encoded.compressionRatio
+        });
+
         // Calculate content hash for integrity verification (consistent with backend)
         const contentHash = await this.calculateHashFromBinary(encoded.data);
         console.log(`[BrowserWalrusService:${requestId}] Content hash calculated: ${contentHash.hash.substring(0, 16)}...`);
@@ -955,6 +1044,95 @@ class BrowserWalrusService {
 
       // Use consistent encoding method (same as backend service)
       const encoded = await this.encodeSpreadsheetData(enhancedData);
+
+      // Validate encoded data size against configured limits
+      const sizeConfig = await this.configLoader.getConfig();
+      const currentNetwork = sizeConfig.getCurrentNetwork();
+      const maxOriginalSize = currentNetwork.walrus?.maxBlobSizeBytes || (256 * 1024 * 1024); // 256 MB default
+      const maxCompressedSize = currentNetwork.walrus?.maxCompressedBlobSizeBytes || (256 * 1024 * 1024); // 256 MB default
+
+      // Check original size
+      if (encoded.originalSize > maxOriginalSize) {
+        const errorMsg = `Data too large: original size ${encoded.originalSize} bytes exceeds limit of ${maxOriginalSize} bytes (${(maxOriginalSize / (1024 * 1024)).toFixed(0)} MB)`;
+        console.error(`[BrowserWalrusService:${requestId}] Size validation failed:`, {
+          originalSize: encoded.originalSize,
+          maxOriginalSize,
+          isCompressed: encoded.isCompressed,
+          compressedSize: encoded.compressedSize
+        });
+
+        this.emitOperationEvent({
+          type: 'size_validation_failed',
+          message: errorMsg,
+          success: false,
+          details: {
+            originalSize: encoded.originalSize,
+            maxOriginalSize,
+            isCompressed: encoded.isCompressed,
+            compressedSize: encoded.compressedSize,
+            requestId
+          }
+        });
+
+        return {
+          success: false,
+          error: errorMsg,
+          details: {
+            originalSize: encoded.originalSize,
+            maxOriginalSize,
+            isCompressed: encoded.isCompressed,
+            compressedSize: encoded.compressedSize
+          },
+          requestId,
+          timestamp: Date.now()
+        };
+      }
+
+      // Check compressed size if compression was applied
+      if (encoded.isCompressed && encoded.compressedSize > maxCompressedSize) {
+        const errorMsg = `Compressed data too large: ${encoded.compressedSize} bytes exceeds limit of ${maxCompressedSize} bytes (${(maxCompressedSize / (1024 * 1024)).toFixed(0)} MB)`;
+        console.error(`[BrowserWalrusService:${requestId}] Compressed size validation failed:`, {
+          originalSize: encoded.originalSize,
+          compressedSize: encoded.compressedSize,
+          maxCompressedSize,
+          compressionRatio: encoded.compressionRatio
+        });
+
+        this.emitOperationEvent({
+          type: 'size_validation_failed',
+          message: errorMsg,
+          success: false,
+          details: {
+            originalSize: encoded.originalSize,
+            compressedSize: encoded.compressedSize,
+            maxCompressedSize,
+            compressionRatio: encoded.compressionRatio,
+            requestId
+          }
+        });
+
+        return {
+          success: false,
+          error: errorMsg,
+          details: {
+            originalSize: encoded.originalSize,
+            compressedSize: encoded.compressedSize,
+            maxCompressedSize,
+            compressionRatio: encoded.compressionRatio
+          },
+          requestId,
+          timestamp: Date.now()
+        };
+      }
+
+      console.log(`[BrowserWalrusService:${requestId}] Size validation passed:`, {
+        originalSize: encoded.originalSize,
+        maxOriginalSize,
+        isCompressed: encoded.isCompressed,
+        compressedSize: encoded.compressedSize,
+        maxCompressedSize: encoded.isCompressed ? maxCompressedSize : 'N/A',
+        compressionRatio: encoded.compressionRatio
+      });
 
       // Calculate content hash for integrity verification
       const contentHash = await this.calculateHashFromBinary(encoded.data);
@@ -3143,15 +3321,9 @@ class BrowserWalrusService {
           }
         };
       }
-      
-      // Check data size (Walrus has limits)
-      const dataSize = jsonString.length;
-      const maxSize = 1024 * 1024 * 10; // 10MB limit for safety
-      if (dataSize > maxSize) {
-        errors.push(`Data too large: ${dataSize} bytes (max: ${maxSize} bytes)`);
-      }
-      
+
       // Check minimum data size
+      const dataSize = jsonString.length;
       if (dataSize < 1) {
         errors.push('Data is empty after JSON serialization');
       }
@@ -3181,10 +3353,9 @@ class BrowserWalrusService {
           definedCheck: data !== null && data !== undefined,
           typeCheck: typeof data === 'object',
           jsonCheck: true,
-          sizeCheck: dataSize > 0 && dataSize <= maxSize,
+          sizeCheck: dataSize > 0,
           structureCheck: isValid,
-          dataSize,
-          maxSize
+          dataSize
         }
       };
       
@@ -3365,8 +3536,72 @@ class BrowserWalrusService {
     
     // Encode and hash data once
     const encoded = await this.encodeSpreadsheetData(data);
+
+    // Validate encoded data size against configured limits
+    const sizeConfig = await this.configLoader.getConfig();
+    const currentNetwork = sizeConfig.getCurrentNetwork();
+    const maxOriginalSize = currentNetwork.walrus?.maxBlobSizeBytes || (256 * 1024 * 1024); // 256 MB default
+    const maxCompressedSize = currentNetwork.walrus?.maxCompressedBlobSizeBytes || (256 * 1024 * 1024); // 256 MB default
+
+    // Check original size
+    if (encoded.originalSize > maxOriginalSize) {
+      const errorMsg = `Data too large: original size ${encoded.originalSize} bytes exceeds limit of ${maxOriginalSize} bytes (${(maxOriginalSize / (1024 * 1024)).toFixed(0)} MB)`;
+      console.error(`[BrowserWalrusService:${requestId}] Size validation failed:`, {
+        originalSize: encoded.originalSize,
+        maxOriginalSize,
+        isCompressed: encoded.isCompressed,
+        compressedSize: encoded.compressedSize
+      });
+
+      return {
+        success: false,
+        error: errorMsg,
+        details: {
+          originalSize: encoded.originalSize,
+          maxOriginalSize,
+          isCompressed: encoded.isCompressed,
+          compressedSize: encoded.compressedSize
+        },
+        requestId,
+        timestamp: Date.now()
+      };
+    }
+
+    // Check compressed size if compression was applied
+    if (encoded.isCompressed && encoded.compressedSize > maxCompressedSize) {
+      const errorMsg = `Compressed data too large: ${encoded.compressedSize} bytes exceeds limit of ${maxCompressedSize} bytes (${(maxCompressedSize / (1024 * 1024)).toFixed(0)} MB)`;
+      console.error(`[BrowserWalrusService:${requestId}] Compressed size validation failed:`, {
+        originalSize: encoded.originalSize,
+        compressedSize: encoded.compressedSize,
+        maxCompressedSize,
+        compressionRatio: encoded.compressionRatio
+      });
+
+      return {
+        success: false,
+        error: errorMsg,
+        details: {
+          originalSize: encoded.originalSize,
+          compressedSize: encoded.compressedSize,
+          maxCompressedSize,
+          compressionRatio: encoded.compressionRatio
+        },
+        requestId,
+        timestamp: Date.now()
+      };
+    }
+
+    console.log(`[BrowserWalrusService:${requestId}] Size validation passed:`, {
+      originalSize: encoded.originalSize,
+      maxOriginalSize,
+      isCompressed: encoded.isCompressed,
+      compressedSize: encoded.compressedSize,
+      maxCompressedSize: encoded.isCompressed ? maxCompressedSize : 'N/A',
+      compressionRatio: encoded.compressionRatio
+    });
+
     const contentHash = await this.calculateHashFromBinary(encoded.data);
-    
+
     // Use configured publishers or fall back to single endpoint
     let publishers = config.walrus.publishers || [this.publisherUrl];
     // In tests, if not enough publishers, replicate to meet redundancyLevel

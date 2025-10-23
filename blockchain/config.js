@@ -76,6 +76,10 @@ export const config = {
       aggregatorUrl: '/api/walrus-aggregator-testnet',
       blobUrl: '/api/walrus-aggregator-testnet/v1/blobs',
 
+      // Blob size limits (256 MB for Walrus documented maximum)
+      maxBlobSizeBytes: 256 * 1024 * 1024,        // 256 MB for original size
+      maxCompressedBlobSizeBytes: 256 * 1024 * 1024, // 256 MB for compressed size
+
       // Multiple endpoints for redundancy (arrays) - all use proxies
       publishers: [
         '/api/walrus-publisher-testnet',
@@ -127,6 +131,10 @@ export const config = {
       publisherUrl: '/api/walrus-publisher-mainnet',
       aggregatorUrl: '/api/walrus-aggregator-mainnet',
       blobUrl: '/api/walrus-aggregator-mainnet/v1/blobs',
+
+      // Blob size limits (256 MB for Walrus documented maximum)
+      maxBlobSizeBytes: 256 * 1024 * 1024,        // 256 MB for original size
+      maxCompressedBlobSizeBytes: 256 * 1024 * 1024, // 256 MB for compressed size
 
       // Multiple endpoints for redundancy - all use proxies
       publishers: [

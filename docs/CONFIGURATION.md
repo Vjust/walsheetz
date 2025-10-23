@@ -1,653 +1,346 @@
 # WalSheetz Configuration Guide
 
-This guide documents all environment variables, feature flags, and configuration options for WalSheetz.
+This document describes the configuration options available in WalSheetz and how to customize them for your deployment.
+
+## Configuration Files
+
+WalSheetz uses two configuration mechanisms:
+
+1. **Runtime Config** (`/app-config.json`) - Dynamic configuration loaded at runtime, allows updates without code changes
+2. **Static Config** (`blockchain/config.js`) - Build-time configuration with defaults and fallbacks
 
 ## Table of Contents
-- [Configuration Sources](#configuration-sources)
+
+- [Walrus Blob Size Limits](#walrus-blob-size-limits)
 - [Network Configuration](#network-configuration)
-- [Bridge Server Configuration](#bridge-server-configuration)
-- [Walrus Storage Configuration](#walrus-storage-configuration)
 - [Storage Features](#storage-features)
-- [Rate Limiting Configuration](#rate-limiting-configuration)
-- [Development & Testing](#development--testing)
-- [Network Switching](#network-switching)
+- [Gas Management](#gas-management)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
-## Configuration Sources
+## Walrus Blob Size Limits
 
-### Configuration Hierarchy
-1. **Environment Variables** - Highest priority (`.env` files, shell exports)
-2. **blockchain/config.js** - Default configuration with environment detection
-3. **app-config.json** - On-chain package IDs and network-specific settings
+### Overview
 
-### Reading Configuration
-**Always use `blockchain/config.js` helpers:**
-```javascript
-import { getCurrentConfig, isTestnet, isMainnet } from '@blockchain/config.js'
+WalSheetz validates data size after encoding and compression to ensure blobs fit within Walrus network limits. These limits are configurable per network.
 
-const cfg = getCurrentConfig()
-console.log(cfg.sui.rpcUrl)         // Network-aware RPC endpoint
-console.log(cfg.walrus.publishers)  // Array of Walrus publishers
-console.log(cfg.storage.features.compression.enabled)  // Feature flag
+### Configuration Options
+
+#### `maxBlobSizeBytes` (Default: 268,435,456 = 256 MB)
+
+Maximum size in bytes for the original (uncompressed) encoded data.
+
+**Location in app-config.json:**
+```json
+{
+  "networks": {
+    "testnet": {
+      "walrus": {
+        "maxBlobSizeBytes": 268435456
+      }
+    }
+  }
+}
 ```
 
-**Never hardcode endpoints or read `process.env` directly!**
+**Location in blockchain/config.js:**
+```javascript
+walrus: {
+  testnet: {
+    maxBlobSizeBytes: 256 * 1024 * 1024
+  }
+}
+```
+
+#### `maxCompressedBlobSizeBytes` (Default: 268,435,456 = 256 MB)
+
+Maximum size in bytes for compressed data when compression is applied.
+
+**Location in app-config.json:**
+```json
+{
+  "networks": {
+    "testnet": {
+      "walrus": {
+        "maxCompressedBlobSizeBytes": 268435456
+      }
+    }
+  }
+}
+```
+
+**Location in blockchain/config.js:**
+```javascript
+walrus: {
+  testnet: {
+    maxCompressedBlobSizeBytes: 256 * 1024 * 1024
+  }
+}
+```
+
+### Validation Flow
+
+1. **Structure Validation** - `validateDataForWalrus()` checks data structure, JSON serializability, and required fields
+2. **Encoding** - Data is encoded to binary JSON format using `encodeSpreadsheetData()`
+3. **Compression** (optional) - If data exceeds compression threshold, it's compressed with gzip
+4. **Size Validation** - Both original and compressed sizes are checked against configured limits
+5. **Upload** - Data is sent to Walrus if all validations pass
+
+```
+┌─────────────────────┐
+│  Structure Check    │  ← validateDataForWalrus()
+│  (no size limit)    │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│   Encode to Binary  │  ← encodeSpreadsheetData()
+│   + Compress        │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  Size Validation    │  ← Check originalSize & compressedSize
+│  (post-encoding)    │     against config limits
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  Upload to Walrus   │
+└─────────────────────┘
+```
+
+### When to Adjust Limits
+
+#### Increase Limits When:
+- Working with very large spreadsheets (>100MB)
+- Storing extensive historical data or cell content
+- Walrus network capacity increases beyond 256 MB
+- Testing edge cases or stress scenarios
+
+#### Decrease Limits When:
+- Network conditions require smaller payloads
+- Implementing stricter data governance policies
+- Protecting against accidental large uploads
+- Rate limiting or quota management needed
+
+### Error Messages
+
+When data exceeds configured limits, you'll see detailed error messages:
+
+**Original size exceeded:**
+```
+Data too large: original size 314572800 bytes exceeds limit of 268435456 bytes (256 MB)
+```
+
+**Compressed size exceeded:**
+```
+Compressed data too large: 270532608 bytes exceeds limit of 268435456 bytes (256 MB)
+```
+
+Error responses include detailed metadata:
+- `originalSize`: Size before compression
+- `compressedSize`: Size after compression (if applicable)
+- `isCompressed`: Boolean indicating if compression was applied
+- `compressionRatio`: Ratio of original to compressed size
+- `maxOriginalSize`: Configured limit for original data
+- `maxCompressedSize`: Configured limit for compressed data
 
 ---
 
 ## Network Configuration
 
-### Sui Network Settings
+### Switching Networks
 
-#### Testnet (Default)
-**Location:** `blockchain/config.js:17-43`
+WalSheetz supports multiple networks (testnet, mainnet). Each network has its own configuration.
 
-```javascript
-environment: 'testnet'  // Change to 'mainnet' for production
+**To switch networks:**
+
+1. Via URL parameter: `?network=mainnet`
+2. Via localStorage: Set `walSheetz_network` to desired network
+3. Via hostname: URLs containing `mainnet` or `devnet` auto-select that network
+
+**Default:** testnet
+
+### Network-Specific Settings
+
+Each network configuration includes:
+- RPC endpoints
+- Package IDs (smart contract addresses)
+- Walrus service URLs
+- Blob size limits
+- Feature flags
+
+Example:
+```json
+{
+  "networks": {
+    "testnet": {
+      "rpcUrl": "https://fullnode.testnet.sui.io:443",
+      "packageId": "0xe7f621...",
+      "walrus": {
+        "maxBlobSizeBytes": 268435456,
+        "maxCompressedBlobSizeBytes": 268435456,
+        "publisherUrl": "https://publisher.walrus-testnet.walrus.space",
+        "aggregatorUrl": "https://aggregator.walrus-testnet.walrus.space"
+      }
+    }
+  }
+}
 ```
-
-**Endpoints:**
-- **RPC URL:** `https://fullnode.testnet.sui.io:443`
-- **gRPC URL:** `fullnode.testnet.sui.io:443`
-- **GraphQL URL:** `https://sui-testnet.mystenlabs.com/graphql`
-- **Faucet:** `https://faucet.testnet.sui.io/gas`
-- **Explorer:** `https://testnet.suivision.xyz`
-
-**Contract Addresses:**
-- **Package ID:** `0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7`
-- **Registry Object ID:** `0x9a6b94f79762fa608c5f0938d092744a8e5b69852f860eb17afa4ab11e24fe25`
-
-#### Mainnet
-**Location:** `blockchain/config.js:45-65`
-
-**Endpoints:**
-- **RPC URL:** `https://fullnode.mainnet.sui.io:443`
-- **gRPC URL:** `fullnode.mainnet.sui.io:443`
-- **GraphQL URL:** `https://sui-mainnet.mystenlabs.com/graphql`
-- **Explorer:** `https://suivision.xyz`
-
-**Contract Addresses:**
-- **Package ID:** `0x991454976a4ef8535ed3572bb1c500dcd565855d49a51f1fadc7f70a316c9631`
-- **Registry Object ID:** `0x66f68bfb639dbc7f24519bcdbbfdb376057d87c6d508ea7a8d67746a11721ca5`
-
-### Network Features
-
-#### Content Hash in Save
-**Location:** `blockchain/config.js:29`, `config.js:53`
-
-```bash
-# Always enabled for deployed contracts
-features.contentHashInSave: true
-```
-
-The deployed contracts require `content_hash` parameter in `save_version()`. Do not disable.
-
-#### gRPC Checkpoint Streaming
-**Location:** `blockchain/config.js:34`, `config.js:56`
-
-```bash
-# Testnet: disabled (returns UNIMPLEMENTED)
-sui.testnet.features.supportsCheckpointStream: false
-
-# Mainnet: enabled
-sui.mainnet.features.supportsCheckpointStream: true
-```
-
-Controls whether to attempt gRPC checkpoint streaming or immediately fallback to GraphQL.
-
----
-
-## Bridge Server Configuration
-
-### ⚠️ Phase 2 - Not implemented in single-user MVP
-
-The WebSocket bridge enables multi-user real-time collaboration. This section documents the configuration for **Phase 2 implementation only**. The current single-user MVP deployment does not require bridge infrastructure.
-
----
-
-### Port & Host
-**Location:** `blockchain/config.js:247-249`
-
-```bash
-# Environment Variables
-BRIDGE_PORT=8081              # Default: 8081
-BRIDGE_HOST=localhost         # Default: localhost (use 0.0.0.0 for Docker)
-BRIDGE_MAX_CLIENTS=100        # Default: 100
-```
-
-**Access:** `config.websocket.port`, `config.websocket.host`
-
-### Logging
-**Location:** `blockchain/config.js:251`
-
-```bash
-BRIDGE_LOG_LEVEL=INFO   # DEBUG, INFO, WARN, ERROR, CRITICAL
-```
-
-**Levels:**
-- **DEBUG** - Detailed diagnostics, message contents, timing
-- **INFO** - Standard operations, connections, major events
-- **WARN** - Non-critical issues, fallbacks
-- **ERROR** - Errors requiring attention
-- **CRITICAL** - System-threatening issues
-
-**Example:**
-```bash
-# Verbose bridge debugging
-BRIDGE_LOG_LEVEL=DEBUG bun run bridge
-```
-
-### Health Checks & Metrics
-**Location:** `blockchain/config.js:252-257`
-
-```bash
-ENABLE_METRICS=false          # Default: false (set to 'true' to enable for Prometheus)
-```
-
-**How it works:**
-- Default (`ENABLE_METRICS` unset or any value except `'true'`): Metrics **disabled**
-- Set `ENABLE_METRICS=true`: Metrics **enabled**
-
-**Endpoints (when enabled):**
-- `http://localhost:8081/health` - Basic liveness check (always available)
-- `http://localhost:8081/ready` - Readiness probe (checks gRPC + WebSocket, always available)
-- `http://localhost:8081/metrics` - Prometheus-style metrics (requires `ENABLE_METRICS=true`)
-- `http://localhost:8081/status` - Detailed status with client info (always available)
-
----
-
-## Walrus Storage Configuration
-
-### Publisher & Aggregator URLs
-**Location:** `blockchain/config.js:70-86`
-
-#### Testnet
-```bash
-# Primary endpoints (proxied in dev)
-publisherUrl: '/walrus-publisher'       # Dev mode
-publisherUrl: 'https://publisher.walrus-testnet.walrus.space'  # Production
-
-aggregatorUrl: '/walrus-aggregator'     # Dev mode
-aggregatorUrl: 'https://aggregator.walrus-testnet.walrus.space'  # Production
-```
-
-**Force absolute URLs in dev:**
-```bash
-WALRUS_USE_ABSOLUTE=true
-```
-
-#### Mainnet
-```bash
-publisherUrl: 'https://publisher.walrus.space'
-aggregatorUrl: 'https://aggregator.walrus.space'
-```
-
-### Redundancy
-**Location:** `blockchain/config.js:89-95`
-
-```bash
-WALRUS_REDUNDANCY=false   # Default: false
-```
-
-**Settings:**
-- `maxEndpoints: 3` - Write to up to 3 publishers
-- `minSuccessful: 1` - At least 1 must succeed
-- `writeTimeout: 30000` - 30 seconds per write
-- `healthCheckInterval: 60000` - 1 minute health checks
-
-**How it works:**
-1. Parallel POST to multiple publishers
-2. HEAD precheck (5s timeout) to verify blob availability
-3. Automatic fallback to secondary aggregators on retrieval
-
-### Walrus SDK
-**Location:** `blockchain/config.js:100-102`
-
-```bash
-WALRUS_USE_SDK=false          # Default: false (safe rollout)
-WALRUS_EPOCHS_DEFAULT=50      # Default: 50 epochs
-WALRUS_EPOCH_RENEWAL_WARNING=7  # Warn users N days before expiry
-```
-
-**SDK Network:** Auto-detected from `config.environment` (testnet/mainnet)
 
 ---
 
 ## Storage Features
 
 ### Compression
-**Location:** `blockchain/config.js:177-179`
 
-```bash
-WALRUS_COMPRESSION=true           # Default: true
-COMPRESSION_THRESHOLD=16384       # 16KB default
-```
+Data compression reduces storage costs and network transfer time.
 
-**How it works:**
-1. Check payload size > `COMPRESSION_THRESHOLD`
-2. If yes: gzip compress, prepend magic bytes (`0x1f8b`)
-3. Automatic decompression on retrieval (magic byte detection)
-
-**Typical compression ratios:** 1.3x-5x for spreadsheet data
-
-### Delta Chains
-**Location:** `blockchain/config.js:182-185`
-
-```bash
-ENABLE_DELTA=true                 # Default: true
-DELTA_MAX_CHAIN=5                 # Max 5 deltas before full snapshot
-```
-
-**How it works:**
-1. Store incremental changes instead of full data
-2. Reconstruct from delta chain on retrieval
-3. Force full snapshot when chain reaches `DELTA_MAX_CHAIN`
-4. Explicit failure on missing base or corrupted chain
-
-**Chain depth tracking:** Logged as `chainDepth` in storage logs
-
-### Batch Persistence
-**Location:** `blockchain/config.js:187-190`
-
-```bash
-BATCH_PERSISTENCE=true            # Default: true
-```
-
-**Settings:**
-- `storageKey: 'walsheetz_batch_'` - LocalStorage prefix
-- `maxBatchAge: 30000` - 30 seconds max batch age
-
-**How it works:**
-1. Persist edit batches to localStorage
-2. Prevent data loss on browser refresh
-3. Auto-resume interrupted uploads
-4. Clear persisted batches after successful upload
-
-### Chunk Purchase & Renewal Metadata
-
-Walrus storage is time-bound. Each blob is pinned for a fixed number of epochs (≈2 days per epoch on testnet). To help users manage renewals we add metadata to both the Walrus payload and the indexing layer.
-
-**Walrus Payload:**
-Every spreadsheet blob encodes a `chunk` record:
-
+**Configuration:**
 ```json
 {
-  "chunk": {
-    "epochsPurchased": 50,
-    "epochStart": 123456,
-    "epochEnd": 123506,
-    "expiryTimestamp": 1739481600000,
-    "renewalCount": 1,
-    "lastRenewedAt": 1736899200000,
-    "purchaseReceipt": "0x...",        // optional Walrus receipt id
-    "notes": "Mainnet archive copy"
+  "features": {
+    "storage": {
+      "compression": {
+        "enabled": true,
+        "threshold": 16384,
+        "algorithm": "gzip"
+      }
+    }
   }
 }
 ```
 
-**Config Defaults:**
+- `enabled`: Enable/disable compression (default: true)
+- `threshold`: Minimum size in bytes before compression is applied (default: 16KB)
+- `algorithm`: Compression algorithm (currently only `gzip` supported)
 
-```bash
-WALRUS_EPOCHS_DEFAULT=50          # Default epochs when saving
-WALRUS_EPOCH_RENEWAL_WARNING=7    # Warn when <7 days remain
-WALRUS_EPOCH_MAX=200              # Upper bound users can pick in UI
-```
+### Auto-Save
 
-**Renewal Flow:**
+Automatically save spreadsheet changes at regular intervals.
 
-1. Auto-save writes to Walrus immediately using the configured epoch count.
-2. Every five minutes we prompt the user to “Publish to Sui” (committing the latest Walrus blob id).
-3. The prompt shows: current chunk expiry, renewal cost estimate (epochs × Walrus price), and “Don’t ask again this session”.
-4. When `expiryTimestamp - now` < `WALRUS_EPOCH_RENEWAL_WARNING` days we raise a prominent banner and send the same info to the off-chain index so other clients see the approaching deadline.
-
-**Index Fields (Sui + off-chain service):**
-
-| Field | Description |
-|-------|-------------|
-| `chunkEpochs` | Epochs purchased for this blob |
-| `chunkExpiry` | UNIX ms timestamp of expiry |
-| `renewalStatus` | `active`, `expiring_soon`, `expired` |
-| `renewalCount` | Number of times renewed |
-| `lastRenewedAt` | Timestamp of last renewal |
-| `defaultEpochSelection` | Suggested epochs for next save |
-
-**UI Behaviour:**
-
-- Display chunk info in the status bar and dataset explorer.
-- "Renew storage" button shortcuts to Walrus purchase flow when expiry is near.
-- When users choose a different duration the selection persists per spreadsheet.
-- Users can open the Storage Management modal via "Manage Storage" button on expiry warnings.
-- Epoch preference is saved per spreadsheet in localStorage under `walsheetz_epoch_pref_{spreadsheetId}`.
-
-**Implementation:**
-
-See [`docs/WALRUS_EPOCH_SELECTION_GUIDE.md`](WALRUS_EPOCH_SELECTION_GUIDE.md) for complete implementation details and threading instructions.
-
-See [`docs/architecture/walrus-indexing.md`](architecture/walrus-indexing.md) for the full ADR.
-
----
-
-## Rate Limiting Configuration
-
-### Global Rate Limiter
-**Location:** `blockchain/config.js:31`, `config.js:99`
-
-```bash
-RATE_LIMITER_ENABLED=true         # Default: true
-```
-
-**Disable rate limiting:**
-```bash
-RATE_LIMITER_ENABLED=false bun run dev:full
-```
-
-### Sui RPC Rate Limits
-**Location:** `blockchain/config.js:38-43`
-
-```bash
-SUI_MAX_RPS=3                     # Max requests per second
-SUI_BURST=6                       # Burst capacity
-SUI_MAX_CONCURRENT=4              # Max concurrent requests
-```
-
-### Walrus Rate Limits
-**Location:** `blockchain/config.js:106-117`
-
-```bash
-# Aggregator (reads)
-WALRUS_AGG_MAX_RPS=3
-WALRUS_AGG_BURST=3
-WALRUS_AGG_MAX_CONCURRENT=2
-
-# Publisher (writes)
-WALRUS_PUB_MAX_RPS=1
-WALRUS_PUB_BURST=1
-WALRUS_PUB_MAX_CONCURRENT=1
-```
-
-**Why conservative limits:**
-- Walrus is in testnet/early stages
-- Prevent rate limit errors (HTTP 429)
-- Ensure fair usage
-
-### Rate Limiter Status UI
-**Location:** `blockchain/config.js:262`
-
-```bash
-SHOW_RATE_LIMITER_STATUS=false    # Default: false
-```
-
-Enable in-app rate limiter status widget for debugging.
-
----
-
-## Development & Testing
-
-### Test Mode
-**Location:** `frontend/services/testing/TestModeAdapter.js`
-
-```bash
-# Enable test mode with mock wallet
-VITE_TEST_MODE=true
-```
-
-**Features:**
-- Mock wallet connection (no browser extension required)
-- Simulated transactions
-- Skip real blockchain interactions
-
-See [docs/test-mode.md](test-mode.md) for details.
-
-### Auto-Save Settings
-**Location:** `blockchain/config.js:169-172`
-
-```javascript
-storage: {
-  autoSaveInterval: 5000,     // 5 seconds
-  editThreshold: 3,           // Save after 3 edits
-  maxVersionHistory: 100,     // Keep last 100 versions per cell
-  batchSize: 50               // Max changes per Walrus blob
+**Configuration:**
+```json
+{
+  "features": {
+    "autoSave": {
+      "enabled": true,
+      "intervalMs": 5000
+    }
+  }
 }
 ```
 
-**Customization:**
-Edit `blockchain/config.js` directly (no env vars for these).
-
-### Sponsor Demo Events
-**Location:** Feature flag in contract/bridge
-
-```bash
-SPONSOR_DEMO_EVENTS=false         # Default: false
-```
-
-**Warning:** Only for demo/testing. When disabled, no placeholder `0x2::event::emit` calls are made.
+- `enabled`: Enable/disable auto-save (default: true)
+- `intervalMs`: Interval between auto-saves in milliseconds (default: 5000 = 5 seconds)
 
 ---
 
-## Network Switching
+## Gas Management
 
-### How to Switch Networks
+### Gas Buffer
 
-1. **Edit `blockchain/config.js`:**
-   ```javascript
-   // Line 399
-   environment: 'mainnet'  // or 'testnet'
-   ```
+Add a buffer percentage to gas estimates for safer transaction execution.
 
-2. **Update wallet network:**
-   - Open Sui Wallet extension
-   - Settings → Network → Select matching network
-
-3. **Verify package IDs:**
-   - Check `blockchain/config.js` testnet/mainnet sections
-   - Ensure `packageId` and `registryObjectId` are correct
-   - Cross-reference with `app-config.json` if present
-
-4. **Restart development server:**
-   ```bash
-   bun run dev:full
-   ```
-
-### Network Detection
-**Helpers:**
-```javascript
-import { isTestnet, isMainnet } from '@blockchain/config.js'
-
-if (isTestnet()) {
-  // Testnet-specific logic
-}
-
-if (isMainnet()) {
-  // Mainnet-specific logic
+**Configuration:**
+```json
+{
+  "features": {
+    "gasManagement": {
+      "bufferPercent": 25
+    }
+  }
 }
 ```
 
-### Network-Specific Behavior
-- **Testnet:** gRPC checkpoint streaming disabled (uses GraphQL fallback)
-- **Mainnet:** gRPC checkpoint streaming enabled
-- **Faucet:** Only available on testnet
-- **Gas costs:** Real SUI on mainnet, test SUI on testnet
+- `bufferPercent`: Percentage to add to gas estimates (default: 25%)
 
 ---
 
-## gRPC Configuration
+## Troubleshooting
 
-### Connection Settings
-**Location:** `blockchain/config.js:198-202`
+### Large Workbook Upload Failures
 
-```javascript
-grpc: {
-  maxReceiveMessageLength: 4 * 1024 * 1024,  // 4MB
-  maxSendMessageLength: 4 * 1024 * 1024,     // 4MB
-  keepAliveTimeMs: 30000,                    // 30s keepalive
-  keepAliveTimeoutMs: 10000,                 // 10s timeout
-  keepAlivePermitWithoutCalls: true
+**Problem:** Uploads fail with "Data too large" error even though data appears reasonable.
+
+**Solutions:**
+1. Check if compression is enabled in storage features
+2. Increase `maxBlobSizeBytes` if working with legitimate large datasets
+3. Verify data doesn't contain excessive metadata or formatting
+4. Review console logs for actual sizes: `originalSize`, `compressedSize`
+
+**Example diagnostic log:**
+```
+[BrowserWalrusService] Size validation passed: {
+  originalSize: 226492416,        // 216 MB raw
+  maxOriginalSize: 268435456,     // 256 MB limit
+  isCompressed: true,
+  compressedSize: 45298483,       // 43 MB compressed
+  maxCompressedSize: 268435456,   // 256 MB limit
+  compressionRatio: 5.0           // 5:1 compression
 }
 ```
 
-### Retry Settings
-**Location:** `blockchain/config.js:204-208`
+### Compression Not Working
 
-```javascript
-enableRetry: true,
-maxRetryAttempts: 3,
-initialRetryDelayMs: 1000,      // 1 second
-maxRetryDelayMs: 30000,         // 30 seconds
-retryDelayMultiplier: 2.0       // Exponential backoff
-```
+**Problem:** Data isn't being compressed even when enabled.
 
-### Streaming Settings
-**Location:** `blockchain/config.js:210-213`
+**Check:**
+1. Verify compression feature is enabled: `features.storage.compression.enabled`
+2. Check if data size exceeds compression threshold (default: 16KB)
+3. Ensure browser supports `CompressionStream` API
+4. Review console logs for compression messages
 
-```javascript
-streamReconnectDelayMs: 1000,       // 1 second
-maxReconnectDelayMs: 30000,         // 30 seconds
-streamKeepaliveIntervalMs: 20000    // 20 seconds
-```
+### Configuration Not Taking Effect
 
----
+**Problem:** Configuration changes aren't reflected in the application.
 
-## Deposit & Gas Configuration
+**Solutions:**
+1. Clear browser cache and reload
+2. Check browser console for config load errors
+3. Verify JSON syntax in `app-config.json`
+4. Ensure ConfigLoader is using correct endpoint (check Network tab)
+5. Check config cache timeout (default: 30 seconds)
 
-### Minimum Deposit & Thresholds
-**Location:** `blockchain/config.js:285-287`
+### Network Connectivity Issues
 
-```javascript
-deposit: {
-  minDepositAmount: 0.002,        // 2,000,000 MIST (min gas budget)
-  lowBalanceThreshold: 0.01,      // 10,000,000 MIST (warn user)
-  gasBuffer: 1.5                  // 50% buffer for estimates
-}
-```
+**Problem:** Cannot connect to Walrus services.
 
-### Gas Constants
-**Location:** `blockchain/config.js:310-311`
-
-```javascript
-mistPerSui: 1_000_000_000,        // 1 SUI = 1 billion MIST
-storageUnitsPerByte: 100,         // 100 storage units per byte
-storageRebatePercentage: 99       // 99% of storage fees rebatable
-```
-
-### Estimated Operation Costs
-**Location:** `blockchain/config.js:313-320`
-
-```javascript
-estimatedGasCosts: {
-  singleEdit: 1000,               // ~1k computation units
-  batchSave: 5000,                // ~5k computation units
-  versionRestore: 10000,          // ~10k computation units
-  walrusStorage: 20000,           // ~20k computation units
-  typicalStorageBytes: 50         // Average bytes per operation
-}
-```
-
-**Note:** Real-time gas prices fetched via GraphQL and cached (30-second expiry).
-
----
-
-## Environment Variable Summary
-
-### Quick Reference
-
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| **Network** |
-| `VITE_NETWORK` | `testnet` | Sui network (testnet/mainnet) |
-| **Bridge** |
-| `BRIDGE_PORT` | `8081` | WebSocket bridge port |
-| `BRIDGE_HOST` | `localhost` | Bridge host (use `0.0.0.0` for Docker) |
-| `BRIDGE_LOG_LEVEL` | `INFO` | Bridge logging level |
-| `BRIDGE_MAX_CLIENTS` | `100` | Max concurrent WebSocket clients |
-| `ENABLE_METRICS` | `false` | Enable Prometheus metrics |
-| **Walrus** |
-| `WALRUS_USE_ABSOLUTE` | `false` | Force absolute URLs in dev |
-| `WALRUS_COMPRESSION` | `true` | Enable gzip compression |
-| `COMPRESSION_THRESHOLD` | `16384` | Min bytes before compression (16KB) |
-| `WALRUS_REDUNDANCY` | `false` | Enable multi-publisher redundancy |
-| `WALRUS_USE_SDK` | `false` | Use @mysten/walrus SDK |
-| `WALRUS_EPOCHS_DEFAULT` | `50` | Default storage epochs |
-| **Storage** |
-| `ENABLE_DELTA` | `true` | Enable delta chain storage |
-| `DELTA_MAX_CHAIN` | `5` | Max delta chain length |
-| `BATCH_PERSISTENCE` | `true` | Persist batches to localStorage |
-| **Rate Limiting** |
-| `RATE_LIMITER_ENABLED` | `true` | Enable rate limiting |
-| `SUI_MAX_RPS` | `3` | Sui RPC max requests/second |
-| `SUI_BURST` | `6` | Sui burst capacity |
-| `SUI_MAX_CONCURRENT` | `4` | Sui max concurrent requests |
-| `WALRUS_AGG_MAX_RPS` | `3` | Walrus aggregator max RPS |
-| `WALRUS_PUB_MAX_RPS` | `1` | Walrus publisher max RPS |
-| **UI** |
-| `SHOW_RATE_LIMITER_STATUS` | `false` | Show rate limiter widget |
-| **Testing** |
-| `VITE_TEST_MODE` | `false` | Enable test mode with mocks |
-| `SPONSOR_DEMO_EVENTS` | `false` | Enable demo event emissions |
-
----
-
-## Troubleshooting Configuration
-
-### Bridge Won't Start
-1. Check port availability: `bun run cleanup`
-2. Verify `BRIDGE_PORT` not in use: `lsof -i :8081`
-3. Check logs: `BRIDGE_LOG_LEVEL=DEBUG bun run bridge`
-
-### Wallet Connection Fails
-1. Verify network match: `blockchain/config.js:399` vs wallet network
-2. Check package IDs match deployed contracts
-3. Ensure sufficient SUI balance
-
-### Walrus Save Fails
-1. Check compression threshold: `COMPRESSION_THRESHOLD`
-2. Verify publisher URL accessibility
-3. Enable redundancy: `WALRUS_REDUNDANCY=true`
-4. Run diagnostics: `bun run diagnose:save`
-
-### Rate Limit Errors (HTTP 429)
-1. Check rate limiter enabled: `RATE_LIMITER_ENABLED=true`
-2. Adjust limits: `SUI_MAX_RPS`, `WALRUS_PUB_MAX_RPS`
-3. Enable status widget: `SHOW_RATE_LIMITER_STATUS=true`
-
----
-
-## Related Documentation
-
-- **[docs/README.md](README.md)** - Developer guide with architecture
-- **[docs/TESTING.md](TESTING.md)** - Testing guide
-- **[docs/scripts/README.md](scripts/README.md)** - Script catalog
-- **[blockchain/config.js](../blockchain/config.js)** - Full configuration source
-- **[docs/rate-limiting-implementation.md](rate-limiting-implementation.md)** - Rate limiting details
+**Check:**
+1. Verify network URLs in configuration are correct
+2. Test endpoints directly: `curl https://publisher.walrus-testnet.walrus.space/v1/api`
+3. Check if proxy is configured correctly in development
+4. Review CORS settings if running in browser
+5. Check health status in console logs
 
 ---
 
 ## Configuration Best Practices
 
-1. **Never hardcode endpoints** - Always use `getCurrentConfig()` helpers
-2. **Use environment variables for secrets** - Never commit API keys or private keys
-3. **Test network switches** - Verify wallet, package IDs, and endpoints align
-4. **Enable verbose logging for debugging** - `BRIDGE_LOG_LEVEL=DEBUG`
-5. **Document new configuration** - Update this file when adding new env vars
-6. **Validate production config** - Double-check `environment: 'mainnet'` and package IDs
+1. **Test changes on testnet first** before deploying to mainnet
+2. **Document custom configurations** in your deployment notes
+3. **Monitor error logs** after configuration changes
+4. **Keep configurations in version control** (except secrets)
+5. **Use environment variables** for sensitive or environment-specific values
+6. **Set conservative limits initially** and increase as needed
+7. **Enable compression** to reduce costs and improve performance
 
 ---
 
-For questions or to report configuration issues, see the main [README.md](../README.md) or open an issue on GitHub.
+## Related Documentation
 
-### Telemetry & Observability
+- [Storage Architecture](./bridge-server-enhancements.md)
+- [Rate Limiting](./rate-limiting-implementation.md)
+- [Testing Guide](./TESTING.md)
+- [Test Mode](./test-mode.md)
 
-WalSheetz surfaces client-side telemetry events so operators can track autosave health, Sui commits, and renewal reminders.
+---
 
-- `frontend/utils/Telemetry.js` emits structured events via the shared logger and a `window` event (`telemetry:event`).
-- `SpreadsheetEngine` records `walrus_autosave_success` and `sui_commit_success` events with blob size, transaction IDs, and chunk expiry timestamps.
-- Integrations can listen for these events and forward them to analytics transports (Datadog, Sentry, etc.).
-- To disable verbose telemetry in development set `VITE_TELEMETRY_ENABLED=false` (default true). Production builds should leave this enabled and configure collectors downstream.
+## Support
 
-Recommended pipeline:
-
-1. Browser dispatches `telemetry:event`.
-2. Frontend monitoring layer (or service worker) forwards to `/api/telemetry` or directly to your observability backend.
-3. Dashboards/alerts monitor commit success rate and imminent Walrus expirations.
-
-See `docs/README.md` for wiring telemetry exporters and `docs/AGENTS.md` for operational runbooks.
+For questions or issues related to configuration:
+- Check console logs for detailed error messages
+- Review this documentation for configuration options
+- Open an issue on the GitHub repository with configuration details and error logs
