@@ -934,7 +934,9 @@ export function Header() {
         // Add extra safeguard: wait a bit for container to be fully cleared
         // This prevents "Cannot read properties of undefined (reading 'getContext')" errors
         // when Luckysheet tries to reinitialize too quickly
-        await new Promise(resolve => setTimeout(resolve, 250))
+        await new Promise(resolve => setTimeout(resolve, 100))
+
+        logger.debug(LogComponent.UI_COMPONENT, 'import_destroy_complete', 'Luckysheet destruction and cleanup complete');
 
         // Verify the container exists and is empty before creating new instance
         const container = document.getElementById('luckysheet') || document.getElementById('luckysheet-container')
@@ -942,26 +944,9 @@ export function Header() {
           throw new Error('Luckysheet container not found in DOM');
         }
 
-        // Wait until canvas is fully removed to prevent addEventListener and getContext errors
-        // Poll up to 2 seconds for canvas cleanup to complete
-        let canvasRemoved = false;
-        for (let i = 0; i < 20; i++) {
-          if (!container.querySelector('canvas')) {
-            canvasRemoved = true;
-            break;
-          }
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-
-        if (!canvasRemoved) {
-          logger.warn(LogComponent.UI_COMPONENT, 'import_canvas_cleanup_incomplete', 'Canvas cleanup incomplete, proceeding anyway');
-        }
-
-        logger.debug(LogComponent.UI_COMPONENT, 'import_destroy_complete', 'Luckysheet destruction and cleanup complete');
-
         // Load the data with pre-allocated capacity
         window.luckysheet.create({
-          container: 'luckysheet',
+          container: 'luckysheet-container',
           data: sheetToLoad,
           title: previewData.info?.name || documentName
         })

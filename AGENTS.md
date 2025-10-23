@@ -24,6 +24,12 @@
 - Import aliases (Vite): `@` → `frontend/`, `@blockchain` → `blockchain/`, `@tests` → `tests/`.
 - Keep changes small and cohesive; match surrounding style. No unrelated refactors.
 
+## Code Change Guidelines
+- **Minimal line changes**: Always prefer single-line fixes over multi-line refactors
+- **Surgical edits**: Change only what's necessary to fix the issue
+- **Root cause first**: Investigate deeply before adding defensive/safety code
+- **Clean history**: Avoid adding unnecessary code that obscures the real fix
+
 ## Testing Guidelines
 - Framework: Vitest. Unit env: `happy-dom`; integration env: Node (see `vitest.integration.config.js`).
 - Start dev/bridge before E2E: `bun run dev:full` then `bun run test:e2e` (Playwright; Docker/neko variants available).
