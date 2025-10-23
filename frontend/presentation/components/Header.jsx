@@ -11,7 +11,6 @@ import { NetworkSelector } from './NetworkSelector.jsx'
 import { logger, LogComponent } from '../../utils/Logger.js'
 import luckysheetApi from '../../services/luckysheetApi.js'
 import SpreadsheetImportExportService from '../../services/SpreadsheetImportExportService.js'
-import { gridSizeManager } from '../../services/GridSizeManager.js'
 import { configLoader } from '../../utils/ConfigLoader.js'
 import '../styles/wallet-modal.css'
 
@@ -68,7 +67,8 @@ export function Header() {
     queryDatasets,
     storageAdapter,
     updateLastSaveInfo,
-    walletSyncReady
+    walletSyncReady,
+    loadImportedData
   } = useSpreadsheetContext()
 
   // Debug helper to check available Luckysheet methods
@@ -901,59 +901,20 @@ export function Header() {
       setIsImporting(true)
       logger.startTimer('import_confirm_action')
 
-      // Load imported data into Luckysheet
-      if (window.luckysheet && previewData.sheets) {
-        // Get the sheet to load
-        const sheetToLoad = previewData.sheets;
-        const selectedSheet = sheetToLoad[selectedSheetIndex] || sheetToLoad[0];
+      // Load imported data via context - lifecycle hook handles re-init with WalSheetz config
+      const importTitle = previewData.info?.name || documentName
+      const result = await loadImportedData(
+        previewData.sheets,
+        selectedSheetIndex,
+        importTitle
+      )
 
-        // Pre-allocate grid capacity before loading data
-        if (selectedSheet.row && selectedSheet.column) {
-          logger.info(LogComponent.UI_COMPONENT, 'import_prealloc_start', 'Pre-allocating grid capacity for import', {
-            rows: selectedSheet.row,
-            cols: selectedSheet.column
-          });
-
-          const expansionResult = gridSizeManager.preallocateForImport({
-            rows: selectedSheet.row,
-            cols: selectedSheet.column
-          });
-
-          logger.info(LogComponent.UI_COMPONENT, 'import_prealloc_complete', 'Grid pre-allocation completed', {
-            expanded: expansionResult.expanded,
-            newDimensions: expansionResult.newDimensions
-          });
-        }
-
-        // Destroy existing instance before loading new data
-        // This ensures all DOM elements and canvas contexts are properly cleaned up
-        // especially important for large datasets (>50K rows) to avoid canvas errors
-        logger.debug(LogComponent.UI_COMPONENT, 'import_destroy_start', 'Starting Luckysheet destruction for reimport');
-        await luckysheetApi.destroy()
-
-        // Add extra safeguard: wait a bit for container to be fully cleared
-        // This prevents "Cannot read properties of undefined (reading 'getContext')" errors
-        // when Luckysheet tries to reinitialize too quickly
-        await new Promise(resolve => setTimeout(resolve, 100))
-
-        logger.debug(LogComponent.UI_COMPONENT, 'import_destroy_complete', 'Luckysheet destruction and cleanup complete');
-
-        // Verify the container exists and is empty before creating new instance
-        const container = document.getElementById('luckysheet') || document.getElementById('luckysheet-container')
-        if (!container) {
-          throw new Error('Luckysheet container not found in DOM');
-        }
-
-        // Load the data with pre-allocated capacity
-        window.luckysheet.create({
-          container: 'luckysheet-container',
-          data: sheetToLoad,
-          title: previewData.info?.name || documentName
-        })
-
-        // Update document name
-        setDocumentName(previewData.info?.name || documentName)
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load imported data')
       }
+
+      // Update document name
+      setDocumentName(importTitle)
 
       const duration = logger.endTimer('import_confirm_action')
 

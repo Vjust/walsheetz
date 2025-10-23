@@ -1989,6 +1989,67 @@ export function useSpreadsheet() {
     }
   }, []);
 
+  // Load imported data from spreadsheet import (Excel/CSV)
+  const loadImportedData = useCallback(async (importedSheets, selectedSheetIndex, title) => {
+    if (!engineRef.current || !gridSizeManagerRef.current) {
+      return { success: false, error: 'Services not initialized' };
+    }
+
+    try {
+      logger.info(LogComponent.BUSINESS_LOGIC, 'import_load_start', 'Loading imported data', {
+        sheetsCount: importedSheets?.length,
+        selectedIndex: selectedSheetIndex,
+        title
+      });
+
+      // Get the sheet to load
+      const selectedSheet = importedSheets[selectedSheetIndex] || importedSheets[0];
+
+      // Pre-allocate grid capacity before loading data
+      if (selectedSheet.row && selectedSheet.column) {
+        logger.debug(LogComponent.BUSINESS_LOGIC, 'import_prealloc', 'Pre-allocating grid', {
+          rows: selectedSheet.row,
+          cols: selectedSheet.column
+        });
+
+        gridSizeManagerRef.current.preallocateForImport({
+          rows: selectedSheet.row,
+          cols: selectedSheet.column
+        });
+      }
+
+      // Construct data format expected by lifecycle hook
+      const importData = {
+        celldata: selectedSheet.celldata,
+        data: {
+          metadata: {
+            title: title || selectedSheet.name || 'Imported Spreadsheet'
+          }
+        }
+      };
+
+      // Update state - lifecycle hook will detect and re-init with WalSheetz config
+      setSpreadsheetData(importData);
+
+      // Update storage metadata
+      if (storageRef.current) {
+        storageRef.current.setSpreadsheetTitle(title || selectedSheet.name || 'Imported Spreadsheet');
+      }
+
+      logger.info(LogComponent.BUSINESS_LOGIC, 'import_load_success', 'Imported data loaded', {
+        title,
+        cellCount: selectedSheet.celldata?.length || 0
+      });
+
+      return { success: true, title };
+    } catch (error) {
+      logger.error(LogComponent.BUSINESS_LOGIC, 'import_load_error', 'Failed to load imported data', {
+        error: error.message
+      });
+      return { success: false, error: error.message };
+    }
+  }, []);
+
   // Delete a spreadsheet permanently
   const deleteSpreadsheet = useCallback(async (spreadsheetId, title) => {
     if (!blockchainRef.current) return { success: false, error: 'Blockchain adapter not initialized' };
@@ -2125,6 +2186,7 @@ export function useSpreadsheet() {
     loadSpreadsheet,
     createNewSpreadsheet,
     initializeLocalSpreadsheet,
+    loadImportedData,
     renameSpreadsheet,
     makeSpreadsheetPublic,
     makeSpreadsheetPrivate,
