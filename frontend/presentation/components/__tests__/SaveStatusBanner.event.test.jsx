@@ -3,7 +3,7 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
-import { SaveStatusBanner } from '../SaveStatusBanner.jsx';
+import { SaveStatusBanner } from '../spreadsheet/SaveStatusBanner.jsx';
 
 /**
  * SaveStatusBanner Event Handling Tests
@@ -346,7 +346,9 @@ describe('SaveStatusBanner Event Handling', () => {
 
       // Click retry button
       const retryButton = screen.getByText(/Retry Save/);
-      retryButton.click();
+      act(() => {
+        retryButton.click();
+      });
 
       // Should emit event with fallback key
       await waitFor(() => {

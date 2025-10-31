@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useSpreadsheetContext } from '../presentation/components/SpreadsheetProvider.jsx'
+import { useSpreadsheetContext } from '../presentation/components/spreadsheet'
 import UnicornStudioHero from '../presentation/components/UnicornStudioHero.jsx'
 import { logger, LogComponent } from '../utils/Logger.js'
 

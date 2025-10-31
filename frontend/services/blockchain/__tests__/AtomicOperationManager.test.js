@@ -142,23 +142,20 @@ describe('AtomicOperationManager', () => {
 
       // Verify operations executed in order with proper context
       expect(operations[0].execute).toHaveBeenCalled()
-      expect(operations[1].execute).toHaveBeenCalledWith(
-        expect.objectContaining({
-          operationResults: expect.objectContaining({
-            'step1': expect.objectContaining({ blobId: 'blob-123' })
-          })
-        }),
-        expect.any(String)
-      )
-      expect(operations[2].execute).toHaveBeenCalledWith(
-        expect.objectContaining({
-          operationResults: expect.objectContaining({
-            'step1': expect.objectContaining({ blobId: 'blob-123' }),
-            'step2': expect.objectContaining({ objectId: 'obj-blob-123' })
-          })
-        }),
-        expect.any(String)
-      )
+
+      // step2 should receive context with step1 results
+      const step2CallContext = operations[1].execute.mock.calls[0][0]
+      expect(step2CallContext.operationResults).toBeDefined()
+      expect(step2CallContext.operationResults['step1']).toBeDefined()
+      expect(step2CallContext.operationResults['step1'].blobId).toBe('blob-123')
+
+      // step3 should receive context with both step1 and step2 results
+      const step3CallContext = operations[2].execute.mock.calls[0][0]
+      expect(step3CallContext.operationResults).toBeDefined()
+      expect(step3CallContext.operationResults['step1']).toBeDefined()
+      expect(step3CallContext.operationResults['step1'].blobId).toBe('blob-123')
+      expect(step3CallContext.operationResults['step2']).toBeDefined()
+      expect(step3CallContext.operationResults['step2'].objectId).toBe('obj-blob-123')
 
       // Verify final result
       const step3Result = result.results.find(r => r.name === 'step3')
@@ -264,7 +261,11 @@ describe('AtomicOperationManager', () => {
       const result = await manager.executeAtomic([operation], testContext)
 
       expect(result.success).toBe(true)
-      expect(operation.execute).toHaveBeenCalledWith(testContext)
+      // Operations now receive both context and operationId parameters
+      expect(operation.execute).toHaveBeenCalledWith(
+        testContext,
+        expect.stringMatching(/^atomic-/)
+      )
     })
 
     it('should handle operations with mixed parallel and sequential', async () => {
@@ -433,11 +434,11 @@ describe('AtomicOperationManager', () => {
       expect(result.success).toBe(true)
 
       // Verify transaction experience was invoked for parallel operations
-      expect(transactionExperienceManager.prepareTransaction).toHaveBeenCalled()
+      // executeWithExperience internally calls prepareTransaction
       expect(transactionExperienceManager.executeWithExperience).toHaveBeenCalled()
     })
 
-    it('should NOT wrap sequential operations with transaction experience (current behavior)', async () => {
+    it('should NOT wrap sequential operations with transaction experience', async () => {
       const { transactionExperienceManager } = await import('../../../utils/TransactionExperience.js')
       vi.clearAllMocks()
 
@@ -453,9 +454,22 @@ describe('AtomicOperationManager', () => {
       expect(result.success).toBe(true)
 
       // Sequential operations should NOT use executeWithExperience wrapper
-      // (They execute directly without the wrapper)
-      // This characterizes the current asymmetric behavior
-      expect(operations[1].execute).toHaveBeenCalled()
+      // They execute directly with (context, operationId) parameters
+      expect(operations[1].execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operationResults: expect.objectContaining({
+            'step-1': expect.objectContaining({ value: 1 })
+          })
+        }),
+        expect.stringMatching(/^atomic-/)  // operationId
+      )
+
+      // Verify executeWithExperience was NOT called for sequential operations
+      expect(transactionExperienceManager.executeWithExperience).not.toHaveBeenCalledWith(
+        expect.objectContaining({ execute: expect.any(Function) }),
+        'step-2',
+        expect.anything()
+      )
     })
 
     it('should emit transaction progress events during parallel execution', async () => {

@@ -297,7 +297,7 @@ export class SpreadsheetEngine {
       await this.storageService.saveData(data);
 
       // Check if we're online for Walrus save
-      if (!this.isOnline) {
+      if (!this.offlineQueueManager.getIsOnline()) {
         logger.info(LogComponent.SPREADSHEET_ENGINE, 'walrus_autosave_offline', 'Adding Walrus save to offline queue');
         this.addToOfflineQueue({
           type: 'walrus_save',
@@ -373,7 +373,7 @@ export class SpreadsheetEngine {
     }
 
     // Check if we're online for blockchain sync
-    if (!this.isOnline) {
+    if (!this.offlineQueueManager.getIsOnline()) {
       logger.info(LogComponent.SPREADSHEET_ENGINE, 'commit_offline', 'Adding Sui commit to offline queue');
       const blobIds = this.pendingWalrusSaves.map(save => save.blobId);
       this.addToOfflineQueue({
@@ -1877,9 +1877,9 @@ export class SpreadsheetEngine {
       chunkMetadata: this.commitPromptState.metadata?.chunk || null,
 
       // Offline queue status
-      isOnline: this.isOnline,
-      offlineQueueSize: this.offlineQueue.length,
-      offlineQueueProcessing: !!this.offlineQueueProcessingTimer
+      isOnline: this.offlineQueueManager.getIsOnline(),
+      offlineQueueSize: this.offlineQueueManager.getQueueSize(),
+      offlineQueueProcessing: this.offlineQueueManager.isProcessing()
     };
 
     logger.debug(LogComponent.SPREADSHEET_ENGINE, 'status_check', `Status requested`, status);

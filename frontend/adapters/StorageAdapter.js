@@ -181,6 +181,11 @@ export class StorageAdapter extends IStorageService {
     }
   }
 
+  // Alias for backward compatibility
+  clearAllData() {
+    return this.clearData()
+  }
+
   async updateHistory(data) {
     try {
       // Add current save to history if it contains edits
@@ -212,16 +217,19 @@ export class StorageAdapter extends IStorageService {
 
   getDefaultData() {
     return {
+      data: {
+        cells: {},
+        metadata: {
+          title: 'New Spreadsheet',
+          rows: 20,
+          cols: 10
+        }
+      },
       version: this.generateVersion(),
       createdAt: Date.now(),
       savedAt: Date.now(),
-      edits: [],
-      metadata: {
-        title: 'New Spreadsheet',
-        rows: 20,
-        cols: 10
-      }
-    };
+      edits: []
+    }
   }
 
   generateVersion() {

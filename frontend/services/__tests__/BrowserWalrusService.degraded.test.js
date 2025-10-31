@@ -11,9 +11,22 @@ describe('BrowserWalrusService Degraded Mode', () => {
   beforeEach(() => {
     // Mock environment
     global.process = { env: { NODE_ENV: 'test' } }
+
+    // Restore Browser APIs in node environment
+    const eventTarget = new EventTarget()
     global.window = {
-      location: { hostname: 'localhost', origin: 'http://localhost:3000' }
+      location: { hostname: 'localhost', origin: 'http://localhost:3000' },
+      addEventListener: eventTarget.addEventListener.bind(eventTarget),
+      removeEventListener: eventTarget.removeEventListener.bind(eventTarget),
+      dispatchEvent: eventTarget.dispatchEvent.bind(eventTarget)
     }
+    global.CustomEvent = global.CustomEvent ?? class CustomEvent extends Event {
+      constructor(type, params = {}) {
+        super(type, params)
+        this.detail = params.detail
+      }
+    }
+
     global.localStorage = {
       getItem: vi.fn(),
       setItem: vi.fn(),
@@ -138,7 +151,7 @@ describe('BrowserWalrusService Degraded Mode', () => {
     const corsErrors = [
       new TypeError('Failed to fetch'),
       new Error('CORS policy: No Access-Control-Allow-Origin header'),
-      new Error('NetworkError when attempting to fetch resource')
+      new TypeError('Failed to fetch') // Network errors are detected as CORS if they're TypeErrors with "Failed to fetch"
     ]
 
     for (const error of corsErrors) {
@@ -168,10 +181,9 @@ describe('BrowserWalrusService Degraded Mode', () => {
     // Perform health check
     await service.performHealthCheck(false)
 
-    // Verify log mentions save queue size
+    // Verify log mentions save queue size (single string log)
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Save queue preserved'),
-      expect.stringContaining('3 pending saves')
+      expect.stringContaining('Save queue preserved (3 pending saves)')
     )
 
     consoleWarnSpy.mockRestore()

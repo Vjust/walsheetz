@@ -10,21 +10,22 @@ describe('LuckysheetApi methods verification', () => {
   beforeEach(() => {
     // Mock window and Luckysheet globals
     if (typeof window === 'undefined') {
-      global.window = {
-        luckysheet: {
-          create: () => {},
-          destroy: () => {},
-          undo: () => {},
-          redo: () => {},
-          refresh: () => {},
-          refreshFormula: () => {},
-          copy: () => {},
-          paste: () => {},
-          cut: () => {},
-          zoom: () => {},
-          getAllSheets: () => []
-        }
-      };
+      global.window = {}
+    }
+
+    // Always set up luckysheet mock (happy-dom provides window but not luckysheet)
+    global.window.luckysheet = {
+      create: () => {},
+      destroy: () => {},
+      undo: () => {},
+      redo: () => {},
+      refresh: () => {},
+      refreshFormula: () => {},
+      copy: () => {},
+      paste: () => {},
+      cut: () => {},
+      zoom: () => {},
+      getAllSheets: () => []
     }
   });
 
@@ -121,8 +122,8 @@ describe('LuckysheetApi methods verification', () => {
       const versionCheck = luckysheetApi.verifyCDNVersion();
 
       // Either should provide useful information
-      const hasMethodInfo = methodCheck.available || methodCheck.missing || methodCheck.error;
-      const hasVersionInfo = versionCheck.version || versionCheck.cdnProvider || versionCheck.error || versionCheck.warning;
+      const hasMethodInfo = !!(methodCheck.available || methodCheck.missing || methodCheck.error);
+      const hasVersionInfo = !!(versionCheck.version || versionCheck.cdnProvider || versionCheck.error || versionCheck.warning);
 
       expect(hasMethodInfo || hasVersionInfo).toBe(true);
     });

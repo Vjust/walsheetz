@@ -49,13 +49,15 @@ try {
     }
   });
 
-  // Log memory usage at debug level
-  const memUsage = process.memoryUsage();
-  logger.debug('Memory usage snapshot', {
-    rss: `${Math.round(memUsage.rss / 1024 / 1024)}MB`,
-    heapUsed: `${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`,
-    heapTotal: `${Math.round(memUsage.heapTotal / 1024 / 1024)}MB`
-  });
+  // Log memory usage at debug level (only in Node environment)
+  if (typeof process !== 'undefined' && process.memoryUsage) {
+    const memUsage = process.memoryUsage()
+    logger.debug('Memory usage snapshot', {
+      rss: `${Math.round(memUsage.rss / 1024 / 1024)}MB`,
+      heapUsed: `${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`,
+      heapTotal: `${Math.round(memUsage.heapTotal / 1024 / 1024)}MB`
+    })
+  }
   
   // Periodic status logging (throttled, only when there's activity)
   setInterval(() => {

@@ -511,6 +511,6 @@ A: Convenience. User shouldn't need to re-select testnet/mainnet every page load
 
 ## See Also
 - `frontend/adapters/StorageAdapter.js` - RAM-only storage implementation
-- `frontend/presentation/components/SaveStatusBanner.jsx` - User notification UI
+- `frontend/presentation/components/spreadsheet/SaveStatusBanner.jsx` - User notification UI
 - `frontend/core/SpreadsheetEngine.js` - Save flow implementation
 - Commit: `2b16165` - Initial RAM-first architecture implementation

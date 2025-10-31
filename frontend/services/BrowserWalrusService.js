@@ -3096,14 +3096,39 @@ class BrowserWalrusService {
   clearRetryQueue() {
     const cleared = this.retryQueue.length;
     this.retryQueue = [];
-    
+
     console.log(`[BrowserWalrusService] Cleared retry queue (${cleared} items)`);
-    
+
     this.emitOperationEvent({
       type: 'retry_queue_cleared',
       message: `Retry queue cleared (${cleared} items)`,
       success: true,
       details: { clearedItems: cleared }
+    });
+  }
+
+  // Clear all data (used during health failure threshold)
+  clearAllData() {
+    const stats = {
+      pendingSaves: this.pendingSaves.length,
+      retryQueue: this.retryQueue.length,
+      batchQueue: this.batchQueue.size,
+      pendingRequests: this.pendingRequests.size
+    };
+
+    this.pendingSaves = [];
+    this.retryQueue = [];
+    this.batchQueue.clear();
+    this.pendingRequests.clear();
+    this.retryInProgress = false;
+
+    console.log(`[BrowserWalrusService] Cleared all data`, stats);
+
+    this.emitOperationEvent({
+      type: 'all_data_cleared',
+      message: 'All data cleared due to persistent health failures',
+      success: true,
+      details: stats
     });
   }
   

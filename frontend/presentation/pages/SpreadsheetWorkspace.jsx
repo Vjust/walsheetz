@@ -3,7 +3,7 @@
  * Main workspace with spreadsheet and formula sidebar
  */
 import React, { useState, useEffect, useRef } from 'react';
-import { Spreadsheet } from '../components/Spreadsheet.jsx';
+import { Spreadsheet } from '../components/spreadsheet';
 import { WALSHEETZ_FUNCTION_METADATA } from '../../services/formulas/WalSheetzFunctions.js';
 import { logger, LogComponent } from '../../utils/Logger.js';
 import '../styles/SpreadsheetWorkspace.css';

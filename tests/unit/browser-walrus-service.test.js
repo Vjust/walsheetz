@@ -52,7 +52,8 @@ describe('BrowserWalrusService', () => {
       // Mock configLoader.getConfig()
       const { configLoader } = await import('../../frontend/utils/ConfigLoader.js');
       configLoader.getConfig.mockResolvedValueOnce({
-        resolveHealthyServiceUrl: vi.fn().mockResolvedValue('http://localhost:8080')
+        resolveHealthyServiceUrl: vi.fn().mockResolvedValue('http://localhost:8080'),
+        getWalrusServiceBase: vi.fn().mockReturnValue('http://localhost:8080')
       });
 
       // Mock successful health check response
@@ -78,7 +79,8 @@ describe('BrowserWalrusService', () => {
       // Mock configLoader.getConfig()
       const { configLoader } = await import('../../frontend/utils/ConfigLoader.js');
       configLoader.getConfig.mockResolvedValueOnce({
-        resolveHealthyServiceUrl: vi.fn().mockResolvedValue('http://localhost:8080')
+        resolveHealthyServiceUrl: vi.fn().mockResolvedValue('http://localhost:8080'),
+        getWalrusServiceBase: vi.fn().mockReturnValue('http://localhost:8080')
       });
 
       // Mock failed fetch
@@ -93,7 +95,8 @@ describe('BrowserWalrusService', () => {
       // Mock configLoader.getConfig()
       const { configLoader } = await import('../../frontend/utils/ConfigLoader.js');
       configLoader.getConfig.mockResolvedValueOnce({
-        resolveHealthyServiceUrl: vi.fn().mockResolvedValue('http://localhost:8080')
+        resolveHealthyServiceUrl: vi.fn().mockResolvedValue('http://localhost:8080'),
+        getWalrusServiceBase: vi.fn().mockReturnValue('http://localhost:8080')
       });
 
       // Mock non-OK response
@@ -112,7 +115,8 @@ describe('BrowserWalrusService', () => {
       // Mock configLoader.getConfig()
       const { configLoader } = await import('../../frontend/utils/ConfigLoader.js');
       configLoader.getConfig.mockResolvedValueOnce({
-        resolveHealthyServiceUrl: vi.fn().mockResolvedValue('http://localhost:8080')
+        resolveHealthyServiceUrl: vi.fn().mockResolvedValue('http://localhost:8080'),
+        getWalrusServiceBase: vi.fn().mockReturnValue('http://localhost:8080')
       });
 
       const eventSpy = vi.spyOn(service, 'emitOperationEvent');

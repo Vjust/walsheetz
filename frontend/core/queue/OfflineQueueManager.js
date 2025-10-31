@@ -206,6 +206,13 @@ export class OfflineQueueManager {
   }
 
   /**
+   * Check if queue is actively processing
+   */
+  isProcessing() {
+    return !!this.offlineQueueProcessingTimer;
+  }
+
+  /**
    * Cleanup - stop timers and remove event listeners
    */
   cleanup() {

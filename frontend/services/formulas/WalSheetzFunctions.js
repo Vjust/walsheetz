@@ -11,7 +11,7 @@
  *                      Wraps luckysheet.create() to inject into sheet.luckysheet_function
  *                      DURING/AFTER luckysheet initialization
  *
- * Layer 3 (CONFIG):    frontend/presentation/components/Spreadsheet.jsx
+* Layer 3 (CONFIG):    frontend/presentation/components/spreadsheet/Spreadsheet.jsx
  *                      Passes luckysheet_function in the config to luckysheet.create()
  *                      AS PART OF the initialization config
  *

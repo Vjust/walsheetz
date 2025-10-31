@@ -74,7 +74,7 @@ The fix includes:
 
 ### SaveDetailsModal
 
-**Location**: `frontend/presentation/components/SaveDetailsModal.jsx`
+**Location**: `frontend/presentation/components/spreadsheet/SaveDetailsModal.jsx`
 
 **Props**:
 ```javascript

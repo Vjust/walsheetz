@@ -718,10 +718,10 @@ class LuckysheetApi {
    */
   verifyCDNVersion() {
     if (!window.luckysheet) {
-      return { error: 'Luckysheet not loaded' };
+      return { error: 'Luckysheet not loaded' }
     }
 
-    const scripts = Array.from(document.querySelectorAll('script'));
+    const scripts = Array.from(document.querySelectorAll('script'))
     const luckysheetScript = scripts.find(s => s.src && s.src.includes('luckysheet'));
 
     if (!luckysheetScript) {

@@ -322,7 +322,6 @@ WALRUS_EPOCH_MAX=200              # Upper bound users can pick in UI
 
 **Implementation:**
 
-See [`docs/WALRUS_EPOCH_SELECTION_GUIDE.md`](WALRUS_EPOCH_SELECTION_GUIDE.md) for complete implementation details and threading instructions.
 
 See [`docs/architecture/walrus-indexing.md`](architecture/walrus-indexing.md) for the full ADR.
 

@@ -14,9 +14,22 @@ describe('ConfigLoader Fallback Logic', () => {
     configLoader.fallbackAttemptCount = 0
     fetchMock = vi.fn()
     global.fetch = fetchMock
+
+    // Restore Browser APIs in node environment
+    const eventTarget = new EventTarget()
     global.window = {
-      location: { hostname: 'localhost', origin: 'http://localhost:3000' }
+      location: { hostname: 'localhost', origin: 'http://localhost:3000' },
+      addEventListener: eventTarget.addEventListener.bind(eventTarget),
+      removeEventListener: eventTarget.removeEventListener.bind(eventTarget),
+      dispatchEvent: eventTarget.dispatchEvent.bind(eventTarget)
     }
+    global.CustomEvent = global.CustomEvent ?? class CustomEvent extends Event {
+      constructor(type, params = {}) {
+        super(type, params)
+        this.detail = params.detail
+      }
+    }
+
     global.localStorage = {
       getItem: vi.fn(),
       setItem: vi.fn(),
@@ -34,7 +47,7 @@ describe('ConfigLoader Fallback Logic', () => {
       ok: false,
       status: 404,
       statusText: 'Not Found',
-      headers: new Map()
+      headers: new Headers()
     })
 
     const config = await configLoader._loadConfig()
@@ -49,7 +62,7 @@ describe('ConfigLoader Fallback Logic', () => {
       ok: false,
       status: 404,
       statusText: 'Not Found',
-      headers: new Map()
+      headers: new Headers()
     })
 
     const config = await configLoader._loadConfig()
@@ -67,7 +80,7 @@ describe('ConfigLoader Fallback Logic', () => {
       ok: false,
       status: 404,
       statusText: 'Not Found',
-      headers: new Map()
+      headers: new Headers()
     })
 
     const config = await configLoader._loadConfig()
@@ -81,7 +94,7 @@ describe('ConfigLoader Fallback Logic', () => {
       ok: false,
       status: 404,
       statusText: 'Not Found',
-      headers: new Map()
+      headers: new Headers()
     })
 
     const config = await configLoader._loadConfig()
@@ -95,7 +108,7 @@ describe('ConfigLoader Fallback Logic', () => {
       ok: false,
       status: 404,
       statusText: 'Not Found',
-      headers: new Map()
+      headers: new Headers()
     })
 
     const config = await configLoader._loadConfig()
@@ -110,7 +123,7 @@ describe('ConfigLoader Fallback Logic', () => {
       ok: false,
       status: 404,
       statusText: 'Not Found',
-      headers: new Map()
+      headers: new Headers()
     })
 
     const config = await configLoader._loadConfig()
@@ -123,6 +136,7 @@ describe('ConfigLoader Fallback Logic', () => {
   test('should succeed with 200 response and not set isFallback', async () => {
     const testConfig = {
       version: '1.0.0',
+      timestamp: Date.now(),
       networks: {
         testnet: {
           rpcUrl: 'https://fullnode.testnet.sui.io:443',
@@ -139,10 +153,14 @@ describe('ConfigLoader Fallback Logic', () => {
       metadata: {}
     }
 
+    const headers = new Headers()
+    headers.set('content-type', 'application/json')
+
     fetchMock.mockResolvedValueOnce({
       ok: true,
       status: 200,
-      headers: new Map([['content-type', 'application/json']]),
+      headers,
+      text: vi.fn().mockResolvedValueOnce(JSON.stringify(testConfig)),
       json: vi.fn().mockResolvedValueOnce(testConfig)
     })
 
@@ -161,7 +179,7 @@ describe('ConfigLoader Fallback Logic', () => {
       ok: false,
       status: 404,
       statusText: 'Not Found',
-      headers: new Map()
+      headers: new Headers()
     })
 
     await configLoader._loadConfig()
@@ -207,27 +225,26 @@ describe('ConfigLoader Fallback Logic', () => {
     expect(global.localStorage.removeItem).toHaveBeenCalled()
   })
 
-  test('fallback config should use valid Walrus endpoints', async () => {
+  test('fallback config should use proxied Walrus endpoints', async () => {
     fetchMock.mockResolvedValueOnce({
       ok: false,
       status: 404,
       statusText: 'Not Found',
-      headers: new Map()
+      headers: new Headers()
     })
 
     const config = await configLoader._loadConfig()
 
-    // Verify testnet uses walrus.space official endpoints
-    expect(config.networks.testnet.walrus.publisherUrl).toBe('https://publisher.walrus-testnet.walrus.space')
-    expect(config.networks.testnet.walrus.aggregatorUrl).toBe('https://aggregator.walrus-testnet.walrus.space')
-    expect(config.networks.testnet.walrus.publisherUrl).not.toContain('staketab')
-    expect(config.networks.testnet.walrus.aggregatorUrl).not.toContain('staketab')
+    // Verify testnet routes through first-party proxy endpoints for CORS-safe requests
+    expect(config.networks.testnet.walrus.publisherUrl).toBe('/api/walrus-publisher-testnet')
+    expect(config.networks.testnet.walrus.aggregatorUrl).toBe('/api/walrus-aggregator-testnet')
+    expect(config.networks.testnet.walrus.publisherUrl).toMatch(/^\/api\//)
+    expect(config.networks.testnet.walrus.aggregatorUrl).toMatch(/^\/api\//)
 
-    // Verify mainnet uses Staketab community endpoints (until official .wal.app endpoints are confirmed)
-    // TODO: Update to official endpoints once available from Mysten/Walrus
-    expect(config.networks.mainnet.walrus.publisherUrl).toBe('https://walrus-mainnet-publisher-1.staketab.org')
-    expect(config.networks.mainnet.walrus.aggregatorUrl).toBe('https://wal-aggregator-mainnet.staketab.org')
-    expect(config.networks.mainnet.walrus.publisherUrl).toContain('staketab')
-    expect(config.networks.mainnet.walrus.aggregatorUrl).toContain('staketab')
+    // Verify mainnet also uses proxied endpoints that forward to community infrastructure
+    expect(config.networks.mainnet.walrus.publisherUrl).toBe('/api/walrus-publisher-mainnet')
+    expect(config.networks.mainnet.walrus.aggregatorUrl).toBe('/api/walrus-aggregator-mainnet')
+    expect(config.networks.mainnet.walrus.publisherUrl).toMatch(/^\/api\//)
+    expect(config.networks.mainnet.walrus.aggregatorUrl).toMatch(/^\/api\//)
   })
 })

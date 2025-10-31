@@ -895,9 +895,12 @@ class BrowserWalletManager {
 
 }
 
+// Export class for testing and advanced usage
+export { BrowserWalletManager }
+
 // Create singleton instance
-export const browserWalletManager = new BrowserWalletManager();
-export default browserWalletManager;
+export const browserWalletManager = new BrowserWalletManager()
+export default browserWalletManager
 
 // Global access for error recovery
 if (typeof window !== 'undefined') {

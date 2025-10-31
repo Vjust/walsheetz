@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { useSpreadsheetContext } from '../presentation/components/SpreadsheetProvider.jsx';
-import { MainLayout } from '../presentation/components/MainLayout.jsx';
-import { LoadingOverlay } from '../presentation/components/LoadingOverlay.jsx';
+import { useSpreadsheetContext, MainLayout, LoadingOverlay } from '../presentation/components/spreadsheet';
 import { BreadcrumbNavigation } from '../components/BreadcrumbNavigation.jsx';
 import { useUnloadWarning } from '../presentation/hooks/useUnloadWarning.js';
 import { logger, LogComponent } from '../utils/Logger.js';

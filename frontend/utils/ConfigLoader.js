@@ -49,11 +49,13 @@ class ConfigLoader {
 
   // Internal config loading with cache-busting and improved dev build support
   async _loadConfig() {
+    // Declare configUrl at function scope so it's accessible in catch block
+    let configUrl = '/app-config.json'
+
     try {
-      console.log('[ConfigLoader] 🔄 Loading runtime config...');
+      console.log('[ConfigLoader] 🔄 Loading runtime config...')
 
       // Try to resolve config URL with BASE_URL support for dev builds
-      let configUrl = '/app-config.json';
 
       // In dev/Vite, use BASE_URL to resolve correct path
       if (import.meta?.env?.BASE_URL && import.meta.env.BASE_URL !== '/') {

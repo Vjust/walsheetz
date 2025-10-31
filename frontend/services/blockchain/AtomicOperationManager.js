@@ -1,6 +1,7 @@
 import { logger, LogComponent } from '../../utils/Logger.js'
 import { standardizedErrorHandler } from '../../utils/StandardizedErrorHandler.js'
 import { transactionExperienceManager } from '../../utils/TransactionExperience.js'
+import { AtomicExecutionContext } from './AtomicExecutionContext.js'
 
 /**
  * Atomic Operation Manager - Ensures operations can be rolled back if any step fails
@@ -63,23 +64,19 @@ export class AtomicOperationManager {
       context: Object.keys(context)
     })
 
-    let lastOperation = { name: 'initialization', type: 'setup' }
+    // Create execution context to manage results and state
+    const execContext = new AtomicExecutionContext(operations, context)
 
     try {
-      const results = []
-      const operationResults = new Map()
-
       const parallelOperations = operations.filter(op => !op.dependencies)
       const sequentialOperations = operations.filter(op => op.dependencies)
 
       if (parallelOperations.length > 0) {
-        const parallelLastOp = await this._executeParallelOperations(parallelOperations, context, operationId, operationResults, results)
-        if (parallelLastOp) lastOperation = parallelLastOp
+        await this._executeParallelOperations(parallelOperations, execContext, operationId)
       }
 
       if (sequentialOperations.length > 0) {
-        const sequentialLastOp = await this._executeSequentialOperations(sequentialOperations, operations, context, operationId, operationResults, results)
-        if (sequentialLastOp) lastOperation = sequentialLastOp
+        await this._executeSequentialOperations(sequentialOperations, operations, execContext, operationId)
       }
 
       logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_success', `Atomic operation completed successfully [${operationId}]`, {
@@ -92,21 +89,21 @@ export class AtomicOperationManager {
       // Auto-cleanup after successful operations
       this.cleanup(operationId)
 
-      return { success: true, results, operationId }
+      return { success: true, results: execContext.results, operationId }
 
     } catch (error) {
-      const safeLastOperation = lastOperation || { name: 'unknown', type: 'unknown' }
+      const safeLastOperation = execContext.lastOperation || 'unknown'
 
       logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_failed', `Atomic operation failed, initiating rollback [${operationId}]`, {
         error: this._extractErrorMessage(error),
         operationId,
         operations: operations.length,
-        lastOperation: safeLastOperation.name
+        lastOperation: safeLastOperation
       })
 
-      await this.rollback(operationId, error)
+      const rollbackSummary = await this.rollback(operationId, error)
 
-      return await this._buildErrorResponse(error, operationId, operations.length, safeLastOperation.name)
+      return await this._buildErrorResponse(error, operationId, operations.length, safeLastOperation, rollbackSummary, execContext.results)
     }
   }
 
@@ -114,9 +111,7 @@ export class AtomicOperationManager {
    * Execute parallel operations concurrently
    * @private
    */
-  async _executeParallelOperations(parallelOperations, context, operationId, operationResults, results) {
-    let lastOperation = null
-
+  async _executeParallelOperations(parallelOperations, execContext, operationId) {
     logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_parallel', `Executing ${parallelOperations.length} parallel operations [${operationId}]`, {
       count: parallelOperations.length,
       operationId
@@ -131,22 +126,17 @@ export class AtomicOperationManager {
 
     const parallelPromises = parallelOperations.map(async (operation, i) => {
       try {
-        lastOperation = operation
+        execContext.updateLastOperation(operation.name)
 
         logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_step', `Executing parallel operation: ${operation.name} [${operationId}]`, {
           operationName: operation.name,
           operationId
         })
 
-        transactionExperienceManager.prepareTransaction(operation.name, context)
-        const result = await transactionExperienceManager.executeWithExperience(
-          { execute: operation.execute.bind(operation) },
-          operation.name,
-          context
-        )
+        // Execute with standardized transaction experience wrapper
+        const result = await this._withTransactionExperience(operation, execContext.initialContext, operationId)
 
         const namedResult = { name: operation.name, ...result }
-        operationResults.set(operation.name, namedResult)
         this._registerCleanup(operation, namedResult, operationId, i)
 
         return namedResult
@@ -162,23 +152,21 @@ export class AtomicOperationManager {
       if (result.status === 'rejected') {
         throw new Error(`Parallel operation failed: ${parallelOperations[i].name} - ${result.reason}`)
       }
-      results.push(result.value)
+      execContext.results.push(result.value)
+      // Also track in operationResults for dependency resolution
+      execContext.operationResults.set(result.value.name, result.value)
     }
 
     logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_parallel_success', `All parallel operations completed [${operationId}]`, {
       completed: parallelOperations.length
     })
-
-    return lastOperation
   }
 
   /**
    * Execute sequential operations with dependency resolution
    * @private
    */
-  async _executeSequentialOperations(sequentialOperations, operations, context, operationId, operationResults, results) {
-    let lastOperation = null
-
+  async _executeSequentialOperations(sequentialOperations, operations, execContext, operationId) {
     logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_sequential', `Executing ${sequentialOperations.length} sequential operations [${operationId}]`, {
       count: sequentialOperations.length,
       operationId
@@ -189,9 +177,9 @@ export class AtomicOperationManager {
 
     for (const operation of sequentialOperations) {
       try {
-        lastOperation = operation
+        execContext.updateLastOperation(operation.name)
 
-        const dependencyContext = this._buildDependencyContext(context, operationResults)
+        const dependencyContext = execContext.buildDependencyContext(operation.name)
 
         logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_step', `Executing sequential operation: ${operation.name} [${operationId}]`, {
           operationName: operation.name,
@@ -199,10 +187,12 @@ export class AtomicOperationManager {
           operationId
         })
 
+        // Execute sequential operation directly with operationId as second parameter
         const result = await operation.execute(dependencyContext, operationId)
         const namedResult = { name: operation.name, ...result }
-        results.push(namedResult)
-        operationResults.set(operation.name, namedResult)
+        execContext.results.push(namedResult)
+        // Also track in operationResults for dependency resolution
+        execContext.operationResults.set(operation.name, namedResult)
         this._registerCleanup(operation, namedResult, operationId, operationIndexMap.get(operation))
       } catch (operationError) {
         throw this._decorateError(operationError, operation.name, 'Sequential operation')
@@ -212,8 +202,55 @@ export class AtomicOperationManager {
     logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_sequential_success', `All sequential operations completed [${operationId}]`, {
       completed: sequentialOperations.length
     })
+  }
 
-    return lastOperation
+  /**
+   * Wrap operation execution with transaction experience tracking
+   * Standardizes instrumentation for both parallel and sequential operations
+   * @private
+   */
+  async _withTransactionExperience(operation, context, operationId) {
+    const operationName = operation.name
+
+    // Emit progress event
+    transactionExperienceManager.emitTransactionEvent('atomic:operation_start', {
+      operationId,
+      operationName,
+      stage: 'execution'
+    })
+
+    try {
+      // Create wrapper that forwards operationId as second parameter
+      const wrappedOperation = {
+        execute: (preparedTransaction) => {
+          return operation.execute(preparedTransaction, operationId)
+        }
+      }
+
+      // Execute with transaction experience wrapper
+      const result = await transactionExperienceManager.executeWithExperience(
+        wrappedOperation,
+        operationName,
+        context
+      )
+
+      // Emit success event
+      transactionExperienceManager.emitTransactionEvent('atomic:operation_success', {
+        operationId,
+        operationName
+      })
+
+      return result
+    } catch (error) {
+      // Emit failure event
+      transactionExperienceManager.emitTransactionEvent('atomic:operation_failed', {
+        operationId,
+        operationName,
+        error: this._extractErrorMessage(error)
+      })
+
+      throw error
+    }
   }
 
   /**
@@ -235,18 +272,6 @@ export class AtomicOperationManager {
   }
 
   /**
-   * Build dependency context with operation results
-   * @private
-   */
-  _buildDependencyContext(context, operationResults) {
-    return {
-      ...context,
-      results: Array.from(operationResults.values()),
-      operationResults: Object.fromEntries(operationResults)
-    }
-  }
-
-  /**
    * Extract error message from various error types
    * @private
    */
@@ -258,14 +283,14 @@ export class AtomicOperationManager {
    * Build error response with standardized error handling
    * @private
    */
-  async _buildErrorResponse(error, operationId, operationsCount, lastOperationName) {
+  async _buildErrorResponse(error, operationId, operationsCount, lastOperationName, rollbackSummary = null, results = []) {
     const errorResult = await standardizedErrorHandler.processError(error, {
       operationId,
       operations: operationsCount,
       lastOperation: lastOperationName
     })
 
-    return {
+    const response = {
       success: false,
       error: errorResult.userMessage,
       technicalError: this._extractErrorMessage(error),
@@ -273,8 +298,16 @@ export class AtomicOperationManager {
       rollbackCompleted: true,
       category: errorResult.category,
       recoveryActions: errorResult.recoveryActions,
-      requiresUserAction: errorResult.requiresUserAction
+      requiresUserAction: errorResult.requiresUserAction,
+      results
     }
+
+    // Include rollback summary if provided
+    if (rollbackSummary) {
+      response.rollbackSummary = rollbackSummary
+    }
+
+    return response
   }
 
   /**
@@ -289,49 +322,97 @@ export class AtomicOperationManager {
   }
 
   /**
+   * Log rollback event with standardized formatting
+   * @private
+   */
+  _logRollbackEvent(eventType, operationId, data = {}) {
+    const eventMap = {
+      start: 'rollback_start',
+      step: 'rollback_step',
+      failed: 'rollback_failed',
+      complete: 'rollback_complete'
+    }
+
+    const message = data.message || ''
+    const logData = { ...data, operationId }
+    delete logData.message
+
+    // Use logger.error for failures, logger.info for other events
+    if (eventType === 'failed') {
+      logger.error(LogComponent.BLOCKCHAIN_ADAPTER, eventMap[eventType], message, logData)
+    } else {
+      logger.info(LogComponent.BLOCKCHAIN_ADAPTER, eventMap[eventType], message, logData)
+    }
+  }
+
+  /**
    * Rollback operations in reverse order
    *
    * Executes cleanup handlers for all operations in the atomic transaction,
    * proceeding in reverse order to properly undo changes. Continues even if
-   * individual cleanup operations fail.
+   * individual cleanup operations fail. Returns a summary documenting cleanup
+   * operations and any failures.
    *
    * @param {string} operationId - The operation ID to rollback
    * @param {Error} originalError - The error that triggered the rollback
-   * @returns {Promise<void>}
+   * @returns {Promise<Object>} Summary object with { cleanedUp, failures, emittedEvents }
    */
   async rollback(operationId, originalError) {
     const operationsToRollback = this.operations.filter(op => op.operationId === operationId)
+    const summary = {
+      cleanedUp: [],
+      failures: [],
+      emittedEvents: []
+    }
 
-    logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'rollback_start', `Starting rollback for operation [${operationId}]`, {
+    // Log rollback start
+    this._logRollbackEvent('start', operationId, {
+      message: `Starting rollback for operation [${operationId}]`,
       operationsToRollback: operationsToRollback.length,
       originalError: this._extractErrorMessage(originalError)
     })
+    summary.emittedEvents.push('rollback_start')
 
     const rollbackOperations = operationsToRollback.reverse()
 
+    // Execute cleanup handlers in reverse order
     for (const op of rollbackOperations) {
       try {
-        logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'rollback_step', `Rolling back step ${op.step} [${operationId}]`, {
-          step: op.step,
-          operationId
+        this._logRollbackEvent('step', operationId, {
+          message: `Rolling back step ${op.step}`,
+          step: op.step
         })
+        summary.emittedEvents.push('rollback_step')
 
         await op.cleanup(op.result)
+        summary.cleanedUp.push(op.step)
       } catch (rollbackError) {
-        logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'rollback_failed', `Rollback failed for step ${op.step} [${operationId}]`, {
+        this._logRollbackEvent('failed', operationId, {
+          message: `Rollback failed for step ${op.step}`,
           step: op.step,
-          rollbackError: this._extractErrorMessage(rollbackError),
-          operationId
+          rollbackError: this._extractErrorMessage(rollbackError)
+        })
+        summary.emittedEvents.push('rollback_failed')
+        summary.failures.push({
+          step: op.step,
+          error: rollbackError
         })
       }
     }
 
-    logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'rollback_complete', `Rollback completed [${operationId}]`, {
-      operationId,
-      operationsRolledBack: rollbackOperations.length
+    // Log rollback completion
+    this._logRollbackEvent('complete', operationId, {
+      message: `Rollback completed`,
+      operationsRolledBack: rollbackOperations.length,
+      cleanedUp: summary.cleanedUp.length,
+      failures: summary.failures.length
     })
+    summary.emittedEvents.push('rollback_complete')
 
+    // Clean up operation tracking
     this.cleanup(operationId)
+
+    return summary
   }
 
   /**

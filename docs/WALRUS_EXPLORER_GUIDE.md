@@ -357,25 +357,6 @@ Execute Sui blockchain transactions (requires wallet connection).
 
 **Note:** Currently shows "No assets found" due to empty `coins` array in transaction responses. Full implementation requires extracting coins from `balanceChanges` in GraphQL service.
 
-### Walrus Site Viewer
-
-**Purpose:** Display Walrus Site information and assets.
-
-**Features:**
-- **Site Header**: Shows site ID and URL
-- **Site Stats**: Total assets, size, certified count
-- **Asset Grid**: Grid of asset cards with PoA badges
-- **Blob Navigation**: Click asset to view blob details
-- **PoA Status**: Real-time PoA certificate status
-
-**Usage:**
-```jsx
-<WalrusSiteViewer
-  siteId="0xabcd..."
-  onBlobClick={(asset) => window.open(`/workspace?blobId=${asset.blobId}`)}
-/>
-```
-
 ### Save Status Indicator
 
 **Purpose:** Display document save and sync status.

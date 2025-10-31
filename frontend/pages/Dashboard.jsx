@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSpreadsheetContext } from '../presentation/components/SpreadsheetProvider.jsx';
+import { useSpreadsheetContext, LoadingOverlay } from '../presentation/components/spreadsheet';
 import { DocumentCard } from '../components/DocumentCard.jsx';
 import { SearchBar } from '../components/SearchBar.jsx';
 import { CreateDocumentModal } from '../components/CreateDocumentModal.jsx';
-import { LoadingOverlay } from '../presentation/components/LoadingOverlay.jsx';
 import { NetworkBadge } from '../presentation/components/NetworkBadge.jsx';
 import { NetworkSelector } from '../presentation/components/NetworkSelector.jsx';
 import { MigrationDialog } from '../presentation/components/MigrationDialog.jsx';

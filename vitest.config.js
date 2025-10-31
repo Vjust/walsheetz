@@ -53,7 +53,7 @@ export default defineConfig({
     watchExclude: ['**/node_modules/**', '**/dist/**'],
 
     // Logging
-    logHeapUsage: true,
+    logHeapUsage: false,
     silent: false
   },
   resolve: {

@@ -92,12 +92,14 @@ export class BlockchainAdapter extends IBlockchainService {
     });
     
     // Listen to wallet events
-    this.setupEventListeners();
-    
-    // Initialize collaboration service
-    this.initializeServices();
-    
-    logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'constructor', 'BlockchainAdapter initialization completed');
+    this.setupEventListeners()
+
+    // Initialize collaboration service (only in browser environment, not in tests)
+    if (typeof window !== 'undefined' && (typeof process === 'undefined' || process.env.NODE_ENV !== 'test')) {
+      this.initializeServices()
+    }
+
+    logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'constructor', 'BlockchainAdapter initialization completed')
   }
 
   // Get runtime configuration with caching
@@ -3646,14 +3648,15 @@ Current state:`, window.WalSheetzDebug.getTransactionState());
 if (typeof window !== 'undefined') {
   // Check periodically for spreadsheet engine availability
   const exposeAdapter = () => {
-    if (window.spreadsheetEngine?.blockchainService) {
-      window.walSheetzBlockchainAdapter = window.spreadsheetEngine.blockchainService;
+    // Guard against window being undefined during test teardown
+    if (typeof window !== 'undefined' && window && window.spreadsheetEngine?.blockchainService) {
+      window.walSheetzBlockchainAdapter = window.spreadsheetEngine.blockchainService
     }
-  };
+  }
 
   // Try immediately
-  exposeAdapter();
+  exposeAdapter()
 
   // Also try after a brief delay to handle async initialization
-  setTimeout(exposeAdapter, 100);
+  setTimeout(exposeAdapter, 100)
 }

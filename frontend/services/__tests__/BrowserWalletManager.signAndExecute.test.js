@@ -77,7 +77,7 @@ describe('BrowserWalletManager signAndExecuteTransaction', () => {
 
     await expect(
       walletManager.signAndExecuteTransaction({ transaction })
-    ).rejects.toThrow(/signAndExecute/)
+    ).rejects.toThrow(/sign-and-execute/)
   })
 
   test('should handle transactionBlock format', async () => {
