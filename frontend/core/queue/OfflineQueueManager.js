@@ -21,8 +21,9 @@ export class OfflineQueueManager {
    * Create a new OfflineQueueManager
    * @param {Object} options - Configuration options
    * @param {Function} options.onProcessItem - Callback to process a queue item (async)
+   * @param {Function} options.onStateChange - Callback when state changes (optional)
    */
-  constructor({ onProcessItem }) {
+  constructor({ onProcessItem, onStateChange }) {
     // Offline queue for disconnected saves
     this.offlineQueue = [];
     this.isOnline = navigator.onLine;
@@ -30,8 +31,9 @@ export class OfflineQueueManager {
     this.maxOfflineQueueSize = 50; // Maximum items in offline queue
     this.offlineRetryInterval = 30000; // 30 seconds retry interval
 
-    // Callback to process queue items
+    // Callbacks
     this.onProcessItem = onProcessItem;
+    this.onStateChange = onStateChange; // Notify engine of state changes
 
     // Event handler references for cleanup
     this.onlineHandler = null;
@@ -44,12 +46,27 @@ export class OfflineQueueManager {
   }
 
   /**
+   * Notify engine of state changes
+   * @private
+   */
+  _notifyStateChange() {
+    if (this.onStateChange) {
+      this.onStateChange({
+        isOnline: this.isOnline,
+        queueSize: this.offlineQueue.length,
+        isProcessing: !!this.offlineQueueProcessingTimer
+      });
+    }
+  }
+
+  /**
    * Setup online/offline event listeners and start processing if online
    */
   setupListeners() {
     const handleOnline = () => {
       logger.info(LogComponent.SPREADSHEET_ENGINE, 'network_online', 'Network connection restored');
       this.isOnline = true;
+      this._notifyStateChange(); // Sync state to engine
       this.processOfflineQueue();
     };
 
@@ -61,6 +78,7 @@ export class OfflineQueueManager {
         clearInterval(this.offlineQueueProcessingTimer);
         this.offlineQueueProcessingTimer = null;
       }
+      this._notifyStateChange(); // Sync state to engine
     };
 
     // Add event listeners
@@ -106,6 +124,8 @@ export class OfflineQueueManager {
       queueSize: this.offlineQueue.length
     });
 
+    this._notifyStateChange(); // Sync queue size to engine
+
     // Start processing if we're online
     if (this.isOnline && !this.offlineQueueProcessingTimer) {
       this.startOfflineQueueProcessing();
@@ -123,6 +143,8 @@ export class OfflineQueueManager {
     this.offlineQueueProcessingTimer = setInterval(() => {
       this.processOfflineQueue();
     }, this.offlineRetryInterval);
+
+    this._notifyStateChange(); // Sync processing state to engine
 
     // Process immediately
     this.processOfflineQueue();
@@ -155,6 +177,7 @@ export class OfflineQueueManager {
           this.offlineQueue.splice(index, 1);
           logger.info(LogComponent.SPREADSHEET_ENGINE, 'offline_queue_success',
             'Offline queue item processed successfully', { queueId: item.id });
+          this._notifyStateChange(); // Sync queue size to engine
         }
       } catch (error) {
         // Increment retry count
@@ -171,6 +194,7 @@ export class OfflineQueueManager {
                 retryCount: item.retryCount,
                 error: typeof error === 'string' ? error : error.message || 'Unknown error'
               });
+            this._notifyStateChange(); // Sync queue size to engine
           }
         } else {
           logger.warn(LogComponent.SPREADSHEET_ENGINE, 'offline_queue_retry',
@@ -188,6 +212,7 @@ export class OfflineQueueManager {
       clearInterval(this.offlineQueueProcessingTimer);
       this.offlineQueueProcessingTimer = null;
       logger.debug(LogComponent.SPREADSHEET_ENGINE, 'offline_queue_empty', 'Offline queue processing stopped - queue empty');
+      this._notifyStateChange(); // Sync processing state to engine
     }
   }
 

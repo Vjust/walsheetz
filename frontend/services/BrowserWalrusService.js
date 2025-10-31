@@ -119,6 +119,38 @@ class BrowserWalrusService {
   }
 
   /**
+   * Fetch with 404 fallback support
+   * If a proxy URL (/api/walrus-*) returns 404, falls back to direct Walrus endpoint
+   * @param {string} url - URL to fetch from
+   * @param {Object} options - Fetch options
+   * @returns {Promise<Response>} Fetch response
+   * @private
+   */
+  async _fetchWithFallback(url, options = {}) {
+    try {
+      const response = await fetch(url, options);
+
+      // If proxy returns 404, try direct Walrus endpoint
+      if (response.status === 404 && url.includes('/api/walrus-')) {
+        console.warn('[BrowserWalrusService] Proxy 404, falling back to direct endpoint');
+
+        // Replace proxy path with direct Walrus URL
+        const directUrl = url
+          .replace('/api/walrus-publisher', this.publisherUrl)
+          .replace('/api/walrus-aggregator', this.aggregatorUrl);
+
+        console.log('[BrowserWalrusService] Retrying with direct URL:', directUrl);
+        return await fetch(directUrl, options);
+      }
+
+      return response;
+    } catch (error) {
+      // Network errors - no fallback possible
+      throw error;
+    }
+  }
+
+  /**
    * Update endpoints when network changes (e.g., testnet to mainnet)
    * @private
    */

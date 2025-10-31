@@ -77,9 +77,15 @@ export class SpreadsheetEngine {
     // Store partial save info (Walrus succeeded, blockchain failed)
     this._partialSaveInfo = null;
 
+    // Offline queue state (synced from OfflineQueueManager for backward compatibility)
+    this.isOnline = navigator.onLine;
+    this.offlineQueue = { length: 0 }; // Facade - only exposes length
+    this.offlineQueueProcessingTimer = null; // Facade - indicates if processing
+
     // Offline queue for disconnected saves (Phase 4: Extracted to OfflineQueueManager)
     this.offlineQueueManager = new OfflineQueueManager({
-      onProcessItem: (item) => this.processOfflineQueueItem(item)
+      onProcessItem: (item) => this.processOfflineQueueItem(item),
+      onStateChange: (state) => this._syncOfflineState(state)
     });
 
     // Formula refresh scheduling (Phase 4: Extracted to FormulaRefreshScheduler)
@@ -297,7 +303,7 @@ export class SpreadsheetEngine {
       await this.storageService.saveData(data);
 
       // Check if we're online for Walrus save
-      if (!this.offlineQueueManager.getIsOnline()) {
+      if (!this.isOnline) {
         logger.info(LogComponent.SPREADSHEET_ENGINE, 'walrus_autosave_offline', 'Adding Walrus save to offline queue');
         this.addToOfflineQueue({
           type: 'walrus_save',
@@ -373,7 +379,7 @@ export class SpreadsheetEngine {
     }
 
     // Check if we're online for blockchain sync
-    if (!this.offlineQueueManager.getIsOnline()) {
+    if (!this.isOnline) {
       logger.info(LogComponent.SPREADSHEET_ENGINE, 'commit_offline', 'Adding Sui commit to offline queue');
       const blobIds = this.pendingWalrusSaves.map(save => save.blobId);
       this.addToOfflineQueue({
@@ -428,6 +434,17 @@ export class SpreadsheetEngine {
     } finally {
       this.isSaveInProgress = false;
     }
+  }
+
+  /**
+   * Sync offline queue state from manager to engine facade
+   * Phase 4: Maintains backward compatibility with direct property access
+   * @private
+   */
+  _syncOfflineState(state) {
+    this.isOnline = state.isOnline;
+    this.offlineQueue.length = state.queueSize;
+    this.offlineQueueProcessingTimer = state.isProcessing ? {} : null;
   }
 
   /**
@@ -1877,9 +1894,9 @@ export class SpreadsheetEngine {
       chunkMetadata: this.commitPromptState.metadata?.chunk || null,
 
       // Offline queue status
-      isOnline: this.offlineQueueManager.getIsOnline(),
-      offlineQueueSize: this.offlineQueueManager.getQueueSize(),
-      offlineQueueProcessing: this.offlineQueueManager.isProcessing()
+      isOnline: this.isOnline,
+      offlineQueueSize: this.offlineQueue.length,
+      offlineQueueProcessing: !!this.offlineQueueProcessingTimer
     };
 
     logger.debug(LogComponent.SPREADSHEET_ENGINE, 'status_check', `Status requested`, status);
