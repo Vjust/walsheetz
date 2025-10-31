@@ -178,9 +178,18 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./frontend', import.meta.url)),
+      '@app': fileURLToPath(new URL('./frontend/app', import.meta.url)),
+      '@features': fileURLToPath(new URL('./frontend/features', import.meta.url)),
+      '@shared': fileURLToPath(new URL('./frontend/shared', import.meta.url)),
+      '@services': fileURLToPath(new URL('./frontend/services', import.meta.url)),
+      '@adapters': fileURLToPath(new URL('./frontend/adapters', import.meta.url)),
+      '@core': fileURLToPath(new URL('./frontend/core', import.meta.url)),
+      '@utils': fileURLToPath(new URL('./frontend/utils', import.meta.url)),
+      '@types': fileURLToPath(new URL('./frontend/types', import.meta.url)),
+      '@interfaces': fileURLToPath(new URL('./frontend/interfaces', import.meta.url)),
       '@blockchain': fileURLToPath(new URL('./blockchain', import.meta.url)),
       '@scripts': fileURLToPath(new URL('./scripts', import.meta.url)),
-      '@sentry/nextjs': fileURLToPath(new URL('./frontend/services/SentryStub.js', import.meta.url))
+      '@sentry/nextjs': fileURLToPath(new URL('./frontend/services/infrastructure/SentryStub.js', import.meta.url))
     },
     // Ensure .js extensions are resolved properly
     extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json']

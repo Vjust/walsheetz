@@ -32,14 +32,17 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./frontend/*"],
-      "@/types/*": ["./frontend/types/*"],
-      "@/utils/*": ["./frontend/utils/*"],
-      "@/services/*": ["./frontend/services/*"],
-      "@/components/*": ["./frontend/presentation/components/*"],
-      "@/pages/*": ["./frontend/pages/*"],
-      "@/hooks/*": ["./frontend/hooks/*"],
-      "@/adapters/*": ["./frontend/adapters/*"],
-      "@/business/*": ["./frontend/business/*"]
+      "@app/*": ["./frontend/app/*"],
+      "@features/*": ["./frontend/features/*"],
+      "@shared/*": ["./frontend/shared/*"],
+      "@services/*": ["./frontend/services/*"],
+      "@adapters/*": ["./frontend/adapters/*"],
+      "@core/*": ["./frontend/core/*"],
+      "@utils/*": ["./frontend/utils/*"],
+      "@types/*": ["./frontend/types/*"],
+      "@interfaces/*": ["./frontend/interfaces/*"],
+      "@blockchain/*": ["./blockchain/*"],
+      "@scripts/*": ["./scripts/*"]
     }
   },
   "include": [

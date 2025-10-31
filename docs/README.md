@@ -286,58 +286,108 @@ console.log(cfg.storage.features.compression.enabled)  // Feature flag
 
 ## Module Organization
 
-### `frontend/` Directory Map
+### `frontend/` Directory Map (Reorganized for Feature-Based Architecture)
 
 ```
 frontend/
-├── main.jsx                   # Vite entry point
-├── presentation/              # App shell & global UI
-│   ├── App.jsx                # Root component with providers
-│   ├── components/            # Global UI (Header, ErrorBoundary, MainLayout)
-│   └── styles/                # Global CSS
-├── pages/                     # Route-level screens
-│   ├── Dashboard.jsx          # Document list & creation
-│   └── SpreadsheetEditor.jsx  # Luckysheet integration
-├── components/                # Reusable UI components
-│   ├── DocumentCard.jsx       # Document preview cards
-│   ├── CreateDocumentModal.jsx
-│   └── StorageAnalyticsDashboard.jsx
-├── providers/                 # React context providers
-│   └── WalletProviders.jsx    # Sui network + wallet contexts
-├── services/                  # Browser API wrappers
-│   ├── BrowserGrpcService.js  # WebSocket bridge client
-│   ├── BrowserSuiService.js   # Browser Sui operations
-│   ├── BrowserWalrusService.js # Browser Walrus client
-│   ├── luckysheet/            # Luckysheet integration
-│   │   ├── injectWzIntoSheets.js
-│   │   ├── ensureLuckysheetNesting.js
-│   │   └── injectWZLocalePatch.js
-│   ├── formulas/              # Custom spreadsheet formulas
-│   │   ├── WalSheetzFunctions.js  # WZ.* functions
-│   │   └── SuiFunctions.js        # Sui blockchain formulas
-│   └── testing/               # Test mode adapters
-├── adapters/                  # Service-to-UI adapters
+├── main.jsx                          # Vite entry point
+│
+├── app/                              # Application shell
+│   ├── App.jsx                       # Root component with providers & routing
+│   └── styles/                       # Global CSS
+│
+├── features/                         # Feature-based modules
+│   ├── dashboard/                    # Dashboard feature
+│   │   ├── components/               # DocumentCard, CreateDocumentModal, SearchBar
+│   │   ├── pages/                    # Dashboard.jsx
+│   │   └── styles/                   # Dashboard styles
+│   │
+│   ├── spreadsheet/                  # Spreadsheet feature
+│   │   ├── components/               # Spreadsheet UI components
+│   │   ├── hooks/                    # useSpreadsheet, useSpreadsheetAutosave
+│   │   ├── pages/                    # SpreadsheetEditor, SpreadsheetWorkspace
+│   │   ├── engine/                   # SpreadsheetEngine, GridSizeManager
+│   │   │   ├── queue/                # OfflineQueueManager
+│   │   │   └── scheduling/           # FormulaRefreshScheduler
+│   │   └── styles/                   # Spreadsheet styles
+│   │
+│   ├── explore/                      # Walrus exploration
+│   │   ├── pages/                    # BlobCatalog, ExploreTundra
+│   │   └── styles/                   # Explore styles
+│   │
+│   └── network/                      # Network management
+│       ├── components/               # NetworkSelector, Migration*, Network*
+│       └── styles/                   # Network styles
+│
+├── shared/                           # Shared across features
+│   ├── components/                   # ErrorBoundary, WalrusStatus, etc.
+│   ├── hooks/                        # All reusable hooks
+│   ├── providers/                    # WalletProviders, NetworkProvider
+│   └── ui/                           # Pure UI components
+│       ├── effects/                  # BlizzardParticles
+│       └── modals/                   # PoACertificationModal, etc.
+│
+├── services/                         # Services organized by domain
+│   ├── blockchain/                   # Blockchain services
+│   │   ├── sui/                      # BrowserSuiService, BrowserGrpcService
+│   │   ├── walrus/                   # BrowserWalrusService + subdirs
+│   │   ├── wallet/                   # BrowserWalletManager
+│   │   └── transactions/             # TransactionManager, TransactionTracker
+│   ├── storage/                      # Storage services
+│   │   ├── IndexedDBCache.js
+│   │   └── OfflineModeService.js
+│   ├── integrations/                 # Third-party integrations
+│   │   ├── luckysheet/               # Luckysheet adapter
+│   │   └── formulas/                 # WalSheetz + Sui formulas
+│   └── infrastructure/               # Cross-cutting services
+│       ├── WebSocketService.js
+│       ├── ErrorRecoveryService.js
+│       └── testing/                  # Test mode adapters
+│
+├── adapters/                         # Service-to-UI adapters
 │   ├── BlockchainAdapter.js
-│   └── StorageAdapter.js
-├── business/                  # Domain hooks
-│   └── useSpreadsheet.js      # Spreadsheet state orchestration
-├── core/                      # Engine primitives
-│   └── SpreadsheetEngine.js
-├── hooks/                     # Shared React hooks
-│   ├── useWalletConnection.ts
-│   └── useWalletConnectionFactory.ts
-├── utils/                     # Utilities
-│   ├── Logger.js              # Centralized logging
-│   ├── EventBus.js            # Event pub/sub
-│   ├── CircuitBreaker.js      # Resilience pattern
-│   └── RateLimiter.js         # Client-side rate limiting
-├── types/                     # TypeScript definitions
+│   ├── StorageAdapter.js
+│   └── atomicOperations/
+│
+├── core/                             # Pure domain logic (reduced)
+│   ├── queue/                        # OfflineQueueManager
+│   └── scheduling/                   # FormulaRefreshScheduler
+│
+├── utils/                            # Utilities by concern
+│   ├── blockchain/                   # AbiHelpers, ExplorerLinks
+│   ├── validation/                   # ValidationGuards, spreadsheetValidation
+│   ├── logging/                      # Logger, LogConfig, Telemetry
+│   ├── errors/                       # Error handling
+│   ├── config/                       # ConfigLoader, testMode
+│   └── helpers/                      # cellUtils, BlobParser, EventBus, etc.
+│
+├── types/                            # TypeScript definitions
 │   ├── blockchain.d.ts
 │   ├── wallet.d.ts
 │   └── spreadsheet.d.ts
-└── interfaces/                # Service interfaces
+│
+└── interfaces/                       # Service interfaces
     ├── IBlockchainService.js
     └── IStorageService.js
+```
+
+**Architecture Benefits:**
+- **Feature-Based Organization:** Related code (components, hooks, pages) lives together by domain
+- **Clear Module Boundaries:** Each feature is self-contained with its own components, hooks, pages, and styles
+- **Organized Services:** Services categorized by domain (blockchain, storage, integrations, infrastructure)
+- **Consolidated Shared Code:** All reusable hooks, components, and providers in `shared/`
+- **Categorized Utilities:** Utils organized by concern (logging, validation, errors, config, helpers)
+- **Clean Import Paths:** All imports use path aliases for better refactoring and readability
+
+**Import Path Aliases:**
+```javascript
+import { Dashboard } from '@features/dashboard/pages/Dashboard.jsx'
+import { useSpreadsheet } from '@features/spreadsheet/hooks/useSpreadsheet.js'
+import { ErrorBoundary } from '@shared/components/ErrorBoundary.jsx'
+import { useWalletConnection } from '@shared/hooks/useWalletConnection.ts'
+import { BrowserWalletManager } from '@services/blockchain/wallet/BrowserWalletManager.js'
+import { logger } from '@utils/logging/Logger.js'
+import { BlockchainAdapter } from '@adapters/BlockchainAdapter.js'
 ```
 
 ### `blockchain/` Directory Map

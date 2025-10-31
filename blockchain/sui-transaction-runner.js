@@ -69,15 +69,8 @@ class SuiTransactionRunner {
         }
       }
 
-      let result;
-
-      // Special handling for different adapters
-      if (adapterId === 'suilend') {
-        result = await this.prepareSuilendTransaction(tx, adapter, method, args, modifiers);
-      } else {
-        // Generic adapter transaction building
-        result = await this.prepareGenericTransaction(tx, adapter, method, args, modifiers);
-      }
+      // Generic adapter transaction building
+      const result = await this.prepareGenericTransaction(tx, adapter, method, args, modifiers);
 
       console.log(`[TransactionRunner] Transaction prepared successfully for ${adapterId}.${method}`);
       return result;
@@ -86,130 +79,6 @@ class SuiTransactionRunner {
       console.error(`[TransactionRunner] Failed to prepare transaction:`, error);
       throw new Error(`Failed to prepare transaction: ${error.message}`);
     }
-  }
-
-  async prepareSuilendTransaction(tx, adapter, method, args, modifiers) {
-    // Get Suilend client from adapter
-    const suilendClient = await adapter.getSuilendClient();
-
-    switch (method) {
-      case 'deposit':
-        return await this.prepareSuilendDeposit(tx, suilendClient, args, modifiers);
-
-      case 'withdraw':
-        return await this.prepareSuilendWithdraw(tx, suilendClient, args, modifiers);
-
-      case 'borrow':
-        return await this.prepareSuilendBorrow(tx, suilendClient, args, modifiers);
-
-      case 'repay':
-        return await this.prepareSuilendRepay(tx, suilendClient, args, modifiers);
-
-      case 'claimRewards':
-        return await this.prepareSuilendClaimRewards(tx, suilendClient, args, modifiers);
-
-      default:
-        throw new Error(`Unsupported Suilend method: ${method}`);
-    }
-  }
-
-  async prepareSuilendDeposit(tx, suilendClient, args, modifiers) {
-    const [marketId, coinType, amount, obligationOwnerCap] = args;
-
-    // Build deposit transaction using Suilend SDK
-    const depositTx = await suilendClient.depositTxb({
-      tx,
-      marketId,
-      coinType,
-      amount: BigInt(amount),
-      obligationOwnerCap
-    });
-
-    return {
-      transaction: depositTx,
-      method: 'deposit',
-      args: { marketId, coinType, amount, obligationOwnerCap },
-      estimatedGas: await this.estimateGas(depositTx, modifiers.sender),
-      description: `Deposit ${amount} ${coinType} to Suilend`
-    };
-  }
-
-  async prepareSuilendWithdraw(tx, suilendClient, args, modifiers) {
-    const [marketId, coinType, amount, obligationOwnerCap] = args;
-
-    const withdrawTx = await suilendClient.withdrawTxb({
-      tx,
-      marketId,
-      coinType,
-      amount: BigInt(amount),
-      obligationOwnerCap
-    });
-
-    return {
-      transaction: withdrawTx,
-      method: 'withdraw',
-      args: { marketId, coinType, amount, obligationOwnerCap },
-      estimatedGas: await this.estimateGas(withdrawTx, modifiers.sender),
-      description: `Withdraw ${amount} ${coinType} from Suilend`
-    };
-  }
-
-  async prepareSuilendBorrow(tx, suilendClient, args, modifiers) {
-    const [marketId, coinType, amount, obligationOwnerCap] = args;
-
-    const borrowTx = await suilendClient.borrowTxb({
-      tx,
-      marketId,
-      coinType,
-      amount: BigInt(amount),
-      obligationOwnerCap
-    });
-
-    return {
-      transaction: borrowTx,
-      method: 'borrow',
-      args: { marketId, coinType, amount, obligationOwnerCap },
-      estimatedGas: await this.estimateGas(borrowTx, modifiers.sender),
-      description: `Borrow ${amount} ${coinType} from Suilend`
-    };
-  }
-
-  async prepareSuilendRepay(tx, suilendClient, args, modifiers) {
-    const [marketId, coinType, amount, obligationOwnerCap] = args;
-
-    const repayTx = await suilendClient.repayTxb({
-      tx,
-      marketId,
-      coinType,
-      amount: BigInt(amount),
-      obligationOwnerCap
-    });
-
-    return {
-      transaction: repayTx,
-      method: 'repay',
-      args: { marketId, coinType, amount, obligationOwnerCap },
-      estimatedGas: await this.estimateGas(repayTx, modifiers.sender),
-      description: `Repay ${amount} ${coinType} to Suilend`
-    };
-  }
-
-  async prepareSuilendClaimRewards(tx, suilendClient, args, modifiers) {
-    const [marketId, obligationOwnerCap] = args;
-
-    const claimTx = await suilendClient.claimRewardsTxb({
-      tx,
-      marketId,
-      obligationOwnerCap
-    });
-
-    return {
-      transaction: claimTx,
-      method: 'claimRewards',
-      args: { marketId, obligationOwnerCap },
-      estimatedGas: await this.estimateGas(claimTx, modifiers.sender),
-      description: `Claim rewards from Suilend market ${marketId}`
-    };
   }
 
   async prepareGenericTransaction(tx, adapter, method, args, modifiers) {

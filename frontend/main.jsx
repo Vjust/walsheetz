@@ -1,11 +1,11 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import App from './presentation/App.jsx'
-import './presentation/styles/index.css'
+import App from '@app/App.jsx'
+import '@app/styles/index.css'
 
 // Single deterministic Luckysheet adapter replaces 5-layer injection
-import { luckysheetAdapter } from './services/luckysheet/LuckysheetAdapter.js'
-import { startRenderTimeInjection } from './services/luckysheet/injectAtRenderTime.js'
+import { luckysheetAdapter } from '@services/integrations/luckysheet/LuckysheetAdapter.js'
+import { startRenderTimeInjection } from '@services/integrations/luckysheet/injectAtRenderTime.js'
 
 console.log('🔧 [main.jsx] Initializing Luckysheet adapter...')
 

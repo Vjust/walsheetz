@@ -344,7 +344,6 @@ Your edits will sync to blockchain when saved."
 These services operate entirely in memory (session-scoped):
 - `StorageAdapter.js` - Spreadsheet data cache
 - `IndexedDBCache.js` - In-memory blob cache
-- `ImportHistoryService.js` - Import history (transient)
 - `PoACertificationService.js` - PoA certificates (transient)
 - `BlobLineageTracker.js` - Version lineage (transient)
 - `TransactionTracker.js` - Transaction history (transient)

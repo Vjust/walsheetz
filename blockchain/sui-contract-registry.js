@@ -26,12 +26,7 @@ class SuiContractRegistry {
 
   async registerDefaultAdapters() {
     // Dynamically import adapters to avoid circular dependencies
-    try {
-      const { SuilendAdapter } = await import('./contract-adapters/suilend-adapter.js');
-      this.registerAdapter('suilend', SuilendAdapter);
-    } catch (error) {
-      console.warn('[ContractRegistry] Failed to load Suilend adapter:', error.message);
-    }
+    // No default adapters registered currently
   }
 
   registerAdapter(adapterId, AdapterClass) {

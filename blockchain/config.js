@@ -364,36 +364,10 @@ export const config = {
   // WalSheetz DeFi configuration
   walSheetz: {
     testnet: {
-      suilend: {
-        enabled: true,
-        defaultLendingMarket: 'main',
-        maxSlippage: 0.005, // 0.5%
-        transactionLimits: {
-          maxSingleTransaction: 1000, // USD
-          dailyLimit: 5000, // USD
-          requireConfirmationAbove: 100 // USD
-        },
-        rateLimit: {
-          maxCallsPerMinute: 60,
-          burstLimit: 10
-        }
-      }
+      // No DeFi protocols configured
     },
     mainnet: {
-      suilend: {
-        enabled: false, // Disabled on mainnet initially
-        defaultLendingMarket: 'main',
-        maxSlippage: 0.003, // 0.3%
-        transactionLimits: {
-          maxSingleTransaction: 10000, // USD
-          dailyLimit: 50000, // USD
-          requireConfirmationAbove: 500 // USD
-        },
-        rateLimit: {
-          maxCallsPerMinute: 30,
-          burstLimit: 5
-        }
-      }
+      // No DeFi protocols configured
     }
   },
 

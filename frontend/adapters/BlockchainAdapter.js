@@ -1,19 +1,19 @@
 import { IBlockchainService } from '../interfaces/IBlockchainService.js';
 // Use browser-compatible services in frontend
-import { browserWalletManager } from '../services/BrowserWalletManager.js';
-import { browserSuiService } from '../services/BrowserSuiService.js';
-import { browserWalrusService } from '../services/BrowserWalrusService.js';
+import { browserWalletManager } from '@services/blockchain/wallet/BrowserWalletManager.js';
+import { browserSuiService } from '@services/blockchain/sui/BrowserSuiService.js';
+import { browserWalrusService } from '@services/blockchain/walrus/BrowserWalrusService.js';
 // Collaboration disabled for single-user MVP
 import { collaborationService } from '../services/CollaborationService.js';
 import { errorRecoveryService } from '../services/ErrorRecoveryService.js';
 import { progressiveEnhancementService } from '../services/ProgressiveEnhancementService.js';
 import { offlineModeService } from '../services/OfflineModeService.js';
-import { logger, LogComponent, ErrorCategory } from '../utils/Logger.js';
-import { configLoader } from '../utils/ConfigLoader.js';
-import { validationGuards } from '../utils/ValidationGuards.js';
+import { logger, LogComponent, ErrorCategory } from '@utils/logging/Logger.js';
+import { configLoader } from '@utils/config/ConfigLoader.js';
+import { validationGuards } from '@utils/validation/ValidationGuards.js';
 import { transactionManager } from '../services/TransactionManager.js';
-import { transactionEventBus } from '../utils/EventBus.js';
-import { NetworkError, WalletError, ContractError, ValidationError, StorageError, ErrorFactory } from '../utils/errors.js';
+import { transactionEventBus } from '@utils/helpers/EventBus.js';
+import { NetworkError, WalletError, ContractError, ValidationError, StorageError, ErrorFactory } from '@utils/errors/errors.js';
 import { standardizedErrorHandler } from '../utils/StandardizedErrorHandler.js';
 import { transactionExperienceManager } from '../utils/TransactionExperience.js';
 import { atomicOperationManager } from '../services/blockchain/AtomicOperationManager.js';

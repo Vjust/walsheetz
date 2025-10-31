@@ -43,27 +43,6 @@ test.describe('WZ Function Autocomplete', () => {
     await page.screenshot({ path: 'tests/e2e/screenshots/autocomplete-dropdown.png', fullPage: true });
   });
 
-  test('should autocomplete WZ.SUILEND.RESERVES when typing =WZ.SUILEND', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('#luckysheet-container canvas', { timeout: 10000 });
-    await page.waitForTimeout(1000);
-
-    const canvas = page.locator('#luckysheet-container canvas').first();
-    await canvas.click({ position: { x: 50, y: 50 } });
-    await page.waitForTimeout(500);
-
-    // Type partial formula
-    await page.keyboard.type('=WZ.SUILEND.RE');
-
-    // Wait for autocomplete
-    const autocompleteDropdown = page.locator('.luckysheet-formula-search, .formula-search-c').first();
-    await expect(autocompleteDropdown).toBeVisible({ timeout: 5000 });
-
-    // Should show WZ.SUILEND.RESERVES
-    const autocompleteItem = page.locator('.luckysheet-formula-search-item').filter({ hasText: 'WZ.SUILEND.RESERVES' });
-    await expect(autocompleteItem).toBeVisible({ timeout: 3000 });
-  });
-
   test('should allow selecting autocomplete item to populate cell', async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('#luckysheet-container canvas', { timeout: 10000 });
