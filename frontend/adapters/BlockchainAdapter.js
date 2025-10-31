@@ -17,6 +17,12 @@ import { NetworkError, WalletError, ContractError, ValidationError, StorageError
 import { standardizedErrorHandler } from '../utils/StandardizedErrorHandler.js';
 import { transactionExperienceManager } from '../utils/TransactionExperience.js';
 import { atomicOperationManager } from '../services/blockchain/AtomicOperationManager.js';
+import {
+  createWalrusStorageOp,
+  createTxPrepOp,
+  createBlockchainExecutionOp
+} from './atomicOperations/index.js';
+import { OperationHelpers } from './atomicOperations/OperationHelpers.js';
 
 
 /**
@@ -69,7 +75,13 @@ export class BlockchainAdapter extends IBlockchainService {
     this.servicesInitialized = false;
     this.initializingServices = false;
     this.initializationPromise = null;
-    
+
+    // Initialize operation helpers with dependency injection
+    this.operationHelpers = new OperationHelpers({
+      logger,
+      logComponent: LogComponent.BLOCKCHAIN_ADAPTER
+    });
+
     logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'constructor', 'Services initialized', {
       walletManager: !!this.walletManager,
       suiService: !!this.suiService,
@@ -1332,6 +1344,55 @@ export class BlockchainAdapter extends IBlockchainService {
     return merged;
   }
 
+  /**
+   * Handle partial save scenario (Walrus succeeded, blockchain failed)
+   * @private
+   */
+  _handlePartialSave(atomicResult, normalizedData) {
+    const walrusResult = atomicResult.results?.find(r => r.name === 'walrus_storage');
+    const blockchainResult = atomicResult.results?.find(r => r.name === 'blockchain_execution');
+
+    // Only handle if Walrus succeeded but blockchain failed
+    if (!walrusResult?.success || blockchainResult?.success) {
+      return { handled: false };
+    }
+
+    // Create partial save info object
+    const partialSaveInfo = {
+      status: 'walrus_only',
+      blobId: walrusResult.blobId,
+      contentHash: walrusResult.contentHash || walrusResult.contentHash?.hash,
+      size: walrusResult.size,
+      timestamp: Date.now(),
+      expiryTimestamp: walrusResult.expiryTimestamp,
+      endEpoch: walrusResult.endEpoch,
+      walrusSuccess: true,
+      blockchainSuccess: false,
+      blockchainError: atomicResult.error || 'Blockchain execution failed',
+      pendingBlockchainData: {
+        spreadsheetObjectId: this.spreadsheetObjectId,
+        walrusBlobId: walrusResult.blobId,
+        contentHash: walrusResult.contentHash || walrusResult.contentHash?.hash,
+        cellCount: Object.keys(normalizedData.cells || {}).length
+      }
+    };
+
+    // Log the partial save
+    logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'partial_save_captured',
+      'Partial save captured: Walrus succeeded, blockchain failed', {
+        blobId: walrusResult.blobId,
+        blockchainError: atomicResult.error
+      });
+
+    // Store partial save info for potential retry
+    this.storageAdapter?.setPartialSaveInfo(partialSaveInfo);
+
+    return {
+      handled: true,
+      partialSaveInfo
+    };
+  }
+
   // Enhanced blockchain save method with progressive enhancement and transaction modal support
   async saveToBlockchain(data, options = {}) {
     logger.startTimer('blockchain_save');
@@ -1479,43 +1540,15 @@ export class BlockchainAdapter extends IBlockchainService {
       // Atomic operation failed with rollback
       logger.endTimer('blockchain_save');
 
-      // Capture partial save if Walrus succeeded but blockchain failed
-      const walrusResult = atomicResult.results?.find(r => r.name === 'walrus_storage');
-      const blockchainResult = atomicResult.results?.find(r => r.name === 'blockchain_execution');
+      // Check if this is a partial save scenario
+      const partialSaveResult = this._handlePartialSave(atomicResult, normalizedData);
 
-      if (walrusResult?.success && !blockchainResult?.success) {
-        const partialSaveInfo = {
-          status: 'walrus_only',
-          blobId: walrusResult.blobId,
-          contentHash: walrusResult.contentHash || walrusResult.contentHash?.hash,
-          size: walrusResult.size,
-          timestamp: Date.now(),
-          expiryTimestamp: walrusResult.expiryTimestamp,
-          endEpoch: walrusResult.endEpoch,
-          walrusSuccess: true,
-          blockchainSuccess: false,
-          blockchainError: atomicResult.error || 'Blockchain execution failed',
-          pendingBlockchainData: {
-            spreadsheetObjectId: this.spreadsheetObjectId,
-            walrusBlobId: walrusResult.blobId,
-            contentHash: walrusResult.contentHash || walrusResult.contentHash?.hash,
-            cellCount: Object.keys(normalizedData.cells || {}).length
-          }
-        }
-
-        logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'partial_save_captured',
-          'Partial save captured: Walrus succeeded, blockchain failed', {
-            blobId: walrusResult.blobId,
-            blockchainError: atomicResult.error
-          })
-
-        this.storageAdapter?.setPartialSaveInfo(partialSaveInfo)
-
+      if (partialSaveResult.handled) {
         return {
           success: false,
           partial: true,
-          ...partialSaveInfo
-        }
+          ...partialSaveResult.partialSaveInfo
+        };
       }
 
       // Use standardized error handler for consistent error processing
@@ -1543,160 +1576,51 @@ export class BlockchainAdapter extends IBlockchainService {
   }
 
   /**
+   * Log operation step with standard formatting
+   * Delegates to operationHelpers for standardized logging
+   * @private
+   */
+  _logOperationStep(operationName, stage, message, metadata = {}) {
+    return this.operationHelpers.logOperationStep(operationName, stage, message, metadata);
+  }
+
+  /**
+   * Create a no-op cleanup handler factory
+   * Delegates to operationHelpers
+   * @private
+   */
+  _createNoOpCleanupHandler(operationName, resultProperty = null) {
+    return this.operationHelpers.createNoOpCleanupHandler(operationName, resultProperty);
+  }
+
+  /**
+   * Validate operation result field and throw if missing
+   * Delegates to operationHelpers
+   * @private
+   */
+  _validateOperationResult(result, fieldName, operationName) {
+    return this.operationHelpers.validateOperationResult(result, fieldName, operationName);
+  }
+
+  /**
+   * Get operation result from context by operation name
+   * Delegates to operationHelpers
+   * @private
+   */
+  _getOperationResult(context, operationName) {
+    return this.operationHelpers.getOperationResult(context, operationName);
+  }
+
+  /**
    * Create atomic operations for the save process with parallel processing
    */
   _createAtomicSaveOperations(data, options) {
-    // Extract epochs from options, use default if not provided
-    const epochs = options?.epochs || 50;
+    // Create operations using factory functions
+    const walrusOp = createWalrusStorageOp(this, data, options);
+    const txPrepOp = createTxPrepOp(this, data);
+    const blockchainOp = createBlockchainExecutionOp(this);
 
-    return [
-      // Parallel operations that can run concurrently
-      {
-        name: 'walrus_storage',
-        execute: async (context, operationId) => {
-          logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_walrus', `Executing Walrus storage with ${epochs} epochs [${operationId}]`);
-
-          // Connect to Walrus if not already connected
-          await this.walrusService.connect();
-
-          const walrusResult = await this.walrusService.storeBlob(data, {
-            epochs: epochs,
-            contentType: 'application/json'
-          });
-
-          if (!walrusResult.success) {
-            throw new Error(`Walrus storage failed: ${walrusResult.error}`);
-          }
-
-          logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_walrus_success', `Walrus storage completed [${operationId}]`, {
-            blobId: walrusResult.blobId
-          });
-
-          return walrusResult;
-        },
-        getCleanupHandler: (result) => {
-          // Return cleanup function for Walrus blob if needed
-          return async () => {
-            logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_walrus_cleanup', 'Cleaning up Walrus blob', {
-              blobId: result.blobId
-            });
-            // Note: In practice, Walrus blobs are immutable and can't be deleted
-            // This is mainly for logging and state cleanup
-          };
-        }
-      },
-      {
-        name: 'transaction_preparation',
-        execute: async (context, operationId) => {
-          logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_tx_prep', `Preparing blockchain transaction metadata [${operationId}]`);
-
-          // This runs in parallel with Walrus storage
-          // We prepare the transaction metadata but don't create the actual transaction yet
-          const versionData = {
-            spreadsheetObjectId: context.spreadsheetObjectId || this.spreadsheetObjectId,
-            version: data.version || this.generateVersion(),
-            cellCount: Object.keys(data.cells || {}).length,
-            description: data.metadata?.title || data.title || 'Untitled Spreadsheet'
-          };
-
-          // Just prepare metadata - don't create transaction without blob ID
-          logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_tx_prep_success', `Transaction metadata prepared [${operationId}]`, {
-            cellCount: versionData.cellCount,
-            description: versionData.description
-          });
-
-          return {
-            versionData,
-            prepared: true
-          };
-        },
-        getCleanupHandler: (result) => {
-          // Return cleanup function for prepared transaction
-          return async () => {
-            logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_tx_prep_cleanup', 'Cleaning up prepared transaction');
-            // No specific cleanup needed for prepared transactions
-          };
-        }
-      },
-      // Final operation that depends on both previous operations
-      {
-        name: 'blockchain_execution',
-        dependencies: ['walrus_storage', 'transaction_preparation'],
-        execute: async (context, operationId) => {
-          logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_blockchain', `Executing blockchain transaction [${operationId}]`);
-
-          const walrusResult = context.results.find(r => r.name === 'walrus_storage');
-          const txPrepResult = context.results.find(r => r.name === 'transaction_preparation');
-
-          if (!walrusResult || !txPrepResult) {
-            const availableResults = context.results.map(r => r.name).join(', ');
-            throw new Error(`Missing required results from parallel operations. Available: ${availableResults}`);
-          }
-
-          // Debug log the results structure
-          logger.debug(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_blockchain_debug', 'Results structure', {
-            walrusResult: walrusResult ? Object.keys(walrusResult) : 'missing',
-            txPrepResult: txPrepResult ? Object.keys(txPrepResult) : 'missing',
-            operationId
-          });
-
-          // Safely access versionData with fallback
-          if (!txPrepResult.versionData) {
-            throw new Error(`Transaction preparation result missing versionData: ${JSON.stringify(txPrepResult)}`);
-          }
-
-          if (!walrusResult.blobId) {
-            throw new Error(`Walrus result missing blobId: ${JSON.stringify(walrusResult)}`);
-          }
-
-          // Create transaction with actual Walrus blob ID
-          const finalVersionData = {
-            ...txPrepResult.versionData,
-            walrusBlobId: walrusResult.blobId,
-            contentHash: walrusResult.contentHash?.hash || 'unknown'
-          };
-
-          // Create and execute the storage transaction with actual blob ID
-          const storageTx = await this.suiService.createStorageTransaction(finalVersionData);
-
-          // Estimate gas for the actual transaction
-          const storageGasEstimate = await this.suiService.estimateGas(storageTx);
-          const storageBalanceCheck = await this.suiService.checkSufficientBalance(storageGasEstimate);
-
-          if (!storageBalanceCheck.sufficient) {
-            throw new Error(`Insufficient balance: ${storageBalanceCheck.message}`);
-          }
-
-          // Execute the transaction
-          const blockchainResult = await this.suiService.executeTransaction(storageTx);
-
-          if (!blockchainResult.success) {
-            throw new Error(`Blockchain transaction failed: ${blockchainResult.error}`);
-          }
-
-          logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_blockchain_success', `Blockchain transaction completed [${operationId}]`, {
-            transactionDigest: blockchainResult.digest
-          });
-
-          return {
-            success: true,
-            walrusResult,
-            blockchainResult,
-            operationId
-          };
-        },
-        getCleanupHandler: (result) => {
-          // Return cleanup function for blockchain operations if needed
-          return async () => {
-            logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_blockchain_cleanup', 'Cleaning up blockchain operations', {
-              transactionDigest: result.blockchainResult?.digest
-            });
-            // Note: Blockchain transactions are immutable once confirmed
-            // This is mainly for state cleanup
-          };
-        }
-      }
-    ];
+    return [walrusOp, txPrepOp, blockchainOp];
   }
 
   // Normalize various producer shapes into a single structure used for Walrus/Sui

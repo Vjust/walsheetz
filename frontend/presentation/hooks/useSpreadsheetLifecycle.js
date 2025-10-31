@@ -23,7 +23,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import luckysheetApi from '../../services/luckysheetApi.js';
 import { luckysheetAdapter } from '../../services/luckysheet/LuckysheetAdapter.js';
-import { registerWalSheetzFunctions, WALSHEETZ_FUNCTION_METADATA } from '../../services/formulas/WalSheetzFunctions.js';
+import { registerWalSheetzFunctions } from '../../services/formulas/WalSheetzFunctions.js';
+import { convertToLuckysheetData, calculateSheetDimensions } from '../../services/luckysheet/dataTransforms.js';
+import { columnLettersToNumber, columnNumberToLetters } from '../../utils/cellUtils.js';
 
 const INIT_RETRY_INTERVAL = 100;
 const INIT_TIMEOUT = 10000;
@@ -42,42 +44,6 @@ export function useSpreadsheetLifecycle({
   const previousCellValueRef = useRef(null);
   const domEventListenersRef = useRef([]);
   const lastInitializedDataRef = useRef(null);
-
-  /**
-   * Convert spreadsheet data to Luckysheet celldata format
-   */
-  const convertToLuckysheetData = useCallback((data) => {
-    try {
-      const prebuilt = data?.data?.celldata || data?.celldata;
-      if (Array.isArray(prebuilt)) return prebuilt;
-
-      const cells = data?.data?.data?.cells ?? data?.data?.cells ?? data?.cells ?? null;
-      if (!cells || typeof cells !== 'object') return [];
-
-      const celldata = [];
-      for (const cellRef of Object.keys(cells)) {
-        const cell = cells[cellRef];
-        const m = cellRef.match(/^([A-Z]+)(\d+)$/);
-        if (!m) continue;
-
-        const col = columnLettersToNumber(m[1]);
-        const row = parseInt(m[2], 10) - 1;
-
-        celldata.push({
-          r: row,
-          c: col,
-          v: {
-            v: cell?.value,
-            m: cell?.value != null ? String(cell.value) : '',
-            ct: cell?.type ? { fa: cell.type, t: 'g' } : { fa: 'General', t: 'g' }
-          }
-        });
-      }
-      return celldata;
-    } catch {
-      return [];
-    }
-  }, []);
 
   /**
    * Initialize Luckysheet instance
@@ -143,36 +109,14 @@ export function useSpreadsheetLifecycle({
       console.log('[Lifecycle] Converted celldata:', celldata.length, 'cells');
 
       // Calculate actual dimensions from celldata (don't hardcode grid size)
-      // This ensures export includes all data, not just first 100x26
-      let actualRows = 100;  // minimum default
-      let actualCols = 26;   // minimum default
-
-      if (celldata && celldata.length > 0) {
-        const bounds = celldata.reduce((acc, cell) => {
-          if (cell && typeof cell.r === 'number') {
-            acc.maxRow = Math.max(acc.maxRow, cell.r);
-          }
-          if (cell && typeof cell.c === 'number') {
-            acc.maxCol = Math.max(acc.maxCol, cell.c);
-          }
-          return acc;
-        }, { maxRow: -1, maxCol: -1 });
-
-        if (bounds.maxRow >= 0) {
-          actualRows = Math.max(actualRows, bounds.maxRow + 1);
-        }
-        if (bounds.maxCol >= 0) {
-          actualCols = Math.max(actualCols, bounds.maxCol + 1);
-        }
-      }
-
+      const { rows: actualRows, cols: actualCols } = calculateSheetDimensions(celldata);
       console.log('[Lifecycle] Calculated sheet dimensions:', { rows: actualRows, cols: actualCols });
 
-      // Build WZ function definitions (adapter already did pre-injection)
+      // Build WZ function definitions using public API
       const {
         tree: wzFunctionTree,
         functionList: wzFunctionList
-      } = luckysheetAdapter._buildWZFunctionDefinitions();
+      } = luckysheetAdapter.buildWZFunctionDefinitions();
 
       await luckysheetApi.init({
         containerId: 'luckysheet-container',
@@ -359,24 +303,4 @@ export function useSpreadsheetLifecycle({
     initLuckysheet,
     cleanup
   };
-}
-
-// Helper functions
-function columnLettersToNumber(letters) {
-  let result = 0;
-  for (let i = 0; i < letters.length; i++) {
-    result = result * 26 + (letters.charCodeAt(i) - 64);
-  }
-  return result - 1;
-}
-
-function columnNumberToLetters(num) {
-  let result = '';
-  let n = num + 1;
-  while (n > 0) {
-    n--;
-    result = String.fromCharCode(65 + (n % 26)) + result;
-    n = Math.floor(n / 26);
-  }
-  return result;
 }

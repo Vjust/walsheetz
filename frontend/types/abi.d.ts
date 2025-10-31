@@ -1,7 +1,7 @@
 /**
  * Generated ABI Type Definitions for WalSheetz
  *
- * Generated on: 2025-10-22T13:01:50.739Z
+ * Generated on: 2025-10-29T23:42:49.095Z
  * Package ID: 0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7
  * Network: testnet
  *

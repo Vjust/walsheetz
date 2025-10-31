@@ -170,7 +170,7 @@ export class LuckysheetAdapter {
 
       // Inject WZ functions into config if not already present
       if (config) {
-        const { tree, functionList } = adapter._buildWZFunctionDefinitions();
+        const { tree, functionList } = adapter.buildWZFunctionDefinitions();
 
         if (!config.luckysheet_function) {
           config.luckysheet_function = tree;
@@ -301,10 +301,10 @@ export class LuckysheetAdapter {
 
   /**
    * Build complete WZ function tree for passing to luckysheet.create()
-   * @private
-   * @returns {Object} Nested function tree
+   * Public API for consuming code (e.g., useSpreadsheetLifecycle)
+   * @returns {Object} {tree, functionList}
    */
-  _buildWZFunctionDefinitions() {
+  buildWZFunctionDefinitions() {
     const tree = {};
     const functionList = [];
 

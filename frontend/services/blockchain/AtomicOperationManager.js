@@ -38,7 +38,6 @@ import { transactionExperienceManager } from '../../utils/TransactionExperience.
 export class AtomicOperationManager {
   constructor() {
     this.operations = []
-    this.resources = new Map()
   }
 
   /**
@@ -74,126 +73,13 @@ export class AtomicOperationManager {
       const sequentialOperations = operations.filter(op => op.dependencies)
 
       if (parallelOperations.length > 0) {
-        logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_parallel', `Executing ${parallelOperations.length} parallel operations [${operationId}]`, {
-          count: parallelOperations.length,
-          operationId
-        })
-
-        transactionExperienceManager.emitTransactionEvent('atomic:progress', {
-          operationId,
-          stage: 'parallel_operations',
-          parallelOperations: parallelOperations.length,
-          description: 'Processing operations in parallel for better performance'
-        })
-
-        const parallelPromises = parallelOperations.map(async (operation, i) => {
-          try {
-            lastOperation = operation
-
-            logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_step', `Executing parallel operation: ${operation.name} [${operationId}]`, {
-              operationName: operation.name,
-              operationId
-            })
-
-            const txExperience = transactionExperienceManager.prepareTransaction(
-              operation.name,
-              context
-            )
-
-            const result = await transactionExperienceManager.executeWithExperience(
-              { execute: operation.execute.bind(operation) },
-              operation.name,
-              context
-            )
-
-            const namedResult = { name: operation.name, ...result }
-            operationResults.set(operation.name, namedResult)
-
-            if (operation.getCleanupHandler) {
-              const cleanupHandler = operation.getCleanupHandler(namedResult)
-              if (cleanupHandler) {
-                this.operations.push({
-                  operationId,
-                  step: i,
-                  cleanup: cleanupHandler,
-                  result: namedResult
-                })
-              }
-            }
-
-            return namedResult
-          } catch (operationError) {
-            const enhancedError = new Error(`Operation ${operation.name} failed: ${typeof operationError === 'string' ? operationError : operationError.message || 'Unknown error'}`)
-            enhancedError.operationName = operation.name
-            enhancedError.originalError = operationError
-            throw enhancedError
-          }
-        })
-
-        const parallelResults = await Promise.allSettled(parallelPromises)
-
-        for (let i = 0; i < parallelResults.length; i++) {
-          const result = parallelResults[i]
-          if (result.status === 'rejected') {
-            throw new Error(`Parallel operation failed: ${parallelOperations[i].name} - ${result.reason}`)
-          }
-          results.push(result.value)
-        }
-
-        logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_parallel_success', `All parallel operations completed [${operationId}]`, {
-          completed: parallelOperations.length
-        })
+        const parallelLastOp = await this._executeParallelOperations(parallelOperations, context, operationId, operationResults, results)
+        if (parallelLastOp) lastOperation = parallelLastOp
       }
 
       if (sequentialOperations.length > 0) {
-        logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_sequential', `Executing ${sequentialOperations.length} sequential operations [${operationId}]`, {
-          count: sequentialOperations.length,
-          operationId
-        })
-
-        for (const operation of sequentialOperations) {
-          try {
-            lastOperation = operation
-
-            const dependencyContext = {
-              ...context,
-              results: Array.from(operationResults.values()),
-              operationResults: Object.fromEntries(operationResults)
-            }
-
-            logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_step', `Executing sequential operation: ${operation.name} [${operationId}]`, {
-              operationName: operation.name,
-              dependencies: operation.dependencies,
-              operationId
-            })
-
-            const result = await operation.execute(dependencyContext, operationId)
-            const namedResult = { name: operation.name, ...result }
-            results.push(namedResult)
-            operationResults.set(operation.name, namedResult)
-
-            if (operation.getCleanupHandler) {
-              const cleanupHandler = operation.getCleanupHandler(namedResult)
-              if (cleanupHandler) {
-                this.operations.push({
-                  operationId,
-                  step: operations.indexOf(operation),
-                  cleanup: cleanupHandler,
-                  result: namedResult
-                })
-              }
-            }
-          } catch (operationError) {
-            const enhancedError = new Error(`Sequential operation ${operation.name} failed: ${typeof operationError === 'string' ? operationError : operationError.message || 'Unknown error'}`)
-            enhancedError.operationName = operation.name
-            enhancedError.originalError = operationError
-            throw enhancedError
-          }
-        }
-
-        logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_sequential_success', `All sequential operations completed [${operationId}]`, {
-          completed: sequentialOperations.length
-        })
+        const sequentialLastOp = await this._executeSequentialOperations(sequentialOperations, operations, context, operationId, operationResults, results)
+        if (sequentialLastOp) lastOperation = sequentialLastOp
       }
 
       logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_success', `Atomic operation completed successfully [${operationId}]`, {
@@ -203,13 +89,16 @@ export class AtomicOperationManager {
         operationId
       })
 
+      // Auto-cleanup after successful operations
+      this.cleanup(operationId)
+
       return { success: true, results, operationId }
 
     } catch (error) {
       const safeLastOperation = lastOperation || { name: 'unknown', type: 'unknown' }
 
       logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_failed', `Atomic operation failed, initiating rollback [${operationId}]`, {
-        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
+        error: this._extractErrorMessage(error),
         operationId,
         operations: operations.length,
         lastOperation: safeLastOperation.name
@@ -217,23 +106,186 @@ export class AtomicOperationManager {
 
       await this.rollback(operationId, error)
 
-      const errorResult = await standardizedErrorHandler.processError(error, {
-        operationId,
-        operations: operations.length,
-        lastOperation: safeLastOperation.name
-      })
+      return await this._buildErrorResponse(error, operationId, operations.length, safeLastOperation.name)
+    }
+  }
 
-      return {
-        success: false,
-        error: errorResult.userMessage,
-        technicalError: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
-        operationId,
-        rollbackCompleted: true,
-        category: errorResult.category,
-        recoveryActions: errorResult.recoveryActions,
-        requiresUserAction: errorResult.requiresUserAction
+  /**
+   * Execute parallel operations concurrently
+   * @private
+   */
+  async _executeParallelOperations(parallelOperations, context, operationId, operationResults, results) {
+    let lastOperation = null
+
+    logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_parallel', `Executing ${parallelOperations.length} parallel operations [${operationId}]`, {
+      count: parallelOperations.length,
+      operationId
+    })
+
+    transactionExperienceManager.emitTransactionEvent('atomic:progress', {
+      operationId,
+      stage: 'parallel_operations',
+      parallelOperations: parallelOperations.length,
+      description: 'Processing operations in parallel for better performance'
+    })
+
+    const parallelPromises = parallelOperations.map(async (operation, i) => {
+      try {
+        lastOperation = operation
+
+        logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_step', `Executing parallel operation: ${operation.name} [${operationId}]`, {
+          operationName: operation.name,
+          operationId
+        })
+
+        transactionExperienceManager.prepareTransaction(operation.name, context)
+        const result = await transactionExperienceManager.executeWithExperience(
+          { execute: operation.execute.bind(operation) },
+          operation.name,
+          context
+        )
+
+        const namedResult = { name: operation.name, ...result }
+        operationResults.set(operation.name, namedResult)
+        this._registerCleanup(operation, namedResult, operationId, i)
+
+        return namedResult
+      } catch (operationError) {
+        throw this._decorateError(operationError, operation.name)
+      }
+    })
+
+    const parallelResults = await Promise.allSettled(parallelPromises)
+
+    for (let i = 0; i < parallelResults.length; i++) {
+      const result = parallelResults[i]
+      if (result.status === 'rejected') {
+        throw new Error(`Parallel operation failed: ${parallelOperations[i].name} - ${result.reason}`)
+      }
+      results.push(result.value)
+    }
+
+    logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_parallel_success', `All parallel operations completed [${operationId}]`, {
+      completed: parallelOperations.length
+    })
+
+    return lastOperation
+  }
+
+  /**
+   * Execute sequential operations with dependency resolution
+   * @private
+   */
+  async _executeSequentialOperations(sequentialOperations, operations, context, operationId, operationResults, results) {
+    let lastOperation = null
+
+    logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_sequential', `Executing ${sequentialOperations.length} sequential operations [${operationId}]`, {
+      count: sequentialOperations.length,
+      operationId
+    })
+
+    // Build index map once to avoid O(n) indexOf per iteration
+    const operationIndexMap = new Map(operations.map((op, idx) => [op, idx]))
+
+    for (const operation of sequentialOperations) {
+      try {
+        lastOperation = operation
+
+        const dependencyContext = this._buildDependencyContext(context, operationResults)
+
+        logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_step', `Executing sequential operation: ${operation.name} [${operationId}]`, {
+          operationName: operation.name,
+          dependencies: operation.dependencies,
+          operationId
+        })
+
+        const result = await operation.execute(dependencyContext, operationId)
+        const namedResult = { name: operation.name, ...result }
+        results.push(namedResult)
+        operationResults.set(operation.name, namedResult)
+        this._registerCleanup(operation, namedResult, operationId, operationIndexMap.get(operation))
+      } catch (operationError) {
+        throw this._decorateError(operationError, operation.name, 'Sequential operation')
       }
     }
+
+    logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_sequential_success', `All sequential operations completed [${operationId}]`, {
+      completed: sequentialOperations.length
+    })
+
+    return lastOperation
+  }
+
+  /**
+   * Register cleanup handler for an operation
+   * @private
+   */
+  _registerCleanup(operation, namedResult, operationId, step) {
+    if (operation.getCleanupHandler) {
+      const cleanupHandler = operation.getCleanupHandler(namedResult)
+      if (cleanupHandler) {
+        this.operations.push({
+          operationId,
+          step,
+          cleanup: cleanupHandler,
+          result: namedResult
+        })
+      }
+    }
+  }
+
+  /**
+   * Build dependency context with operation results
+   * @private
+   */
+  _buildDependencyContext(context, operationResults) {
+    return {
+      ...context,
+      results: Array.from(operationResults.values()),
+      operationResults: Object.fromEntries(operationResults)
+    }
+  }
+
+  /**
+   * Extract error message from various error types
+   * @private
+   */
+  _extractErrorMessage(error) {
+    return typeof error === 'string' ? error : error?.message || 'Unknown error'
+  }
+
+  /**
+   * Build error response with standardized error handling
+   * @private
+   */
+  async _buildErrorResponse(error, operationId, operationsCount, lastOperationName) {
+    const errorResult = await standardizedErrorHandler.processError(error, {
+      operationId,
+      operations: operationsCount,
+      lastOperation: lastOperationName
+    })
+
+    return {
+      success: false,
+      error: errorResult.userMessage,
+      technicalError: this._extractErrorMessage(error),
+      operationId,
+      rollbackCompleted: true,
+      category: errorResult.category,
+      recoveryActions: errorResult.recoveryActions,
+      requiresUserAction: errorResult.requiresUserAction
+    }
+  }
+
+  /**
+   * Decorate error with operation context
+   * @private
+   */
+  _decorateError(operationError, operationName, prefix = 'Operation') {
+    const enhancedError = new Error(`${prefix} ${operationName} failed: ${this._extractErrorMessage(operationError)}`)
+    enhancedError.operationName = operationName
+    enhancedError.originalError = operationError
+    return enhancedError
   }
 
   /**
@@ -252,7 +304,7 @@ export class AtomicOperationManager {
 
     logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'rollback_start', `Starting rollback for operation [${operationId}]`, {
       operationsToRollback: operationsToRollback.length,
-      originalError: typeof originalError === 'string' ? originalError : originalError.message || 'Unknown error'
+      originalError: this._extractErrorMessage(originalError)
     })
 
     const rollbackOperations = operationsToRollback.reverse()
@@ -268,7 +320,7 @@ export class AtomicOperationManager {
       } catch (rollbackError) {
         logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'rollback_failed', `Rollback failed for step ${op.step} [${operationId}]`, {
           step: op.step,
-          rollbackError: typeof rollbackError === 'string' ? rollbackError : rollbackError.message || 'Unknown error',
+          rollbackError: this._extractErrorMessage(rollbackError),
           operationId
         })
       }
@@ -278,6 +330,8 @@ export class AtomicOperationManager {
       operationId,
       operationsRolledBack: rollbackOperations.length
     })
+
+    this.cleanup(operationId)
   }
 
   /**
