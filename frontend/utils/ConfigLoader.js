@@ -416,6 +416,23 @@ class ConfigLoader {
       return result;
     };
 
+    // Get fallback URL for Walrus service (used when proxy returns 404)
+    config.getWalrusFallback = function(service) {
+      const network = this.getCurrentNetwork();
+      if (service === 'publisher') {
+        return network.walrus.publisherFallback || network.walrus.publisherUrl;
+      } else if (service === 'aggregator') {
+        return network.walrus.aggregatorFallback || network.walrus.aggregatorUrl;
+      }
+      throw new Error(`Unknown Walrus service: ${service}`);
+    };
+
+    // Get fallback URL for Sui RPC (used when proxy returns 404)
+    config.getSuiRpcFallback = function() {
+      const network = this.getCurrentNetwork();
+      return network.rpcFallback || network.rpcUrl;
+    };
+
     // Resolve healthy service URL with proxy→absolute fallback
     config.resolveHealthyServiceUrl = async function(service, path = '/v1/api', opts = {}) {
       const base = this.getServiceUrl(service, ''); // proxy or absolute base, no path
@@ -488,12 +505,15 @@ class ConfigLoader {
         testnet: {
           rpcUrl: 'https://fullnode.testnet.sui.io:443',
           rpcProxy: '/api/sui-rpc-proxy',
+          rpcFallback: 'https://fullnode.testnet.sui.io:443',
           packageId: '0xe7f62142b48f1b1746bd7dd7b695f0e2e5952879662ab7d755fdd9081b189fa7',
           registryObjectId: '0x9a6b94f79762fa608c5f0938d092744a8e5b69852f860eb17afa4ab11e24fe25',
           walrus: {
             // Walrus requests routed through Vercel Edge proxies to fix CORS issues
             aggregatorUrl: '/api/walrus-aggregator-testnet',
+            aggregatorFallback: 'https://aggregator.walrus-testnet.walrus.space',
             publisherUrl: '/api/walrus-publisher-testnet',
+            publisherFallback: 'https://publisher.walrus-testnet.walrus.space',
             maxRetries: 3,
             retryDelay: 1000,
             // Epochs feature config
@@ -505,13 +525,16 @@ class ConfigLoader {
         mainnet: {
           rpcUrl: 'https://fullnode.mainnet.sui.io:443',
           rpcProxy: '/api/sui-rpc-proxy',
+          rpcFallback: 'https://fullnode.mainnet.sui.io:443',
           packageId: '0x991454976a4ef8535ed3572bb1c500dcd565855d49a51f1fadc7f70a316c9631',
           registryObjectId: '0x66f68bfb639dbc7f24519bcdbbfdb376057d87c6d508ea7a8d67746a11721ca5',
           walrus: {
             // Walrus requests routed through Vercel Edge proxies to fix CORS issues
             // Proxies forward to community endpoints (Staketab)
             aggregatorUrl: '/api/walrus-aggregator-mainnet',
+            aggregatorFallback: 'https://aggregator.walrus.space',
             publisherUrl: '/api/walrus-publisher-mainnet',
+            publisherFallback: 'https://publisher.walrus.space',
             maxRetries: 3,
             retryDelay: 1000
           }

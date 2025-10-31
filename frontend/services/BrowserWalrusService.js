@@ -120,7 +120,7 @@ class BrowserWalrusService {
 
   /**
    * Fetch with 404 fallback support
-   * If a proxy URL (/api/walrus-*) returns 404, falls back to direct Walrus endpoint
+   * If a proxy URL (/api/walrus-*) returns 404, falls back to config fallback endpoint
    * @param {string} url - URL to fetch from
    * @param {Object} options - Fetch options
    * @returns {Promise<Response>} Fetch response
@@ -130,22 +130,42 @@ class BrowserWalrusService {
     try {
       const response = await fetch(url, options);
 
-      // If proxy returns 404, try direct Walrus endpoint
+      // If proxy returns 404, try fallback from config
       if (response.status === 404 && url.includes('/api/walrus-')) {
-        console.warn('[BrowserWalrusService] Proxy 404, falling back to direct endpoint');
+        console.warn('[BrowserWalrusService] Proxy 404, using config fallback');
 
-        // Replace proxy path with direct Walrus URL
-        const directUrl = url
-          .replace('/api/walrus-publisher', this.publisherUrl)
-          .replace('/api/walrus-aggregator', this.aggregatorUrl);
+        // Determine service type from URL
+        const serviceType = url.includes('publisher') ? 'publisher' : 'aggregator';
 
-        console.log('[BrowserWalrusService] Retrying with direct URL:', directUrl);
-        return await fetch(directUrl, options);
+        // Get fallback from config
+        const config = await this.configLoader.getConfig();
+        const fallbackBase = config.getWalrusFallback(serviceType);
+
+        // Replace proxy base with fallback base, preserve path
+        const path = url.replace(/^.*\/api\/walrus-[^/]+/, '');
+        const fallbackUrl = fallbackBase + path;
+
+        console.log('[BrowserWalrusService] Retrying with fallback:', fallbackUrl);
+        return await fetch(fallbackUrl, options);
       }
 
       return response;
     } catch (error) {
-      // Network errors - no fallback possible
+      // ERR_INVALID_URL or network error with proxy - try fallback
+      if (error.message?.includes('ERR_INVALID_URL') && url.includes('/api/walrus-')) {
+        console.warn('[BrowserWalrusService] Invalid proxy URL, using config fallback');
+
+        const serviceType = url.includes('publisher') ? 'publisher' : 'aggregator';
+        const config = await this.configLoader.getConfig();
+        const fallbackBase = config.getWalrusFallback(serviceType);
+        const path = url.replace(/^.*\/api\/walrus-[^/]+/, '');
+        const fallbackUrl = fallbackBase + path;
+
+        console.log('[BrowserWalrusService] Retrying with fallback:', fallbackUrl);
+        return await fetch(fallbackUrl, options);
+      }
+
+      // Other network errors - no fallback possible
       throw error;
     }
   }
@@ -267,7 +287,7 @@ class BrowserWalrusService {
       console.log(`[BrowserWalrusService:${connectId}] Sending connectivity test to publisher...`);
       const config = await this.configLoader.getConfig();
       const publisherBase = config.getWalrusServiceBase('publisher');
-      const publisherResponse = await fetch(`${publisherBase}/v1/api`, {
+      const publisherResponse = await this._fetchWithFallback(`${publisherBase}/v1/api`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' }
       });
@@ -1278,7 +1298,7 @@ class BrowserWalrusService {
         if (this.rateLimiterEnabled && this.limiters.walrusAgg) {
           const key = `retrieve-head:${blobId}`;
           headResponse = await this.limiters.walrusAgg.schedule(key, async () => {
-            const resp = await fetch(`${aggregatorBase}/v1/blobs/${blobId}`, {
+            const resp = await this._fetchWithFallback(`${aggregatorBase}/v1/blobs/${blobId}`, {
               method: 'HEAD',
               signal: AbortSignal.timeout(5000)
             });
@@ -1286,7 +1306,7 @@ class BrowserWalrusService {
             return resp;
           }, { ttlMs: 10000 }); // Cache HEAD for 10 seconds
         } else {
-          headResponse = await fetch(`${aggregatorBase}/v1/blobs/${blobId}`, {
+          headResponse = await this._fetchWithFallback(`${aggregatorBase}/v1/blobs/${blobId}`, {
             method: 'HEAD',
             signal: AbortSignal.timeout(5000)
           });
@@ -1327,7 +1347,7 @@ class BrowserWalrusService {
       if (this.rateLimiterEnabled && this.limiters.walrusAgg) {
         const key = `retrieve:${blobId}`;
         response = await this.limiters.walrusAgg.schedule(key, async () => {
-          const resp = await fetch(`${aggregatorBase}/v1/blobs/${blobId}`, {
+          const resp = await this._fetchWithFallback(`${aggregatorBase}/v1/blobs/${blobId}`, {
             method: 'GET',
             headers: {
               'Accept': 'application/octet-stream',
@@ -1337,7 +1357,7 @@ class BrowserWalrusService {
           return resp;
         }, { ttlMs: 5000 }); // Cache for 5 seconds
       } else {
-        response = await fetch(`${aggregatorBase}/v1/blobs/${blobId}`, {
+        response = await this._fetchWithFallback(`${aggregatorBase}/v1/blobs/${blobId}`, {
           method: 'GET',
           headers: {
             'Accept': 'application/octet-stream',
@@ -2329,7 +2349,7 @@ class BrowserWalrusService {
   // Check if service is available
   async isServiceAvailable() {
     try {
-      const response = await fetch(`${this.publisherUrl}/v1/api`, {
+      const response = await this._fetchWithFallback(`${this.publisherUrl}/v1/api`, {
         method: 'GET',
         signal: AbortSignal.timeout(5000) // 5 second timeout
       });
@@ -2639,7 +2659,7 @@ class BrowserWalrusService {
       const config = await this.configLoader.getConfig();
       const publisherBase = config.getWalrusServiceBase('publisher');
 
-      const response = await fetch(`${publisherBase}/v1/api`, {
+      const response = await this._fetchWithFallback(`${publisherBase}/v1/api`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
         signal: AbortSignal.timeout(10000) // 10 second timeout
