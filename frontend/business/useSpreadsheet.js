@@ -11,9 +11,11 @@ import { parseCellRef } from '../utils/cellUtils.js';
 import luckysheetApi from '../services/luckysheetApi.js';
 import { TestModeAdapter } from '../services/testing/TestModeAdapter.js';
 import { isAuthBypassed } from '../utils/testMode.js';
-import { getTemplateData } from '../utils/templateData.js';
 import { logger, LogComponent } from '../utils/Logger.js';
 import { detectSaveVersionSignature } from '../utils/AbiHelpers.js';
+// Phase 3: Extracted hooks for better separation of concerns
+import { useSpreadsheetAutosave } from './hooks/useSpreadsheetAutosave.js';
+import { useSpreadsheetImport } from './hooks/useSpreadsheetImport.js';
 
 /**
  * React hook for spreadsheet business logic
@@ -36,17 +38,12 @@ export function useSpreadsheet() {
   });
   const [spreadsheetCount, setSpreadsheetCount] = useState(0);
   const [spreadsheetData, setSpreadsheetData] = useState(null);
-  const [saveReminder, setSaveReminder] = useState({
-    visible: false,
-    lastChecked: Date.now()
-  });
-  const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
   const [walletSyncReady, setWalletSyncReady] = useState(false);
   const [lastSaveInfo, setLastSaveInfo] = useState(null); // Track metadata from last save (for UI confirmation)
 
   // Use the wallet connection factory (returns mock in test mode)
   const walletConnection = useWalletConnectionFactory();
-  
+
   const engineRef = useRef(null);
   const blockchainRef = useRef(null);
   const storageRef = useRef(null);
@@ -56,10 +53,25 @@ export function useSpreadsheet() {
   const servicesInitializedRef = useRef(false);
   const sessionRestorationAttemptedRef = useRef(false);
   const autoDiscoveryAttemptedRef = useRef(false);
-  const saveReminderIntervalRef = useRef(null);
-  const autoSaveIntervalRef = useRef(null);
   const saveToBlockchainRef = useRef(null);
   const loadingOperationRef = useRef(null); // Track ongoing load operations
+
+  // Phase 3: Use extracted hooks for autosave and import functionality
+  const autosave = useSpreadsheetAutosave({
+    engineRef,
+    storageRef,
+    saveToBlockchainRef,
+    walletConnected: walletConnection.isConnected
+  });
+
+  const importExport = useSpreadsheetImport({
+    engineRef,
+    storageRef,
+    gridSizeManagerRef,
+    setSpreadsheetData,
+    setEditCount,
+    setSaveStatus
+  });
   
   // Auto-discover user's spreadsheets when wallet connects
   const autoDiscoverSpreadsheets = useCallback(async () => {
@@ -317,91 +329,15 @@ export function useSpreadsheet() {
   }, []);
 
   // Start save reminder monitoring
-  const startSaveReminderMonitoring = useCallback(() => {
-    if (saveReminderIntervalRef.current) {
-      clearInterval(saveReminderIntervalRef.current);
-    }
-
-    saveReminderIntervalRef.current = setInterval(() => {
-      if (!engineRef.current) return;
-
-      const timeSinceLastEdit = engineRef.current.getTimeSinceLastEdit();
-      const timeSinceLastSave = engineRef.current.getTimeSinceLastSave();
-
-      // Show reminder if:
-      // 1. User has made edits (timeSinceLastEdit exists)
-      // 2. More than 60 seconds since last edit
-      // 3. Either never saved or last save was before the edits
-      if (timeSinceLastEdit !== null &&
-          timeSinceLastEdit > 60000 && // 60 seconds
-          (timeSinceLastSave === null || timeSinceLastSave > timeSinceLastEdit)) {
-        setSaveReminder(prev => ({ ...prev, visible: true }));
-      }
-    }, 5000); // Check every 5 seconds
-  }, []);
-
-  // Dismiss save reminder
-  const dismissSaveReminder = useCallback(() => {
-    setSaveReminder(prev => ({ ...prev, visible: false }));
-  }, []);
-
-  // Toggle auto-save preference
-  const toggleAutoSave = useCallback((enabled) => {
-    setAutoSaveEnabled(enabled);
-    if (storageRef.current) {
-      storageRef.current.setAutoSaveEnabled(enabled);
-    }
-
-    // Update the engine's auto-save state
-    if (engineRef.current && engineRef.current.setAutoSaveEnabled) {
-      engineRef.current.setAutoSaveEnabled(enabled);
-    }
-
-    // Start/stop auto-save interval based on preference
-    if (enabled && walletConnection.isConnected) {
-      startAutoSaveLoop();
-    } else {
-      stopAutoSaveLoop();
-    }
-  }, [walletConnection.isConnected]);
-
-  // Start auto-save loop when enabled
-  const startAutoSaveLoop = useCallback(() => {
-    if (autoSaveIntervalRef.current) {
-      clearInterval(autoSaveIntervalRef.current);
-    }
-
-    autoSaveIntervalRef.current = setInterval(async () => {
-      if (!engineRef.current || !walletConnection.isConnected || !autoSaveEnabled) {
-        return;
-      }
-
-      // Check if there are changes worth saving
-      const timeSinceLastEdit = engineRef.current.getTimeSinceLastEdit();
-      const timeSinceLastSave = engineRef.current.getTimeSinceLastSave();
-
-      // Auto-save if there are recent edits and we haven't saved since then
-      if (timeSinceLastEdit !== null &&
-          timeSinceLastEdit < 30000 && // Recent edits (within 30 seconds)
-          (timeSinceLastSave === null || timeSinceLastSave > timeSinceLastEdit)) {
-        try {
-          if (saveToBlockchainRef.current) {
-            await saveToBlockchainRef.current();
-          }
-        } catch (error) {
-          console.warn('Auto-save failed:', error.message);
-        }
-      }
-    }, 10000); // Auto-save check every 10 seconds
-  }, [walletConnection.isConnected, autoSaveEnabled]);
-
-  // Stop auto-save loop
-  const stopAutoSaveLoop = useCallback(() => {
-    if (autoSaveIntervalRef.current) {
-      clearInterval(autoSaveIntervalRef.current);
-      autoSaveIntervalRef.current = null;
-    }
-  }, []);
+  // Phase 3: Autosave functions now handled by useSpreadsheetAutosave hook
+  // Expose them directly from the hook for backward compatibility
+  const {
+    startSaveReminderMonitoring,
+    dismissSaveReminder,
+    toggleAutoSave,
+    startAutoSaveLoop,
+    stopAutoSaveLoop
+  } = autosave;
 
   // Sync wallet connection with browserWalletManager and handle session restoration
   useEffect(() => {
@@ -591,12 +527,8 @@ export function useSpreadsheet() {
       if (engineRef.current) {
         engineRef.current.cleanup();
       }
-      if (saveReminderIntervalRef.current) {
-        clearInterval(saveReminderIntervalRef.current);
-      }
-      if (autoSaveIntervalRef.current) {
-        clearInterval(autoSaveIntervalRef.current);
-      }
+      // Phase 3: Cleanup autosave intervals via hook
+      autosave.cleanup();
       // Don't reset servicesInitializedRef here as we want to keep services alive
     };
   }, [updateSyncStatus]);
@@ -1933,122 +1865,9 @@ export function useSpreadsheet() {
     }
   }, [updateSyncStatus]);
 
-  // Initialize local spreadsheet with template
-  const initializeLocalSpreadsheet = useCallback(async ({ title, template }) => {
-    if (!engineRef.current || !storageRef.current) {
-      return { success: false, error: 'Services not initialized' };
-    }
-
-    try {
-      // Get template data from pure utility
-      const templateConfig = getTemplateData(template);
-
-      // Create data structure in format engine expects
-      const localData = {
-        data: {
-          version: `v${Date.now()}-local`,
-          createdAt: Date.now(),
-          savedAt: Date.now(),
-          title,
-          celldata: templateConfig.celldata || [],
-          edits: [],
-          metadata: {
-            title,
-            rows: templateConfig.rows || 100,
-            cols: templateConfig.cols || 26,
-            sheets: templateConfig.sheets || [{ name: 'Sheet1', index: 0, order: 0, status: 1 }],
-            template,
-            isLocal: true
-          }
-        }
-      };
-
-      // Clear current data and load template
-      await storageRef.current.clearData();
-      await engineRef.current.loadData(localData);
-
-      // Update storage adapter state
-      storageRef.current.setCurrentSpreadsheetId(null); // Signal local-only
-      storageRef.current.setSpreadsheetTitle(title);
-
-      // Update component state
-      setSpreadsheetData(localData);
-      setEditCount(0);
-      setSaveStatus('ready');
-
-      logger.info(LogComponent.BUSINESS_LOGIC, 'local_init_success', 'Local spreadsheet initialized', {
-        title, template
-      });
-
-      return { success: true, title, isLocal: true };
-    } catch (error) {
-      logger.error(LogComponent.BUSINESS_LOGIC, 'local_init_error', 'Local init failed', {
-        error: error.message
-      });
-      return { success: false, error: error.message };
-    }
-  }, []);
-
-  // Load imported data from spreadsheet import (Excel/CSV)
-  const loadImportedData = useCallback(async (importedSheets, selectedSheetIndex, title) => {
-    if (!engineRef.current || !gridSizeManagerRef.current) {
-      return { success: false, error: 'Services not initialized' };
-    }
-
-    try {
-      logger.info(LogComponent.BUSINESS_LOGIC, 'import_load_start', 'Loading imported data', {
-        sheetsCount: importedSheets?.length,
-        selectedIndex: selectedSheetIndex,
-        title
-      });
-
-      // Get the sheet to load
-      const selectedSheet = importedSheets[selectedSheetIndex] || importedSheets[0];
-
-      // Pre-allocate grid capacity before loading data
-      if (selectedSheet.row && selectedSheet.column) {
-        logger.debug(LogComponent.BUSINESS_LOGIC, 'import_prealloc', 'Pre-allocating grid', {
-          rows: selectedSheet.row,
-          cols: selectedSheet.column
-        });
-
-        gridSizeManagerRef.current.preallocateForImport({
-          rows: selectedSheet.row,
-          cols: selectedSheet.column
-        });
-      }
-
-      // Construct data format expected by lifecycle hook
-      const importData = {
-        celldata: selectedSheet.celldata,
-        data: {
-          metadata: {
-            title: title || selectedSheet.name || 'Imported Spreadsheet'
-          }
-        }
-      };
-
-      // Update state - lifecycle hook will detect and re-init with WalSheetz config
-      setSpreadsheetData(importData);
-
-      // Update storage metadata
-      if (storageRef.current) {
-        storageRef.current.setSpreadsheetTitle(title || selectedSheet.name || 'Imported Spreadsheet');
-      }
-
-      logger.info(LogComponent.BUSINESS_LOGIC, 'import_load_success', 'Imported data loaded', {
-        title,
-        cellCount: selectedSheet.celldata?.length || 0
-      });
-
-      return { success: true, title };
-    } catch (error) {
-      logger.error(LogComponent.BUSINESS_LOGIC, 'import_load_error', 'Failed to load imported data', {
-        error: error.message
-      });
-      return { success: false, error: error.message };
-    }
-  }, []);
+  // Phase 3: Import/export functions now handled by useSpreadsheetImport hook
+  // Expose them directly from the hook for backward compatibility
+  const { initializeLocalSpreadsheet, loadImportedData } = importExport;
 
   // Delete a spreadsheet permanently
   const deleteSpreadsheet = useCallback(async (spreadsheetId, title) => {
@@ -2140,8 +1959,8 @@ export function useSpreadsheet() {
     syncStatus,
     collaborationStatus,
     spreadsheetData,
-    saveReminder,
-    autoSaveEnabled,
+    saveReminder: autosave.saveReminder, // Phase 3: From useSpreadsheetAutosave
+    autoSaveEnabled: autosave.autoSaveEnabled, // Phase 3: From useSpreadsheetAutosave
     lastSaveInfo,
     smartSaveStatus: getStatus?.(),
 
