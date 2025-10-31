@@ -13,6 +13,8 @@ import {
   WZ_APY
 } from '../services/formulas/WalSheetzFunctions.js';
 import { recordTelemetry } from '../utils/Telemetry.js';
+import { FormulaRefreshScheduler } from './scheduling/FormulaRefreshScheduler.js';
+import { OfflineQueueManager } from './queue/OfflineQueueManager.js';
 
 /**
  * Core spreadsheet business logic
@@ -75,20 +77,13 @@ export class SpreadsheetEngine {
     // Store partial save info (Walrus succeeded, blockchain failed)
     this._partialSaveInfo = null;
 
-    // Offline queue for disconnected saves
-    this.offlineQueue = [];
-    this.isOnline = navigator.onLine;
-    this.offlineQueueProcessingTimer = null;
-    this.maxOfflineQueueSize = 50; // Maximum items in offline queue
-    this.offlineRetryInterval = 30000; // 30 seconds retry interval
+    // Offline queue for disconnected saves (Phase 4: Extracted to OfflineQueueManager)
+    this.offlineQueueManager = new OfflineQueueManager({
+      onProcessItem: (item) => this.processOfflineQueueItem(item)
+    });
 
-    // Formula refresh scheduling
-    this.refreshSchedules = new Map(); // cellRef -> { interval, timer, lastRun, formula }
-    this.refreshSchedulerTimer = null; // Main scheduler loop
-    this.refreshSchedulerInterval = 1000; // Check every second for cells to refresh
-    this.minRefreshInterval = 5000; // Minimum 5 seconds between refreshes for a cell
-    this.maxRefreshInterval = 3600000; // Maximum 1 hour between refreshes
-    this.refreshEnabled = true; // Global enable/disable flag
+    // Formula refresh scheduling (Phase 4: Extracted to FormulaRefreshScheduler)
+    this.formulaScheduler = new FormulaRefreshScheduler();
 
     logger.info(LogComponent.SPREADSHEET_ENGINE, 'constructor', 'SpreadsheetEngine initialized', {
       userId: this.userId,
@@ -437,150 +432,18 @@ export class SpreadsheetEngine {
 
   /**
    * Setup offline queue management and event listeners
+   * Phase 4: Delegates to OfflineQueueManager
    */
   setupOfflineQueueManagement() {
-    // Listen for online/offline events
-    const handleOnline = () => {
-      logger.info(LogComponent.SPREADSHEET_ENGINE, 'network_online', 'Network connection restored');
-      this.isOnline = true;
-      this.processOfflineQueue();
-    };
-
-    const handleOffline = () => {
-      logger.info(LogComponent.SPREADSHEET_ENGINE, 'network_offline', 'Network connection lost');
-      this.isOnline = false;
-      // Clear any existing queue processing timer
-      if (this.offlineQueueProcessingTimer) {
-        clearInterval(this.offlineQueueProcessingTimer);
-        this.offlineQueueProcessingTimer = null;
-      }
-    };
-
-    // Add event listeners
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    // Store references for cleanup
-    this.onlineHandler = handleOnline;
-    this.offlineHandler = handleOffline;
-
-    // Setup periodic queue processing
-    if (this.isOnline) {
-      this.startOfflineQueueProcessing();
-    }
+    this.offlineQueueManager.setupListeners();
   }
 
   /**
    * Add a save operation to the offline queue
+   * Phase 4: Delegates to OfflineQueueManager
    */
   addToOfflineQueue(operation) {
-    // Prevent queue from growing too large
-    if (this.offlineQueue.length >= this.maxOfflineQueueSize) {
-      // Remove oldest items to make room
-      const toRemove = this.offlineQueue.length - this.maxOfflineQueueSize + 1;
-      this.offlineQueue.splice(0, toRemove);
-      logger.warn(LogComponent.SPREADSHEET_ENGINE, 'offline_queue_trimmed',
-        `Offline queue trimmed, removed ${toRemove} oldest items`);
-    }
-
-    const queueItem = {
-      id: `queue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      operation,
-      timestamp: Date.now(),
-      retryCount: 0,
-      maxRetries: 3
-    };
-
-    this.offlineQueue.push(queueItem);
-
-    logger.info(LogComponent.SPREADSHEET_ENGINE, 'offline_queue_add', 'Operation added to offline queue', {
-      queueId: queueItem.id,
-      operation: operation.type,
-      queueSize: this.offlineQueue.length
-    });
-
-    // Start processing if we're online
-    if (this.isOnline && !this.offlineQueueProcessingTimer) {
-      this.startOfflineQueueProcessing();
-    }
-  }
-
-  /**
-   * Start processing the offline queue
-   */
-  startOfflineQueueProcessing() {
-    if (this.offlineQueueProcessingTimer) {
-      return; // Already processing
-    }
-
-    this.offlineQueueProcessingTimer = setInterval(() => {
-      this.processOfflineQueue();
-    }, this.offlineRetryInterval);
-
-    // Process immediately
-    this.processOfflineQueue();
-  }
-
-  /**
-   * Process items in the offline queue
-   */
-  async processOfflineQueue() {
-    if (!this.isOnline || this.offlineQueue.length === 0) {
-      return;
-    }
-
-    logger.debug(LogComponent.SPREADSHEET_ENGINE, 'offline_queue_processing',
-      `Processing offline queue with ${this.offlineQueue.length} items`);
-
-    // Process items one by one
-    const itemsToProcess = [...this.offlineQueue];
-
-    for (let i = 0; i < itemsToProcess.length; i++) {
-      const item = itemsToProcess[i];
-
-      try {
-        await this.processOfflineQueueItem(item);
-
-        // Remove successfully processed item from queue
-        const index = this.offlineQueue.findIndex(q => q.id === item.id);
-        if (index !== -1) {
-          this.offlineQueue.splice(index, 1);
-          logger.info(LogComponent.SPREADSHEET_ENGINE, 'offline_queue_success',
-            'Offline queue item processed successfully', { queueId: item.id });
-        }
-      } catch (error) {
-        // Increment retry count
-        item.retryCount++;
-
-        if (item.retryCount >= item.maxRetries) {
-          // Remove item that has exceeded retry limit
-          const index = this.offlineQueue.findIndex(q => q.id === item.id);
-          if (index !== -1) {
-            this.offlineQueue.splice(index, 1);
-            logger.error(LogComponent.SPREADSHEET_ENGINE, 'offline_queue_failed',
-              'Offline queue item failed permanently', {
-                queueId: item.id,
-                retryCount: item.retryCount,
-                error: typeof error === 'string' ? error : error.message || 'Unknown error'
-              });
-          }
-        } else {
-          logger.warn(LogComponent.SPREADSHEET_ENGINE, 'offline_queue_retry',
-            'Offline queue item failed, will retry', {
-              queueId: item.id,
-              retryCount: item.retryCount,
-              error: typeof error === 'string' ? error : error.message || 'Unknown error'
-            });
-        }
-      }
-    }
-
-    // Stop processing if queue is empty
-    if (this.offlineQueue.length === 0 && this.offlineQueueProcessingTimer) {
-      clearInterval(this.offlineQueueProcessingTimer);
-      this.offlineQueueProcessingTimer = null;
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'offline_queue_empty', 'Offline queue processing stopped - queue empty');
-    }
+    this.offlineQueueManager.addToOfflineQueue(operation);
   }
 
   /**
@@ -2089,27 +1952,13 @@ export class SpreadsheetEngine {
     // Clear smart auto-save timers
     this.stopAutoSaveTimers();
 
-    // Clean up offline queue timer
-    if (this.offlineQueueProcessingTimer) {
-      clearInterval(this.offlineQueueProcessingTimer);
-      this.offlineQueueProcessingTimer = null;
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'cleanup', `Offline queue processing timer cleared`);
-    }
+    // Clean up offline queue (Phase 4: Delegated to OfflineQueueManager)
+    this.offlineQueueManager.cleanup();
+    logger.debug(LogComponent.SPREADSHEET_ENGINE, 'cleanup', `Offline queue manager cleaned up`);
 
-    // Clean up refresh scheduler
-    this.stopRefreshScheduler();
-    this.refreshSchedules.clear();
+    // Clean up refresh scheduler (Phase 4: Delegated to FormulaRefreshScheduler)
+    this.formulaScheduler.cleanup();
     logger.debug(LogComponent.SPREADSHEET_ENGINE, 'cleanup', `Refresh scheduler stopped and cleared`);
-
-    // Remove online/offline event listeners
-    if (this.onlineHandler) {
-      window.removeEventListener('online', this.onlineHandler);
-      this.onlineHandler = null;
-    }
-    if (this.offlineHandler) {
-      window.removeEventListener('offline', this.offlineHandler);
-      this.offlineHandler = null;
-    }
 
     // Save any pending edits before cleanup
     if (this.editCount > 0) {
@@ -2128,192 +1977,47 @@ export class SpreadsheetEngine {
 
   /**
    * Register a cell for periodic refresh
+   * Phase 4: Delegates to FormulaRefreshScheduler
    * @param {string} cellRef - Cell reference (e.g., "A1", "B5")
    * @param {number} interval - Refresh interval in milliseconds
    * @param {string} formula - Formula to re-execute
    */
   registerCellForRefresh(cellRef, interval, formula) {
-    // Validate interval
-    const clampedInterval = Math.max(
-      this.minRefreshInterval,
-      Math.min(interval, this.maxRefreshInterval)
-    );
-
-    if (clampedInterval !== interval) {
-      logger.warn(LogComponent.SPREADSHEET_ENGINE, 'register_refresh',
-        `Refresh interval clamped for cell ${cellRef}`, {
-          requested: interval,
-          actual: clampedInterval
-        });
-    }
-
-    // Store schedule
-    this.refreshSchedules.set(cellRef, {
-      interval: clampedInterval,
-      lastRun: Date.now(),
-      formula,
-      enabled: true
-    });
-
-    logger.debug(LogComponent.SPREADSHEET_ENGINE, 'register_refresh',
-      `Registered cell for refresh`, {
-        cellRef,
-        interval: clampedInterval,
-        formula: formula.substring(0, 50)
-      });
-
-    // Start scheduler if not already running
-    if (!this.refreshSchedulerTimer && this.refreshEnabled) {
-      this.startRefreshScheduler();
-    }
+    this.formulaScheduler.registerCellForRefresh(cellRef, interval, formula);
   }
 
   /**
    * Unregister a cell from periodic refresh
+   * Phase 4: Delegates to FormulaRefreshScheduler
    * @param {string} cellRef - Cell reference
    */
   unregisterCellForRefresh(cellRef) {
-    const removed = this.refreshSchedules.delete(cellRef);
-
-    if (removed) {
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'unregister_refresh',
-        `Unregistered cell from refresh`, { cellRef });
-    }
-
-    // Stop scheduler if no more cells to refresh
-    if (this.refreshSchedules.size === 0 && this.refreshSchedulerTimer) {
-      this.stopRefreshScheduler();
-    }
+    this.formulaScheduler.unregisterCellForRefresh(cellRef);
   }
 
   /**
    * Start the refresh scheduler loop
+   * Phase 4: Delegates to FormulaRefreshScheduler
    */
   startRefreshScheduler() {
-    if (this.refreshSchedulerTimer) {
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'start_refresh_scheduler',
-        'Refresh scheduler already running');
-      return;
-    }
-
-    logger.info(LogComponent.SPREADSHEET_ENGINE, 'start_refresh_scheduler',
-      'Starting refresh scheduler', {
-        cellCount: this.refreshSchedules.size,
-        interval: this.refreshSchedulerInterval
-      });
-
-    this.refreshSchedulerTimer = setInterval(
-      () => this._runRefreshScheduler(),
-      this.refreshSchedulerInterval
-    );
+    this.formulaScheduler.startRefreshScheduler();
   }
 
   /**
    * Stop the refresh scheduler loop
+   * Phase 4: Delegates to FormulaRefreshScheduler
    */
   stopRefreshScheduler() {
-    if (this.refreshSchedulerTimer) {
-      clearInterval(this.refreshSchedulerTimer);
-      this.refreshSchedulerTimer = null;
-
-      logger.info(LogComponent.SPREADSHEET_ENGINE, 'stop_refresh_scheduler',
-        'Refresh scheduler stopped');
-    }
+    this.formulaScheduler.stopRefreshScheduler();
   }
 
   /**
    * Enable/disable refresh scheduler globally
+   * Phase 4: Delegates to FormulaRefreshScheduler
    * @param {boolean} enabled - Enable or disable
    */
   setRefreshEnabled(enabled) {
-    this.refreshEnabled = enabled;
-
-    if (enabled && this.refreshSchedules.size > 0 && !this.refreshSchedulerTimer) {
-      this.startRefreshScheduler();
-    } else if (!enabled && this.refreshSchedulerTimer) {
-      this.stopRefreshScheduler();
-    }
-
-    logger.info(LogComponent.SPREADSHEET_ENGINE, 'set_refresh_enabled',
-      `Refresh scheduler ${enabled ? 'enabled' : 'disabled'}`);
-  }
-
-  /**
-   * Main refresh scheduler loop - checks all cells and refreshes as needed
-   * @private
-   */
-  _runRefreshScheduler() {
-    const now = Date.now();
-    const toRefresh = [];
-
-    // Check each registered cell
-    for (const [cellRef, schedule] of this.refreshSchedules.entries()) {
-      if (!schedule.enabled) continue;
-
-      const timeSinceLastRun = now - schedule.lastRun;
-      if (timeSinceLastRun >= schedule.interval) {
-        toRefresh.push({ cellRef, schedule });
-      }
-    }
-
-    // Refresh cells
-    if (toRefresh.length > 0) {
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'refresh_scheduler',
-        `Refreshing ${toRefresh.length} cells`, {
-          cells: toRefresh.map(r => r.cellRef)
-        });
-
-      toRefresh.forEach(({ cellRef, schedule }) => {
-        this._refreshCell(cellRef, schedule);
-        schedule.lastRun = now;
-      });
-    }
-  }
-
-  /**
-   * Refresh a specific cell by re-executing its formula
-   * @private
-   * @param {string} cellRef - Cell reference
-   * @param {Object} schedule - Refresh schedule object
-   */
-  async _refreshCell(cellRef, schedule) {
-    try {
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'refresh_cell',
-        `Refreshing cell ${cellRef}`, { formula: schedule.formula });
-
-      // Re-execute formula via Luckysheet if available
-      if (window.luckysheet) {
-        // Parse cell reference (e.g., "A1" -> row=0, col=0)
-        const match = cellRef.match(/^([A-Z]+)(\d+)$/);
-        if (match) {
-          const col = match[1].charCodeAt(0) - 65; // A=0, B=1, etc.
-          const row = parseInt(match[2]) - 1; // 1-indexed to 0-indexed
-
-          // Get current cell value
-          const currentValue = window.luckysheet.getCellValue(row, col);
-
-          // Only refresh if it's still a formula
-          if (currentValue && typeof currentValue === 'object' && currentValue.f) {
-            // Force recalculation by setting the same formula
-            window.luckysheet.setCellValue(row, col, currentValue);
-
-            logger.debug(LogComponent.SPREADSHEET_ENGINE, 'refresh_cell',
-              `Cell ${cellRef} refreshed`, { row, col });
-          } else {
-            // Cell no longer contains a formula, unregister it
-            logger.warn(LogComponent.SPREADSHEET_ENGINE, 'refresh_cell',
-              `Cell ${cellRef} no longer has formula, unregistering`, { currentValue });
-            this.unregisterCellForRefresh(cellRef);
-          }
-        }
-      }
-    } catch (error) {
-      logger.error(LogComponent.SPREADSHEET_ENGINE, 'refresh_cell_error',
-        `Error refreshing cell ${cellRef}`, {
-          error: error.message,
-          cellRef
-        });
-    }
+    this.formulaScheduler.setRefreshEnabled(enabled);
   }
 
   /**
