@@ -364,7 +364,7 @@ export function useSpreadsheet() {
       }
 
       // Start auto-save if enabled
-      if (autoSaveEnabled) {
+      if (autosave.autoSaveEnabled) { // Phase 3: Get from hook
         startAutoSaveLoop();
       }
 
@@ -391,7 +391,7 @@ export function useSpreadsheet() {
       sessionRestorationAttemptedRef.current = false;
       autoDiscoveryAttemptedRef.current = false;
     }
-  }, [walletConnection.isConnected, walletConnection.isAutoConnecting, walletConnection.address, autoSaveEnabled, autoDiscoverSpreadsheets, checkSessionRestoration, startAutoSaveLoop, stopAutoSaveLoop]);
+  }, [walletConnection.isConnected, walletConnection.isAutoConnecting, walletConnection.address, autosave.autoSaveEnabled, autoDiscoverSpreadsheets, checkSessionRestoration, startAutoSaveLoop, stopAutoSaveLoop]);
 
   // Initialize services
   useEffect(() => {
@@ -435,7 +435,7 @@ export function useSpreadsheet() {
         engineRef.current = new SpreadsheetEngine(
           storageRef.current,
           blockchainRef.current,
-          autoSaveEnabled,
+          autosave.autoSaveEnabled, // Phase 3: Get from hook
           gridSizeManagerRef.current
         );
 
@@ -474,7 +474,7 @@ export function useSpreadsheet() {
         // Load auto-save preference from storage
         if (storageRef.current) {
           const autoSavePref = storageRef.current.getAutoSaveEnabled();
-          setAutoSaveEnabled(autoSavePref);
+          autosave.toggleAutoSave(autoSavePref); // Phase 3: Use hook function
         }
 
         // Start save reminder checking
@@ -1190,7 +1190,7 @@ export function useSpreadsheet() {
           updateSyncStatus();
 
           // Dismiss save reminder on successful save
-          setSaveReminder(prev => ({ ...prev, visible: false }));
+          autosave.dismissSaveReminder(); // Phase 3: Use hook function
 
           // Complete final step and clear loading state
           setLoadingState(prev => ({
@@ -1932,16 +1932,16 @@ export function useSpreadsheet() {
       engineRef.current.commitPromptState.visible = false;
       engineRef.current.commitPromptState.since = Date.now();
     }
-    setSaveReminder(prev => ({ ...prev, visible: false }));
-  }, []);
+    autosave.dismissSaveReminder(); // Phase 3: Use hook function
+  }, [autosave]);
 
   const suppressCommitPrompts = useCallback(() => {
     if (engineRef.current?.commitPromptState) {
       engineRef.current.commitPromptState.visible = false;
       engineRef.current.commitPromptState.suppressed = true;
     }
-    setSaveReminder(prev => ({ ...prev, visible: false }));
-  }, []);
+    autosave.dismissSaveReminder(); // Phase 3: Use hook function
+  }, [autosave]);
 
   return {
     // State

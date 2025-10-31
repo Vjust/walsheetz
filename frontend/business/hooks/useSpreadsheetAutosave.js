@@ -10,7 +10,7 @@
  * - Toggle auto-save preference and persist to storage
  */
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 /**
  * Hook for managing spreadsheet auto-save and save reminders
@@ -36,6 +36,12 @@ export function useSpreadsheetAutosave({
 
   const saveReminderIntervalRef = useRef(null);
   const autoSaveIntervalRef = useRef(null);
+  const autoSaveEnabledRef = useRef(false); // Ref to avoid stale closure in interval
+
+  // Keep ref in sync with state to avoid stale closures
+  useEffect(() => {
+    autoSaveEnabledRef.current = autoSaveEnabled;
+  }, [autoSaveEnabled]);
 
   /**
    * Start monitoring for unsaved changes and show reminders
@@ -74,6 +80,7 @@ export function useSpreadsheetAutosave({
   /**
    * Start auto-save loop
    * Automatically saves spreadsheet every 10 seconds if there are recent edits
+   * Uses ref to avoid stale closure bug
    */
   const startAutoSaveLoop = useCallback(() => {
     if (autoSaveIntervalRef.current) {
@@ -81,7 +88,8 @@ export function useSpreadsheetAutosave({
     }
 
     autoSaveIntervalRef.current = setInterval(async () => {
-      if (!engineRef.current || !walletConnected || !autoSaveEnabled) {
+      // Use ref instead of captured state to avoid stale closure
+      if (!engineRef.current || !walletConnected || !autoSaveEnabledRef.current) {
         return;
       }
 
@@ -102,7 +110,7 @@ export function useSpreadsheetAutosave({
         }
       }
     }, 10000); // Auto-save check every 10 seconds
-  }, [engineRef, walletConnected, autoSaveEnabled, saveToBlockchainRef]);
+  }, [engineRef, walletConnected, saveToBlockchainRef]);
 
   /**
    * Stop auto-save loop
