@@ -272,8 +272,8 @@ async function runBlockchainOperations() {
     const fs = await import('fs').then(m => m.promises);
     const requiredServices = [
       'frontend/adapters/BlockchainAdapter.js',
-      'frontend/services/BrowserSuiService.js',
-      'frontend/services/BrowserWalrusService.js'
+      'src/sdk/services/blockchain/BrowserSuiService.js',
+      'src/walrus/BrowserWalrusService.js'
     ];
 
     let allServicesReady = true;
