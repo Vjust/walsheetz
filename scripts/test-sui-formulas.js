@@ -1,5 +1,5 @@
 // Simple test script for SUI formula functions
-import { getSuiBalance, getSuiGasPrice, getSuiEpoch, clearCache, getCacheStats } from '../frontend/services/formulas/SuiFunctions.js';
+import { getSuiBalance, getSuiGasPrice, getSuiEpoch, clearCache, getCacheStats } from '@/sdk/services/formulas/SuiFunctions.js';
 
 async function testSuiFormulas() {
   console.log('🧪 Testing SUI Formula Functions...\n');

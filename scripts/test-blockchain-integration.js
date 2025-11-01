@@ -20,9 +20,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Import the browser services directly for testing
-import { browserSuiService } from '../frontend/services/BrowserSuiService.js';
-import { browserWalrusService } from '../frontend/services/BrowserWalrusService.js';
-import { browserWalletManager } from '../frontend/services/BrowserWalletManager.js';
+import { browserSuiService } from '@/sdk/services/blockchain/BrowserSuiService.js';
+import { browserWalrusService } from '@/walrus/BrowserWalrusService.js';
+import { browserWalletManager } from '@/sdk/services/blockchain/BrowserWalletManager.js';
 
 class BlockchainIntegrationTest {
   constructor() {
@@ -349,8 +349,8 @@ class BlockchainIntegrationTest {
 
     try {
       // Import ABI helpers for testing
-      const { configLoader } = await import('../frontend/utils/ConfigLoader.js');
-      const { detectSaveVersionSignature } = await import('../frontend/utils/AbiHelpers.js');
+      const { configLoader } = await import('@/sdk/utils/ConfigLoader.js');
+      const { detectSaveVersionSignature } = await import('@/sdk/utils/AbiHelpers.js');
 
       this.log('Testing ABI detection for save_version function...');
       const abiInfo = await detectSaveVersionSignature();

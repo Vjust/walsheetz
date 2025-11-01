@@ -1,6 +1,6 @@
 // Test script to verify Walrus SDK integration is working correctly
 import { getCurrentConfig } from '../blockchain/config.js';
-import { WalrusSdkClient } from '../frontend/services/WalrusSdkClient.js';
+import { WalrusSdkClient } from '@/walrus/WalrusSdkClient.js';
 
 async function testWalrusSdkIntegration() {
   console.log('🧪 Testing Walrus SDK Integration...\n');
