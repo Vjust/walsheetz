@@ -16,11 +16,19 @@ import {
 } from '../../utils/TestHelpers.js';
 
 // We'll mock the imports
-vi.mock('@/sdk/utils/EventBus.js', () => ({
-  EventBus: createMockEventBus()
-}));
+vi.mock('@/sdk/shared/utils/EventBus.js', () => {
+  const mockBus = createMockEventBus();
+  return {
+    EventBus: class MockEventBus {
+      constructor() {
+        return mockBus;
+      }
+    },
+    eventBus: mockBus
+  };
+});
 
-vi.mock('@/sdk/utils/Logger.js', () => ({
+vi.mock('@/sdk/shared/utils/Logger.js', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
