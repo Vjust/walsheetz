@@ -9,7 +9,7 @@
 import { test, expect } from './fixtures/wallet-free.js';
 
 test.describe('WZ Function Autocomplete', () => {
-  test('should show WZ.CONTRACT.LIST in autocomplete when typing =WZ', async ({ page }) => {
+  test('should show WALRUS.PUT in autocomplete when typing =WAL', async ({ page }) => {
     // Navigate to the app
     await page.goto('/');
 
@@ -27,7 +27,7 @@ test.describe('WZ Function Autocomplete', () => {
     await page.waitForTimeout(500);
 
     // Type formula prefix to trigger autocomplete
-    await page.keyboard.type('=WZ.CONTRACT.LIST(');
+    await page.keyboard.type('=WALRUS.PUT(');
 
     // Wait for autocomplete dropdown to appear
     // Luckysheet uses classes like 'luckysheet-formula-search' or 'formula-search-c'
@@ -35,33 +35,12 @@ test.describe('WZ Function Autocomplete', () => {
 
     await expect(autocompleteDropdown).toBeVisible({ timeout: 5000 });
 
-    // Check that WZ.CONTRACT.LIST appears in the dropdown
-    const autocompleteItem = page.locator('.luckysheet-formula-search-item').filter({ hasText: 'WZ.CONTRACT.LIST' });
+    // Check that WALRUS.PUT appears in the dropdown
+    const autocompleteItem = page.locator('.luckysheet-formula-search-item').filter({ hasText: 'WALRUS.PUT' });
     await expect(autocompleteItem).toBeVisible({ timeout: 3000 });
 
     // Take screenshot for debugging if needed
     await page.screenshot({ path: 'tests/e2e/screenshots/autocomplete-dropdown.png', fullPage: true });
-  });
-
-  test('should autocomplete WZ.SUILEND.RESERVES when typing =WZ.SUILEND', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('#luckysheet-container canvas', { timeout: 10000 });
-    await page.waitForTimeout(1000);
-
-    const canvas = page.locator('#luckysheet-container canvas').first();
-    await canvas.click({ position: { x: 50, y: 50 } });
-    await page.waitForTimeout(500);
-
-    // Type partial formula
-    await page.keyboard.type('=WZ.SUILEND.RE');
-
-    // Wait for autocomplete
-    const autocompleteDropdown = page.locator('.luckysheet-formula-search, .formula-search-c').first();
-    await expect(autocompleteDropdown).toBeVisible({ timeout: 5000 });
-
-    // Should show WZ.SUILEND.RESERVES
-    const autocompleteItem = page.locator('.luckysheet-formula-search-item').filter({ hasText: 'WZ.SUILEND.RESERVES' });
-    await expect(autocompleteItem).toBeVisible({ timeout: 3000 });
   });
 
   test('should allow selecting autocomplete item to populate cell', async ({ page }) => {
@@ -74,7 +53,7 @@ test.describe('WZ Function Autocomplete', () => {
     await page.waitForTimeout(500);
 
     // Type formula
-    await page.keyboard.type('=WZ.CONTRACT.LIST');
+    await page.keyboard.type('=WALRUS.PUT');
     await page.waitForTimeout(500);
 
     // Wait for autocomplete dropdown
@@ -82,7 +61,7 @@ test.describe('WZ Function Autocomplete', () => {
     await expect(autocompleteDropdown).toBeVisible({ timeout: 5000 });
 
     // Click on the autocomplete item
-    const autocompleteItem = page.locator('.luckysheet-formula-search-item').filter({ hasText: 'WZ.CONTRACT.LIST' }).first();
+    const autocompleteItem = page.locator('.luckysheet-formula-search-item').filter({ hasText: 'WALRUS.PUT' }).first();
     await autocompleteItem.click();
 
     // Autocomplete should close
@@ -90,7 +69,7 @@ test.describe('WZ Function Autocomplete', () => {
 
     // Formula bar should contain the function
     const formulaBar = page.locator('#luckysheet-rich-text-editor, #luckysheet-input-box');
-    await expect(formulaBar.first()).toContainText('WZ.CONTRACT.LIST');
+    await expect(formulaBar.first()).toContainText('WALRUS.PUT');
 
     // Take screenshot
     await page.screenshot({ path: 'tests/e2e/screenshots/formula-selected.png', fullPage: true });
@@ -192,23 +171,23 @@ test.describe('WZ Function Injection Diagnostics', () => {
     await page.waitForSelector('#luckysheet-container canvas', { timeout: 10000 });
     await page.waitForTimeout(1000);
 
-    // Check that WZ functions are in luckysheet_function
-    const wzFunctions = await page.evaluate(() => {
+    // Check that WALRUS/SUI functions are in luckysheet_function
+    const walrusFunctions = await page.evaluate(() => {
       if (typeof window.luckysheet_function === 'object') {
-        const wzKeys = Object.keys(window.luckysheet_function).filter(k => k.startsWith('WZ'));
-        return wzKeys;
+        const walrusKeys = Object.keys(window.luckysheet_function).filter(k => k.startsWith('WALRUS') || k.startsWith('SUI'));
+        return walrusKeys;
       }
       return [];
     });
 
-    expect(wzFunctions.length).toBeGreaterThan(0);
-    console.log('Registered WZ functions:', wzFunctions);
+    expect(walrusFunctions.length).toBeGreaterThan(0);
+    console.log('Registered WALRUS/SUI functions:', walrusFunctions);
 
     // Verify nested structure exists
-    const hasNestedStructure = await page.evaluate(() => {
-      return !!(window.luckysheet_function?.WZ?.CONTRACT?.LIST);
+    const hasWalrusPut = await page.evaluate(() => {
+      return !!(window.luckysheet_function?.WALRUS?.PUT);
     });
 
-    expect(hasNestedStructure).toBe(true);
+    expect(hasWalrusPut).toBe(true);
   });
 });

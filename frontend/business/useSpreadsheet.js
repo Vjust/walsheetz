@@ -2020,7 +2020,6 @@ export function useSpreadsheet() {
     // Walrus epoch management
     getWalrusEpochPreference,
     setWalrusEpochPreference,
-    // Service adapters (for advanced components like SpreadsheetCreationService)
     blockchainAdapter: blockchainRef.current,
     storageAdapter: storageRef.current,
     spreadsheetEngine: engineRef.current

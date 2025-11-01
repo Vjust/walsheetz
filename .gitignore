@@ -139,3 +139,5 @@ hrm_reasoning.*
 
 # Reference documentation
 Sui Ref/
+# Migration temporary files
+.migration-temp/
