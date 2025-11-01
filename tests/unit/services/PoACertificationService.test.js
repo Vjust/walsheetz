@@ -16,11 +16,11 @@ import {
 } from '../../utils/TestHelpers.js';
 
 // We'll mock the imports
-vi.mock('../../../frontend/utils/EventBus.js', () => ({
+vi.mock('@/sdk/utils/EventBus.js', () => ({
   EventBus: createMockEventBus()
 }));
 
-vi.mock('../../../frontend/utils/Logger.js', () => ({
+vi.mock('@/sdk/utils/Logger.js', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -37,13 +37,13 @@ let mockBrowserSuiServiceInstance;
 let mockBrowserWalrusServiceInstance;
 
 // Mock the service imports that are dynamically loaded
-vi.mock('../../../frontend/services/BrowserSuiService.js', () => ({
+vi.mock('@/sdk/services/blockchain/BrowserSuiService.js', () => ({
   get browserSuiService() {
     return mockBrowserSuiServiceInstance;
   }
 }));
 
-vi.mock('../../../frontend/services/BrowserWalrusService.js', () => ({
+vi.mock('@/walrus/BrowserWalrusService.js', () => ({
   get browserWalrusService() {
     return mockBrowserWalrusServiceInstance;
   }
@@ -78,7 +78,7 @@ describe('PoACertificationService', () => {
     testLogger.success('Mocks created successfully');
 
     // Import service dynamically after mocks are set up
-    const { PoACertificationService } = await import('../../../frontend/services/PoACertificationService.js');
+    const { PoACertificationService } = await import('@/sdk/services/PoACertificationService.js');
     service = new PoACertificationService();
   });
 

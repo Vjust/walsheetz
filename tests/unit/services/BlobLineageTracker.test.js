@@ -15,11 +15,11 @@ import {
 } from '../../utils/TestHelpers.js';
 
 // Mock imports
-vi.mock('../../../frontend/utils/EventBus.js', () => ({
+vi.mock('@/sdk/utils/EventBus.js', () => ({
   EventBus: createMockEventBus()
 }));
 
-vi.mock('../../../frontend/utils/Logger.js', () => ({
+vi.mock('@/sdk/utils/Logger.js', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -45,7 +45,7 @@ describe('BlobLineageTracker', () => {
     global.localStorage = mockLocalStorage;
     testLogger.success('Mocks created');
 
-    const { BlobLineageTracker } = await import('../../../frontend/services/BlobLineageTracker.js');
+    const { BlobLineageTracker } = await import('@/sdk/services/BlobLineageTracker.js');
     tracker = new BlobLineageTracker();
   });
 
