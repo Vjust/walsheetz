@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { validationGuards } from "@/sdk/utils/ValidationGuards.js";
+import { validationGuards } from "../utils/ValidationGuards.js";
 
 describe('ValidationGuards error reporting', () => {
   beforeEach(() => {

@@ -7,12 +7,12 @@ import { resolve } from 'path'
 
 describe('Config deployment', () => {
   test('app-config.json exists in public directory', () => {
-    const configPath = resolve(__dirname, '../../../public/app-config.json')
+    const configPath = resolve(__dirname, '../../../../public/app-config.json')
     expect(existsSync(configPath)).toBe(true)
   })
 
   test('app-config.json contains required network configuration', async () => {
-    const configPath = resolve(__dirname, '../../../public/app-config.json')
+    const configPath = resolve(__dirname, '../../../../public/app-config.json')
     const config = JSON.parse(require('fs').readFileSync(configPath, 'utf-8'))
 
     // Verify networks section exists

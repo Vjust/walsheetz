@@ -2,7 +2,7 @@
  * @vitest-environment node
  */
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
-import { configLoader } from "@/sdk/utils/ConfigLoader.js";
+import { configLoader } from "../utils/ConfigLoader.js";
 
 describe('ConfigLoader Fallback Logic', () => {
   let fetchMock;
