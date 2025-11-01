@@ -34,10 +34,26 @@ export { StorageAdapter } from "@/sdk/adapters/StorageAdapter.js";
 // Business Logic
 export { useSpreadsheet } from "@/sdk/business/useSpreadsheet.js";
 
-// Utils
-export { Logger } from "@/sdk/utils/Logger.js";
-export { ConfigLoader, configLoader } from "@/sdk/utils/ConfigLoader.js";
-export { EventBus } from "@/sdk/utils/EventBus.js";
-export { CircuitBreaker } from "@/sdk/utils/CircuitBreaker.js";
-export { RateLimiter } from "@/sdk/utils/RateLimiter.js";
-export { Telemetry } from "@/sdk/utils/Telemetry.js";
+// Utils - Shared Foundation
+export { logger, Logger } from "@/sdk/shared/utils/Logger.js";
+export { ConfigLoader, configLoader } from "@/sdk/shared/utils/ConfigLoader.js";
+export { EventBus, eventBus } from "@/sdk/shared/utils/EventBus.js";
+export { ResilientExecutor } from "@/sdk/shared/utils/CircuitBreaker.js";
+export { RateLimiter } from "@/sdk/shared/utils/RateLimiter.js";
+export { telemetry } from "@/sdk/shared/utils/Telemetry.js";
+export { indexedDBCache } from "@/sdk/shared/services/IndexedDBCache.js";
+
+// Error handling
+export {
+  WalSheetzError,
+  BlockchainError,
+  WalrusError,
+  ValidationError,
+  ConfigurationError,
+  NetworkError,
+  StorageError,
+  AuthenticationError,
+  TransactionError,
+  TimeoutError,
+  StandardizedErrorHandler
+} from "@/sdk/shared";

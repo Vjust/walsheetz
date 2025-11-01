@@ -307,7 +307,7 @@ export const createDevTools = (spreadsheetHook) => {
 
     getEventHistory: async () => {
       try {
-        const { transactionEventBus } = await import("@/sdk/utils/EventBus.js");
+        const { transactionEventBus } = await import("@/sdk/shared/utils/EventBus.js");
         const history = transactionEventBus.getHistory();
         const debugInfo = transactionEventBus.getDebugInfo();
 
@@ -338,7 +338,7 @@ export const createDevTools = (spreadsheetHook) => {
         console.log('🔍 Simulating transaction flow with data:', data);
 
         // Import event tracking
-        const { transactionEventBus } = await import("@/sdk/utils/EventBus.js");
+        const { transactionEventBus } = await import("@/sdk/shared/utils/EventBus.js");
         const events = [];
 
         // Set up event listener

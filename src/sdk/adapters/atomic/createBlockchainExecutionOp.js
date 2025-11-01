@@ -5,7 +5,7 @@
  * This operation depends on both Walrus storage and transaction preparation.
  */
 
-import { logger, LogComponent } from "@/sdk/utils/Logger.js";
+import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
 
 /**
  * Creates a blockchain execution operation

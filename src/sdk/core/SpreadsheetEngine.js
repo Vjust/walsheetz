@@ -1,11 +1,11 @@
 // WebSocket service disabled for single-user MVP
 // import { webSocketService } from '../services/WebSocketService.js';
-import { logger, LogComponent } from "@/sdk/utils/Logger.js";
+import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
 import { defiStateManager } from "@/sdk/services/DeFiStateManager.js";
-import { CircuitBreaker } from "@/sdk/utils/CircuitBreaker.js";
+import { CircuitBreaker } from "@/sdk/shared/utils/CircuitBreaker.js";
 import luckysheetApi from "@/sdk/services/luckysheetApi.js";
 import { getSuiBalance, getSuiGasPrice, getSuiEpoch } from "@/sdk/services/formulas/SuiFunctions.js";
-import { recordTelemetry } from "@/sdk/utils/Telemetry.js";
+import { recordTelemetry } from "@/sdk/shared/utils/Telemetry.js";
 import { FormulaRefreshScheduler } from "@/sdk/core/scheduling/FormulaRefreshScheduler.js";
 import { OfflineQueueManager } from "@/sdk/core/queue/OfflineQueueManager.js";
 

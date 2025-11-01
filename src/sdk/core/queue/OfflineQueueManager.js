@@ -11,7 +11,7 @@
  * - Trim queue to prevent memory bloat
  */
 
-import { logger, LogComponent } from "@/sdk/utils/Logger.js";
+import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
 
 /**
  * Manager for offline operation queueing and processing

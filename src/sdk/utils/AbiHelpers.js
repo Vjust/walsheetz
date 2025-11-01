@@ -1,4 +1,4 @@
-import { configLoader } from "@/sdk/utils/ConfigLoader.js";
+import { configLoader } from "@/sdk/shared/utils/ConfigLoader.js";
 
 function normalizeMoveType(param) {
   if (typeof param === 'string') {

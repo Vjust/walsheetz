@@ -1,4 +1,4 @@
-import { logger, LogComponent } from "@/sdk/utils/Logger.js";
+import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
 
 /**
  * Transaction Experience Manager - Improves user experience with wallet transactions

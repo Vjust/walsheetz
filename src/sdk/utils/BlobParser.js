@@ -3,7 +3,7 @@
  * Converts blob data between various formats and grid representations
  */
 
-import { logger, LogComponent } from "@/sdk/utils/Logger.js";
+import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
 
 /**
  * Parse blob data to grid format

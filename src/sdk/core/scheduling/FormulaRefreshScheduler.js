@@ -11,7 +11,7 @@
  * - Enable/disable refresh globally
  */
 
-import { logger, LogComponent } from "@/sdk/utils/Logger.js";
+import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
 
 /**
  * Scheduler for periodic formula cell refreshes

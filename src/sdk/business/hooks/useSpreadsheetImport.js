@@ -12,7 +12,7 @@
 
 import { useCallback } from 'react';
 import { getTemplateData } from "@/sdk/utils/templateData.js";
-import { logger, LogComponent } from "@/sdk/utils/Logger.js";
+import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
 
 /**
  * Hook for managing spreadsheet import and initialization

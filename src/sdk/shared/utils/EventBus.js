@@ -635,4 +635,7 @@ export const emitCellEditComplete = (spreadsheetId, cellRef, newValue, userId = 
 // Export schemas for external validation
 export { EVENT_SCHEMAS };
 
+// Export singleton as 'eventBus' for convenience (most common use case)
+export { transactionEventBus as eventBus };
+
 export default EventBus;
