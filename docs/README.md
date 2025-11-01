@@ -294,20 +294,57 @@ frontend/
 ├── presentation/              # App shell & global UI
 │   ├── App.jsx                # Root component with providers
 │   ├── components/            # Global UI (Header, ErrorBoundary, MainLayout)
+│   │   └── spreadsheet/       # Spreadsheet workspace UI components
+│   │       ├── Header.jsx
+│   │       ├── MainLayout.jsx
+│   │       ├── Spreadsheet.jsx
+│   │       ├── SpreadsheetProvider.jsx
+│   │       ├── SaveDetailsModal.jsx
+│   │       ├── SaveStatusBanner.jsx
+│   │       ├── SaveStatusIndicator.jsx
+│   │       ├── WalletModal.jsx
+│   │       ├── ExportButton.jsx
+│   │       ├── ImportButton.jsx
+│   │       ├── ImportPreviewModal.jsx
+│   │       ├── StatusBar.jsx
+│   │       ├── NotificationContainer.jsx
+│   │       ├── LoadingOverlay.jsx
+│   │       └── index.js
 │   └── styles/                # Global CSS
 ├── pages/                     # Route-level screens
 │   ├── Dashboard.jsx          # Document list & creation
 │   └── SpreadsheetEditor.jsx  # Luckysheet integration
 ├── components/                # Reusable UI components
 │   ├── DocumentCard.jsx       # Document preview cards
-│   ├── CreateDocumentModal.jsx
-│   └── StorageAnalyticsDashboard.jsx
+│   └── CreateDocumentModal.jsx
 ├── providers/                 # React context providers
 │   └── WalletProviders.jsx    # Sui network + wallet contexts
 ├── services/                  # Browser API wrappers
 │   ├── BrowserGrpcService.js  # WebSocket bridge client
 │   ├── BrowserSuiService.js   # Browser Sui operations
-│   ├── BrowserWalrusService.js # Browser Walrus client
+│   ├── BrowserWalrusService.js # Browser Walrus client (facade)
+│   ├── walrus/                # Modular Walrus storage architecture
+│   │   ├── client/            # Blob client & connection manager
+│   │   │   ├── WalrusBlobClient.js
+│   │   │   └── WalrusConnectionManager.js
+│   │   ├── config/            # Configuration & endpoint resolution
+│   │   │   ├── WalrusConfigResolver.js
+│   │   │   └── endpointHelper.js
+│   │   ├── health/            # Health monitoring
+│   │   │   └── HealthMonitor.js
+│   │   ├── retry/             # Retry queue system
+│   │   │   └── RetryQueue.js
+│   │   ├── transports/        # HTTP transports (proxy & direct)
+│   │   │   ├── Transport.js
+│   │   │   ├── ProxyTransport.js
+│   │   │   └── DirectTransport.js
+│   │   └── utils/             # Encoding, validation, event handling
+│   │       ├── DataEncoder.js
+│   │       ├── DataValidator.js
+│   │       ├── WalrusEventEmitter.js
+│   │       ├── PoACertificateReader.js
+│   │       ├── BlobRangeReader.js
+│   │       └── GridStreamer.js
 │   ├── luckysheet/            # Luckysheet integration
 │   │   ├── injectWzIntoSheets.js
 │   │   ├── ensureLuckysheetNesting.js
@@ -619,7 +656,3 @@ Encryption will be reintroduced when Walrus Seal support is available, providing
 2. **Wallet won't connect**: Verify network match (testnet/mainnet)
 3. **Save fails**: Check Walrus publisher availability, run `bun run diagnose:save`
 4. **gRPC errors**: Fallback to GraphQL should be automatic, check `BRIDGE_LOG_LEVEL=DEBUG`
-
----
-
-For questions or contributions, see the main [README.md](../README.md) or open an issue on GitHub.

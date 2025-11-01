@@ -340,11 +340,41 @@ Your edits will sync to blockchain when saved."
 
 ## Technical Implementation
 
+### Walrus Storage Architecture (Modular)
+The Walrus storage client is implemented as a modular, layered architecture:
+
+**Client Layer** (`frontend/services/walrus/client/`)
+- `WalrusBlobClient.js` - Core blob storage orchestration, compression, integrity validation
+- `WalrusConnectionManager.js` - Connection lifecycle management and pooling
+
+**Transport Layer** (`frontend/services/walrus/transports/`)
+- `Transport.js` - Base transport interface
+- `ProxyTransport.js` - Vite dev proxy transport (routes through /api/walrus-*)
+- `DirectTransport.js` - Direct endpoint transport for production
+
+**Configuration** (`frontend/services/walrus/config/`)
+- `WalrusConfigResolver.js` - Environment-aware configuration management
+- `endpointHelper.js` - Endpoint resolution, fallback logic, health-based routing
+
+**Data Processing** (`frontend/services/walrus/utils/`)
+- `DataEncoder.js` - Spreadsheet data encoding, compression (gzip), base64 handling
+- `DataValidator.js` - Data validation before Walrus storage (size limits, format checks)
+- `GridStreamer.js` - Grid-to-blob streaming for large datasets
+- `BlobRangeReader.js` - Partial blob reading support
+- `PoACertificateReader.js` - Proof-of-Availability certificate parsing
+
+**Supporting Infrastructure** (`frontend/services/walrus/`)
+- `health/HealthMonitor.js` - Endpoint health checking and connectivity monitoring
+- `retry/RetryQueue.js` - Queue-based retry mechanism with exponential backoff
+- `utils/WalrusEventEmitter.js` - Event emission system for storage operations
+
+**Facade** (`frontend/services/`)
+- `BrowserWalrusService.js` - Main facade that orchestrates the modular components
+
 ### RAM-Only Services
 These services operate entirely in memory (session-scoped):
 - `StorageAdapter.js` - Spreadsheet data cache
 - `IndexedDBCache.js` - In-memory blob cache
-- `ImportHistoryService.js` - Import history (transient)
 - `PoACertificationService.js` - PoA certificates (transient)
 - `BlobLineageTracker.js` - Version lineage (transient)
 - `TransactionTracker.js` - Transaction history (transient)

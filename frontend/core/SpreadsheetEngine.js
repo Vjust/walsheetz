@@ -5,13 +5,6 @@ import { defiStateManager } from '../services/DeFiStateManager.js';
 import { CircuitBreaker } from '../utils/CircuitBreaker.js';
 import luckysheetApi from '../services/luckysheetApi.js';
 import { getSuiBalance, getSuiGasPrice, getSuiEpoch } from '../services/formulas/SuiFunctions.js';
-import {
-  WZ_CONTRACT_LIST,
-  WZ_CONTRACT_CALL,
-  WZ_CONTRACT_EXEC,
-  WZ_BALANCE,
-  WZ_APY
-} from '../services/formulas/WalSheetzFunctions.js';
 import { recordTelemetry } from '../utils/Telemetry.js';
 import { FormulaRefreshScheduler } from './scheduling/FormulaRefreshScheduler.js';
 import { OfflineQueueManager } from './queue/OfflineQueueManager.js';
@@ -495,7 +488,7 @@ export class SpreadsheetEngine {
       throw new Error('Walrus service not available');
     }
 
-    const result = await this.blockchainService.walrusService.storeData(data, title);
+    const result = await this.blockchainService.walrusService.storeBlob(data, {});
     if (result.success) {
       this.lastWalrusSaveTimestamp = Date.now();
       this.pendingWalrusSaves.push({
@@ -1224,17 +1217,6 @@ export class SpreadsheetEngine {
 
     const formulaUpper = formula.toUpperCase();
 
-    // GUARD: If Luckysheet has already successfully evaluated a WZ function, skip SpreadsheetEngine handling
-    // This prevents double-handling now that we have proper execution wrappers in Luckysheet
-    if (formulaUpper.includes('WZ.') && cellData.value !== undefined && cellData.value !== '#NAME?' && cellData.value !== '#ERROR') {
-      // Luckysheet successfully handled this WZ function, no need for SpreadsheetEngine to process it
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'formula_already_handled', `WZ formula already handled by Luckysheet for ${cellRef}`, {
-        cellRef,
-        value: cellData.value
-      });
-      return;
-    }
-
     try {
       // Check for SUI_BALANCE formula
       const balanceMatch = formulaUpper.match(/^=SUI_BALANCE\s*\(\s*["']?([^"')]+)["']?\s*\)$/);
@@ -1631,202 +1613,6 @@ export class SpreadsheetEngine {
 
         return { statusIcon, statusClass, status };
       };
-
-      // Check for WZ.CONTRACT.LIST() formula
-      if (formulaUpper.match(/^=WZ\.CONTRACT\.LIST\s*\(\s*\)$/)) {
-        logger.info(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_eval', `Evaluating WZ.CONTRACT.LIST for ${cellRef}`, { cellRef });
-
-        try {
-          // Set loading state first
-          if (defiStateManager) {
-            defiStateManager.setLoading(cellRef, 'registry', 'listAdapters', []);
-          }
-
-          const result = await WZ_CONTRACT_LIST(cellRef);
-
-          // Clear loading state
-          if (defiStateManager) {
-            defiStateManager.clearLoading(cellRef, 'registry', 'listAdapters', []);
-          }
-
-          if (result.status === 'error') {
-            cellData.value = '#ERROR';
-            cellData.displayValue = `#ERROR: ${result.message}`;
-            if (defiStateManager) {
-              defiStateManager.setError(cellRef, 'registry', 'listAdapters', [], new Error(result.message));
-            }
-          } else {
-            cellData.value = JSON.stringify(result);
-            cellData.displayValue = `${Array.isArray(result) ? result.length : 0} contracts`;
-          }
-
-          addStatusIndicator(cellData, 'registry', 'listAdapters', []);
-
-          logger.info(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_success', `WZ.CONTRACT.LIST evaluated for ${cellRef}`, { cellRef });
-          this.refreshLuckysheetCell(cellRef, cellData);
-        } catch (error) {
-          // Clear loading and set error state
-          if (defiStateManager) {
-            defiStateManager.clearLoading(cellRef, 'registry', 'listAdapters', []);
-            defiStateManager.setError(cellRef, 'registry', 'listAdapters', [], error);
-          }
-
-          logger.error(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_error', `Failed to evaluate WZ.CONTRACT.LIST for ${cellRef}`, {
-            cellRef,
-            error: error.message
-          });
-          cellData.value = '#ERROR';
-          cellData.displayValue = `#ERROR: ${error.message}`;
-          addStatusIndicator(cellData, 'registry', 'listAdapters', [], 'error');
-        }
-        return;
-      }
-
-      // Check for WZ.CONTRACT.CALL formula
-      const contractCallMatch = formulaUpper.match(/^=WZ\.CONTRACT\.CALL\s*\(\s*["']([^"']+)["']\s*,\s*["']([^"']+)["']\s*((?:\s*,\s*["']?[^"')]*["']?)*)\s*\)$/);
-      if (contractCallMatch) {
-        const adapterId = contractCallMatch[1].trim();
-        const method = contractCallMatch[2].trim();
-        const argsStr = contractCallMatch[3].trim();
-
-        // Parse additional arguments
-        const args = [];
-        if (argsStr) {
-          const argMatches = argsStr.split(',');
-          for (const arg of argMatches) {
-            const cleanArg = arg.trim().replace(/^["']|["']$/g, '');
-            if (cleanArg) args.push(cleanArg);
-          }
-        }
-
-        logger.info(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_eval', `Evaluating WZ.CONTRACT.CALL for ${cellRef}`, {
-          cellRef,
-          adapterId,
-          method,
-          args
-        });
-
-        try {
-          // Set loading state
-          if (defiStateManager) {
-            defiStateManager.setLoading(cellRef, adapterId, method, args);
-          }
-
-          const result = await WZ_CONTRACT_CALL.call({ cellRef }, adapterId, method, ...args);
-
-          // Clear loading state
-          if (defiStateManager) {
-            defiStateManager.clearLoading(cellRef, adapterId, method, args);
-          }
-
-          if (result.status === 'error') {
-            cellData.value = '#ERROR';
-            cellData.displayValue = `#ERROR: ${result.message}`;
-            if (defiStateManager) {
-              defiStateManager.setError(cellRef, adapterId, method, args, new Error(result.message));
-            }
-          } else if (result.status === 'loading') {
-            cellData.value = 'Loading...';
-            cellData.displayValue = 'Loading...';
-          } else {
-            cellData.value = typeof result === 'object' ? JSON.stringify(result) : result;
-            cellData.displayValue = this.formatWalSheetzResult(result);
-          }
-
-          addStatusIndicator(cellData, adapterId, method, args);
-
-          logger.info(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_success', `WZ.CONTRACT.CALL evaluated for ${cellRef}`, { cellRef });
-          this.refreshLuckysheetCell(cellRef, cellData);
-        } catch (error) {
-          // Clear loading and set error state
-          if (defiStateManager) {
-            defiStateManager.clearLoading(cellRef, adapterId, method, args);
-            defiStateManager.setError(cellRef, adapterId, method, args, error);
-          }
-          logger.error(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_error', `Failed to evaluate WZ.CONTRACT.CALL for ${cellRef}`, {
-            cellRef,
-            error: error.message
-          });
-          cellData.value = '#ERROR';
-          cellData.displayValue = `#ERROR: ${error.message}`;
-          addStatusIndicator(cellData, adapterId, method, args, 'error');
-        }
-        return;
-      }
-
-      // Check for WZ.BALANCE formula
-      const balanceMatch = formulaUpper.match(/^=WZ\.BALANCE\s*\(\s*["']?([^"')]+)["']?\s*(?:\s*,\s*["']?([^"')]+)["']?\s*)?\)$/);
-      if (balanceMatch) {
-        const address = balanceMatch[1].trim();
-        const tokenType = balanceMatch[2] ? balanceMatch[2].trim() : 'SUI';
-
-        logger.info(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_eval', `Evaluating WZ.BALANCE for ${cellRef}`, {
-          cellRef,
-          address: address.substring(0, 10) + '...',
-          tokenType
-        });
-
-        try {
-          const result = await WZ_BALANCE.call({ cellRef }, address, tokenType);
-          if (result.status === 'error') {
-            cellData.value = '#ERROR';
-            cellData.displayValue = `#ERROR: ${result.message}`;
-          } else {
-            const balance = result.balance || '0';
-            cellData.value = parseFloat(balance);
-            cellData.displayValue = `${balance} ${tokenType}`;
-          }
-
-          logger.info(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_success', `WZ.BALANCE evaluated for ${cellRef}`, { cellRef });
-          this.refreshLuckysheetCell(cellRef, cellData);
-        } catch (error) {
-          logger.error(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_error', `Failed to evaluate WZ.BALANCE for ${cellRef}`, {
-            cellRef,
-            error: error.message
-          });
-          cellData.value = '#ERROR';
-          cellData.displayValue = `#ERROR: ${error.message}`;
-        }
-        return;
-      }
-
-      // Check for WZ.APY formula
-      const apyMatch = formulaUpper.match(/^=WZ\.APY\s*\(\s*["']([^"']+)["']\s*,\s*["']([^"']+)["']\s*,\s*["']([^"']+)["']\s*\)$/);
-      if (apyMatch) {
-        const protocol = apyMatch[1].trim();
-        const type = apyMatch[2].trim();
-        const asset = apyMatch[3].trim();
-
-        logger.info(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_eval', `Evaluating WZ.APY for ${cellRef}`, {
-          cellRef,
-          protocol,
-          type,
-          asset
-        });
-
-        try {
-          const result = await WZ_APY.call({ cellRef }, protocol, type, asset);
-          if (result.status === 'error') {
-            cellData.value = '#ERROR';
-            cellData.displayValue = `#ERROR: ${result.message}`;
-          } else {
-            const apy = typeof result === 'number' ? result : parseFloat(result) || 0;
-            cellData.value = apy;
-            cellData.displayValue = `${(apy * 100).toFixed(2)}%`;
-          }
-
-          logger.info(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_success', `WZ.APY evaluated for ${cellRef}`, { cellRef });
-          this.refreshLuckysheetCell(cellRef, cellData);
-        } catch (error) {
-          logger.error(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_error', `Failed to evaluate WZ.APY for ${cellRef}`, {
-            cellRef,
-            error: error.message
-          });
-          cellData.value = '#ERROR';
-          cellData.displayValue = `#ERROR: ${error.message}`;
-        }
-        return;
-      }
 
     } catch (error) {
       logger.error(LogComponent.SPREADSHEET_ENGINE, 'walsheetz_formula_parse_error', `Error parsing WalSheetz formula for ${cellRef}`, {
