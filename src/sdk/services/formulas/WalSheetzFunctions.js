@@ -3,11 +3,11 @@
  *
  * MULTI-LAYER INJECTION STRATEGY:
  *
- * Layer 1 (PRE-INIT):  frontend/services/luckysheet/injectWZLocalePatch.js
+ * Layer 1 (PRE-INIT):  frontend/services/luckysheet/injectWZLocalePatch.js (legacy path)
  *                      Patches window.luckysheet_function and window.luckysheet_configsetting
  *                      BEFORE luckysheet.create() is called
  *
- * Layer 2 (HOOK):      frontend/services/luckysheet/injectWzIntoSheets.js
+ * Layer 2 (HOOK):      frontend/services/luckysheet/injectWzIntoSheets.js (legacy path)
  *                      Wraps luckysheet.create() to inject into sheet.luckysheet_function
  *                      DURING/AFTER luckysheet initialization
  *

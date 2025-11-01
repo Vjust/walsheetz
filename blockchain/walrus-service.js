@@ -1,4 +1,4 @@
-// NOTE: Node/server/CLI usage only. The React UI must use frontend/services/* (Browser*Service).
+// NOTE: Node/server/CLI usage only. The React UI must use @/sdk/* or @/walrus/* (Browser*Service).
 // Walrus storage service for WalSheetz
 import { getCurrentConfig } from './config.js';
 import { ResilientExecutor } from '@/sdk/utils/CircuitBreaker.js';

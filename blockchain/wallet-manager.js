@@ -1,4 +1,4 @@
-// NOTE: Node/server/CLI usage only. The React UI must use frontend/services/* (Browser*Service).
+// NOTE: Node/server/CLI usage only. The React UI must use @/sdk/* or @/walrus/* (Browser*Service).
 // Wallet connection manager for WalSheetz
 import { 
   getWallets,
