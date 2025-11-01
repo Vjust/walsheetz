@@ -1,4 +1,4 @@
-import { logger, LogComponent } from "@/sdk/utils/Logger.js";
+import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
 import LuckyExcel from 'luckyexcel';
 import * as XLSX from 'xlsx';
 import { parseCSV } from "@/sdk/utils/BlobParser.js";

@@ -3,8 +3,8 @@
  * Handles Proof of Availability certificate requests and status tracking for Walrus blobs
  */
 
-import { EventBus } from "@/sdk/utils/EventBus.js";
-import { logger, LogComponent } from "@/sdk/utils/Logger.js";
+import { EventBus } from "@/sdk/shared/utils/EventBus.js";
+import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
 
 class PoACertificationService {
   constructor() {

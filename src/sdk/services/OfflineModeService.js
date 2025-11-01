@@ -3,7 +3,7 @@
  * Provides local-first capabilities with synchronization when services are available
  */
 
-import { logger, LogComponent } from "@/sdk/utils/Logger.js";
+import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
 
 class OfflineModeService {
   constructor() {

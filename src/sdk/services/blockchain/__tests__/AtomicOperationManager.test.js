@@ -79,7 +79,7 @@ describe('AtomicOperationManager', () => {
     manager = new AtomicOperationManager();
 
     // Get reference to logger for assertions
-    const loggerModule = await import("@/sdk/utils/Logger.js");
+    const loggerModule = await import("@/sdk/shared/utils/Logger.js");
     logger = loggerModule.logger;
   });
 

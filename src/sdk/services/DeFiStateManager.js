@@ -1,5 +1,5 @@
 // DeFi State Manager for async result caching and state management in WalSheetz
-import { EventBus } from "@/sdk/utils/EventBus.js";
+import { EventBus } from "@/sdk/shared/utils/EventBus.js";
 
 class DeFiStateManager {
   constructor() {

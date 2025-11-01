@@ -1,4 +1,4 @@
-import { logger, LogComponent } from "@/sdk/utils/Logger.js";
+import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
 
 /**
  * Generate a UUID v4 for idempotency

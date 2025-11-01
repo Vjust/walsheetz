@@ -1,7 +1,7 @@
 // Custom Sui blockchain functions for spreadsheet formulas
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
 import { getCurrentConfig } from '@/blockchain/config.js';
-import { configLoader } from "@/sdk/utils/ConfigLoader.js";
+import { configLoader } from "@/sdk/shared/utils/ConfigLoader.js";
 
 // In-memory cache with TTL
 const cache = new Map();

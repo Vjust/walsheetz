@@ -1,5 +1,5 @@
 import { getCurrentConfig } from '@blockchain/config.js';
-import { logger, LogComponent } from "@/sdk/utils/Logger.js";
+import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
 
 /**
  * SpreadsheetMigrator - Handles migration of spreadsheets from testnet to mainnet

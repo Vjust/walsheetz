@@ -3,8 +3,8 @@
  * Monitors blob PoA certificates and manages renewal workflows
  */
 
-import { EventBus } from "@/sdk/utils/EventBus.js";
-import { logger, LogComponent } from "@/sdk/utils/Logger.js";
+import { EventBus } from "@/sdk/shared/utils/EventBus.js";
+import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
 
 class PoARenewalManager {
   constructor() {

@@ -24,7 +24,7 @@
  * - Each layer reinforces the others to maximize reliability
  */
 import { defiStateManager } from "@/sdk/services/DeFiStateManager.js";
-import { EventBus } from "@/sdk/utils/EventBus.js";
+import { EventBus } from "@/sdk/shared/utils/EventBus.js";
 import { browserWalletManager } from "@/sdk/services/blockchain/BrowserWalletManager.js";
 import { suiGraphQLService } from '@/blockchain/sui-graphql-service.js';
 import { browserWalrusService } from "@/walrus/BrowserWalrusService.js";

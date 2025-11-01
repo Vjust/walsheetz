@@ -1,5 +1,5 @@
 // Browser-compatible Sui service using real testnet integration
-import { configLoader } from "@/sdk/utils/ConfigLoader.js";
+import { configLoader } from "@/sdk/shared/utils/ConfigLoader.js";
 import { browserWalletManager } from "@/sdk/services/blockchain/BrowserWalletManager.js";
 import { SuiClient, SuiHTTPTransport } from '@mysten/sui/client';
 import { Transaction } from '@mysten/sui/transactions';
@@ -9,7 +9,7 @@ import {
   detectModuleVersion,
   checkSpreadsheetVersionCompatibility } from
 "@/sdk/utils/AbiHelpers.js";
-import { logger, LogComponent, LogLevel } from "@/sdk/utils/Logger.js";
+import { logger, LogComponent, LogLevel } from "@/sdk/shared/utils/Logger.js";
 
 class BrowserSuiService {
   constructor() {

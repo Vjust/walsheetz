@@ -3,8 +3,8 @@
  * Tracks all Sui transactions related to the application
  */
 
-import { EventBus } from "@/sdk/utils/EventBus.js";
-import { logger, LogComponent } from "@/sdk/utils/Logger.js";
+import { EventBus } from "@/sdk/shared/utils/EventBus.js";
+import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
 
 class TransactionTracker {
   constructor() {

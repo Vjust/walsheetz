@@ -4,7 +4,7 @@
  * Prevents stack overflow by pre-allocating grid in chunks as needed
  */
 
-import { logger, LogComponent } from "@/sdk/utils/Logger.js";
+import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
 
 /**
  * GridSizeManager - Tracks and manages spreadsheet grid capacity

@@ -1,5 +1,5 @@
 // Browser-compatible service using Sui JSON-RPC instead of gRPC
-import { configLoader } from "@/sdk/utils/ConfigLoader.js";
+import { configLoader } from "@/sdk/shared/utils/ConfigLoader.js";
 import { SuiClient } from '@mysten/sui/client';
 
 class BrowserGrpcService {

@@ -3,7 +3,7 @@
  * Provides graceful degradation when blockchain services are unavailable
  */
 
-import { logger, LogComponent, ErrorCategory } from "@/sdk/utils/Logger.js";
+import { logger, LogComponent, ErrorCategory } from "@/sdk/shared/utils/Logger.js";
 
 class ProgressiveEnhancementService {
   constructor() {

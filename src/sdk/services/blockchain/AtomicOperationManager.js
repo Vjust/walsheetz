@@ -1,5 +1,5 @@
-import { logger, LogComponent } from "@/sdk/utils/Logger.js";
-import { standardizedErrorHandler } from "@/sdk/utils/StandardizedErrorHandler.js";
+import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
+import { standardizedErrorHandler } from "@/sdk/shared/utils/StandardizedErrorHandler.js";
 import { transactionExperienceManager } from "@/sdk/utils/TransactionExperience.js";
 import { AtomicExecutionContext } from "@/sdk/services/blockchain/AtomicExecutionContext.js";
 

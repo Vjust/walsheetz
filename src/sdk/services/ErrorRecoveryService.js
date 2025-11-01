@@ -3,7 +3,7 @@
  * Provides intelligent error handling and recovery strategies
  */
 
-import { logger, LogComponent, ErrorCategory } from "@/sdk/utils/Logger.js";
+import { logger, LogComponent, ErrorCategory } from "@/sdk/shared/utils/Logger.js";
 
 class ErrorRecoveryService {
   constructor() {
