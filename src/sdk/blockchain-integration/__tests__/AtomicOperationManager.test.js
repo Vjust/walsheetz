@@ -423,7 +423,7 @@ describe('AtomicOperationManager', () => {
 
   describe('Characterization - Transaction Experience Integration', () => {
     it('should wrap parallel operations with transaction experience', async () => {
-      const { transactionExperienceManager } = await import("@/sdk/utils/TransactionExperience.js");
+      const { transactionExperienceManager } = await import("@/sdk/transaction-management/utils/TransactionExperience.js");
       const operations = [
       createOperation('parallel-op-1', { result: 'value1' }),
       createOperation('parallel-op-2', { result: 'value2' })];
@@ -439,7 +439,7 @@ describe('AtomicOperationManager', () => {
     });
 
     it('should NOT wrap sequential operations with transaction experience', async () => {
-      const { transactionExperienceManager } = await import("@/sdk/utils/TransactionExperience.js");
+      const { transactionExperienceManager } = await import("@/sdk/transaction-management/utils/TransactionExperience.js");
       vi.clearAllMocks();
 
       const operations = [
@@ -473,7 +473,7 @@ describe('AtomicOperationManager', () => {
     });
 
     it('should emit transaction progress events during parallel execution', async () => {
-      const { transactionExperienceManager } = await import("@/sdk/utils/TransactionExperience.js");
+      const { transactionExperienceManager } = await import("@/sdk/transaction-management/utils/TransactionExperience.js");
 
       const operations = [
       createOperation('op-1', { value: 1 }),

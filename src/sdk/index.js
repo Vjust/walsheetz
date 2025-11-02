@@ -4,7 +4,7 @@
 // Core
 export { SpreadsheetEngine } from "@/sdk/core/SpreadsheetEngine.js";
 export { FormulaRefreshScheduler } from "@/sdk/core/scheduling/FormulaRefreshScheduler.js";
-export { OfflineQueueManager } from "@/sdk/core/queue/OfflineQueueManager.js";
+export { OfflineQueueManager } from "@/sdk/transaction-management/queue/OfflineQueueManager.js";
 
 // Services - Blockchain
 export { BrowserSuiService } from "@/sdk/blockchain-integration/services/BrowserSuiService.js";
