@@ -4,7 +4,7 @@
  */
 
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { SpreadsheetImportExportService } from "@/sdk/SpreadsheetImportExportService.js";
+import { SpreadsheetImportExportService } from "@/sdk/services/SpreadsheetImportExportService.js";
 import { parseCSV } from "@/sdk/utils/BlobParser.js";
 
 describe('CSV Import Integration', () => {

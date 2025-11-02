@@ -3,7 +3,7 @@
  * Tracks all Sui transactions related to the application
  */
 
-import { EventBus } from "@/sdk/shared/utils/EventBus.js";
+import { eventBus } from "@/sdk/shared/utils/EventBus.js";
 import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
 
 class TransactionTracker {
@@ -52,7 +52,7 @@ class TransactionTracker {
    */
   setupEventListeners() {
     // Walrus blob events
-    EventBus.on('walrus:blob:stored', (data) => {
+    eventBus.on('walrus:blob:stored', (data) => {
       this.trackTransaction({
         type: this.txTypes.BLOB_STORE,
         status: 'pending',
@@ -66,7 +66,7 @@ class TransactionTracker {
     });
 
     // PoA certification events
-    EventBus.on('poa:certification:completed', (data) => {
+    eventBus.on('poa:certification:completed', (data) => {
       this.trackTransaction({
         type: this.txTypes.BLOB_CERTIFY,
         transactionDigest: data.transactionDigest,
@@ -77,7 +77,7 @@ class TransactionTracker {
     });
 
     // Sui transaction events
-    EventBus.on('sui:transaction:completed', (data) => {
+    eventBus.on('sui:transaction:completed', (data) => {
       this.trackTransaction({
         type: data.txType || this.txTypes.OTHER,
         transactionDigest: data.transactionDigest,
@@ -90,7 +90,7 @@ class TransactionTracker {
       });
     });
 
-    EventBus.on('sui:transaction:failed', (data) => {
+    eventBus.on('sui:transaction:failed', (data) => {
       this.trackTransaction({
         type: data.txType || this.txTypes.OTHER,
         status: 'failed',
@@ -100,7 +100,7 @@ class TransactionTracker {
     });
 
     // DeFi transaction events
-    EventBus.on('defi:transaction:completed', (data) => {
+    eventBus.on('defi:transaction:completed', (data) => {
       this.trackTransaction({
         type: this.txTypes.DEFI_EXECUTE,
         transactionDigest: data.transactionDigest,
@@ -116,7 +116,7 @@ class TransactionTracker {
       });
     });
 
-    EventBus.on('defi:transaction:failed', (data) => {
+    eventBus.on('defi:transaction:failed', (data) => {
       this.trackTransaction({
         type: this.txTypes.DEFI_EXECUTE,
         status: 'failed',
@@ -204,7 +204,7 @@ class TransactionTracker {
       this.saveToStorage();
 
       // Emit event
-      EventBus.emit('transaction:tracked', {
+      eventBus.emit('transaction:tracked', {
         txId,
         type,
         status,
@@ -266,7 +266,7 @@ class TransactionTracker {
       this.saveToStorage();
 
       // Emit event
-      EventBus.emit('transaction:updated', {
+      eventBus.emit('transaction:updated', {
         txId,
         updates,
         timestamp: Date.now()

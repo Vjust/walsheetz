@@ -4,7 +4,7 @@
  */
 
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { GridSizeManager } from "@/sdk/GridSizeManager.js";
+import { GridSizeManager } from "@/sdk/services/GridSizeManager.js";
 
 describe('GridSizeManager', () => {
   let manager;

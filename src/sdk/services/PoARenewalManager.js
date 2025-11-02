@@ -3,7 +3,7 @@
  * Monitors blob PoA certificates and manages renewal workflows
  */
 
-import { EventBus } from "@/sdk/shared/utils/EventBus.js";
+import { eventBus } from "@/sdk/shared/utils/EventBus.js";
 import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
 
 class PoARenewalManager {
@@ -46,7 +46,7 @@ class PoARenewalManager {
    */
   setupEventListeners() {
     // Listen for blob certification events
-    EventBus.on('poa:certification:completed', (data) => {
+    eventBus.on('poa:certification:completed', (data) => {
       this.trackCertificate({
         blobId: data.blobId,
         status: 'certified',
@@ -56,7 +56,7 @@ class PoARenewalManager {
     });
 
     // Listen for PoA status updates
-    EventBus.on('poa:status:updated', (data) => {
+    eventBus.on('poa:status:updated', (data) => {
       if (data.certified && data.certificate) {
         this.trackCertificate({
           blobId: data.blobId,
@@ -68,7 +68,7 @@ class PoARenewalManager {
     });
 
     // Listen for blob storage events to start monitoring
-    EventBus.on('walrus:blob:stored', (data) => {
+    eventBus.on('walrus:blob:stored', (data) => {
       this.startMonitoring(data.blobId);
     });
   }
@@ -265,7 +265,7 @@ class PoARenewalManager {
         this.renewalWarnings.set(blobId, warning);
 
         // Emit warning event
-        EventBus.emit('poa:renewal:warning', warning);
+        eventBus.emit('poa:renewal:warning', warning);
 
         logger.warn(LogComponent.UI, 'renewal_warning', 'PoA renewal warning', {
           blobId,
@@ -342,7 +342,7 @@ class PoARenewalManager {
         this.saveToStorage();
 
         // Emit success event
-        EventBus.emit('poa:renewal:completed', {
+        eventBus.emit('poa:renewal:completed', {
           blobId,
           transactionDigest: result.transactionDigest,
           durationDays,
@@ -368,7 +368,7 @@ class PoARenewalManager {
         });
 
         // Emit failure event
-        EventBus.emit('poa:renewal:failed', {
+        eventBus.emit('poa:renewal:failed', {
           blobId,
           error: result.error,
           timestamp: Date.now()

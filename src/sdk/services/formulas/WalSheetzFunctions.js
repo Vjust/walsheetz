@@ -24,7 +24,7 @@
  * - Each layer reinforces the others to maximize reliability
  */
 import { defiStateManager } from "@/sdk/services/DeFiStateManager.js";
-import { EventBus } from "@/sdk/shared/utils/EventBus.js";
+import { eventBus } from "@/sdk/shared/utils/EventBus.js";
 import { browserWalletManager } from "@/sdk/services/blockchain/BrowserWalletManager.js";
 import { suiGraphQLService } from '@/blockchain/sui-graphql-service.js';
 import { browserWalrusService } from "@/walrus/BrowserWalrusService.js";
@@ -414,7 +414,7 @@ export async function WALRUS_PUT(sourceRange, metadata = {}) {
       }
 
       // Emit success event
-      EventBus.emit('walrus:blob:stored', {
+      eventBus.emit('walrus:blob:stored', {
         cellRef,
         blobId: uploadResult.blobId,
         range: sourceRange,
@@ -432,7 +432,7 @@ export async function WALRUS_PUT(sourceRange, metadata = {}) {
     } catch (error) {
       defiStateManager.setError(cellRef, 'walrus', 'storeBlob', [sourceRange], error);
 
-      EventBus.emit('walrus:blob:failed', {
+      eventBus.emit('walrus:blob:failed', {
         cellRef,
         range: sourceRange,
         error: error.message,
@@ -499,7 +499,7 @@ export async function SUI_TX(txType, ...args) {
         };
 
         // Emit success event
-        EventBus.emit('sui:transaction:completed', {
+        eventBus.emit('sui:transaction:completed', {
           cellRef,
           ...result
         });
@@ -511,7 +511,7 @@ export async function SUI_TX(txType, ...args) {
     } catch (error) {
       defiStateManager.setError(cellRef, 'sui', txType, parsedArgs, error);
 
-      EventBus.emit('sui:transaction:failed', {
+      eventBus.emit('sui:transaction:failed', {
         cellRef,
         txType,
         args: parsedArgs,

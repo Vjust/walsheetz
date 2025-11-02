@@ -3,7 +3,7 @@
  * Tracks blob version history and relationships for Walrus spreadsheets
  */
 
-import { EventBus } from "@/sdk/shared/utils/EventBus.js";
+import { eventBus } from "@/sdk/shared/utils/EventBus.js";
 import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
 
 class BlobLineageTracker {
@@ -103,7 +103,7 @@ class BlobLineageTracker {
       this.saveToStorage();
 
       // Emit event
-      EventBus.emit('blob:lineage:version_created', {
+      eventBus.emit('blob:lineage:version_created', {
         type: 'version_created',
         blobId,
         objectId,
@@ -305,7 +305,7 @@ class BlobLineageTracker {
       this.saveToStorage();
 
       // Emit event
-      EventBus.emit('blob:lineage:updated', {
+      eventBus.emit('blob:lineage:updated', {
         type: 'lineage_updated',
         blobId,
         objectId,

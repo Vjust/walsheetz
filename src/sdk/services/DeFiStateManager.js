@@ -1,5 +1,5 @@
 // DeFi State Manager for async result caching and state management in WalSheetz
-import { EventBus } from "@/sdk/shared/utils/EventBus.js";
+import { eventBus } from "@/sdk/shared/utils/EventBus.js";
 
 class DeFiStateManager {
   constructor() {
@@ -63,7 +63,7 @@ class DeFiStateManager {
     this.cache.set(key, cacheEntry);
 
     // Notify cell that data is available
-    EventBus.emit('defi:cell:updated', {
+    eventBus.emit('defi:cell:updated', {
       cellRef,
       adapterId,
       method,
@@ -121,7 +121,7 @@ class DeFiStateManager {
     this.errorStates.delete(key);
 
     // Notify UI of loading state
-    EventBus.emit('defi:cell:loading', {
+    eventBus.emit('defi:cell:loading', {
       cellRef,
       adapterId,
       method,
@@ -153,7 +153,7 @@ class DeFiStateManager {
     this.clearLoading(cellRef, adapterId, method, args);
 
     // Notify UI of error state
-    EventBus.emit('defi:cell:error', {
+    eventBus.emit('defi:cell:error', {
       cellRef,
       adapterId,
       method,
@@ -271,7 +271,7 @@ class DeFiStateManager {
         invalidatedCount++;
 
         // Notify that cell needs refresh
-        EventBus.emit('defi:cell:invalidated', {
+        eventBus.emit('defi:cell:invalidated', {
           cellRef: entry.cellRef,
           adapterId: entry.adapterId,
           method: entry.method
@@ -317,7 +317,7 @@ class DeFiStateManager {
     this.loadingStates.clear();
     this.errorStates.clear();
 
-    EventBus.emit('defi:cache:cleared', { entriesCleared: size });
+    eventBus.emit('defi:cache:cleared', { entriesCleared: size });
     console.log(`[DeFiStateManager] Cleared all cache (${size} entries)`);
   }
 

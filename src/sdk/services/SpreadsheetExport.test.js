@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { SpreadsheetImportExportService } from "@/sdk/SpreadsheetImportExportService.js";
+import { SpreadsheetImportExportService } from "@/sdk/services/SpreadsheetImportExportService.js";
 
 describe('SpreadsheetImportExportService export conversions', () => {
   let service;

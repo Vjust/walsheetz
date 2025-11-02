@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { BlockchainAdapter } from '../../adapters/BlockchainAdapter.js';
-import { StorageAdapter } from '../../adapters/StorageAdapter.js';
+import { BlockchainAdapter } from '../adapters/BlockchainAdapter.js';
+import { StorageAdapter } from '../adapters/StorageAdapter.js';
 import {
   createMockLocalStorage,
   createMockBrowserWalrusService,

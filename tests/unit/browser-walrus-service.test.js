@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { BrowserWalrusService } from '@/walrus/BrowserWalrusService.js';
 
 // Mock the dependencies
-vi.mock('@/sdk/utils/ConfigLoader.js', () => ({
+vi.mock('@/sdk/shared/utils/ConfigLoader.js', () => ({
   configLoader: {
     getConfig: vi.fn()
   }
@@ -61,7 +61,7 @@ describe('BrowserWalrusService', () => {
     // TODO: Update these tests after Walrus service migration completes
     it.skip('should return true when connection is successful', async () => {
       // Mock configLoader.getConfig()
-      const { configLoader } = await import('@/sdk/utils/ConfigLoader.js');
+      const { configLoader } = await import('@/sdk/shared/utils/ConfigLoader.js');
       configLoader.getConfig.mockResolvedValueOnce({
         resolveHealthyServiceUrl: vi.fn().mockResolvedValue('http://localhost:8080'),
         getWalrusServiceBase: vi.fn().mockReturnValue('http://localhost:8080')
@@ -88,7 +88,7 @@ describe('BrowserWalrusService', () => {
 
     it('should handle connection failure gracefully', async () => {
       // Mock configLoader.getConfig()
-      const { configLoader } = await import('@/sdk/utils/ConfigLoader.js');
+      const { configLoader } = await import('@/sdk/shared/utils/ConfigLoader.js');
       configLoader.getConfig.mockResolvedValueOnce({
         resolveHealthyServiceUrl: vi.fn().mockResolvedValue('http://localhost:8080'),
         getWalrusServiceBase: vi.fn().mockReturnValue('http://localhost:8080')
@@ -104,7 +104,7 @@ describe('BrowserWalrusService', () => {
 
     it('should handle non-200 response gracefully', async () => {
       // Mock configLoader.getConfig()
-      const { configLoader } = await import('@/sdk/utils/ConfigLoader.js');
+      const { configLoader } = await import('@/sdk/shared/utils/ConfigLoader.js');
       configLoader.getConfig.mockResolvedValueOnce({
         resolveHealthyServiceUrl: vi.fn().mockResolvedValue('http://localhost:8080'),
         getWalrusServiceBase: vi.fn().mockReturnValue('http://localhost:8080')
@@ -124,7 +124,7 @@ describe('BrowserWalrusService', () => {
 
     it.skip('should emit operation events during connection', async () => {
       // Mock configLoader.getConfig()
-      const { configLoader } = await import('@/sdk/utils/ConfigLoader.js');
+      const { configLoader } = await import('@/sdk/shared/utils/ConfigLoader.js');
       configLoader.getConfig.mockResolvedValueOnce({
         resolveHealthyServiceUrl: vi.fn().mockResolvedValue('http://localhost:8080'),
         getWalrusServiceBase: vi.fn().mockReturnValue('http://localhost:8080')

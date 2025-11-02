@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import luckysheetApi from "@/sdk/luckysheetApi.js";
+import luckysheetApi from "@/frontend/services/luckysheetApi.js";
 
 describe('LuckysheetApi methods verification', () => {
   beforeEach(() => {

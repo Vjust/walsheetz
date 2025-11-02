@@ -3,7 +3,7 @@
  * Handles Proof of Availability certificate requests and status tracking for Walrus blobs
  */
 
-import { EventBus } from "@/sdk/shared/utils/EventBus.js";
+import { eventBus } from "@/sdk/shared/utils/EventBus.js";
 import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
 
 class PoACertificationService {
@@ -60,7 +60,7 @@ class PoACertificationService {
       const { browserSuiService } = await import("@/sdk/services/blockchain/BrowserSuiService.js");
 
       // Emit event
-      EventBus.emit('poa:certification:requested', {
+      eventBus.emit('poa:certification:requested', {
         blobId,
         timestamp: Date.now(),
         options
@@ -93,7 +93,7 @@ class PoACertificationService {
         });
 
         // Emit success event
-        EventBus.emit('poa:certification:completed', {
+        eventBus.emit('poa:certification:completed', {
           blobId,
           transactionDigest: result.transactionDigest,
           timestamp: Date.now()
@@ -123,7 +123,7 @@ class PoACertificationService {
         });
 
         // Emit error event
-        EventBus.emit('poa:certification:failed', {
+        eventBus.emit('poa:certification:failed', {
           blobId,
           error: result.error,
           timestamp: Date.now()
@@ -158,7 +158,7 @@ class PoACertificationService {
       }
 
       // Emit error event
-      EventBus.emit('poa:certification:failed', {
+      eventBus.emit('poa:certification:failed', {
         blobId,
         error: error.message,
         timestamp: Date.now()
@@ -200,7 +200,7 @@ class PoACertificationService {
         };
 
         // Emit status update event
-        EventBus.emit('poa:status:updated', status);
+        eventBus.emit('poa:status:updated', status);
 
         return {
           success: true,
@@ -261,7 +261,7 @@ class PoACertificationService {
           this.stopStatusPolling(blobId);
 
           // Emit confirmation event
-          EventBus.emit('poa:certification:confirmed', {
+          eventBus.emit('poa:certification:confirmed', {
             blobId,
             attempts,
             timestamp: Date.now()
@@ -276,7 +276,7 @@ class PoACertificationService {
           this.stopStatusPolling(blobId);
 
           // Emit timeout event
-          EventBus.emit('poa:certification:timeout', {
+          eventBus.emit('poa:certification:timeout', {
             blobId,
             attempts,
             timestamp: Date.now()
