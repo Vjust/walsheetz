@@ -86,7 +86,7 @@ describe('PoACertificationService', () => {
     testLogger.success('Mocks created successfully');
 
     // Import service dynamically after mocks are set up
-    const { PoACertificationService } = await import('@/sdk/services/PoACertificationService.js');
+    const { PoACertificationService } = await import('@/sdk/data-integrity/services/PoACertificationService.js');
     service = new PoACertificationService();
   });
 

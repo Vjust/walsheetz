@@ -29,7 +29,7 @@ import { browserWalletManager } from "@/sdk/blockchain-integration/services/Brow
 import { suiGraphQLService } from '@/blockchain/sui-graphql-service.js';
 import { browserWalrusService } from "@/walrus/BrowserWalrusService.js";
 import { browserSuiService } from "@/sdk/blockchain-integration/services/BrowserSuiService.js";
-import { blobLineageTracker } from "@/sdk/services/BlobLineageTracker.js";
+import { blobLineageTracker } from "@/sdk/data-integrity/services/BlobLineageTracker.js";
 import { StorageAdapter } from "@/sdk/adapters/StorageAdapter.js";
 import { serializeRange } from "@/sdk/utils/BlobParser.js";
 

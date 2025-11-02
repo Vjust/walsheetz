@@ -11,9 +11,10 @@ export { BrowserSuiService } from "@/sdk/blockchain-integration/services/Browser
 export { BrowserWalletManager } from "@/sdk/blockchain-integration/services/BrowserWalletManager.js";
 export { BrowserGrpcService } from "@/sdk/blockchain-integration/services/BrowserGrpcService.js";
 
-// Services - Storage
-export { BlobLineageTracker } from "@/sdk/services/storage/BlobLineageTracker.js";
-export { PoACertificationService } from "@/sdk/services/storage/PoACertificationService.js";
+// Services - Data Integrity
+export { BlobLineageTracker } from "@/sdk/data-integrity/services/BlobLineageTracker.js";
+export { PoACertificationService } from "@/sdk/data-integrity/services/PoACertificationService.js";
+export { PoARenewalManager } from "@/sdk/data-integrity/services/PoARenewalManager.js";
 
 // Services - Formulas
 export { WalSheetzFunctions } from "@/sdk/services/formulas/WalSheetzFunctions.js";
@@ -22,7 +23,7 @@ export { SuiFunctions } from "@/sdk/services/formulas/SuiFunctions.js";
 // Services - Other
 export { ErrorRecoveryService } from "@/sdk/services/ErrorRecoveryService.js";
 export { SpreadsheetMigrator } from "@/sdk/services/SpreadsheetMigrator.js";
-export { PoARenewalManager } from "@/sdk/services/PoARenewalManager.js";
+export { PoARenewalManager } from "@/sdk/data-integrity/services/PoARenewalManager.js";
 export { FaucetService } from "@/sdk/services/FaucetService.js";
 export { DeFiStateManager } from "@/sdk/services/DeFiStateManager.js";
 export { WebSocketService } from "@/sdk/services/WebSocketService.js";

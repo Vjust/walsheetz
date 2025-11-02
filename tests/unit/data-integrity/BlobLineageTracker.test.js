@@ -53,7 +53,7 @@ describe('BlobLineageTracker', () => {
     global.localStorage = mockLocalStorage;
     testLogger.success('Mocks created');
 
-    const { BlobLineageTracker } = await import('@/sdk/services/BlobLineageTracker.js');
+    const { BlobLineageTracker } = await import('@/sdk/data-integrity/services/BlobLineageTracker.js');
     tracker = new BlobLineageTracker();
   });
 
