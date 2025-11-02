@@ -7,9 +7,9 @@ export { FormulaRefreshScheduler } from "@/sdk/core/scheduling/FormulaRefreshSch
 export { OfflineQueueManager } from "@/sdk/core/queue/OfflineQueueManager.js";
 
 // Services - Blockchain
-export { BrowserSuiService } from "@/sdk/services/blockchain/BrowserSuiService.js";
-export { BrowserWalletManager } from "@/sdk/services/blockchain/BrowserWalletManager.js";
-export { BrowserGrpcService } from "@/sdk/services/blockchain/BrowserGrpcService.js";
+export { BrowserSuiService } from "@/sdk/blockchain-integration/services/BrowserSuiService.js";
+export { BrowserWalletManager } from "@/sdk/blockchain-integration/services/BrowserWalletManager.js";
+export { BrowserGrpcService } from "@/sdk/blockchain-integration/services/BrowserGrpcService.js";
 
 // Services - Storage
 export { BlobLineageTracker } from "@/sdk/services/storage/BlobLineageTracker.js";
@@ -28,7 +28,7 @@ export { DeFiStateManager } from "@/sdk/services/DeFiStateManager.js";
 export { WebSocketService } from "@/sdk/services/WebSocketService.js";
 
 // Adapters
-export { BlockchainAdapter } from "@/sdk/adapters/BlockchainAdapter.js";
+export { BlockchainAdapter } from "@/sdk/blockchain-integration/adapters/BlockchainAdapter.js";
 export { StorageAdapter } from "@/sdk/adapters/StorageAdapter.js";
 
 // Business Logic

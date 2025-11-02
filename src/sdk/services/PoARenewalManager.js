@@ -318,7 +318,7 @@ class PoARenewalManager {
       });
 
       // Import services
-      const { browserSuiService } = await import("@/sdk/services/blockchain/BrowserSuiService.js");
+      const { browserSuiService } = await import("@/sdk/blockchain-integration/services/BrowserSuiService.js");
 
       // Execute renewal transaction (same as initial certification)
       const result = await browserSuiService.certifyBlob(blobId, {

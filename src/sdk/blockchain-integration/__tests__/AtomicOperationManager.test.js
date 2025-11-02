@@ -74,7 +74,7 @@ describe('AtomicOperationManager', () => {
     vi.clearAllMocks();
 
     // Import the module after mocks are set up
-    const module = await import("@/sdk/services/blockchain/AtomicOperationManager.js");
+    const module = await import("@/sdk/blockchain-integration/services/AtomicOperationManager.js");
     AtomicOperationManager = module.default;
     manager = new AtomicOperationManager();
 

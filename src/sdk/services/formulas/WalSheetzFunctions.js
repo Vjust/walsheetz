@@ -25,10 +25,10 @@
  */
 import { defiStateManager } from "@/sdk/services/DeFiStateManager.js";
 import { eventBus } from "@/sdk/shared/utils/EventBus.js";
-import { browserWalletManager } from "@/sdk/services/blockchain/BrowserWalletManager.js";
+import { browserWalletManager } from "@/sdk/blockchain-integration/services/BrowserWalletManager.js";
 import { suiGraphQLService } from '@/blockchain/sui-graphql-service.js';
 import { browserWalrusService } from "@/walrus/BrowserWalrusService.js";
-import { browserSuiService } from "@/sdk/services/blockchain/BrowserSuiService.js";
+import { browserSuiService } from "@/sdk/blockchain-integration/services/BrowserSuiService.js";
 import { blobLineageTracker } from "@/sdk/services/BlobLineageTracker.js";
 import { StorageAdapter } from "@/sdk/adapters/StorageAdapter.js";
 import { serializeRange } from "@/sdk/utils/BlobParser.js";

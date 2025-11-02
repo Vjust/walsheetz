@@ -1,7 +1,7 @@
 import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
 import { standardizedErrorHandler } from "@/sdk/shared/utils/StandardizedErrorHandler.js";
 import { transactionExperienceManager } from "@/sdk/utils/TransactionExperience.js";
-import { AtomicExecutionContext } from "@/sdk/services/blockchain/AtomicExecutionContext.js";
+import { AtomicExecutionContext } from "@/sdk/blockchain-integration/services/AtomicExecutionContext.js";
 
 /**
  * Atomic Operation Manager - Ensures operations can be rolled back if any step fails

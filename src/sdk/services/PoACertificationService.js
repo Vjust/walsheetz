@@ -57,7 +57,7 @@ class PoACertificationService {
       });
 
       // Import browser sui service dynamically
-      const { browserSuiService } = await import("@/sdk/services/blockchain/BrowserSuiService.js");
+      const { browserSuiService } = await import("@/sdk/blockchain-integration/services/BrowserSuiService.js");
 
       // Emit event
       eventBus.emit('poa:certification:requested', {
