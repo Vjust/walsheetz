@@ -45,7 +45,7 @@ let mockBrowserSuiServiceInstance;
 let mockBrowserWalrusServiceInstance;
 
 // Mock the service imports that are dynamically loaded
-vi.mock('@/sdk/services/blockchain/BrowserSuiService.js', () => ({
+vi.mock('@/sdk/blockchain-integration/services/BrowserSuiService.js', () => ({
   get browserSuiService() {
     return mockBrowserSuiServiceInstance;
   }

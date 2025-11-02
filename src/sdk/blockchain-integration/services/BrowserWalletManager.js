@@ -560,7 +560,7 @@ class BrowserWalletManager {
       await this.preflightCheck();
 
       // Import transaction runner dynamically to avoid circular dependencies
-      const { transactionRunner } = await import("@/sdk/blockchain/sui-transaction-runner.js");
+      const { transactionRunner } = await import("@/blockchain/sui-transaction-runner.js");
 
       // Prepare the transaction
       const txPreparation = await transactionRunner.prepareTransaction({
