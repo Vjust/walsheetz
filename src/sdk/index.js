@@ -17,8 +17,8 @@ export { PoACertificationService } from "@/sdk/data-integrity/services/PoACertif
 export { PoARenewalManager } from "@/sdk/data-integrity/services/PoARenewalManager.js";
 
 // Services - Formulas
-export { WalSheetzFunctions } from "@/sdk/services/formulas/WalSheetzFunctions.js";
-export { SuiFunctions } from "@/sdk/services/formulas/SuiFunctions.js";
+export { WalSheetzFunctions } from "@/sdk/formula-engine/formulas/WalSheetzFunctions.js";
+export { SuiFunctions } from "@/sdk/formula-engine/formulas/SuiFunctions.js";
 
 // Services - Other
 export { ErrorRecoveryService } from "@/sdk/services/ErrorRecoveryService.js";
