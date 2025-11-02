@@ -2,8 +2,8 @@
 // Layer 1: Core spreadsheet functionality and blockchain integration
 
 // Core
-export { SpreadsheetEngine } from "@/sdk/core/SpreadsheetEngine.js";
-export { FormulaRefreshScheduler } from "@/sdk/core/scheduling/FormulaRefreshScheduler.js";
+export { SpreadsheetEngine } from "@/sdk/spreadsheet-core/core/SpreadsheetEngine.js";
+export { FormulaRefreshScheduler } from "@/sdk/spreadsheet-core/scheduling/FormulaRefreshScheduler.js";
 export { OfflineQueueManager } from "@/sdk/transaction-management/queue/OfflineQueueManager.js";
 
 // Services - Blockchain
@@ -30,10 +30,10 @@ export { WebSocketService } from "@/sdk/services/WebSocketService.js";
 
 // Adapters
 export { BlockchainAdapter } from "@/sdk/blockchain-integration/adapters/BlockchainAdapter.js";
-export { StorageAdapter } from "@/sdk/adapters/StorageAdapter.js";
+export { StorageAdapter } from "@/sdk/spreadsheet-core/adapters/StorageAdapter.js";
 
 // Business Logic
-export { useSpreadsheet } from "@/sdk/business/useSpreadsheet.js";
+export { useSpreadsheet } from "@/sdk/spreadsheet-core/hooks/useSpreadsheet.js";
 
 // Utils - Shared Foundation
 export { logger, Logger } from "@/sdk/shared/utils/Logger.js";

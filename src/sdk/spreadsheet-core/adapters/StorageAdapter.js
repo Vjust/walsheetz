@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
-import { StorageAdapter } from "@/sdk/adapters/StorageAdapter.js";
+import { StorageAdapter } from "@/sdk/spreadsheet-core/adapters/StorageAdapter.js";
 
 describe('StorageAdapter Session Backup and Recovery', () => {
   let adapter;

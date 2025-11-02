@@ -1,21 +1,21 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { SpreadsheetEngine } from "@/sdk/business/core/SpreadsheetEngine.js";
-import { BlockchainAdapter } from "@/sdk/business/adapters/BlockchainAdapter.js";
-import { StorageAdapter } from "@/sdk/business/adapters/StorageAdapter.js";
-import { GridSizeManager } from "@/sdk/business/services/GridSizeManager.js";
+import { SpreadsheetEngine } from "@/sdk/spreadsheet-core/core/SpreadsheetEngine.js";
+import { BlockchainAdapter } from "@/sdk/blockchain-integration/adapters/BlockchainAdapter.js";
+import { StorageAdapter } from "@/sdk/spreadsheet-core/adapters/StorageAdapter.js";
+import { GridSizeManager } from "@/sdk/services/GridSizeManager.js";
 // WebSocket service disabled for single-user MVP
 // import { webSocketService } from '../services/WebSocketService.js';
-import { useWalletConnectionFactory } from "@/sdk/business/hooks/useWalletConnectionFactory.ts";
-import { browserWalletManager } from "@/sdk/business/services/BrowserWalletManager.js";
-import { parseCellRef } from "@/sdk/business/utils/cellUtils.js";
-import luckysheetApi from "@/sdk/business/services/luckysheetApi.js";
-import { TestModeAdapter } from "@/sdk/business/services/testing/TestModeAdapter.js";
-import { isAuthBypassed } from "@/sdk/business/utils/testMode.js";
-import { logger, LogComponent } from "@/sdk/business/utils/Logger.js";
-import { detectSaveVersionSignature } from "@/sdk/business/utils/AbiHelpers.js";
+import { useWalletConnectionFactory } from "@/sdk/blockchain-integration/hooks/useWalletConnectionFactory.ts";
+import { browserWalletManager } from "@/sdk/blockchain-integration/services/BrowserWalletManager.js";
+import { parseCellRef } from "@/sdk/utils/cellUtils.js";
+import luckysheetApi from "@/sdk/services/luckysheetApi.js";
+import { TestModeAdapter } from "@/sdk/services/testing/TestModeAdapter.js";
+import { isAuthBypassed } from "@/sdk/utils/testMode.js";
+import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
+import { detectSaveVersionSignature } from "@/sdk/utils/AbiHelpers.js";
 // Phase 3: Extracted hooks for better separation of concerns
-import { useSpreadsheetAutosave } from "@/sdk/business/hooks/hooks/useSpreadsheetAutosave.js";
-import { useSpreadsheetImport } from "@/sdk/business/hooks/hooks/useSpreadsheetImport.js";
+import { useSpreadsheetAutosave } from "@/sdk/spreadsheet-core/hooks/useSpreadsheetAutosave.js";
+import { useSpreadsheetImport } from "@/sdk/spreadsheet-core/hooks/useSpreadsheetImport.js";
 
 /**
  * React hook for spreadsheet business logic

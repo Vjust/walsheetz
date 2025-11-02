@@ -6,7 +6,7 @@ import { CircuitBreaker } from "@/sdk/shared/utils/CircuitBreaker.js";
 import luckysheetApi from "@/sdk/services/luckysheetApi.js";
 import { getSuiBalance, getSuiGasPrice, getSuiEpoch } from "@/sdk/services/formulas/SuiFunctions.js";
 import { recordTelemetry } from "@/sdk/shared/utils/Telemetry.js";
-import { FormulaRefreshScheduler } from "@/sdk/core/scheduling/FormulaRefreshScheduler.js";
+import { FormulaRefreshScheduler } from "@/sdk/spreadsheet-core/scheduling/FormulaRefreshScheduler.js";
 import { OfflineQueueManager } from "@/sdk/transaction-management/queue/OfflineQueueManager.js";
 
 /**
