@@ -31,7 +31,7 @@ import { browserWalrusService } from "@/walrus/BrowserWalrusService.js";
 import { browserSuiService } from "@/sdk/blockchain-integration/services/BrowserSuiService.js";
 import { blobLineageTracker } from "@/sdk/data-integrity/services/BlobLineageTracker.js";
 import { StorageAdapter } from "@/sdk/spreadsheet-core/adapters/StorageAdapter.js";
-import { serializeRange } from "@/sdk/utils/BlobParser.js";
+import { serializeRange } from "@/sdk/shared/utils/BlobParser.js";
 
 class WalSheetzFormulaEngine {
   constructor() {
