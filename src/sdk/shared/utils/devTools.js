@@ -2,7 +2,7 @@
  * Development tools utility functions
  */
 
-import { detectSaveVersionSignature } from "@/sdk/utils/AbiHelpers.js";
+import { detectSaveVersionSignature } from "@/sdk/blockchain-integration/utils/AbiHelpers.js";
 
 export const createDevTools = (spreadsheetHook) => {
   return {

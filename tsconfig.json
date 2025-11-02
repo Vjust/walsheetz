@@ -38,7 +38,7 @@
       "@/blockchain/*": ["./blockchain/*"],
       "@/*": ["./frontend/*"],
       "@/types/*": ["./frontend/types/*", "./src/sdk/types/*"],
-      "@/utils/*": ["./frontend/utils/*", "./src/sdk/utils/*"],
+      "@/utils/*": ["./frontend/utils/*", "./src/sdk/shared/utils/*"],
       "@/services/*": ["./frontend/services/*", "./src/sdk/services/*"],
       "@/components/*": ["./frontend/presentation/components/*", "./web/components/*"],
       "@/pages/*": ["./frontend/pages/*", "./web/pages/*"],

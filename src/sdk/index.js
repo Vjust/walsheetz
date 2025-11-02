@@ -23,7 +23,6 @@ export { SuiFunctions } from "@/sdk/formula-engine/formulas/SuiFunctions.js";
 // Services - Other
 export { ErrorRecoveryService } from "@/sdk/services/ErrorRecoveryService.js";
 export { SpreadsheetMigrator } from "@/sdk/services/SpreadsheetMigrator.js";
-export { PoARenewalManager } from "@/sdk/data-integrity/services/PoARenewalManager.js";
 export { FaucetService } from "@/sdk/services/FaucetService.js";
 export { DeFiStateManager } from "@/sdk/services/DeFiStateManager.js";
 export { WebSocketService } from "@/sdk/collaboration/services/WebSocketService.js";

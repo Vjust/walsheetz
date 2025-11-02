@@ -5,14 +5,14 @@ import { StorageAdapter } from "@/sdk/spreadsheet-core/adapters/StorageAdapter.j
 import { GridSizeManager } from "@/sdk/services/GridSizeManager.js";
 // WebSocket service disabled for single-user MVP
 // import { webSocketService } from '../services/WebSocketService.js';
-import { useWalletConnectionFactory } from "@/sdk/blockchain-integration/hooks/useWalletConnectionFactory.ts";
+import { useWalletConnectionFactory } from "@/frontend/hooks/useWalletConnectionFactory.ts";
 import { browserWalletManager } from "@/sdk/blockchain-integration/services/BrowserWalletManager.js";
 import { parseCellRef } from "@/sdk/shared/utils/cellUtils.js";
-import luckysheetApi from "@/sdk/services/luckysheetApi.js";
+import luckysheetApi from "@/frontend/services/luckysheetApi.js";
 import { TestModeAdapter } from "@/sdk/shared/testing/TestModeAdapter.js";
-import { isAuthBypassed } from "@/sdk/utils/testMode.js";
+import { isAuthBypassed } from "@/sdk/shared/utils/testMode.js";
 import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
-import { detectSaveVersionSignature } from "@/sdk/utils/AbiHelpers.js";
+import { detectSaveVersionSignature } from "@/sdk/blockchain-integration/utils/AbiHelpers.js";
 // Phase 3: Extracted hooks for better separation of concerns
 import { useSpreadsheetAutosave } from "@/sdk/spreadsheet-core/hooks/useSpreadsheetAutosave.js";
 import { useSpreadsheetImport } from "@/sdk/spreadsheet-core/hooks/useSpreadsheetImport.js";

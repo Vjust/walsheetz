@@ -17,7 +17,7 @@ vi.mock('../../blockchain/config.js', () => ({
   })
 }));
 
-vi.mock('@/sdk/utils/CircuitBreaker.js', () => ({
+vi.mock('@/sdk/shared/utils/CircuitBreaker.js', () => ({
   ResilientExecutor: class MockResilientExecutor {
     constructor(config) {
       this.config = config;
