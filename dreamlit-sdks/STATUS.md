@@ -67,7 +67,47 @@ lit-sdks/` folder with Bun workspaces
   - dist/node.js (146 KB)
   - Source maps included
 
-**Progress**: Day 1 - 98% complete (build passing, ready to commit)
+**Progress**: Day 1 - ✅ **COMPLETE** (committed: 703d565)
+
+---
+
+## Day 2-3 Progress (2025-11-02)
+
+### ✅ Completed: @dreamlit/walrus-sui-core
+
+**Package extracted and committed successfully!**
+
+1. **Package Structure Created**
+   - 73 files total (54 source files + configs)
+   - 4 main modules: blockchain/, blockchain-integration/, transaction-management/, data-integrity/
+   - Dual exports: main + submodule exports
+
+2. **Files Copied**
+   - blockchain/ (18 files): Core Sui blockchain services
+   - blockchain-integration/ (20 files): Browser-specific integration
+   - transaction-management/ (6 files): Transaction handling
+   - data-integrity/ (8 files): PoA and blob lineage
+
+3. **Import Transformations**
+   - Updated 18 files with @/ aliases → @dreamlit/walrus
+   - Fixed 20+ export mismatches
+   - Converted all intra-package imports to relative paths
+   - Removed TypeScript type exports for JavaScript build
+
+4. **Build Status: ✅ PASSING**
+   - Build time: 2.7s
+   - Outputs: 2.3 MB (main), 1.4 MB (blockchain module)
+   - 4 entry points successfully bundled
+   - Source maps included
+   - Commit: 339380b
+
+**@dreamlit/walrus-sui-core Statistics**:
+- Source files: 54 JavaScript files + 3 TypeScript type definitions
+- Lines of code: ~25,000
+- Dependencies: @dreamlit/walrus, @mysten/sui, @mysten/graphql-transport
+- Build outputs: 4 entry points (index, blockchain, transaction, data-integrity)
+
+**Progress**: Days 2-3 - ✅ **COMPLETE**
 
 ### 🔗 File Locations
 
