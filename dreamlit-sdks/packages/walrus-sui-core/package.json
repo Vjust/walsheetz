@@ -1,0 +1,49 @@
+{
+  "name": "@dreamlit/walrus-sui-core",
+  "version": "1.0.0",
+  "description": "Walrus + Sui blockchain integration core - CLI-compatible storage and blockchain operations",
+  "type": "module",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./blockchain": "./dist/blockchain/index.js",
+    "./transaction": "./dist/transaction-management/index.js",
+    "./data-integrity": "./dist/data-integrity/index.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@dreamlit/walrus": "workspace:*",
+    "@mysten/sui": "^1.38.0",
+    "@mysten/graphql-transport": "^0.3.0",
+    "graphql": "^16.8.1",
+    "graphql-request": "^6.1.0"
+  },
+  "optionalDependencies": {
+    "undici": "^6.0.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  },
+  "keywords": [
+    "walrus",
+    "sui",
+    "blockchain",
+    "storage",
+    "decentralized",
+    "cli",
+    "node"
+  ],
+  "author": "Dreamlit",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dreamlit/walrus-sui-core"
+  }
+}
