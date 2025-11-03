@@ -143,6 +143,9 @@ export class NodeFsStorageAdapter implements StorageAdapter {
 
     const yamlPath = path.join(this.walletsDir, `sui_client_${walletId}.yaml`);
 
+    // Ensure the directory exists before writing
+    await fs.mkdir(this.walletsDir, { recursive: true });
+
     // Read existing YAML
     let doc: Record<string, unknown> = {};
     try {
