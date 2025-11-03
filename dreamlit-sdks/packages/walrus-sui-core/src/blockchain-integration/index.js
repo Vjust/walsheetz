@@ -18,7 +18,9 @@ export { AtomicOperationManager } from './services/AtomicOperationManager.js';
 export { AtomicExecutionContext } from './services/AtomicExecutionContext.js';
 
 // Adapters
-export { BlockchainAdapter } from './adapters/BlockchainAdapter.js';
+// Note: BlockchainAdapter.js is a test file only, not a real implementation
+// The actual BlockchainAdapter is in @dreamlit/spreadsheet-sdk
+// export { BlockchainAdapter } from './adapters/BlockchainAdapter.js';
 export {
   createBlockchainExecutionOp,
   createTxPrepOp,

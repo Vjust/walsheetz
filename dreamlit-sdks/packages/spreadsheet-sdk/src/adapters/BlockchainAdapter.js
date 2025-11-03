@@ -22,17 +22,66 @@ import { AtomicOperationManager } from '@dreamlit/walrus-sui-core/blockchain';
 // import { createWalrusStorageOp, createTxPrepOp, createBlockchainExecutionOp } from './atomicOperations/index.js';
 // import { OperationHelpers } from './atomicOperations/OperationHelpers.js';
 
-// Temporary stubs for missing services
-const errorRecoveryService = { recover: async (error) => ({ recovered: false, error }) };
-const progressiveEnhancementService = { enhance: (data) => data };
-const validationGuards = { validate: () => true };
-const standardizedErrorHandler = { handle: (error) => error };
+// Temporary stubs for missing services (TODO: Extract these properly)
+const errorRecoveryService = {
+  recover: async (error) => ({ recovered: false, error }),
+  handleError: async (error, context) => {
+    console.warn('[errorRecoveryService] Error:', error, context);
+    return { handled: false, error };
+  }
+};
+
+const progressiveEnhancementService = {
+  enhance: (data) => data,
+  forceHealthCheck: async () => ({ healthy: true }),
+  executeWithFallback: async (primary, fallback) => {
+    try {
+      return await primary();
+    } catch (error) {
+      return await fallback();
+    }
+  }
+};
+
+const validationGuards = {
+  validate: () => true,
+  runPreflightChecks: async (operation, context) => {
+    // Stub: always pass preflight checks
+    return { passed: true, warnings: [] };
+  }
+};
+
+const standardizedErrorHandler = {
+  handle: (error) => error
+};
+
+// Stub for ErrorFactory
+const ErrorFactory = {
+  create: (type, message, context) => {
+    const error = new Error(message);
+    error.type = type;
+    error.context = context;
+    return error;
+  }
+};
 
 // Temporary stub for OperationHelpers
 class OperationHelpers {
   constructor(config) {
     this.logger = config.logger;
     this.logComponent = config.logComponent;
+  }
+
+  logOperationStep(step, data) {
+    this.logger?.info?.(this.logComponent, `[Operation] ${step}`, data);
+  }
+
+  logOperationSuccess(operation, result) {
+    this.logger?.info?.(this.logComponent, `[Operation Success] ${operation}`, result);
+  }
+
+  logOperationError(operation, error) {
+    this.logger?.error?.(this.logComponent, `[Operation Error] ${operation}`, error);
   }
 }
 
@@ -3026,59 +3075,10 @@ export class BlockchainAdapter extends IBlockchainService {
     }
   }
 
-  // Unlock a cell for collaborative editing
-  async unlockCell(cellRef) {
-    try {
-      logger.startTimer('cell_unlock');
-      logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'cell_unlock_start', 'Starting cell unlock operation', {
-        cellRef,
-        spreadsheetId: this.spreadsheetObjectId
-      });
-
-      if (!this.spreadsheetObjectId) {
-        throw new Error('No active spreadsheet - cannot unlock cell');
-      }
-
-      // Check wallet connection
-      const walletInfo = this.walletManager.isConnected;
-      if (!walletInfo) {
-        throw new Error('Wallet not connected - cannot unlock cell');
-      }
-
-      // Create unlock cell transaction
-      const tx = this.suiService.createUnlockCellTransaction(this.spreadsheetObjectId, cellRef);
-
-      // Execute the transaction
-      const result = await this.suiService.executeTransaction(tx);
-
-      logger.endTimer('cell_unlock');
-      logger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'cell_unlock_success', 'Cell unlocked successfully', {
-        cellRef,
-        transactionDigest: result.digest,
-        duration: logger.getTimerDuration('cell_unlock')
-      });
-
-      return {
-        success: true,
-        transactionDigest: result.digest,
-        cellRef
-      };
-    } catch (error) {
-      logger.endTimer('cell_unlock');
-      logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'cell_unlock_error', 'Failed to unlock cell', {
-        cellRef,
-        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
-        duration: logger.getTimerDuration('cell_unlock')
-      });
-
-      return {
-        success: false,
-        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
-        cellRef,
-        category: ErrorCategory.BLOCKCHAIN
-      };
-    }
-  }
+  // NOTE: Duplicate unlockCell method removed (was at line 3079)
+  // The correct unlockCell implementation using collaboration service is at line 669
+  // This duplicate was overwriting the collaboration-based implementation with
+  // a blockchain transaction-based implementation, breaking collaborative unlocks.
 
   /**
    * Clear invalid object cache when "notExists" errors occur
