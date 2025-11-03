@@ -107,7 +107,41 @@ lit-sdks/` folder with Bun workspaces
 - Dependencies: @dreamlit/walrus, @mysten/sui, @mysten/graphql-transport
 - Build outputs: 4 entry points (index, blockchain, transaction, data-integrity)
 
-**Progress**: Days 2-3 - ✅ **COMPLETE**
+**Progress**: Days 2-3 - ✅ **COMPLETE** (committed: 339380b, CLI refactor: 695d82a)
+
+### CLI Compatibility Improvements (2025-11-02)
+
+**Addressed user feedback for true Node.js/CLI support:**
+
+1. ✅ **NodeWalrusService** created for CLI usage
+   - Uses undici for fetch polyfill (optional dependency)
+   - No window/localStorage dependencies
+   - DirectTransport (no CORS proxy)
+   - Graceful shutdown support
+
+2. ✅ **Separate Browser/Node Entries**
+   - `@dreamlit/walrus-sui-core/node`: CLI-safe entry
+   - `@dreamlit/walrus-sui-core/browser`: Browser-only APIs
+   - Automatic environment detection via conditional exports
+
+3. ✅ **Peer Dependencies**
+   - @dreamlit/walrus moved to peerDependencies
+   - Prevents version conflicts
+   - undici as optional dependency
+
+4. ✅ **Enhanced Documentation**
+   - README documents peer dependency requirement
+   - Entry point usage patterns
+   - Node.js and browser examples
+
+5. ✅ **Node Smoke Tests** (test/node-smoke.test.js)
+   - Verify no window/DOM dependencies
+   - Test export separation
+   - Requires package linking to run
+
+**Build Status**: ✅ PASSING (4.3s)
+- dist/node/index.js: 1.52 MB
+- dist/browser/index.js: 783 KB
 
 ### 🔗 File Locations
 
