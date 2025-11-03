@@ -11,6 +11,16 @@ import { detectSaveVersionSignature } from '../blockchain-integration/utils/AbiH
 // Note: ResilientExecutor/CircuitBreaker not needed in this service
 // If needed in future, import from @dreamlit/walrus
 
+// Stub implementation for ResilientExecutor (not yet extracted to @dreamlit/walrus)
+const ResilientExecutor = class {
+  constructor(config) {
+    this.config = config;
+  }
+  async execute(fn) {
+    return await fn();
+  }
+};
+
 class SuiService {
   constructor() {
     const config = getCurrentConfig();

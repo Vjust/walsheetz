@@ -1,7 +1,26 @@
 // NOTE: Node/server/CLI usage only. The React UI must use @/sdk/* or @/walrus/* (Browser*Service).
 // Walrus storage service for WalSheetz
 import { getCurrentConfig } from './config.js';
-import { ResilientExecutor, indexedDBCache } from '@dreamlit/walrus';
+// TODO: Extract ResilientExecutor and indexedDBCache to @dreamlit/walrus
+// import { ResilientExecutor, indexedDBCache } from '@dreamlit/walrus';
+
+// Stub implementations for optional features not yet extracted
+const ResilientExecutor = class {
+  constructor(config) {
+    this.config = config;
+  }
+  async execute(fn) {
+    return await fn();
+  }
+};
+
+const indexedDBCache = {
+  async getCachedVersion() { return null; },
+  async cacheVersion() {},
+  async getCacheStats() { return { size: 0, entries: 0 }; },
+  async clearCache() {},
+  policies: { maxCacheSize: 0, maxVersionAge: 0, compressionThreshold: 0 }
+};
 
 // SDK support for Node.js (if available)
 let WalrusClient, SuiClient;
