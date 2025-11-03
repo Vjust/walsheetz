@@ -17,7 +17,8 @@
     "./data-integrity": "./dist/data-integrity/index.js"
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && npm run copy-protos",
+    "copy-protos": "mkdir -p dist/protos/sui/rpc/v2beta2 && cp src/protos/sui/rpc/v2beta2/*.proto dist/protos/sui/rpc/v2beta2/",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"

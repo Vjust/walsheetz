@@ -7,7 +7,9 @@ import { logger, LogComponent } from "@dreamlit/walrus";
 
 class OfflineModeService {
   constructor() {
-    this.isOnline = navigator.onLine;
+    // Guard browser-only APIs for Node.js compatibility
+    this.isBrowser = typeof window !== 'undefined' && typeof navigator !== 'undefined';
+    this.isOnline = this.isBrowser ? navigator.onLine : true; // Assume online in Node.js
     this.pendingOperations = [];
     this.localDataStore = new Map();
     this.syncQueue = [];
@@ -18,8 +20,10 @@ class OfflineModeService {
     this.LOCAL_DATA_KEY = 'walsheetz_local_data';
     this.SYNC_QUEUE_KEY = 'walsheetz_sync_queue';
 
-    // Initialize offline detection
-    this.setupOfflineDetection();
+    // Initialize offline detection (browser only)
+    if (this.isBrowser) {
+      this.setupOfflineDetection();
+    }
     this.loadPersistedData();
 
     logger.info(LogComponent.PERFORMANCE, 'offline_mode_init', 'Offline Mode Service initialized', {
