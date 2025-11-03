@@ -6,6 +6,7 @@ export default defineConfig({
     'node/index': 'src/node/index.js',
     'browser/index': 'src/browser/index.js',
     'blockchain/index': 'src/blockchain/index.js',
+    'blockchain-integration/index': 'src/blockchain-integration/index.js',
     'transaction-management/index': 'src/transaction-management/index.js',
     'data-integrity/index': 'src/data-integrity/index.js',
   },

@@ -12,6 +12,7 @@
     "./node": "./dist/node/index.js",
     "./browser": "./dist/browser/index.js",
     "./blockchain": "./dist/blockchain/index.js",
+    "./blockchain-integration": "./dist/blockchain-integration/index.js",
     "./transaction": "./dist/transaction-management/index.js",
     "./data-integrity": "./dist/data-integrity/index.js"
   },

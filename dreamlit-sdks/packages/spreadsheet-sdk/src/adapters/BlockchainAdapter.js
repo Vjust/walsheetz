@@ -10,13 +10,13 @@ import {
   transactionManager,
   offlineModeService
 } from '@dreamlit/walrus-sui-core/transaction';
-// Import atomic operations from walrus-sui-core
+// Import atomic operations from walrus-sui-core blockchain-integration
 import {
   AtomicOperationManager,
   createWalrusStorageOp,
   createTxPrepOp,
   createBlockchainExecutionOp
-} from '@dreamlit/walrus-sui-core/blockchain';
+} from '@dreamlit/walrus-sui-core/blockchain-integration';
 
 // TODO: Missing local files - stub or re-implement if needed
 // import { errorRecoveryService } from '../services/ErrorRecoveryService.js';
