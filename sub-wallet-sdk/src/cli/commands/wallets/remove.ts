@@ -39,6 +39,20 @@ export default class WalletsRemove extends BaseCommand {
         this.error(`Wallet '${args.id}' not found`)
       }
 
+      // Protect wallet 0 (sponsor wallet) from deletion
+      if (args.id === '0') {
+        this.error('Cannot delete wallet 0 (sponsor wallet). This wallet is protected.')
+      }
+
+      // Check balance before deletion
+      const balance = await orchestrator.getBalance(wallet.address)
+      if (balance.sui > 0n || balance.wal > 0n) {
+        this.error(
+          `Wallet '${args.id}' has funds (${orchestrator.formatSui(balance.sui)} SUI, ${orchestrator.formatWal(balance.wal)} WAL). ` +
+          `Sweep funds first using 'walrus-wallet sweep to-sponsor' before deleting.`
+        )
+      }
+
       // Confirm deletion unless --force is used
       if (!flags.force && !this.jsonOutput) {
         this.log(warning(`This will permanently delete wallet '${args.id}' (${wallet.address})`))
@@ -62,13 +76,25 @@ export default class WalletsRemove extends BaseCommand {
         }
       }
 
-      // Delete the wallet file if it has a filePath
+      // Delete wallet files (metadata and keypair)
+      const walletsDir = this.cliConfig.walletsDir || '/Users/angel/.walrus-wallets'
+      const { join } = await import('node:path')
+
+      // Delete wallet metadata file
       if (wallet.filePath) {
         try {
           unlinkSync(wallet.filePath)
         } catch (err) {
-          this.log(errorMsg(`Failed to delete wallet file: ${err}`))
+          this.log(errorMsg(`Failed to delete wallet metadata file: ${err}`))
         }
+      }
+
+      // Delete keypair file
+      const keypairPath = join(walletsDir, `sui_client_${args.id}.yaml`)
+      try {
+        unlinkSync(keypairPath)
+      } catch (err) {
+        // Keypair file might not exist, that's okay
       }
 
       // Remove from wallet list
