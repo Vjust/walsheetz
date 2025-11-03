@@ -1,0 +1,13 @@
+[package]
+name = "WalrusSubwallet"
+version = "0.1.0"
+edition = "2024.beta"
+license = "MIT"
+authors = ["DreamLit"]
+
+[dependencies]
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "testnet-v1.43.0" }
+
+[addresses]
+walrus_subwallet = "0x0"
+sui = "0x2"

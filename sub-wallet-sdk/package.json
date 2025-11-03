@@ -1,0 +1,106 @@
+{
+  "name": "@walrus/subwallet-sdk",
+  "version": "0.1.0",
+  "description": "Reusable SDK for sub-wallet orchestration on Sui/Walrus - works in Node and browser",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "walrus-wallet": "./bin/run.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./cli": {
+      "import": "./dist/cli/base-command.js",
+      "types": "./dist/cli/base-command.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "bin",
+    "oclif.manifest.json"
+  ],
+  "oclif": {
+    "bin": "walrus-wallet",
+    "dirname": "walrus-wallet",
+    "commands": "./dist/cli/commands",
+    "plugins": [
+      "@oclif/plugin-help",
+      "@oclif/plugin-plugins",
+      "@oclif/plugin-warn-if-update-available"
+    ],
+    "topicSeparator": " ",
+    "topics": {
+      "wallets": {
+        "description": "Manage sub-wallets"
+      },
+      "balance": {
+        "description": "Check wallet balances"
+      },
+      "fund": {
+        "description": "Fund wallets with SUI or WAL"
+      },
+      "sweep": {
+        "description": "Sweep funds from wallets"
+      },
+      "config": {
+        "description": "Manage CLI configuration"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "test:once": "vitest run",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "prepublishOnly": "npm run build",
+    "cli:ptb": "ts-node --esm scripts/run_move_ptb.ts",
+    "cli:run": "node --loader ts-node/esm ./bin/dev.js",
+    "cli:dev": "node --loader ts-node/esm --watch ./bin/dev.js",
+    "postpack": "rm -f oclif.manifest.json",
+    "prepack": "npm run build && oclif manifest"
+  },
+  "keywords": [
+    "sui",
+    "walrus",
+    "wallet",
+    "subwallet",
+    "etl",
+    "blockchain",
+    "sponsored-transactions"
+  ],
+  "author": "DreamLit",
+  "license": "MIT",
+  "dependencies": {
+    "@mysten/sui.js": "^0.54.0",
+    "@oclif/core": "^4.8.0",
+    "@oclif/plugin-help": "^6.2.35",
+    "@oclif/plugin-plugins": "^5.4.52",
+    "@oclif/plugin-warn-if-update-available": "^3.1.51",
+    "chalk": "^5.6.2",
+    "cli-table3": "^0.6.5",
+    "ora": "^9.0.0",
+    "p-limit": "^5.0.0",
+    "yaml": "^2.5.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.4",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
+  },
+  "engines": {
+    "node": ">=18.17.0"
+  }
+}

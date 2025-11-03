@@ -1,0 +1,47 @@
+{
+  "name": "walrus-wallet-plugin-demo",
+  "version": "1.0.0",
+  "description": "Example plugin for walrus-wallet CLI demonstrating custom API integration",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "oclif": {
+    "commands": "./dist/commands",
+    "bin": "walrus-wallet",
+    "topicSeparator": " ",
+    "topics": {
+      "demo": {
+        "description": "Demo commands for custom API integration"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "prepack": "npm run build",
+    "test": "echo \"No tests yet\""
+  },
+  "keywords": [
+    "walrus-wallet",
+    "oclif-plugin",
+    "sui",
+    "blockchain"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@oclif/core": "^4.0.0",
+    "@walrus/subwallet-sdk": "^0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.17.0"
+  }
+}

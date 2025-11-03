@@ -1,0 +1,13 @@
+node_modules/
+*.log
+.DS_Store
+coverage/
+*.tsbuildinfo
+
+# Local AI tooling artifacts
+.claude/
+hrm_reasoning.db
+
+# Generated packages
+walrus-subwallet-sdk-*.tgz
+
