@@ -11,7 +11,12 @@ import {
   offlineModeService
 } from '@dreamlit/walrus-sui-core/transaction';
 // Import atomic operations from walrus-sui-core
-import { AtomicOperationManager } from '@dreamlit/walrus-sui-core/blockchain';
+import {
+  AtomicOperationManager,
+  createWalrusStorageOp,
+  createTxPrepOp,
+  createBlockchainExecutionOp
+} from '@dreamlit/walrus-sui-core/blockchain';
 
 // TODO: Missing local files - stub or re-implement if needed
 // import { errorRecoveryService } from '../services/ErrorRecoveryService.js';
@@ -19,7 +24,6 @@ import { AtomicOperationManager } from '@dreamlit/walrus-sui-core/blockchain';
 // import { validationGuards } from '../utils/ValidationGuards.js';
 // import { NetworkError, WalletError, ContractError, ValidationError, StorageError, ErrorFactory } from '../utils/errors.js';
 // import { standardizedErrorHandler } from '../utils/StandardizedErrorHandler.js';
-// import { createWalrusStorageOp, createTxPrepOp, createBlockchainExecutionOp } from './atomicOperations/index.js';
 // import { OperationHelpers } from './atomicOperations/OperationHelpers.js';
 
 // Temporary stubs for missing services (TODO: Extract these properly)
@@ -27,20 +31,36 @@ const errorRecoveryService = {
   recover: async (error) => ({ recovered: false, error }),
   handleError: async (error, context) => {
     console.warn('[errorRecoveryService] Error:', error, context);
-    return { handled: false, error };
+    // Return structured response expected by callers
+    return {
+      handled: false,
+      error,
+      userMessage: error.message || 'An error occurred',
+      category: error.category || 'unknown',
+      requiresUserAction: true,
+      queued: false
+    };
   }
 };
 
 const progressiveEnhancementService = {
   enhance: (data) => data,
-  forceHealthCheck: async () => ({ healthy: true }),
+  forceHealthCheck: async () => ({ healthy: true, degradationLevel: 0 }),
   executeWithFallback: async (primary, fallback) => {
     try {
       return await primary();
     } catch (error) {
       return await fallback();
     }
-  }
+  },
+  getServiceStatus: () => ({
+    healthy: true,
+    degradationLevel: 0,
+    availableServices: ['walrus', 'blockchain']
+  }),
+  getAvailableFeatures: () => ['save', 'load', 'transactions'],
+  getStatusMessage: () => 'All services operational',
+  getRecoveryEstimate: () => null
 };
 
 const validationGuards = {
@@ -52,7 +72,18 @@ const validationGuards = {
 };
 
 const standardizedErrorHandler = {
-  handle: (error) => error
+  handle: (error) => error,
+  processError: async (error, context) => {
+    // Return structured error response
+    return {
+      userMessage: error.message || 'An error occurred',
+      category: error.category || 'unknown',
+      recoveryActions: ['retry', 'contact_support'],
+      requiresUserAction: true,
+      technicalDetails: error.stack,
+      context
+    };
+  }
 };
 
 // Stub for ErrorFactory
@@ -61,6 +92,16 @@ const ErrorFactory = {
     const error = new Error(message);
     error.type = type;
     error.context = context;
+    return error;
+  },
+  fromError: (originalError) => {
+    // Convert any error to structured format
+    const error = new Error(originalError.message || 'Unknown error');
+    error.type = originalError.type || originalError.name || 'Error';
+    error.category = originalError.category || 'unknown';
+    error.code = originalError.code;
+    error.details = originalError.details || {};
+    error.originalError = originalError;
     return error;
   }
 };
@@ -72,8 +113,8 @@ class OperationHelpers {
     this.logComponent = config.logComponent;
   }
 
-  logOperationStep(step, data) {
-    this.logger?.info?.(this.logComponent, `[Operation] ${step}`, data);
+  logOperationStep(operationName, stage, message, metadata = {}) {
+    this.logger?.info?.(this.logComponent, `[${operationName}] ${stage}: ${message}`, metadata);
   }
 
   logOperationSuccess(operation, result) {
@@ -82,6 +123,29 @@ class OperationHelpers {
 
   logOperationError(operation, error) {
     this.logger?.error?.(this.logComponent, `[Operation Error] ${operation}`, error);
+  }
+
+  createNoOpCleanupHandler(operationName, resultProperty = null) {
+    // Return a cleanup handler that does nothing
+    return async (context) => {
+      this.logger?.info?.(this.logComponent, `[${operationName}] No-op cleanup`, { resultProperty });
+      return { success: true, noOp: true };
+    };
+  }
+
+  validateOperationResult(result, fieldName, operationName) {
+    if (!result || result[fieldName] === undefined) {
+      throw new Error(`${operationName} failed: missing required field '${fieldName}'`);
+    }
+    return result[fieldName];
+  }
+
+  getOperationResult(context, operationName) {
+    const result = context.results?.[operationName];
+    if (!result) {
+      throw new Error(`Operation '${operationName}' result not found in context`);
+    }
+    return result;
   }
 }
 
