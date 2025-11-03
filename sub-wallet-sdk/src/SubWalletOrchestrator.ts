@@ -52,6 +52,7 @@ export class SubWalletOrchestrator {
   private config: OrchestratorConfig;
   private moveOrchestrator?: MoveSubWalletOrchestrator;
   private movePackageId?: string;
+  private sponsorWalletBootstrapped = false;
 
   constructor(config: OrchestratorConfig) {
     this.config = config;
@@ -108,6 +109,7 @@ export class SubWalletOrchestrator {
    * Load all wallets from storage
    */
   async loadWallets(): Promise<WalletMetadata[]> {
+    await this.ensureSponsorWallet();
     return this.manager.loadWallets();
   }
 
@@ -122,6 +124,7 @@ export class SubWalletOrchestrator {
    * Create a new wallet
    */
   async createWallet(id?: string): Promise<WalletMetadata> {
+    await this.ensureSponsorWallet();
     return this.manager.createWallet(id);
   }
 
@@ -129,6 +132,7 @@ export class SubWalletOrchestrator {
    * Create multiple wallets
    */
   async createWallets(count: number): Promise<WalletMetadata[]> {
+    await this.ensureSponsorWallet();
     return this.manager.createWallets(count);
   }
 
@@ -145,6 +149,7 @@ export class SubWalletOrchestrator {
    * Check balances for all wallets
    */
   async checkAllBalances(): Promise<WalletBalance[]> {
+    await this.ensureSponsorWallet();
     return this.manager.checkAllBalances();
   }
 
@@ -152,6 +157,7 @@ export class SubWalletOrchestrator {
    * Get aggregate balance across all wallets
    */
   async getAggregateBalance(): Promise<{ totalSui: bigint; totalWal: bigint; count: number }> {
+    await this.ensureSponsorWallet();
     return this.manager.getAggregateBalance();
   }
 
@@ -164,6 +170,7 @@ export class SubWalletOrchestrator {
     sponsorKeypair: Ed25519Keypair,
     options: FundOptions
   ): Promise<TransferResult[]> {
+    await this.ensureSponsorWallet();
     return this.manager.fundWallets(sponsorKeypair, options);
   }
 
@@ -207,6 +214,7 @@ export class SubWalletOrchestrator {
    * Sweep funds from all wallets to a target address
    */
   async sweepWallets(options: SweepOptions): Promise<TransferResult[]> {
+    await this.ensureSponsorWallet();
     return this.manager.sweepWallets(options);
   }
 
@@ -243,6 +251,7 @@ export class SubWalletOrchestrator {
     buildTransaction: (tx: import('@mysten/sui.js/transactions').TransactionBlock) => void;
     gasBudget?: bigint;
   }): Promise<{ digest: string }> {
+    await this.ensureSponsorWallet();
     const sponsor = options.sponsor || this.config.sponsor;
     if (!sponsor) {
       throw new Error('No sponsor keypair configured or provided');
@@ -260,6 +269,7 @@ export class SubWalletOrchestrator {
    * Build and execute Move-based funding transaction using RPC.
    */
   async fundWalletsViaMove(params: MoveFundWalletsParams, signer: Ed25519Keypair) {
+    await this.ensureSponsorWallet();
     if (!this.moveOrchestrator) {
       throw new Error('Move orchestrator not configured');
     }
@@ -267,6 +277,7 @@ export class SubWalletOrchestrator {
   }
 
   async registerSponsorViaMove(params: MoveRegisterSponsorParams, signer: Ed25519Keypair) {
+    await this.ensureSponsorWallet();
     if (!this.moveOrchestrator) {
       throw new Error('Move orchestrator not configured');
     }
@@ -274,6 +285,7 @@ export class SubWalletOrchestrator {
   }
 
   async setSponsorAllowanceViaMove(params: MoveSetAllowanceParams, signer: Ed25519Keypair) {
+    await this.ensureSponsorWallet();
     if (!this.moveOrchestrator) {
       throw new Error('Move orchestrator not configured');
     }
@@ -296,6 +308,7 @@ export class SubWalletOrchestrator {
     runOptions?: SuiCliRunOptions;
     extraFlags?: string[];
   }): Promise<string> {
+    await this.ensureSponsorWallet();
     const packageId = params.packageId ?? this.movePackageId;
     if (!packageId) {
       throw new Error('packageId required for CLI invocation');
@@ -336,6 +349,7 @@ export class SubWalletOrchestrator {
    * Get wallet keypair by ID
    */
   async getWalletKeypair(id: string): Promise<Ed25519Keypair | null> {
+    await this.ensureSponsorWallet();
     return this.config.storage.loadKeypair(id);
   }
 
@@ -369,6 +383,39 @@ export class SubWalletOrchestrator {
   parseWal(wal: string): bigint {
     const value = parseFloat(wal);
     return BigInt(Math.floor(value * 1_000_000_000));
+  }
+
+  /**
+   * Ensure sponsor wallet is bootstrapped as wallet 0
+   * Only runs once when sponsor is configured and no wallets exist yet
+   */
+  private async ensureSponsorWallet(): Promise<void> {
+    if (this.sponsorWalletBootstrapped) {
+      return;
+    }
+
+    const sponsor = this.config.sponsor;
+    if (!sponsor) {
+      this.sponsorWalletBootstrapped = true;
+      return;
+    }
+
+    const wallets = await this.manager.loadWallets();
+    if (wallets.length > 0) {
+      this.sponsorWalletBootstrapped = true;
+      return;
+    }
+
+    // Bootstrap wallet 0 with sponsor keypair
+    const sponsorAddress = sponsor.getPublicKey().toSuiAddress();
+    const wallet: WalletMetadata = {
+      id: '0',
+      address: sponsorAddress,
+    };
+
+    await this.config.storage.saveKeypair('0', sponsor);
+    await this.manager.saveWallets([wallet]);
+    this.sponsorWalletBootstrapped = true;
   }
 }
 

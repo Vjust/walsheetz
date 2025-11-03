@@ -1,8 +1,10 @@
 import { Command, Flags } from '@oclif/core'
+import { Ed25519Keypair } from '@mysten/sui.js/keypairs/ed25519'
 import { SubWalletOrchestrator } from '../index.js'
 import { NodeFsStorageAdapter } from '../sub-wallet-walrus/storage/node-fs-adapter.js'
 import { configManager, type CliConfig } from './config/manager.js'
 import { formatJson } from './utils/output.js'
+import { decodeSuiSecret } from './utils/suiCliKeys.js'
 
 export abstract class BaseCommand extends Command {
   static baseFlags = {
@@ -84,10 +86,26 @@ export abstract class BaseCommand extends Command {
 
     const storage = new NodeFsStorageAdapter(walletsDir)
 
+    // Import sponsor key from Sui CLI if available
+    let sponsor: Ed25519Keypair | undefined
+    if (this.cliConfig.defaultSponsorKey) {
+      try {
+        const secret = decodeSuiSecret(this.cliConfig.defaultSponsorKey)
+        sponsor = Ed25519Keypair.fromSecretKey(secret)
+      } catch (error) {
+        this.warn(
+          `Failed to import default sponsor key from Sui CLI: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        )
+      }
+    }
+
     return new SubWalletOrchestrator({
       rpcUrl,
       storage,
       move: options?.move,
+      ...(sponsor ? { sponsor } : {}),
     })
   }
 
