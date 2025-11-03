@@ -4,36 +4,105 @@ Walrus + Sui blockchain integration core - CLI-compatible storage and blockchain
 
 ## Features
 
+- **Dual Environment Support**: Separate entry points for Node.js/CLI and browser environments
 - **Blockchain Services**: Complete Sui blockchain interaction layer
 - **Transaction Management**: Queueing, tracking, retry logic, offline support
 - **Data Integrity**: PoA certification, blob lineage tracking
-- **Wallet Management**: Browser wallet integration
+- **Wallet Management**: Browser wallet integration (browser entry only)
 - **GraphQL Integration**: Sui GraphQL client for querying blockchain state
 - **GRPC Support**: High-performance GRPC transaction execution
 
 ## Installation
 
 ```bash
-npm install @dreamlit/walrus-sui-core
+npm install @dreamlit/walrus-sui-core @dreamlit/walrus
 # or
-bun add @dreamlit/walrus-sui-core
+bun add @dreamlit/walrus-sui-core @dreamlit/walrus
+```
+
+**Important**: This package has a **peer dependency** on `@dreamlit/walrus`. You must install both packages.
+
+For Node.js/CLI usage with fetch support, also install `undici`:
+
+```bash
+npm install undici
+# or
+bun add undici
+```
+
+## Entry Points
+
+This package provides **three entry points** for different environments:
+
+### 1. Node.js/CLI Entry Point (Recommended for Server/CLI)
+
+```javascript
+import { nodeWalrusService, suiService } from '@dreamlit/walrus-sui-core/node';
+// or
+import { nodeWalrusService, suiService } from '@dreamlit/walrus-sui-core'; // Auto-detects Node.js
+```
+
+**Features**:
+- NodeWalrusService (uses `undici` for fetch polyfill)
+- No window/localStorage dependencies
+- DirectTransport (no CORS proxy)
+- CLI-safe blockchain services
+
+### 2. Browser Entry Point (Browser-Only)
+
+```javascript
+import { browserSuiService, browserWalletManager } from '@dreamlit/walrus-sui-core/browser';
+```
+
+**Features**:
+- Browser wallet integration (@mysten/wallet-standard)
+- LocalStorage-based persistence
+- ProxyTransport for CORS handling
+- window-based event listeners
+
+### 3. Submodule Exports (Environment-Agnostic)
+
+```javascript
+import { suiService } from '@dreamlit/walrus-sui-core/blockchain';
+import { TransactionManager } from '@dreamlit/walrus-sui-core/transaction';
+import { poaCertificationService } from '@dreamlit/walrus-sui-core/data-integrity';
 ```
 
 ## Usage
 
-### Basic Blockchain Operations
+### Node.js/CLI Usage
 
 ```javascript
-import { suiService, walletManager } from '@dreamlit/walrus-sui-core/blockchain';
+import { NodeWalrusService, suiService } from '@dreamlit/walrus-sui-core/node';
+
+// Create Node-compatible Walrus service
+const walrusService = new NodeWalrusService({ verbose: true });
+
+// Store data to Walrus
+const { blobId } = await walrusService.storeBlob({ myData: 'value' });
+
+// Use blockchain services
+const networkInfo = await suiService.getNetworkInfo();
+console.log('Sui network:', networkInfo);
+```
+
+### Browser Usage
+
+```javascript
+import { browserWalletManager, browserSuiService } from '@dreamlit/walrus-sui-core/browser';
+import { browserWalrusService } from '@dreamlit/walrus';
 
 // Connect wallet
-await walletManager.connect();
+await browserWalletManager.connect();
 
-// Get wallet address
-const address = walletManager.getCurrentAddress();
+// Store to Walrus
+const { blobId } = await browserWalrusService.storeBlob(data);
 
-// Execute transaction
-const result = await suiService.executeTransaction(txBlock);
+// Record on Sui blockchain
+await browserSuiService.storeSpreadsheetVersion({
+  blobId,
+  metadata: { /* ... */ }
+});
 ```
 
 ### Transaction Management
@@ -106,16 +175,49 @@ await txManager.executeWithTracking(async () => {
 - `@mysten/sui`: Sui SDK
 - `@mysten/graphql-transport`: GraphQL transport for Sui
 
-## CLI Usage
+## Peer Dependencies
 
-This package is designed to work in both browser and Node.js environments:
+This package requires `@dreamlit/walrus` as a peer dependency. Install both:
+
+```bash
+npm install @dreamlit/walrus-sui-core @dreamlit/walrus
+```
+
+**Why peer dependency?**
+- Prevents version conflicts
+- Allows consumers to control the Walrus version
+- Reduces bundle size (shared dependency)
+
+### Optional: undici for Node.js
+
+For Node.js fetch support, install `undici`:
+
+```bash
+npm install undici
+```
+
+If `undici` is not installed, NodeWalrusService will warn but won't crash. Some features may not work without fetch polyfill.
+
+## Environment Detection
+
+The package automatically detects the environment:
 
 ```javascript
-// Node.js CLI script
-import { suiService } from '@dreamlit/walrus-sui-core/blockchain';
+// In Node.js, this imports node/index.js
+import { ... } from '@dreamlit/walrus-sui-core';
 
-const result = await suiService.queryObject(objectId);
-console.log(result);
+// In browser bundlers (webpack/vite), this imports index.js (browser version)
+import { ... } from '@dreamlit/walrus-sui-core';
+```
+
+You can also explicitly import:
+
+```javascript
+// Force Node.js entry
+import { ... } from '@dreamlit/walrus-sui-core/node';
+
+// Force browser entry
+import { ... } from '@dreamlit/walrus-sui-core/browser';
 ```
 
 ## License
