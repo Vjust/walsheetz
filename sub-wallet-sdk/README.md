@@ -98,6 +98,82 @@ Additional behavior:
 - `NodeFsStorageAdapter` writes the same YAML structure as the original Walrus shell scripts (`sui_client_<n>.yaml`), enabling easy migration.
 - Browser or service environments can supply their own `StorageAdapter` implementation to keep key material wherever it belongs.
 
+## Wallet Protection & Sponsor Bootstrapping
+
+### Automatic Sponsor Wallet (Wallet 0)
+
+The SDK automatically creates wallet 0 from your Sui CLI active address when you run any command for the first time. This sponsor wallet has special properties:
+
+**Protected Features:**
+- ✅ **Cannot be deleted** - Wallet 0 is permanently protected
+- ✅ **Auto-synced** - Always matches your Sui CLI active address
+- ✅ **Can hold funds** - Only wallet that should store significant SUI
+- ✅ **Pays gas** - Sponsor for all worker wallet operations
+
+**Worker Wallets (1-N):**
+- ⚠️ **Deletable** - Can be removed (only when balance = 0)
+- ⚠️ **Gasless** - Should use sponsored transactions for all operations
+- ⚠️ **No funds** - Keep balances minimal, sweep back to sponsor
+
+### Safety Commands
+
+**Clear all worker wallets:**
+```bash
+# Check balances first
+walrus-wallet balance check
+
+# Auto-sweep and clear (safe)
+walrus-wallet wallets clear --sweep --force
+
+# Manual workflow
+walrus-wallet sweep to-sponsor
+walrus-wallet wallets clear
+```
+
+**Remove individual wallets:**
+```bash
+# Protected wallet 0
+walrus-wallet wallets remove 0
+# ❌ Error: Cannot delete wallet 0 (sponsor wallet). This wallet is protected.
+
+# Wallet with funds
+walrus-wallet wallets remove 5
+# ❌ Error: Wallet '5' has funds. Sweep funds first.
+
+# Safe removal
+walrus-wallet sweep to-sponsor
+walrus-wallet wallets remove 5
+# ✅ Success
+```
+
+### Recommended Workflow
+
+```typescript
+// 1. Create orchestrator (wallet 0 auto-created from Sui CLI)
+const orchestrator = new SubWalletOrchestrator({
+  rpcUrl: 'https://fullnode.testnet.sui.io:443',
+  storage: new NodeFsStorageAdapter('./wallets'),
+});
+
+// 2. Create worker wallets (IDs: 1, 2, 3, ...)
+const workers = await orchestrator.createWallets(10);
+
+// 3. Fund workers via sponsored transactions (sponsor pays gas)
+await orchestrator.fundWalletsSponsored({
+  amount: orchestrator.parseSui('0.05'),
+});
+
+// 4. Do your work...
+
+// 5. Sweep all funds back to sponsor (wallet 0)
+await orchestrator.sweepToSponsor({
+  gasReserve: orchestrator.parseSui('0.01'), // Keep 0.01 SUI for final cleanup
+});
+
+// 6. Clean up workers (wallet 0 preserved)
+// Use CLI: walrus-wallet wallets clear --force
+```
+
 ## Quick start (Node/CLI)
 
 ```typescript
@@ -189,22 +265,64 @@ For production dashboards, replace `MemoryStorageAdapter` with a custom adapter 
 
 The `walrus-wallet` CLI wraps the orchestrator with human-friendly output and JSON mode for automation.
 
+### Basic Commands
+
 ```bash
 # Inspect current defaults (auto-filled from Sui CLI when available)
 walrus-wallet config list
 
-# Create and fund wallets
+# Wallet 0 auto-created from Sui CLI active address
+# Create worker wallets (IDs: 1, 2, 3...)
 walrus-wallet wallets create 8
-walrus-wallet fund wallets 0.25
 
-# Fund via Move policy with policy/sponsor caps
+# Fund wallets (sponsor pays gas)
+walrus-wallet fund wallets 0.25
+```
+
+### Wallet Management
+
+```bash
+# List all wallets
+walrus-wallet wallets list
+
+# Check balances
+walrus-wallet balance check
+
+# Remove single wallet (fails if has funds or is wallet 0)
+walrus-wallet wallets remove 5
+walrus-wallet wallets remove 5 --force  # Skip confirmation
+
+# Clear ALL worker wallets (keeps wallet 0)
+walrus-wallet wallets clear
+walrus-wallet wallets clear --sweep     # Auto-sweep funds first
+walrus-wallet wallets clear --sweep --force  # No confirmation
+```
+
+### Funding Operations
+
+```bash
+# Direct funding (sponsor pays gas)
+walrus-wallet fund wallets 0.25 --sponsor-key <KEY>
+
+# Fund via Move policy with on-chain enforcement
 walrus-wallet fund via-move 0.1 \
   --package-id 0xPACKAGE \
   --sponsor-cap-id 0xCAP \
   --coin-object-id 0xCOIN \
-  --policy-id 0xPOLICY
+  --policy-id 0xPOLICY \
+  --sponsor-key <KEY>
 
-# Sweep funds back to the sponsor address
+# Sponsored transactions (gasless for workers)
+walrus-wallet fund sponsored 0.1
+```
+
+### Sweeping Operations
+
+```bash
+# Sweep all funds back to sponsor (wallet 0)
+walrus-wallet sweep to-sponsor
+
+# Keep some gas for final operations
 walrus-wallet sweep to-sponsor --keep-amount 0.02
 ```
 
