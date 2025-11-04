@@ -5,20 +5,32 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "sub-wallet-sdk",
-    "walrus",
-    "walrus-sui-core",
-    "spreadsheet-sdk"
+    "packages/*"
   ],
   "scripts": {
     "build": "bun run --filter '*' build",
     "test": "bun test",
-    "clean": "rm -rf */dist",
-    "typecheck": "bun run --filter '*' typecheck"
+    "clean": "rm -rf packages/*/dist apps/*/dist",
+    "typecheck": "bun run --filter '*' typecheck",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "changeset": "changeset",
+    "version": "changeset version && bun install --lockfile-only",
+    "release": "bun run build && changeset publish"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
+    "@changesets/cli": "^2.29.7",
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-react": "^7.35.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "globals": "^15.0.0",
+    "prettier": "^3.2.0",
     "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.0.0",
     "vitest": "^2.0.0"
   },
   "keywords": [

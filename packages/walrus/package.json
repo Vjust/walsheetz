@@ -38,6 +38,7 @@
     "url": "git@github.com:Vjust/dreamlit-walrus-sdk.git"
   },
   "dependencies": {
+    "@dreamlit/shared": "workspace:*",
     "@mysten/walrus": "^0.2.0",
     "@mysten/sui": "^1.38.0"
   },
@@ -45,8 +46,10 @@
     "undici": "^6.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "happy-dom": "^15.0.0",
     "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
     "vitest": "^2.0.0"
   }
 }

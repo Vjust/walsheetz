@@ -1,0 +1,59 @@
+{
+  "name": "@dreamlit/shared",
+  "version": "0.1.0",
+  "description": "Shared utilities for Dreamlit Walrus SDK packages",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./config": {
+      "import": "./dist/config/index.js",
+      "types": "./dist/config/index.d.ts"
+    },
+    "./logging": {
+      "import": "./dist/logging/index.js",
+      "types": "./dist/logging/index.d.ts"
+    },
+    "./events": {
+      "import": "./dist/events/index.js",
+      "types": "./dist/events/index.d.ts"
+    },
+    "./types": {
+      "import": "./dist/types/index.js",
+      "types": "./dist/types/index.d.ts"
+    },
+    "./network": {
+      "import": "./dist/network/index.js",
+      "types": "./dist/network/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "shared",
+    "utilities",
+    "walrus",
+    "sui",
+    "sdk"
+  ],
+  "author": "Dreamlit",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  },
+  "sideEffects": false
+}

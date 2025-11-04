@@ -1,16 +1,25 @@
 # Dependencies
 node_modules/
-*/node_modules/
+**/node_modules/
+.pnp
+.pnp.js
 
 # Build outputs
 dist/
-*/dist/
+**/dist/
 build/
-*/build/
+**/build/
 *.tsbuildinfo
+
+# Package build artifacts
+packages/*/dist/
+packages/*/build/
+apps/*/dist/
+apps/*/build/
 
 # Test coverage
 coverage/
+**/coverage/
 .nyc_output/
 
 # Environment files
@@ -46,3 +55,20 @@ lerna-debug.log*
 .claude/
 *.db
 *.sqlite
+
+# Tool caches
+.eslintcache
+.prettiercache
+
+# Changesets
+.changeset/**/*.md
+!.changeset/README.md
+!.changeset/config.json
+
+# Generated reference docs (not source docs)
+reference/
+**/reference/
+
+# Walrus-specific
+**/walrus-sui-core/src/**/*.proto
+!**/walrus-sui-core/protos/**/*.proto

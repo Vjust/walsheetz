@@ -11,8 +11,8 @@
 
 import { configLoader } from "../shared/ConfigLoader.js";
 
-let cachedClient = null;
-let loadingPromise = null;
+let cachedClient: any = null;
+let loadingPromise: Promise<any> | null = null;
 
 /**
  * Dynamically load and initialize WalrusSdkClient
@@ -32,7 +32,7 @@ export async function loadWalrusSdkClient(options = {}) {
     return loadingPromise;
   }
 
-  loadingPromise = (async () => {
+  loadingPromise = (async (): Promise<any> => {
     try {
       // Only load in browser environment
       if (typeof window === 'undefined') {
@@ -46,7 +46,7 @@ export async function loadWalrusSdkClient(options = {}) {
       try {
         // Load config to check if Walrus SDK is enabled
         config = await configLoader.getConfig();
-      } catch (error) {
+      } catch (error: any) {
         console.warn('[WalrusSdkClientLoader] Failed to load config, disabling Walrus SDK:',
         typeof error === 'string' ? error : error?.message || 'Unknown error'
         );
@@ -69,7 +69,7 @@ export async function loadWalrusSdkClient(options = {}) {
       try {
         const module = await import("./WalrusSdkClient.js");
         WalrusSdkClient = module.WalrusSdkClient;
-      } catch (error) {
+      } catch (error: any) {
         console.error('[WalrusSdkClientLoader] Failed to dynamically import WalrusSdkClient:',
         typeof error === 'string' ? error : error?.message || 'Unknown error'
         );
