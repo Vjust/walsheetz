@@ -1,0 +1,38 @@
+{
+  "name": "@dreamlit/sdks",
+  "version": "1.0.0",
+  "description": "Enterprise-grade SDKs for building on Walrus and Sui blockchain",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "sub-wallet-sdk",
+    "walrus",
+    "walrus-sui-core",
+    "spreadsheet-sdk"
+  ],
+  "scripts": {
+    "build": "bun run --filter '*' build",
+    "test": "bun test",
+    "clean": "rm -rf */dist",
+    "typecheck": "bun run --filter '*' typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "tsup": "^8.0.0",
+    "vitest": "^2.0.0"
+  },
+  "keywords": [
+    "walrus",
+    "sui",
+    "blockchain",
+    "storage",
+    "decentralized",
+    "sdk"
+  ],
+  "author": "Dreamlit",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:Vjust/dreamlit-walrus-sdk.git"
+  }
+}

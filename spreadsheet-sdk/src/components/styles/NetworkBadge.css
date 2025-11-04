@@ -1,0 +1,19 @@
+/* NetworkBadge styles */
+.network-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.network-badge.testnet {
+  background-color: #fbbf24;
+  color: #78350f;
+}
+
+.network-badge.mainnet {
+  background-color: #10b981;
+  color: #064e3b;
+}

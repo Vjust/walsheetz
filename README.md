@@ -4,9 +4,125 @@ A collection of enterprise-grade SDKs for building on Walrus and Sui blockchain.
 
 ## Packages
 
-### [@walrus/subwallet-sdk](./sub-wallet-sdk)
+This monorepo contains four SDKs for different use cases:
 
-A comprehensive SDK for managing sub-wallet fleets on Sui/Walrus with automatic sponsor bootstrapping and safety features.
+### 1. [@dreamlit/walrus](./walrus)
+
+**Core Walrus storage adapter for browser and Node.js environments**
+
+**🎯 Key Features:**
+- Store and retrieve data on Walrus decentralized storage
+- Browser and Node.js support with environment-specific optimizations
+- Health monitoring and endpoint failover
+- Automatic retry with exponential backoff
+- Rate limiting and circuit breaker patterns
+- Blob range reading and streaming
+- PoA (Proof of Availability) certificate support
+
+**Installation:**
+```bash
+npm install @dreamlit/walrus
+# or
+bun add @dreamlit/walrus
+```
+
+**Quick Start:**
+```typescript
+import { BrowserWalrusService } from '@dreamlit/walrus';
+
+const walrusService = new BrowserWalrusService();
+const blob = new Blob(['Hello Walrus!'], { type: 'text/plain' });
+const result = await walrusService.store(blob, { epochs: 5 });
+console.log('Stored at blob ID:', result.blobId);
+```
+
+See the [walrus documentation](./walrus/README.md) for complete API reference.
+
+---
+
+### 2. [@dreamlit/walrus-sui-core](./walrus-sui-core)
+
+**Walrus + Sui blockchain integration core with CLI compatibility**
+
+**🎯 Key Features:**
+- Dual environment support (Node.js/CLI and browser)
+- Complete Sui blockchain interaction layer
+- Transaction management with queueing, tracking, and retry logic
+- Offline transaction support
+- PoA certification and blob lineage tracking
+- Browser wallet integration (browser entry only)
+- GraphQL and GRPC support for high-performance operations
+
+**Installation:**
+```bash
+npm install @dreamlit/walrus-sui-core @dreamlit/walrus
+# or
+bun add @dreamlit/walrus-sui-core @dreamlit/walrus
+```
+
+**Quick Start:**
+```javascript
+import { nodeWalrusService, suiService } from '@dreamlit/walrus-sui-core/node';
+
+// For browser environments
+import { BrowserSuiService } from '@dreamlit/walrus-sui-core/browser';
+```
+
+See the [walrus-sui-core documentation](./walrus-sui-core/README.md) for entry points and advanced usage.
+
+---
+
+### 3. [@dreamlit/spreadsheet-sdk](./spreadsheet-sdk)
+
+**React SDK for building Walrus-powered spreadsheet applications**
+
+**🎯 Key Features:**
+- Complete React hooks for spreadsheet state management
+- Pre-built UI components with Walrus/Sui integration
+- Luckysheet-powered rich spreadsheet functionality
+- Built-in blockchain adapters and services
+- Custom formula engine with Sui-specific formulas
+- CSV/Excel import/export with Walrus storage
+- Automatic saving with blockchain versioning
+- Multi-wallet and multi-network support
+
+**Installation:**
+```bash
+npm install @dreamlit/spreadsheet-sdk @dreamlit/walrus @dreamlit/walrus-sui-core react react-dom
+# or
+bun add @dreamlit/spreadsheet-sdk @dreamlit/walrus @dreamlit/walrus-sui-core react react-dom
+```
+
+**Quick Start:**
+```jsx
+import {
+  SpreadsheetProvider,
+  Spreadsheet,
+  Header,
+  StatusBar
+} from '@dreamlit/spreadsheet-sdk';
+import '@dreamlit/spreadsheet-sdk/dist/index.css';
+
+function App() {
+  return (
+    <SpreadsheetProvider>
+      <div className="app-container">
+        <Header />
+        <Spreadsheet />
+        <StatusBar />
+      </div>
+    </SpreadsheetProvider>
+  );
+}
+```
+
+See the [spreadsheet-sdk documentation](./spreadsheet-sdk/README.md) for components and API reference.
+
+---
+
+### 4. [@walrus/subwallet-sdk](./sub-wallet-sdk)
+
+**Comprehensive SDK for managing sub-wallet fleets on Sui/Walrus**
 
 **🎯 Key Features:**
 - **Automatic Sponsor Wallet Bootstrapping** - Wallet 0 auto-synced with Sui CLI
@@ -53,16 +169,10 @@ const orchestrator = new SubWalletOrchestrator({
 });
 
 // Wallet 0 auto-created from Sui CLI sponsor
-// Create 10 worker wallets
 const wallets = await orchestrator.createWallets(10);
-
-// Fund all wallets (sponsor pays gas)
 await orchestrator.fundWallets(sponsorKeypair, {
   amount: BigInt(100_000_000) // 0.1 SUI each
 });
-
-// Sweep funds back to sponsor when done
-await orchestrator.sweepToSponsor();
 ```
 
 **CLI Workflow:**
@@ -70,40 +180,66 @@ await orchestrator.sweepToSponsor();
 # Install globally
 npm install -g @walrus/subwallet-sdk
 
-# Wallet 0 auto-created from Sui CLI on first use
+# Create wallets
 walrus-wallet wallets create 5
 
 # Fund wallets (sponsor pays gas)
 walrus-wallet fund wallets 0.1 --sponsor-key <KEY>
 
-# Check balances
-walrus-wallet balance check
-
-# Clean up (auto-sweep funds, delete wallets 1-5, keep wallet 0)
+# Clean up (auto-sweep funds first)
 walrus-wallet wallets clear --sweep
-```
-
-**Protected Operations:**
-```bash
-# ❌ Cannot delete wallet 0 (sponsor)
-walrus-wallet wallets remove 0
-# Error: Cannot delete wallet 0 (sponsor wallet). This wallet is protected.
-
-# ❌ Cannot delete wallets with funds
-walrus-wallet wallets remove 3
-# Error: Wallet '3' has funds (0.500000 SUI). Sweep funds first.
-
-# ✅ Sweep then delete
-walrus-wallet sweep to-sponsor
-walrus-wallet wallets remove 3
 ```
 
 See the [sub-wallet-sdk documentation](./sub-wallet-sdk/README.md) for complete API reference and advanced usage.
 
-## Contributing
+---
 
-Contributions are welcome! Please read our contributing guidelines and submit pull requests to the main repository.
+## Development
+
+This is a Bun workspace monorepo. To work with all packages:
+
+```bash
+# Install dependencies
+bun install
+
+# Build all packages
+bun run build
+
+# Run tests
+bun test
+
+# Type checking
+bun run typecheck
+
+# Clean build artifacts
+bun run clean
+```
+
+## Package Dependencies
+
+```mermaid
+graph TD
+    A[spreadsheet-sdk] --> B[walrus-sui-core]
+    A --> C[walrus]
+    B --> C
+    D[sub-wallet-sdk] -.-> C
+```
+
+- `spreadsheet-sdk` depends on both `walrus-sui-core` and `walrus`
+- `walrus-sui-core` depends on `walrus` as a peer dependency
+- `sub-wallet-sdk` can optionally use `walrus` for storage
+
+## Architecture
+
+- **@dreamlit/walrus**: Core storage layer with health monitoring and failover
+- **@dreamlit/walrus-sui-core**: Blockchain integration with transaction management
+- **@dreamlit/spreadsheet-sdk**: High-level React components and hooks
+- **@walrus/subwallet-sdk**: Wallet fleet management with sponsor protection
 
 ## License
 
 MIT
+
+## Contributing
+
+Contributions are welcome! Please read our contributing guidelines and submit pull requests to the main repository.
