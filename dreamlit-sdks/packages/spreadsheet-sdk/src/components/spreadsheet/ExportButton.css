@@ -1,0 +1,153 @@
+.export-button-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.export-dropdown {
+  position: relative;
+}
+
+.export-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.export-button:hover:not(:disabled) {
+  background-color: #0b7dda;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.export-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.export-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.export-button .button-text {
+  display: inline-block;
+  min-width: 60px;
+  text-align: center;
+}
+
+.export-button .chevron {
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+
+.export-button .chevron.open {
+  transform: rotate(-180deg);
+}
+
+/* Export Menu */
+.export-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin-top: 0.25rem;
+  overflow: hidden;
+  z-index: 1000;
+  min-width: 200px;
+}
+
+.export-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 0.875rem;
+  color: #333;
+}
+
+.export-menu-item:hover:not(:disabled) {
+  background-color: #f5f5f5;
+}
+
+.export-menu-item:active:not(:disabled) {
+  background-color: #e8e8e8;
+}
+
+.export-menu-item:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.export-menu-item:not(:last-child) {
+  border-bottom: 1px solid #eee;
+}
+
+.export-menu-item .menu-icon {
+  font-size: 1.25rem;
+  width: 24px;
+  text-align: center;
+}
+
+.export-menu-item .menu-text {
+  flex: 1;
+}
+
+/* Responsive styles */
+@media (max-width: 640px) {
+  .export-button {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem;
+  }
+
+  .export-button .button-text {
+    display: none;
+  }
+
+  .export-button {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .export-button .chevron {
+    display: none;
+  }
+
+  .export-menu {
+    min-width: 150px;
+  }
+
+  .export-menu-item {
+    padding: 0.6rem 0.8rem;
+  }
+
+  .export-menu-item .menu-icon {
+    width: 20px;
+    font-size: 1rem;
+  }
+}

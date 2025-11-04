@@ -50,8 +50,7 @@
     "walSheetz": {
       "enabled": true,
       "defi": {
-        "enabled": true,
-        "defaultProtocol": "suilend",
+        "enabled": false,
         "maxTransactionValue": 1000,
         "confirmationRequired": true,
         "riskWarnings": true

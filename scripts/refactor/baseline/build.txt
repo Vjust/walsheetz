@@ -1,0 +1,9 @@
+$ vite build
+[plugin:vite:reporter] [plugin vite:reporter] 
+(!) /Users/angel/Projects/test/walsheetz/node_modules/@mysten/sui/dist/esm/client/index.js is dynamically imported by /Users/angel/Projects/test/walsheetz/frontend/services/BrowserWalletManager.js but also statically imported by /Users/angel/Projects/test/walsheetz/blockchain/sui-transaction-runner.js, /Users/angel/Projects/test/walsheetz/frontend/providers/WalletProviders.jsx, /Users/angel/Projects/test/walsheetz/frontend/services/BrowserSuiService.js, /Users/angel/Projects/test/walsheetz/frontend/services/formulas/SuiFunctions.js, /Users/angel/Projects/test/walsheetz/node_modules/@mysten/dapp-kit/dist/esm/index.js, dynamic import will not move module into another chunk.
+
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.

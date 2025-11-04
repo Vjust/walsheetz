@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+import "google/rpc/status.proto";
+
+package sui.rpc.v2beta2;
+
+// Checkpoint subscription request
+message SubscribeToCheckpointsRequest {
+  uint64 start_sequence = 1;
+  bool include_full_transactions = 2;
+}
+
+// Checkpoint data
+message Checkpoint {
+  uint64 sequence_number = 1;
+  string digest = 2;
+  repeated Transaction transactions = 3;
+  uint64 timestamp = 4;
+}
+
+// Transaction data
+message Transaction {
+  string digest = 1;
+  repeated Event events = 2;
+  TransactionEffects effects = 3;
+}
+
+// Event data
+message Event {
+  string type = 1;
+  string data = 2;
+  string sender = 3;
+}
+
+// Transaction effects
+message TransactionEffects {
+  google.rpc.Status status = 1;
+  GasUsed gas_used = 2;
+}
+
+// Gas usage data
+message GasUsed {
+  uint64 computation_cost = 1;
+  uint64 storage_cost = 2;
+  uint64 storage_rebate = 3;
+}
+
+service SubscriptionService {
+  rpc SubscribeToCheckpoints(SubscribeToCheckpointsRequest) returns (stream Checkpoint);
+}

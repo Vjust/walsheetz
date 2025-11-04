@@ -67,6 +67,8 @@ export default defineConfig({
     fs: {
       strict: true,
       allow: [
+        fileURLToPath(new URL('./src', import.meta.url)),
+        fileURLToPath(new URL('./web', import.meta.url)),
         fileURLToPath(new URL('./frontend', import.meta.url)),
         fileURLToPath(new URL('./blockchain', import.meta.url)),
         fileURLToPath(new URL('./scripts', import.meta.url)),
@@ -177,10 +179,14 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      '@/walrus': fileURLToPath(new URL('./src/walrus', import.meta.url)),
+      '@/sdk': fileURLToPath(new URL('./src/sdk', import.meta.url)),
+      '@/web': fileURLToPath(new URL('./web', import.meta.url)),
+      '@/blockchain': fileURLToPath(new URL('./blockchain', import.meta.url)),
       '@': fileURLToPath(new URL('./frontend', import.meta.url)),
       '@blockchain': fileURLToPath(new URL('./blockchain', import.meta.url)),
       '@scripts': fileURLToPath(new URL('./scripts', import.meta.url)),
-      '@sentry/nextjs': fileURLToPath(new URL('./frontend/services/SentryStub.js', import.meta.url))
+      '@sentry/nextjs': fileURLToPath(new URL('./src/sdk/services/SentryStub.js', import.meta.url))
     },
     // Ensure .js extensions are resolved properly
     extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json']

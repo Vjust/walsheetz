@@ -34,7 +34,7 @@ async function checkUIImports() {
       console.log('⚠️  Found UI imports from blockchain/* services:');
       console.log(stdout);
       console.log('\n💡 Note: These existing imports are legacy.');
-      console.log('   New code should use frontend/services/* (Browser*Service) instead.');
+      console.log('   New code should use @/sdk/* or @/walrus/* aliases (Browser*Service) instead.');
       console.log('   blockchain/* services are for server/CLI/testing only.');
 
       // Count the violations - if it's more than expected legacy ones, fail

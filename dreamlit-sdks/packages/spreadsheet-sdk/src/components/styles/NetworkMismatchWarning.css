@@ -1,0 +1,18 @@
+/* NetworkMismatchWarning styles */
+.network-mismatch-warning {
+  background-color: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  color: #92400e;
+}
+
+.network-mismatch-warning__title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.network-mismatch-warning__message {
+  font-size: 14px;
+}

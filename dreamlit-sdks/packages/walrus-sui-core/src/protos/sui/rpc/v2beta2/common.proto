@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+import "google/rpc/status.proto";
+
+package sui.rpc.v2beta2;
+
+// Simple test proto to verify Google proto files integration
+message TestMessage {
+  string id = 1;
+  google.rpc.Status status = 2;
+}
+
+service TestService {
+  rpc GetTest(TestMessage) returns (TestMessage);
+}

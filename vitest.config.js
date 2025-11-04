@@ -34,6 +34,8 @@ export default defineConfig({
         '**/build/**'
       ],
       include: [
+        'src/walrus/**/*.js',
+        'src/sdk/**/*.js',
         'frontend/services/**/*.js',
         'blockchain/**/*.js'
       ],
@@ -58,6 +60,10 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      '@/walrus': fileURLToPath(new URL('./src/walrus', import.meta.url)),
+      '@/sdk': fileURLToPath(new URL('./src/sdk', import.meta.url)),
+      '@/web': fileURLToPath(new URL('./web', import.meta.url)),
+      '@/blockchain': fileURLToPath(new URL('./blockchain', import.meta.url)),
       '@': fileURLToPath(new URL('./frontend', import.meta.url)),
       '@blockchain': fileURLToPath(new URL('./blockchain', import.meta.url)),
       '@scripts': fileURLToPath(new URL('./scripts', import.meta.url))

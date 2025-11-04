@@ -246,7 +246,7 @@ class LoadingDebugger {
 
     if (this.issues.includes('BrowserSuiService service missing')) {
       console.log('❌ BrowserSuiService Missing:');
-      console.log('   - Check if frontend/services/BrowserSuiService.js exists');
+      console.log('   - Check if src/sdk/services/blockchain/BrowserSuiService.js exists');
       console.log('   - Verify the file is being imported correctly');
       console.log('   - Look for Sui-related errors in console');
       console.log('');
@@ -254,7 +254,7 @@ class LoadingDebugger {
 
     if (this.issues.includes('BrowserWalrusService service missing')) {
       console.log('❌ BrowserWalrusService Missing:');
-      console.log('   - Check if frontend/services/BrowserWalrusService.js exists');
+      console.log('   - Check if src/walrus/BrowserWalrusService.js exists');
       console.log('   - Verify Walrus connectivity errors');
       console.log('   - Check for blob retrieval errors');
       console.log('');

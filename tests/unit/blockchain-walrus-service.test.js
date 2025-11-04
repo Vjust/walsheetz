@@ -17,7 +17,7 @@ vi.mock('../../blockchain/config.js', () => ({
   })
 }));
 
-vi.mock('../../frontend/utils/CircuitBreaker.js', () => ({
+vi.mock('@/sdk/shared/utils/CircuitBreaker.js', () => ({
   ResilientExecutor: class MockResilientExecutor {
     constructor(config) {
       this.config = config;
@@ -28,7 +28,7 @@ vi.mock('../../frontend/utils/CircuitBreaker.js', () => ({
   }
 }));
 
-vi.mock('../../frontend/services/IndexedDBCache.js', () => ({
+vi.mock('@/sdk/services/IndexedDBCache.js', () => ({
   indexedDBCache: {
     get: vi.fn(),
     set: vi.fn(),

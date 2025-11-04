@@ -1,0 +1,72 @@
+Only in src/walrus: BrowserWalrusService.js
+Only in src/walrus: WalrusSdkClient.js
+Only in src/walrus: WalrusSdkClientLoader.js
+Only in src/walrus/client: .gitkeep
+diff -r frontend/services/walrus/client/WalrusBlobClient.js src/walrus/client/WalrusBlobClient.js
+4,7c4,7
+< import { encodeSpreadsheetData, decodeSpreadsheetData, calculateContentHash } from '../utils/DataEncoder.js';
+< import { validateDataForWalrus } from '../utils/DataValidator.js';
+< import { emitOperationEvent } from '../utils/WalrusEventEmitter.js';
+< import { withWalrusEndpoint } from '../config/endpointHelper.js';
+---
+> import { encodeSpreadsheetData, decodeSpreadsheetData, calculateContentHash } from "@/walrus/utils/DataEncoder.js";
+> import { validateDataForWalrus } from "@/walrus/utils/DataValidator.js";
+> import { emitOperationEvent } from "@/walrus/utils/WalrusEventEmitter.js";
+> import { withWalrusEndpoint } from "@/walrus/config/endpointHelper.js";
+131c131
+< }
+---
+> }
+\ No newline at end of file
+diff -r frontend/services/walrus/client/WalrusConnectionManager.js src/walrus/client/WalrusConnectionManager.js
+4c4
+< import { emitConnectionChange } from '../utils/WalrusEventEmitter.js';
+---
+> import { emitConnectionChange } from "@/walrus/utils/WalrusEventEmitter.js";
+63,64c63,64
+<       message.includes('NetworkError')
+<     );
+---
+>       message.includes('NetworkError'));
+> 
+106c106
+< }
+---
+> }
+\ No newline at end of file
+Only in src/walrus/config: .gitkeep
+Only in src/walrus/health: .gitkeep
+diff -r frontend/services/walrus/health/HealthMonitor.js src/walrus/health/HealthMonitor.js
+4c4
+< import { emitHealthStatusChange } from '../utils/WalrusEventEmitter.js';
+---
+> import { emitHealthStatusChange } from "@/walrus/utils/WalrusEventEmitter.js";
+134c134
+< }
+---
+> }
+\ No newline at end of file
+Only in src/walrus: index.js
+Only in src/walrus/retry: .gitkeep
+Only in src/walrus/transports: .gitkeep
+diff -r frontend/services/walrus/transports/DirectTransport.js src/walrus/transports/DirectTransport.js
+4c4
+< import { Transport } from './Transport.js';
+---
+> import { Transport } from "@/walrus/transports/Transport.js";
+79c79
+< }
+---
+> }
+\ No newline at end of file
+diff -r frontend/services/walrus/transports/ProxyTransport.js src/walrus/transports/ProxyTransport.js
+4c4
+< import { Transport } from './Transport.js';
+---
+> import { Transport } from "@/walrus/transports/Transport.js";
+79c79
+< }
+---
+> }
+\ No newline at end of file
+Only in src/walrus/utils: .gitkeep

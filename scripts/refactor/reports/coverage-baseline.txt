@@ -1,0 +1,1874 @@
+$ vitest run --coverage
+
+ RUN  v3.2.4 /Users/angel/Projects/test/walsheetz
+      Coverage enabled with v8
+
+stdout | tests/unit/services/BlobLineageTracker.test.js
+[90m[2:36:06 PM.856][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > trackVersion > should track a new blob version successfully
+[90m[2:36:06 PM.858][0m   ✅ [32mMocks created[0m
+
+stdout | src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js
+[90m[2:36:06 PM.879][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > trackVersion > should track a new blob version successfully
+[90m[2:36:06 PM.904][0m   🧪 [36mTest: should track a new blob version successfully[0m
+[90m[2:36:06 PM.905][0m   ✅ [32mPASS (0ms)[0m
+
+stdout | tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > trackVersion > should track parent-child relationship
+[90m[2:36:06 PM.906][0m   ✅ [32mMocks created[0m
+
+stdout | tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > trackVersion > should track parent-child relationship
+[90m[2:36:06 PM.910][0m   🧪 [36mTest: should track parent-child relationship[0m
+[90m[2:36:06 PM.910][0m   ✅ [32mPASS (0ms)[0m
+
+stdout | tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > getLineage > should retrieve lineage by object ID
+[90m[2:36:06 PM.910][0m   ✅ [32mMocks created[0m
+
+stdout | tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > getLineage > should retrieve lineage by object ID
+[90m[2:36:06 PM.911][0m   🧪 [36mTest: should retrieve lineage by object ID[0m
+[90m[2:36:06 PM.911][0m   ✅ [32mPASS (0ms)[0m
+
+stdout | tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > getLineage > should retrieve lineage by blob ID
+[90m[2:36:06 PM.912][0m   ✅ [32mMocks created[0m
+
+stdout | tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > getLineage > should retrieve lineage by blob ID
+[90m[2:36:06 PM.914][0m   🧪 [36mTest: should retrieve lineage by blob ID[0m
+[90m[2:36:06 PM.914][0m   ✅ [32mPASS (0ms)[0m
+
+stdout | tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > getLineage > should return error for non-existent lineage
+[90m[2:36:06 PM.915][0m   ✅ [32mMocks created[0m
+
+stdout | tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > getLineage > should return error for non-existent lineage
+[90m[2:36:06 PM.917][0m   🧪 [36mTest: should return error for non-existent lineage[0m
+[90m[2:36:06 PM.917][0m   ✅ [32mPASS (0ms)[0m
+
+stdout | tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > version queries > should get all versions for an object
+[90m[2:36:06 PM.917][0m   ✅ [32mMocks created[0m
+
+stdout | tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > version queries > should get all versions for an object
+[90m[2:36:06 PM.924][0m   🧪 [36mTest: should get all versions for an object[0m
+[90m[2:36:06 PM.928][0m   ✅ [32mPASS (0ms)[0m
+
+stdout | tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > version queries > should build version chain from blob to root
+[90m[2:36:06 PM.929][0m   ✅ [32mMocks created[0m
+
+stdout | tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > version queries > should build version chain from blob to root
+[90m[2:36:06 PM.938][0m   🧪 [36mTest: should build version chain from blob to root[0m
+[90m[2:36:06 PM.939][0m   ✅ [32mPASS (0ms)[0m
+
+stdout | tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > statistics > should calculate lineage statistics
+[90m[2:36:06 PM.940][0m   ✅ [32mMocks created[0m
+
+ ✓ tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > trackVersion > should track a new blob version successfully 48ms
+ ✓ tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > trackVersion > should track parent-child relationship 4ms
+ ✓ tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > getLineage > should retrieve lineage by object ID 1ms
+ ✓ tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > getLineage > should retrieve lineage by blob ID 3ms
+ ✓ tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > getLineage > should return error for non-existent lineage 2ms
+ ✓ tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > version queries > should get all versions for an object 12ms
+ ✓ tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > version queries > should build version chain from blob to root 11ms
+stdout | tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > statistics > should calculate lineage statistics
+[90m[2:36:06 PM.961][0m   🧪 [36mTest: should calculate lineage statistics[0m
+[90m[2:36:06 PM.962][0m   ✅ [32mPASS (0ms)[0m
+
+stdout | tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > update metadata > should update version metadata
+[90m[2:36:06 PM.963][0m   ✅ [32mMocks created[0m
+
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > executeAtomic > should execute 'single operation' 55ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > executeAtomic > should execute 'multiple parallel operations' 13ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > executeAtomic > should execute sequential operations with dependency resolution 1ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > executeAtomic > should register and track cleanup handlers 3ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > executeAtomic > should rollback on 'parallel operation failure' 1ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > executeAtomic > should rollback on 'sequential operation failure' 1ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > executeAtomic > should rollback on 'cleanup failure (continues rollback)' 1ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > executeAtomic > should pass context to operations 1ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > executeAtomic > should handle operations with mixed parallel and sequential 1ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > cleanup > should auto-cleanup operation tracking after successful completion 0ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > cleanup > should log cleanup events for both success and failure paths 0ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > error handling > should 'enhance errors with context' 0ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > error handling > should 'handle string errors' 0ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > error handling > should 'include recovery actions' 0ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > logging > should log 'start and success' 0ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > logging > should log 'parallel and sequential phases' 0ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > logging > should log 'rollback on failure' 0ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Transaction Experience Integration > should wrap parallel operations with transaction experience 0ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Transaction Experience Integration > should NOT wrap sequential operations with transaction experience 1ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Transaction Experience Integration > should emit transaction progress events during parallel execution 0ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Operation Context Flow > should pass operationResults through context for dependent operations 0ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Operation Context Flow > should pass initial context through all operations 3ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Cleanup Handler Lifecycle > should call getCleanupHandler with operation result 1ms
+stdout | tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > update metadata > should update version metadata
+[90m[2:36:06 PM.968][0m   🧪 [36mTest: should update version metadata[0m
+[90m[2:36:06 PM.968][0m   ✅ [32mPASS (0ms)[0m
+
+stdout | tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > localStorage persistence > should track lineage in-memory (RAM-only mode)
+[90m[2:36:06 PM.969][0m   ✅ [32mMocks created[0m
+
+stdout | src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js
+[90m[2:36:06 PM.970][0m ✅ [32m✅ Test environment cleaned up[0m
+
+stdout | tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > localStorage persistence > should track lineage in-memory (RAM-only mode)
+[90m[2:36:06 PM.972][0m   🧪 [36mTest: should track lineage in-memory[0m
+[90m[2:36:06 PM.972][0m   ✅ [32mPASS (0ms)[0m
+
+stdout | tests/unit/services/BlobLineageTracker.test.js
+[90m[2:36:06 PM.972][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > statistics > should calculate lineage statistics 23ms
+ ✓ tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > update metadata > should update version metadata 6ms
+ ✓ tests/unit/services/BlobLineageTracker.test.js > BlobLineageTracker > localStorage persistence > should track lineage in-memory (RAM-only mode) 4ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Cleanup Handler Lifecycle > should auto-cleanup and remove operations from tracking on success 1ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Cleanup Handler Lifecycle > should execute cleanup in reverse order during rollback 1ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Cleanup Handler Lifecycle > should continue rollback even if a cleanup handler fails 0ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Error Decoration > should decorate errors with operation context 0ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Error Decoration > should handle errors in parallel operations 0ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Error Decoration > should handle errors in sequential operations 0ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Mixed Parallel and Sequential > should execute parallel operations first, then sequential 0ms
+ ✓ src/sdk/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Mixed Parallel and Sequential > should build correct dependency context for sequential operations 2ms
+stdout | frontend/presentation/components/__tests__/SaveStatusBanner.event.test.jsx
+[90m[2:36:07 PM.145][0m ✅ [32m✅ Test environment ready[0m
+
+ ✓ frontend/presentation/components/__tests__/SaveStatusBanner.event.test.jsx > SaveStatusBanner Event Handling > save:fallback event > should render banner when save:fallback event fired 22ms
+ ✓ frontend/presentation/components/__tests__/SaveStatusBanner.event.test.jsx > SaveStatusBanner Event Handling > save:fallback event > should avoid duplicate fallback notifications 3ms
+ ✓ frontend/presentation/components/__tests__/SaveStatusBanner.event.test.jsx > SaveStatusBanner Event Handling > save:fallback event > should show multiple fallbacks with count 7ms
+ ✓ frontend/presentation/components/__tests__/SaveStatusBanner.event.test.jsx > SaveStatusBanner Event Handling > save:retry-success event > should remove fallback from list on success 5ms
+ ✓ frontend/presentation/components/__tests__/SaveStatusBanner.event.test.jsx > SaveStatusBanner Event Handling > save:retry-success event > should show success confirmation message 10ms
+ ✓ frontend/presentation/components/__tests__/SaveStatusBanner.event.test.jsx > SaveStatusBanner Event Handling > save:retry-failed event > should show failure message when retry fails 5ms
+ ✓ frontend/presentation/components/__tests__/SaveStatusBanner.event.test.jsx > SaveStatusBanner Event Handling > save:retry-failed event > should keep fallback in list on failure 6ms
+ ✓ frontend/presentation/components/__tests__/SaveStatusBanner.event.test.jsx > SaveStatusBanner Event Handling > save:startup-retry-complete event > should show summary of startup retry results 6ms
+ ✓ frontend/presentation/components/__tests__/SaveStatusBanner.event.test.jsx > SaveStatusBanner Event Handling > save:startup-retry-complete event > should show pending saves if some failed 4ms
+ ✓ frontend/presentation/components/__tests__/SaveStatusBanner.event.test.jsx > SaveStatusBanner Event Handling > Retry button functionality > should emit save:retry-fallbacks event on button click 12ms
+stdout | frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx
+[90m[2:36:07 PM.339][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Successful Renewal > should call extendBlobStorage with blobId and epochs
+✅ Blob expiry persisted to StorageAdapter
+✅ Parent lastSaveInfo updated
+✅ blob:expiry-extended event emitted
+
+stderr | frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Successful Renewal > should call extendBlobStorage with blobId and epochs
+Warning: The current testing environment is not configured to support act(...)
+❌ Error renewing storage: TypeError: alert is not a function
+    at [90m/Users/angel/Projects/test/walsheetz/[39mfrontend/presentation/components/spreadsheet/SaveDetailsModal.jsx:143:9
+Warning: The current testing environment is not configured to support act(...)
+Warning: The current testing environment is not configured to support act(...)
+
+ ✓ frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Renewal Button Display > should display renewal button when expiry is within 7 days 36ms
+ ✓ frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Renewal Button Display > should not display renewal button when expiry is after 7 days 5ms
+ ✓ frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Renewal Button Display > should display expiry warning when storage expires soon 5ms
+stdout | frontend/services/luckysheet/__tests__/dataTransforms.test.js
+[90m[2:36:07 PM.430][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Successful Renewal > should update StorageAdapter with new expiry after renewal
+✅ Blob expiry persisted to StorageAdapter
+✅ Parent lastSaveInfo updated
+✅ blob:expiry-extended event emitted
+
+stderr | frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Successful Renewal > should update StorageAdapter with new expiry after renewal
+Warning: The current testing environment is not configured to support act(...)
+❌ Error renewing storage: TypeError: alert is not a function
+    at [90m/Users/angel/Projects/test/walsheetz/[39mfrontend/presentation/components/spreadsheet/SaveDetailsModal.jsx:143:9
+Warning: The current testing environment is not configured to support act(...)
+Warning: The current testing environment is not configured to support act(...)
+
+stdout | frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Successful Renewal > should call onExpiryUpdate callback after successful renewal
+✅ Blob expiry persisted to StorageAdapter
+✅ Parent lastSaveInfo updated
+✅ blob:expiry-extended event emitted
+
+stderr | frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Successful Renewal > should call onExpiryUpdate callback after successful renewal
+Warning: The current testing environment is not configured to support act(...)
+❌ Error renewing storage: TypeError: alert is not a function
+    at [90m/Users/angel/Projects/test/walsheetz/[39mfrontend/presentation/components/spreadsheet/SaveDetailsModal.jsx:143:9
+Warning: The current testing environment is not configured to support act(...)
+Warning: The current testing environment is not configured to support act(...)
+
+stdout | frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Successful Renewal > should emit blob:expiry-extended event after renewal
+✅ Blob expiry persisted to StorageAdapter
+✅ Parent lastSaveInfo updated
+✅ blob:expiry-extended event emitted
+
+stderr | frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Successful Renewal > should emit blob:expiry-extended event after renewal
+Warning: The current testing environment is not configured to support act(...)
+❌ Error renewing storage: TypeError: alert is not a function
+    at [90m/Users/angel/Projects/test/walsheetz/[39mfrontend/presentation/components/spreadsheet/SaveDetailsModal.jsx:143:9
+Warning: The current testing environment is not configured to support act(...)
+Warning: The current testing environment is not configured to support act(...)
+
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > convertToLuckysheetData > should convert cell-reference format to celldata array 2ms
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > convertToLuckysheetData > should handle nested data format (data.data.cells) 0ms
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > convertToLuckysheetData > should handle data.cells format 0ms
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > convertToLuckysheetData > should return prebuilt celldata array if already in correct format 0ms
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > convertToLuckysheetData > should return empty array for invalid input 0ms
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > convertToLuckysheetData > should skip invalid cell references 0ms
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > convertToLuckysheetData > should handle cells with type metadata 0ms
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > convertToLuckysheetData > should handle null/undefined cell values 0ms
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > convertToLuckysheetData > should handle multi-letter columns (AA, AB, etc.) 0ms
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > convertToLuckysheetFormula > should convert function metadata to Luckysheet format 0ms
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > convertToLuckysheetFormula > should handle variadic parameters 0ms
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > convertToLuckysheetFormula > should handle functions with no parameters 0ms
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > convertToLuckysheetFormula > should use default description if not provided 0ms
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > buildLuckysheetFunctionObject > should build nested function tree 0ms
+ × frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > buildLuckysheetFunctionObject > should include all WalSheetz functions 9ms
+   → expected false to be true // Object.is equality
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > buildLuckysheetFunctionObject > should handle errors gracefully 1ms
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > calculateSheetDimensions > should calculate dimensions from celldata 0ms
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > calculateSheetDimensions > should use minimum defaults for empty data 0ms
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > calculateSheetDimensions > should use minimum defaults when cells are within defaults 0ms
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > calculateSheetDimensions > should expand rows beyond default 0ms
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > calculateSheetDimensions > should expand columns beyond default 0ms
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > calculateSheetDimensions > should allow custom minimum dimensions 0ms
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > calculateSheetDimensions > should handle null celldata 0ms
+ ✓ frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > calculateSheetDimensions > should ignore invalid cells without r/c properties 0ms
+stderr | frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Renewal Error Handling > should display error message when renewal fails
+Warning: The current testing environment is not configured to support act(...)
+❌ Renewal failed: Blob not found on aggregator
+Warning: The current testing environment is not configured to support act(...)
+
+ ✓ frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Successful Renewal > should call extendBlobStorage with blobId and epochs 36ms
+ ✓ frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Successful Renewal > should update StorageAdapter with new expiry after renewal 23ms
+ ✓ frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Successful Renewal > should call onExpiryUpdate callback after successful renewal 19ms
+ ✓ frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Successful Renewal > should emit blob:expiry-extended event after renewal 29ms
+stderr | frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Renewal Error Handling > should not update StorageAdapter if renewal fails
+Warning: The current testing environment is not configured to support act(...)
+❌ Renewal failed: Network error
+Warning: The current testing environment is not configured to support act(...)
+
+stderr | frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Renewal Error Handling > should handle exception thrown by extendBlobStorage
+❌ Error renewing storage: Error: Connection timeout
+    at [90m/Users/angel/Projects/test/walsheetz/[39mfrontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx:371:47
+    at [90mfile:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+    at runTest [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1574:12[90m)[39m
+    at runSuite [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+Warning: The current testing environment is not configured to support act(...)
+Warning: The current testing environment is not configured to support act(...)
+
+stdout | tests/unit/services/PoACertificationService.test.js
+[90m[2:36:07 PM.559][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | tests/unit/services/PoACertificationService.test.js > PoACertificationService > requestCertification > should successfully request certification for a blob
+[90m[2:36:07 PM.561][0m   ✅ [32mMocks created successfully[0m
+
+stdout | tests/unit/services/PoACertificationService.test.js > PoACertificationService > requestCertification > should successfully request certification for a blob
+[90m[2:36:07 PM.571][0m   🧪 [36mTest: should successfully request certification for a blob[0m
+
+stdout | frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Button State During Renewal > should disable renewal button while renewal is in progress
+✅ Blob expiry persisted to StorageAdapter
+✅ Parent lastSaveInfo updated
+✅ blob:expiry-extended event emitted
+
+stderr | frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Button State During Renewal > should disable renewal button while renewal is in progress
+❌ Error renewing storage: TypeError: alert is not a function
+    at [90m/Users/angel/Projects/test/walsheetz/[39mfrontend/presentation/components/spreadsheet/SaveDetailsModal.jsx:143:9
+
+stdout | tests/unit/services/PoACertificationService.test.js > PoACertificationService > requestCertification > should successfully request certification for a blob
+[90m[2:36:07 PM.573][0m   ✅ [32mPASS (0ms)[0m
+
+stdout | tests/unit/services/PoACertificationService.test.js > PoACertificationService > requestCertification > should handle certification failure
+[90m[2:36:07 PM.574][0m   ✅ [32mMocks created successfully[0m
+
+stdout | tests/unit/services/PoACertificationService.test.js > PoACertificationService > requestCertification > should handle certification failure
+[90m[2:36:07 PM.576][0m   🧪 [36mTest: should handle certification failure[0m
+
+stdout | tests/unit/services/PoACertificationService.test.js > PoACertificationService > requestCertification > should handle certification failure
+[90m[2:36:07 PM.577][0m   ✅ [32mPASS (0ms)[0m
+
+stdout | tests/unit/services/PoACertificationService.test.js > PoACertificationService > requestCertification > should prevent duplicate certification requests
+[90m[2:36:07 PM.577][0m   ✅ [32mMocks created successfully[0m
+
+stdout | frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx
+[90m[2:36:07 PM.577][0m ✅ [32m✅ Test environment cleaned up[0m
+
+stdout | tests/unit/services/PoACertificationService.test.js > PoACertificationService > requestCertification > should prevent duplicate certification requests
+[90m[2:36:07 PM.578][0m   🧪 [36mTest: should prevent duplicate certification requests[0m
+
+stdout | frontend/adapters/__tests__/BlockchainAdapter.fallback.test.js
+[90m[2:36:07 PM.588][0m ✅ [32m✅ Test environment ready[0m
+
+ ✓ frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Renewal Error Handling > should display error message when renewal fails 22ms
+ ✓ frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Renewal Error Handling > should not update StorageAdapter if renewal fails 18ms
+ ✓ frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Renewal Error Handling > should handle exception thrown by extendBlobStorage 25ms
+ ✓ frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx > SaveDetailsModal Renewal > Button State During Renewal > should disable renewal button while renewal is in progress 19ms
+ ✓ tests/unit/services/PoACertificationService.test.js > PoACertificationService > requestCertification > should successfully request certification for a blob 14ms
+ ✓ tests/unit/services/PoACertificationService.test.js > PoACertificationService > requestCertification > should handle certification failure 3ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.fallback.test.js > BlockchainAdapter Fallback Retry System > retryFallbackSave() > should use cached fallback data, not current sheet 3ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.fallback.test.js > BlockchainAdapter Fallback Retry System > retryFallbackSave() > should delete fallback key on success 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.fallback.test.js > BlockchainAdapter Fallback Retry System > retryFallbackSave() > should keep fallback key on failure 1ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.fallback.test.js > BlockchainAdapter Fallback Retry System > retryFallbackSave() > should return success object on success 1ms
+stdout | tests/unit/services/PoACertificationService.test.js > PoACertificationService > requestCertification > should prevent duplicate certification requests
+[90m[2:36:07 PM.681][0m   ✅ [32mPASS (0ms)[0m
+
+stdout | tests/unit/services/PoACertificationService.test.js > PoACertificationService > checkCertificationStatus > should check and return certification status
+[90m[2:36:07 PM.682][0m   ✅ [32mMocks created successfully[0m
+
+stdout | tests/unit/services/PoACertificationService.test.js > PoACertificationService > checkCertificationStatus > should check and return certification status
+[90m[2:36:07 PM.684][0m   🧪 [36mTest: should check and return certification status[0m
+
+stdout | tests/unit/services/PoACertificationService.test.js > PoACertificationService > checkCertificationStatus > should check and return certification status
+[90m[2:36:07 PM.684][0m   ✅ [32mPASS (0ms)[0m
+
+stdout | tests/unit/services/PoACertificationService.test.js > PoACertificationService > startStatusPolling > should poll until certification is confirmed
+[90m[2:36:07 PM.684][0m   ✅ [32mMocks created successfully[0m
+
+stdout | tests/unit/services/PoACertificationService.test.js > PoACertificationService > startStatusPolling > should poll until certification is confirmed
+[90m[2:36:07 PM.687][0m   🧪 [36mTest: should poll until certification is confirmed[0m
+
+stdout | frontend/services/__tests__/CSVImportIntegration.test.js
+[90m[2:36:07 PM.763][0m ✅ [32m✅ Test environment ready[0m
+
+ ✓ tests/unit/services/PoACertificationService.test.js > PoACertificationService > requestCertification > should prevent duplicate certification requests 104ms
+ ✓ tests/unit/services/PoACertificationService.test.js > PoACertificationService > checkCertificationStatus > should check and return certification status 3ms
+ ✓ frontend/services/__tests__/CSVImportIntegration.test.js > CSV Import Integration > Async Chunked CSV Conversion > should handle small CSV data 1ms
+ ✓ frontend/services/__tests__/CSVImportIntegration.test.js > CSV Import Integration > Async Chunked CSV Conversion > should handle medium CSV data without blocking 9ms
+stdout | tests/unit/services/PoACertificationService.test.js > PoACertificationService > startStatusPolling > should poll until certification is confirmed
+[90m[2:36:07 PM.995][0m   ✅ [32mPASS (0ms)[0m
+
+stdout | tests/unit/services/PoACertificationService.test.js > PoACertificationService > getCertificationHistory > should return certification history for a blob
+[90m[2:36:07 PM.996][0m   ✅ [32mMocks created successfully[0m
+
+stdout | tests/unit/services/PoACertificationService.test.js > PoACertificationService > getCertificationHistory > should return certification history for a blob
+[90m[2:36:07 PM.998][0m   🧪 [36mTest: should return certification history for a blob[0m
+[90m[2:36:07 PM.999][0m   ✅ [32mPASS (0ms)[0m
+
+stdout | tests/unit/services/PoACertificationService.test.js > PoACertificationService > certification history tracking > should track certification history in-memory (RAM-only mode)
+[90m[2:36:08 PM.000][0m   ✅ [32mMocks created successfully[0m
+
+stdout | tests/unit/services/PoACertificationService.test.js > PoACertificationService > certification history tracking > should track certification history in-memory (RAM-only mode)
+[90m[2:36:08 PM.002][0m   🧪 [36mTest: should track certification history in-memory[0m
+[90m[2:36:08 PM.002][0m   ✅ [32mPASS (0ms)[0m
+
+stdout | tests/unit/services/PoACertificationService.test.js
+[90m[2:36:08 PM.003][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ tests/unit/services/PoACertificationService.test.js > PoACertificationService > startStatusPolling > should poll until certification is confirmed 311ms
+ ✓ tests/unit/services/PoACertificationService.test.js > PoACertificationService > getCertificationHistory > should return certification history for a blob 4ms
+ ✓ tests/unit/services/PoACertificationService.test.js > PoACertificationService > certification history tracking > should track certification history in-memory (RAM-only mode) 3ms
+ ✓ frontend/services/__tests__/CSVImportIntegration.test.js > CSV Import Integration > Async Chunked CSV Conversion > should handle large CSV data (50k+ cells) 79ms
+ ✓ frontend/services/__tests__/CSVImportIntegration.test.js > CSV Import Integration > Async Chunked CSV Conversion > should not stack overflow with very large data 80ms
+ ✓ frontend/services/__tests__/CSVImportIntegration.test.js > CSV Import Integration > Async Chunked CSV Conversion > should provide progress callbacks 15ms
+ ✓ frontend/services/__tests__/CSVImportIntegration.test.js > CSV Import Integration > Async Chunked CSV Conversion > should preserve data integrity during chunked processing 1ms
+ ✓ frontend/services/__tests__/CSVImportIntegration.test.js > CSV Import Integration > Error Handling > should handle malformed CSV gracefully 0ms
+ ✓ frontend/services/__tests__/CSVImportIntegration.test.js > CSV Import Integration > Error Handling > should handle empty CSV 0ms
+stdout | src/sdk/services/blockchain/BrowserSuiService.network.test.js
+[90m[2:36:08 PM.056][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | frontend/services/__tests__/CSVImportIntegration.test.js
+[90m[2:36:08 PM.060][0m ✅ [32m✅ Test environment cleaned up[0m
+
+stdout | src/sdk/services/blockchain/BrowserSuiService.network.test.js
+[90m[2:36:08 PM.064][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ frontend/services/__tests__/CSVImportIntegration.test.js > CSV Import Integration > Performance > should not block main thread significantly 110ms
+ ✓ src/sdk/services/blockchain/BrowserSuiService.network.test.js > BrowserSuiService - Network Detection > checkNetworkAgainstConfig > should detect testnet network consistency 1ms
+ ✓ src/sdk/services/blockchain/BrowserSuiService.network.test.js > BrowserSuiService - Network Detection > checkNetworkAgainstConfig > should detect mainnet network consistency 0ms
+ ✓ src/sdk/services/blockchain/BrowserSuiService.network.test.js > BrowserSuiService - Network Detection > checkNetworkAgainstConfig > should detect network mismatch between wallet and config 1ms
+ ✓ src/sdk/services/blockchain/BrowserSuiService.network.test.js > BrowserSuiService - Network Detection > checkNetworkAgainstConfig > should not auto-switch network on mismatch detection 0ms
+ ✓ src/sdk/services/blockchain/BrowserSuiService.network.test.js > BrowserSuiService - Network Detection > checkNetworkAgainstConfig > should allow explicit network switch after confirmation 3ms
+ ✓ src/sdk/services/blockchain/BrowserSuiService.network.test.js > BrowserSuiService - Network Detection > Network warning state > should generate network warning when mismatch detected 0ms
+ ✓ src/sdk/services/blockchain/BrowserSuiService.network.test.js > BrowserSuiService - Network Detection > Network warning state > should provide user choice between switching or keeping config 0ms
+ ✓ src/sdk/services/blockchain/BrowserSuiService.network.test.js > BrowserSuiService - Network Detection > RPC endpoint selection > should use configured RPC URL for detected network 0ms
+ ✓ src/sdk/services/blockchain/BrowserSuiService.network.test.js > BrowserSuiService - Network Detection > RPC endpoint selection > should use proxy endpoint in production 0ms
+ ✓ src/sdk/services/blockchain/BrowserSuiService.network.test.js > BrowserSuiService - Network Detection > RPC endpoint selection > should fallback to absolute URL on proxy failure 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.fallback.test.js > BlockchainAdapter Fallback Retry System > autoRetryFallbacksOnStartup() > should wait for wallet connection before retrying 503ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.fallback.test.js > BlockchainAdapter Fallback Retry System > autoRetryFallbacksOnStartup() > should skip retry if wallet never connects (timeout) 6ms
+stdout | tests/unit/blockchain/graphql-error-recovery.test.js
+[90m[2:36:08 PM.332][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | tests/unit/blockchain-walrus-service.test.js
+[90m[2:36:08 PM.395][0m ✅ [32m✅ Test environment ready[0m
+
+ ✓ tests/unit/blockchain/graphql-error-recovery.test.js > GraphQL Error Recovery > should increase backoff multiplier on errors 5ms
+ ✓ tests/unit/blockchain/graphql-error-recovery.test.js > GraphQL Error Recovery > should preserve backoff state across start/stop cycles 0ms
+ ✓ tests/unit/blockchain/graphql-error-recovery.test.js > GraphQL Error Recovery > should reset backoff multiplier only on successful operations 0ms
+ ✓ tests/unit/blockchain/graphql-error-recovery.test.js > GraphQL Error Recovery > should handle restart flag correctly 0ms
+ ✓ tests/unit/blockchain/graphql-error-recovery.test.js > GraphQL Error Recovery > should preserve interval calculation with backoff 3ms
+ ✓ tests/unit/blockchain/graphql-error-recovery.test.js > GraphQL Error Recovery > should handle error during active polling 101ms
+stdout | frontend/services/__tests__/GridSizeManager.test.js
+[90m[2:36:08 PM.523][0m ✅ [32m✅ Test environment ready[0m
+
+ ✓ tests/unit/blockchain-walrus-service.test.js > WalrusService > storeWithQuilt > should await encodeSpreadsheetData and use encoded.data for blob 116ms
+ ✓ tests/unit/blockchain-walrus-service.test.js > WalrusService > storeWithQuilt > should handle encoding errors gracefully 3ms
+ ✓ tests/unit/blockchain-walrus-service.test.js > WalrusService > storeWithQuilt > should create blob with correct binary data 4ms
+stdout | frontend/services/__tests__/GridSizeManager.test.js
+[90m[2:36:08 PM.566][0m ✅ [32m✅ Test environment cleaned up[0m
+
+stdout | frontend/services/blockchain/__tests__/AtomicOperationManager.test.js
+[90m[2:36:08 PM.565][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | frontend/services/__tests__/walrus/config/WalrusConfigResolver.test.js
+[90m[2:36:08 PM.575][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | frontend/services/__tests__/walrus/config/WalrusConfigResolver.test.js
+[90m[2:36:08 PM.578][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ frontend/services/__tests__/GridSizeManager.test.js > GridSizeManager > Initialization > should initialize with default capacity 2ms
+ ✓ frontend/services/__tests__/GridSizeManager.test.js > GridSizeManager > Initialization > should calculate proper initial dimensions 0ms
+ ✓ frontend/services/__tests__/GridSizeManager.test.js > GridSizeManager > Initialization > should have empty expansion listeners 0ms
+ ✓ frontend/services/__tests__/GridSizeManager.test.js > GridSizeManager > Capacity Checking > should not expand for data smaller than current capacity 0ms
+ ✓ frontend/services/__tests__/GridSizeManager.test.js > GridSizeManager > Capacity Checking > should expand for data larger than current capacity 0ms
+ ✓ frontend/services/__tests__/GridSizeManager.test.js > GridSizeManager > Capacity Checking > should expand to next chunk boundary 0ms
+ ✓ frontend/services/__tests__/GridSizeManager.test.js > GridSizeManager > Capacity Checking > should track rows and columns added 0ms
+ ✓ frontend/services/__tests__/GridSizeManager.test.js > GridSizeManager > Dimension Calculations > should calculate square-equivalent dimensions 0ms
+ ✓ frontend/services/__tests__/GridSizeManager.test.js > GridSizeManager > Dimension Calculations > should round up capacity to chunk boundary 0ms
+ ✓ frontend/services/__tests__/GridSizeManager.test.js > GridSizeManager > Dimension Calculations > should not change capacity if requirement is below current 0ms
+ ✓ frontend/services/__tests__/GridSizeManager.test.js > GridSizeManager > Expansion Callbacks > should call expansion listeners on expansion 11ms
+ ✓ frontend/services/__tests__/GridSizeManager.test.js > GridSizeManager > Expansion Callbacks > should not call listeners if no expansion needed 12ms
+ ✓ frontend/services/__tests__/GridSizeManager.test.js > GridSizeManager > Expansion Callbacks > should remove listener with offExpand 0ms
+ ✓ frontend/services/__tests__/GridSizeManager.test.js > GridSizeManager > Expansion Callbacks > should provide expansion details to listener 13ms
+ ✓ frontend/services/__tests__/GridSizeManager.test.js > GridSizeManager > Import Preallocation > should prealloc for large imports 0ms
+ ✓ frontend/services/__tests__/GridSizeManager.test.js > GridSizeManager > Import Preallocation > should handle sequential imports 0ms
+ ✓ frontend/services/__tests__/GridSizeManager.test.js > GridSizeManager > Reset > should reset capacity to default 0ms
+ ✓ frontend/services/__tests__/GridSizeManager.test.js > GridSizeManager > Reset > should reset dimensions after reset 0ms
+ ✓ frontend/services/__tests__/GridSizeManager.test.js > GridSizeManager > Info Method > should return debug info 0ms
+ ✓ frontend/services/__tests__/GridSizeManager.test.js > GridSizeManager > Custom Configuration > should respect custom default capacity 0ms
+ ✓ frontend/services/__tests__/GridSizeManager.test.js > GridSizeManager > Custom Configuration > should respect custom chunk size 0ms
+ ✓ frontend/services/__tests__/walrus/config/WalrusConfigResolver.test.js > WalrusConfigResolver > should resolve endpoints with proxy and direct URLs 1ms
+ ✓ frontend/services/__tests__/walrus/config/WalrusConfigResolver.test.js > WalrusConfigResolver > should detect when proxy is disabled (proxy === direct) 0ms
+ ✓ frontend/services/__tests__/walrus/config/WalrusConfigResolver.test.js > WalrusConfigResolver > should throw error if config is null 1ms
+stdout | frontend/services/blockchain/__tests__/AtomicOperationManager.test.js
+[90m[2:36:08 PM.606][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > executeAtomic > should execute 'single operation' 14ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > executeAtomic > should execute 'multiple parallel operations' 12ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > executeAtomic > should execute sequential operations with dependency resolution 1ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > executeAtomic > should register and track cleanup handlers 2ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > executeAtomic > should rollback on 'parallel operation failure' 1ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > executeAtomic > should rollback on 'sequential operation failure' 0ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > executeAtomic > should rollback on 'cleanup failure (continues rollback)' 1ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > executeAtomic > should pass context to operations 1ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > executeAtomic > should handle operations with mixed parallel and sequential 0ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > cleanup > should auto-cleanup operation tracking after successful completion 0ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > cleanup > should log cleanup events for both success and failure paths 0ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > error handling > should 'enhance errors with context' 0ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > error handling > should 'handle string errors' 0ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > error handling > should 'include recovery actions' 0ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > logging > should log 'start and success' 0ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > logging > should log 'parallel and sequential phases' 0ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > logging > should log 'rollback on failure' 0ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Transaction Experience Integration > should wrap parallel operations with transaction experience 0ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Transaction Experience Integration > should NOT wrap sequential operations with transaction experience 1ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Transaction Experience Integration > should emit transaction progress events during parallel execution 0ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Operation Context Flow > should pass operationResults through context for dependent operations 0ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Operation Context Flow > should pass initial context through all operations 0ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Cleanup Handler Lifecycle > should call getCleanupHandler with operation result 1ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Cleanup Handler Lifecycle > should auto-cleanup and remove operations from tracking on success 0ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Cleanup Handler Lifecycle > should execute cleanup in reverse order during rollback 1ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Cleanup Handler Lifecycle > should continue rollback even if a cleanup handler fails 0ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Error Decoration > should decorate errors with operation context 0ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Error Decoration > should handle errors in parallel operations 0ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Error Decoration > should handle errors in sequential operations 0ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Mixed Parallel and Sequential > should execute parallel operations first, then sequential 0ms
+ ✓ frontend/services/blockchain/__tests__/AtomicOperationManager.test.js > AtomicOperationManager > Characterization - Mixed Parallel and Sequential > should build correct dependency context for sequential operations 0ms
+stdout | frontend/services/__tests__/walrus/utils/DataEncoder.test.js
+[90m[2:36:08 PM.936][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | frontend/services/__tests__/walrus/utils/DataEncoder.test.js
+[90m[2:36:08 PM.945][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ frontend/services/__tests__/walrus/utils/DataEncoder.test.js > DataEncoder > should encode spreadsheet data without compression for small data 1ms
+ ✓ frontend/services/__tests__/walrus/utils/DataEncoder.test.js > DataEncoder > should decode encoded data back to original structure 0ms
+ ✓ frontend/services/__tests__/walrus/utils/DataEncoder.test.js > DataEncoder > should detect gzip compression 0ms
+ ✓ frontend/services/__tests__/walrus/utils/DataEncoder.test.js > DataEncoder > should calculate consistent content hash 4ms
+stdout | frontend/adapters/__tests__/BlockchainAdapter.fallback.test.js
+[90m[2:36:09 PM.106][0m ✅ [32m✅ Test environment cleaned up[0m
+
+stdout | frontend/services/__tests__/WalrusSdkClientLoader.smoke.test.js
+[90m[2:36:09 PM.123][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | frontend/adapters/__tests__/BlockchainAdapter.metadata.test.js
+[90m[2:36:09 PM.129][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | frontend/adapters/__tests__/BlockchainAdapter.metadata.test.js
+[90m[2:36:09 PM.133][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.fallback.test.js > BlockchainAdapter Fallback Retry System > autoRetryFallbacksOnStartup() > should retry all fallback keys when wallet connected 1002ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.fallback.test.js > BlockchainAdapter Fallback Retry System > checkStaleFallbacks() > should detect fallbacks older than 7 days 1ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.fallback.test.js > BlockchainAdapter Fallback Retry System > checkStaleFallbacks() > should not include recent fallbacks 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.fallback.test.js > BlockchainAdapter Fallback Retry System > deleteStaleFallbacks() > should delete specified fallback keys 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.fallback.test.js > BlockchainAdapter Fallback Retry System > exportFallbackAsJSON() > should export fallback as properly formatted JSON 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.fallback.test.js > BlockchainAdapter Fallback Retry System > exportFallbackAsJSON() > should return null if fallback not found 0ms
+stderr | frontend/services/__tests__/WalrusSdkClientLoader.smoke.test.js > WalrusSdkClientLoader > should return null when SDK is not enabled
+AggregateError: 
+[90m    at internalConnectMultiple (node:net:1134:18)[39m
+[90m    at afterConnectMultiple (node:net:1715:7)[39m {
+  code: [32m'ECONNREFUSED'[39m,
+  [errors]: [
+    Error: connect ECONNREFUSED ::1:3000
+    [90m    at createConnectionError (node:net:1678:14)[39m
+    [90m    at afterConnectMultiple (node:net:1708:16)[39m {
+      errno: [33m-61[39m,
+      code: [32m'ECONNREFUSED'[39m,
+      syscall: [32m'connect'[39m,
+      address: [32m'::1'[39m,
+      port: [33m3000[39m
+    },
+    Error: connect ECONNREFUSED 127.0.0.1:3000
+    [90m    at createConnectionError (node:net:1678:14)[39m
+    [90m    at afterConnectMultiple (node:net:1708:16)[39m {
+      errno: [33m-61[39m,
+      code: [32m'ECONNREFUSED'[39m,
+      syscall: [32m'connect'[39m,
+      address: [32m'127.0.0.1'[39m,
+      port: [33m3000[39m
+    }
+  ]
+}
+
+stderr | frontend/services/__tests__/WalrusSdkClientLoader.smoke.test.js > WalrusSdkClientLoader > should return null when SDK is not enabled
+❌ [ConfigLoader] Config loading error: {
+  errorMessage: [32m'Failed to execute "fetch()" on "Window" with URL "http://localhost:3000/app-config.json": '[39m,
+  errorType: [32m'DOMException'[39m,
+  errorStack: [32m'NetworkError: Failed to execute "fetch()" on "Window" with URL "http://localhost:3000/app-config.json": \n'[39m +
+    [32m'    at Fetch.onError (file:///Users/angel/Projects/test/walsheetz/node_modules/happy-dom/src/fetch/Fetch.ts:673:4)\n'[39m +
+    [32m'    at ClientRequest.emit (node:events:508:28)'[39m,
+  timestamp: [32m'2025-11-01T21:36:09.150Z'[39m,
+  configUrl: [32m'/app-config.json'[39m
+}
+
+stdout | frontend/services/__tests__/WalrusSdkClientLoader.smoke.test.js > WalrusSdkClientLoader > should return null when SDK is not enabled
+[WalrusSdkClientLoader] Walrus SDK disabled (default). Set walrus.features.useSdk=true to enable.
+
+stdout | frontend/services/__tests__/WalrusSdkClientLoader.smoke.test.js > WalrusSdkClientLoader > should return same promise for concurrent load attempts
+[WalrusSdkClientLoader] Walrus SDK disabled (default). Set walrus.features.useSdk=true to enable.
+
+stdout | frontend/services/__tests__/WalrusSdkClientLoader.smoke.test.js
+[90m[2:36:09 PM.154][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.metadata.test.js > BlockchainAdapter - Save Metadata Returns > Standard Save Metadata > should return blobId on successful save 1ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.metadata.test.js > BlockchainAdapter - Save Metadata Returns > Standard Save Metadata > should return transaction digest 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.metadata.test.js > BlockchainAdapter - Save Metadata Returns > Standard Save Metadata > should return content hash 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.metadata.test.js > BlockchainAdapter - Save Metadata Returns > Standard Save Metadata > should return storage status 1ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.metadata.test.js > BlockchainAdapter - Save Metadata Returns > Standard Save Metadata > should return expiry timestamp 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.metadata.test.js > BlockchainAdapter - Save Metadata Returns > Standard Save Metadata > should return end epoch 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.metadata.test.js > BlockchainAdapter - Save Metadata Returns > Standard Save Metadata > should return save method 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.metadata.test.js > BlockchainAdapter - Save Metadata Returns > Standard Save Metadata > should return storage strategy 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.metadata.test.js > BlockchainAdapter - Save Metadata Returns > Dual Field Support > should have both blobId and walrusBlobId fields 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.metadata.test.js > BlockchainAdapter - Save Metadata Returns > Dual Field Support > should have both transactionDigest and transactionId fields 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.metadata.test.js > BlockchainAdapter - Save Metadata Returns > Enhanced Save Metadata > should include redundant blob IDs when redundancy enabled 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.metadata.test.js > BlockchainAdapter - Save Metadata Returns > Enhanced Save Metadata > should include compression information 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.metadata.test.js > BlockchainAdapter - Save Metadata Returns > Enhanced Save Metadata > should indicate enhanced features used 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.metadata.test.js > BlockchainAdapter - Save Metadata Returns > Creation Metadata > should mark optimized creates 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.metadata.test.js > BlockchainAdapter - Save Metadata Returns > Creation Metadata > should track wallet prompts 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.metadata.test.js > BlockchainAdapter - Save Metadata Returns > Creation Metadata > should include title information 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.metadata.test.js > BlockchainAdapter - Save Metadata Returns > Fallback Handling > should handle missing content hash with fallback 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.metadata.test.js > BlockchainAdapter - Save Metadata Returns > Fallback Handling > should handle missing endEpoch gracefully 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.metadata.test.js > BlockchainAdapter - Save Metadata Returns > Fallback Handling > should calculate expiryTimestamp from epochs if needed 0ms
+ ✓ frontend/services/__tests__/WalrusSdkClientLoader.smoke.test.js > WalrusSdkClientLoader > should return null when SDK is not enabled 28ms
+ ✓ frontend/services/__tests__/WalrusSdkClientLoader.smoke.test.js > WalrusSdkClientLoader > should cache the loaded client 0ms
+ ✓ frontend/services/__tests__/WalrusSdkClientLoader.smoke.test.js > WalrusSdkClientLoader > should not import WalrusSdkClient at module level 0ms
+ ✓ frontend/services/__tests__/WalrusSdkClientLoader.smoke.test.js > WalrusSdkClientLoader > should return same promise for concurrent load attempts 0ms
+ ✓ frontend/services/__tests__/WalrusSdkClientLoader.smoke.test.js > WalrusSdkClientLoader > should provide diagnostic methods 0ms
+stdout | frontend/services/__tests__/SpreadsheetCRUD.test.js
+[90m[2:36:09 PM.246][0m ✅ [32m✅ Test environment ready[0m
+
+stderr | frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > CREATE Operations > should validate configuration before creation
+AggregateError: 
+[90m    at internalConnectMultiple (node:net:1134:18)[39m
+[90m    at afterConnectMultiple (node:net:1715:7)[39m {
+  code: [32m'ECONNREFUSED'[39m,
+  [errors]: [
+    Error: connect ECONNREFUSED ::1:3000
+    [90m    at createConnectionError (node:net:1678:14)[39m
+    [90m    at afterConnectMultiple (node:net:1708:16)[39m {
+      errno: [33m-61[39m,
+      code: [32m'ECONNREFUSED'[39m,
+      syscall: [32m'connect'[39m,
+      address: [32m'::1'[39m,
+      port: [33m3000[39m
+    },
+    Error: connect ECONNREFUSED 127.0.0.1:3000
+    [90m    at createConnectionError (node:net:1678:14)[39m
+    [90m    at afterConnectMultiple (node:net:1708:16)[39m {
+      errno: [33m-61[39m,
+      code: [32m'ECONNREFUSED'[39m,
+      syscall: [32m'connect'[39m,
+      address: [32m'127.0.0.1'[39m,
+      port: [33m3000[39m
+    }
+  ]
+}
+
+stderr | frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > CREATE Operations > should validate configuration before creation
+❌ [ConfigLoader] Config loading error: {
+  errorMessage: [32m'Failed to execute "fetch()" on "Window" with URL "http://localhost:3000/app-config.json": '[39m,
+  errorType: [32m'DOMException'[39m,
+  errorStack: [32m'NetworkError: Failed to execute "fetch()" on "Window" with URL "http://localhost:3000/app-config.json": \n'[39m +
+    [32m'    at Fetch.onError (file:///Users/angel/Projects/test/walsheetz/node_modules/happy-dom/src/fetch/Fetch.ts:673:4)\n'[39m +
+    [32m'    at ClientRequest.emit (node:events:508:28)'[39m,
+  timestamp: [32m'2025-11-01T21:36:09.300Z'[39m,
+  configUrl: [32m'/app-config.json'[39m
+}
+
+stderr | frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > Error Scenarios > should handle invalid cell references
+[BlockchainAdapter] Row or column cannot be null or undefined { row: [1mnull[22m, col: [33m0[39m }
+[BlockchainAdapter] Row or column cannot be null or undefined { row: [90mundefined[39m, col: [33m0[39m }
+[BlockchainAdapter] Row and column must be valid non-negative numbers { row: [33m-1[39m, col: [33m0[39m, numRow: [33m-1[39m, numCol: [33m0[39m }
+[BlockchainAdapter] Row and column must be valid non-negative numbers { row: [32m'INVALID'[39m, col: [33m0[39m, numRow: [33mNaN[39m, numCol: [33m0[39m }
+
+stdout | frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > Storage Info > should report storage info correctly
+[StorageAdapter:storage-save-1700000000000-r1ucgb331] ✅ Data saved to RAM {
+  totalDuration: [32m'0ms'[39m,
+  memoryTime: [32m'0ms'[39m,
+  historyUpdateTime: [32m'0ms'[39m,
+  version: [32m'v1700000000000-x9ln57nvt'[39m,
+  warning: [32m'⚠️  Data exists in memory only. Must save to blockchain to persist.'[39m
+}
+
+stdout | frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > Storage Info > should export and import data
+[StorageAdapter:storage-save-1700000000000-r379nxv3k] ✅ Data saved to RAM {
+  totalDuration: [32m'0ms'[39m,
+  memoryTime: [32m'0ms'[39m,
+  historyUpdateTime: [32m'0ms'[39m,
+  version: [32m'v1700000000000-38qowst8g'[39m,
+  warning: [32m'⚠️  Data exists in memory only. Must save to blockchain to persist.'[39m
+}
+
+stdout | frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > Storage Info > should export and import data
+[StorageAdapter:storage-load-1700000000000-r20uq8ec3] ✅ Data loaded from RAM {
+  totalDuration: [32m'0ms'[39m,
+  fetchTime: [32m'0ms'[39m,
+  dataSize: [33m141[39m,
+  cellCount: [33m0[39m,
+  version: [32m'v1700000000000-38qowst8g'[39m,
+  savedAt: [32m'2023-11-14T22:13:20.000Z'[39m
+}
+
+stdout | frontend/services/__tests__/SpreadsheetCRUD.test.js
+[90m[2:36:09 PM.341][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > CREATE Operations > should create a new spreadsheet with empty data 2ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > CREATE Operations > should set spreadsheet ID in adapter after creation 0ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > CREATE Operations > should generate valid version string 0ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > CREATE Operations > should validate configuration before creation 57ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > READ (Load) Operations > should retrieve current spreadsheet ID from session 0ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > READ (Load) Operations > should retrieve spreadsheet title from session 0ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > READ (Load) Operations > should retrieve walrus blob ID from session 0ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > READ (Load) Operations > should get session info correctly 0ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > UPDATE (Save) Operations > should update spreadsheet ID in adapter 0ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > UPDATE (Save) Operations > should store latest walrus blob ID 0ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > UPDATE (Save) Operations > should update spreadsheet title in storage 0ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > UPDATE (Save) Operations > should reset pending changes after save 0ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > UPDATE (Save) Operations > should track pending edits 0ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > DELETE Operations > should clear spreadsheet ID from adapter on delete 0ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > DELETE Operations > should clear edit tracker on delete 0ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > DELETE Operations > should reset sync status on delete 0ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > DELETE Operations > should clear session on delete 0ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > DELETE Operations > should validate session state after deletion 1ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > Session Management > should create empty session with defaults 2ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > Session Management > should fail validation for session with missing wallet but set spreadsheet 1ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > Session Management > should preserve session data when valid 1ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > Session Management > should set and get auto-save preference 1ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > Error Scenarios > should handle missing wallet connection gracefully 1ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > Error Scenarios > should handle invalid cell references 2ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > Error Scenarios > should clear pending edits safely 0ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > Error Scenarios > should handle session clearing when storage adapter missing 1ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > Storage Info > should report storage info correctly 1ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > Storage Info > should export and import data 1ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > Wallet Integration > should store and retrieve wallet address 0ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > Wallet Integration > should have valid wallet info 0ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > Wallet Integration > should match wallet address in session 2ms
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > Walrus Epoch Preference > should store and retrieve epoch preference 3ms
+ ✓ frontend/presentation/components/__tests__/SaveStatusBanner.event.test.jsx > SaveStatusBanner Event Handling > Auto-dismiss behavior > should auto-dismiss success message after 2 seconds 2016ms
+stdout | frontend/adapters/__tests__/BlockchainAdapter.partial.test.js
+[90m[2:36:09 PM.359][0m ✅ [32m✅ Test environment ready[0m
+
+stderr | frontend/adapters/__tests__/BlockchainAdapter.partial.test.js > BlockchainAdapter - Partial Saves > retryBlockchainCommit > should return error if no pending blockchain data
+❌ [21:36:09] BlockchainAdapter retry_blockchain_failed: Blockchain commit retry failed {
+  error: [32m'No pending blockchain data to retry'[39m,
+  userAgent: [32m'Mozilla/5.0 (X11; Darwin arm64) AppleWebKit/537.36 (KHTML, like Gecko) HappyDOM/0.0.0'[39m,
+  url: [32m'http://localhost:3000/'[39m
+}
+
+stderr | frontend/adapters/__tests__/BlockchainAdapter.partial.test.js > BlockchainAdapter - Partial Saves > retryBlockchainCommit > should return error if blockchain execution fails
+❌ [21:36:09] BlockchainAdapter retry_blockchain_failed: Blockchain commit retry failed {
+  error: [32m'Insufficient gas fee'[39m,
+  userAgent: [32m'Mozilla/5.0 (X11; Darwin arm64) AppleWebKit/537.36 (KHTML, like Gecko) HappyDOM/0.0.0'[39m,
+  url: [32m'http://localhost:3000/'[39m
+}
+
+stdout | frontend/adapters/__tests__/BlockchainAdapter.partial.test.js
+[90m[2:36:09 PM.377][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ frontend/services/__tests__/SpreadsheetCRUD.test.js > Spreadsheet CRUD Operations > Walrus Epoch Preference > should return null for non-existent preference 12ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.partial.test.js > BlockchainAdapter - Partial Saves > retryBlockchainCommit > should retry blockchain commit without re-uploading to Walrus 9ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.partial.test.js > BlockchainAdapter - Partial Saves > retryBlockchainCommit > should return error if no pending blockchain data 1ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.partial.test.js > BlockchainAdapter - Partial Saves > retryBlockchainCommit > should return error if blockchain execution fails 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.partial.test.js > BlockchainAdapter - Partial Saves > Partial save flow integration > partial save info should be retrievable from storage adapter 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.partial.test.js > BlockchainAdapter - Partial Saves > Partial save flow integration > partial save info should be clearable 0ms
+stderr | Fetch.onError (file:/Users/angel/Projects/test/walsheetz/node_modules/happy-dom/src/fetch/Fetch.ts:671:35)
+DOMException [AbortError]: The operation was aborted.
+    at Fetch.onAsyncTaskManagerAbort [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mhappy-dom[24m/src/fetch/Fetch.ts:684:17[90m)[39m
+    at Object.<anonymous> [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mhappy-dom[24m/src/fetch/Fetch.ts:518:10[90m)[39m
+    at AsyncTaskManager.abortAll [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mhappy-dom[24m/src/async-task-manager/AsyncTaskManager.ts:328:21[90m)[39m
+    at AsyncTaskManager.abort [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mhappy-dom[24m/src/async-task-manager/AsyncTaskManager.ts:61:15[90m)[39m
+    at DetachedBrowserFrame.abort [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mhappy-dom[24m/src/browser/detached-browser/DetachedBrowserFrame.ts:150:49[90m)[39m
+    at DetachedWindowAPI.abort [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mhappy-dom[24m/src/window/DetachedWindowAPI.ts:62:29[90m)[39m
+    at teardownWindow [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mvitest[24m/dist/chunks/index.CmSc2RE5.js:336:22[90m)[39m
+    at Object.teardown [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mvitest[24m/dist/chunks/index.CmSc2RE5.js:391:10[90m)[39m
+    at withEnv [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mvitest[24m/dist/chunks/runBaseTests.9Ij9_de-.js:89:13[90m)[39m
+    at run [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mvitest[24m/dist/chunks/runBaseTests.9Ij9_de-.js:109:2[90m)[39m
+
+stderr | Fetch.onError (file:/Users/angel/Projects/test/walsheetz/node_modules/happy-dom/src/fetch/Fetch.ts:671:35)
+DOMException [AbortError]: The operation was aborted.
+    at Fetch.onAsyncTaskManagerAbort [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mhappy-dom[24m/src/fetch/Fetch.ts:684:17[90m)[39m
+    at Object.<anonymous> [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mhappy-dom[24m/src/fetch/Fetch.ts:518:10[90m)[39m
+    at AsyncTaskManager.abortAll [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mhappy-dom[24m/src/async-task-manager/AsyncTaskManager.ts:328:21[90m)[39m
+    at AsyncTaskManager.abort [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mhappy-dom[24m/src/async-task-manager/AsyncTaskManager.ts:61:15[90m)[39m
+    at DetachedBrowserFrame.abort [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mhappy-dom[24m/src/browser/detached-browser/DetachedBrowserFrame.ts:150:49[90m)[39m
+    at DetachedWindowAPI.abort [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mhappy-dom[24m/src/window/DetachedWindowAPI.ts:62:29[90m)[39m
+    at teardownWindow [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mvitest[24m/dist/chunks/index.CmSc2RE5.js:336:22[90m)[39m
+    at Object.teardown [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mvitest[24m/dist/chunks/index.CmSc2RE5.js:391:10[90m)[39m
+    at withEnv [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mvitest[24m/dist/chunks/runBaseTests.9Ij9_de-.js:89:13[90m)[39m
+    at run [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mvitest[24m/dist/chunks/runBaseTests.9Ij9_de-.js:109:2[90m)[39m
+
+stdout | frontend/services/__tests__/BrowserSuiService.network.test.js
+[90m[2:36:09 PM.667][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | frontend/services/__tests__/BrowserSuiService.network.test.js
+[90m[2:36:09 PM.672][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ frontend/services/__tests__/BrowserSuiService.network.test.js > BrowserSuiService - Network Detection > checkNetworkAgainstConfig > should detect testnet network consistency 1ms
+ ✓ frontend/services/__tests__/BrowserSuiService.network.test.js > BrowserSuiService - Network Detection > checkNetworkAgainstConfig > should detect mainnet network consistency 0ms
+ ✓ frontend/services/__tests__/BrowserSuiService.network.test.js > BrowserSuiService - Network Detection > checkNetworkAgainstConfig > should detect network mismatch between wallet and config 1ms
+ ✓ frontend/services/__tests__/BrowserSuiService.network.test.js > BrowserSuiService - Network Detection > checkNetworkAgainstConfig > should not auto-switch network on mismatch detection 0ms
+ ✓ frontend/services/__tests__/BrowserSuiService.network.test.js > BrowserSuiService - Network Detection > checkNetworkAgainstConfig > should allow explicit network switch after confirmation 1ms
+ ✓ frontend/services/__tests__/BrowserSuiService.network.test.js > BrowserSuiService - Network Detection > Network warning state > should generate network warning when mismatch detected 0ms
+ ✓ frontend/services/__tests__/BrowserSuiService.network.test.js > BrowserSuiService - Network Detection > Network warning state > should provide user choice between switching or keeping config 0ms
+ ✓ frontend/services/__tests__/BrowserSuiService.network.test.js > BrowserSuiService - Network Detection > RPC endpoint selection > should use configured RPC URL for detected network 0ms
+ ✓ frontend/services/__tests__/BrowserSuiService.network.test.js > BrowserSuiService - Network Detection > RPC endpoint selection > should use proxy endpoint in production 0ms
+ ✓ frontend/services/__tests__/BrowserSuiService.network.test.js > BrowserSuiService - Network Detection > RPC endpoint selection > should fallback to absolute URL on proxy failure 0ms
+stdout | frontend/adapters/__tests__/BlockchainAdapter.operations.test.js
+[90m[2:36:09 PM.747][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | frontend/services/__tests__/CSVExportRegression.test.js
+[90m[2:36:09 PM.753][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | frontend/services/__tests__/walrus/BrowserWalrusService.integration.test.js
+[90m[2:36:09 PM.763][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | frontend/adapters/__tests__/BlockchainAdapter.operations.test.js
+[90m[2:36:09 PM.765][0m ✅ [32m✅ Test environment cleaned up[0m
+
+stderr | frontend/services/__tests__/CSVExportRegression.test.js > SpreadsheetImportExportService CSV Export Regression Tests > exportToCSV with fallback data sources > throws error when no sheet data found from any source
+❌ [21:36:09] UIComponent csv_export_no_data: No sheet data available from any source {
+  hasSheets: [33mtrue[39m,
+  sheetsLength: [33m0[39m,
+  luckysheetAvailable: [33mfalse[39m,
+  dataSource: [32m'luckysheetData'[39m,
+  userAgent: [32m'Mozilla/5.0 (X11; Darwin arm64) AppleWebKit/537.36 (KHTML, like Gecko) HappyDOM/0.0.0'[39m,
+  url: [32m'http://test.local'[39m
+}
+❌ [21:36:09] UIComponent csv_export_error: CSV export failed {
+  error: [32m'No sheet data found. Please ensure data is loaded before exporting.'[39m,
+  userAgent: [32m'Mozilla/5.0 (X11; Darwin arm64) AppleWebKit/537.36 (KHTML, like Gecko) HappyDOM/0.0.0'[39m,
+  url: [32m'http://test.local'[39m
+}
+
+stdout | frontend/services/__tests__/CSVExportRegression.test.js
+[90m[2:36:09 PM.770][0m ✅ [32m✅ Test environment cleaned up[0m
+
+stdout | frontend/services/__tests__/walrus/BrowserWalrusService.integration.test.js
+[90m[2:36:09 PM.771][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ frontend/services/__tests__/walrus/BrowserWalrusService.integration.test.js > BrowserWalrusService Integration > should initialize with connection manager 2ms
+ ✓ frontend/services/__tests__/walrus/BrowserWalrusService.integration.test.js > BrowserWalrusService Integration > should expose public API methods 0ms
+ ✓ frontend/services/__tests__/walrus/BrowserWalrusService.integration.test.js > BrowserWalrusService Integration > should have backward compatibility properties 3ms
+ ✓ frontend/services/__tests__/CSVExportRegression.test.js > SpreadsheetImportExportService CSV Export Regression Tests > exportToCSV with celldata format > exports sheet with celldata format successfully 4ms
+ ✓ frontend/services/__tests__/CSVExportRegression.test.js > SpreadsheetImportExportService CSV Export Regression Tests > exportToCSV with celldata format > exports sheet with both data and celldata formats, preferring data 2ms
+ ✓ frontend/services/__tests__/CSVExportRegression.test.js > SpreadsheetImportExportService CSV Export Regression Tests > exportToCSV with fallback data sources > uses luckysheet.getluckysheetfile() when sheets array is empty 1ms
+ ✓ frontend/services/__tests__/CSVExportRegression.test.js > SpreadsheetImportExportService CSV Export Regression Tests > exportToCSV with fallback data sources > uses getAllSheets() as second fallback when getluckysheetfile fails 1ms
+ ✓ frontend/services/__tests__/CSVExportRegression.test.js > SpreadsheetImportExportService CSV Export Regression Tests > exportToCSV with fallback data sources > uses window.luckysheetfile as last resort fallback 1ms
+ ✓ frontend/services/__tests__/CSVExportRegression.test.js > SpreadsheetImportExportService CSV Export Regression Tests > exportToCSV with fallback data sources > throws error when no sheet data found from any source 5ms
+ ✓ frontend/services/__tests__/CSVExportRegression.test.js > SpreadsheetImportExportService CSV Export Regression Tests > exportToCSV error handling > throws error when export already in progress 0ms
+ ✓ frontend/services/__tests__/CSVExportRegression.test.js > SpreadsheetImportExportService CSV Export Regression Tests > exportToCSV error handling > throws error when no luckysheetData provided 0ms
+ ✓ frontend/services/__tests__/CSVExportRegression.test.js > SpreadsheetImportExportService CSV Export Regression Tests > exportToCSV error handling > properly resets exportInProgress flag on error 0ms
+ ✓ frontend/services/__tests__/CSVExportRegression.test.js > SpreadsheetImportExportService CSV Export Regression Tests > exportToCSV error handling > properly resets exportInProgress flag on success 0ms
+ ✓ frontend/services/__tests__/CSVExportRegression.test.js > SpreadsheetImportExportService CSV Export Regression Tests > CSV export with formulas and formatting > preserves formulas in CSV export 0ms
+ ✓ frontend/services/__tests__/CSVExportRegression.test.js > SpreadsheetImportExportService CSV Export Regression Tests > CSV export with formulas and formatting > handles cells with style information 0ms
+ ✓ frontend/services/__tests__/CSVExportRegression.test.js > SpreadsheetImportExportService CSV Export Regression Tests > exportToCSV filename generation > uses provided filename if specified 0ms
+ ✓ frontend/services/__tests__/CSVExportRegression.test.js > SpreadsheetImportExportService CSV Export Regression Tests > exportToCSV filename generation > generates filename with timestamp when not provided 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.operations.test.js > BlockchainAdapter - Atomic Operations Characterization > _createAtomicSaveOperations Structure > should create 3 operations: walrus_storage, transaction_preparation, blockchain_execution 12ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.operations.test.js > BlockchainAdapter - Atomic Operations Characterization > _createAtomicSaveOperations Structure > all operations should have name and execute properties 1ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.operations.test.js > BlockchainAdapter - Atomic Operations Characterization > _createAtomicSaveOperations Structure > walrus_storage should not have dependencies 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.operations.test.js > BlockchainAdapter - Atomic Operations Characterization > _createAtomicSaveOperations Structure > transaction_preparation should not have dependencies 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.operations.test.js > BlockchainAdapter - Atomic Operations Characterization > _createAtomicSaveOperations Structure > blockchain_execution should depend on walrus_storage and transaction_preparation 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.operations.test.js > BlockchainAdapter - Atomic Operations Characterization > _createAtomicSaveOperations Structure > operations may have optional getCleanupHandler 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.operations.test.js > BlockchainAdapter - Atomic Operations Characterization > Helper Methods > _createNoOpCleanupHandler should return a function 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.operations.test.js > BlockchainAdapter - Atomic Operations Characterization > Helper Methods > _validateOperationResult should not throw for valid result 1ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.operations.test.js > BlockchainAdapter - Atomic Operations Characterization > Helper Methods > _validateOperationResult should throw for missing field 0ms
+ ✓ frontend/adapters/__tests__/BlockchainAdapter.operations.test.js > BlockchainAdapter - Atomic Operations Characterization > Helper Methods > _getOperationResult should extract result from context 1ms
+stderr | Fetch.onError (file:/Users/angel/Projects/test/walsheetz/node_modules/happy-dom/src/fetch/Fetch.ts:671:35)
+DOMException [AbortError]: The operation was aborted.
+    at Fetch.onAsyncTaskManagerAbort [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mhappy-dom[24m/src/fetch/Fetch.ts:684:17[90m)[39m
+    at Object.<anonymous> [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mhappy-dom[24m/src/fetch/Fetch.ts:518:10[90m)[39m
+    at AsyncTaskManager.abortAll [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mhappy-dom[24m/src/async-task-manager/AsyncTaskManager.ts:328:21[90m)[39m
+    at AsyncTaskManager.abort [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mhappy-dom[24m/src/async-task-manager/AsyncTaskManager.ts:61:15[90m)[39m
+    at DetachedBrowserFrame.abort [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mhappy-dom[24m/src/browser/detached-browser/DetachedBrowserFrame.ts:150:49[90m)[39m
+    at DetachedWindowAPI.abort [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mhappy-dom[24m/src/window/DetachedWindowAPI.ts:62:29[90m)[39m
+    at teardownWindow [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mvitest[24m/dist/chunks/index.CmSc2RE5.js:336:22[90m)[39m
+    at Object.teardown [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mvitest[24m/dist/chunks/index.CmSc2RE5.js:391:10[90m)[39m
+    at withEnv [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mvitest[24m/dist/chunks/runBaseTests.9Ij9_de-.js:89:13[90m)[39m
+    at run [90m(file:///Users/angel/Projects/test/walsheetz/[39mnode_modules/[4mvitest[24m/dist/chunks/runBaseTests.9Ij9_de-.js:109:2[90m)[39m
+
+stdout | frontend/services/__tests__/luckysheetApi.methods.test.js
+[90m[2:36:09 PM.905][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | frontend/services/__tests__/luckysheetApi.methods.test.js > LuckysheetApi methods verification > checkRequiredMethods > should identify all required methods when present
+[LuckysheetApi] ✅ All required methods are available
+
+stdout | frontend/services/__tests__/luckysheetApi.methods.test.js > LuckysheetApi methods verification > checkRequiredMethods > should list all required methods
+[LuckysheetApi] ✅ All required methods are available
+
+stdout | frontend/services/__tests__/luckysheetApi.methods.test.js > LuckysheetApi methods verification > diagnostic methods > should provide useful diagnostic data for troubleshooting
+[LuckysheetApi] ✅ All required methods are available
+
+stdout | frontend/services/__tests__/luckysheetApi.methods.test.js
+[90m[2:36:09 PM.909][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ frontend/services/__tests__/luckysheetApi.methods.test.js > LuckysheetApi methods verification > checkRequiredMethods > should identify all required methods when present 1ms
+ ✓ frontend/services/__tests__/luckysheetApi.methods.test.js > LuckysheetApi methods verification > checkRequiredMethods > should return error when Luckysheet not loaded 0ms
+ ✓ frontend/services/__tests__/luckysheetApi.methods.test.js > LuckysheetApi methods verification > checkRequiredMethods > should list all required methods 1ms
+ ✓ frontend/services/__tests__/luckysheetApi.methods.test.js > LuckysheetApi methods verification > verifyCDNVersion > should return error when Luckysheet not loaded 0ms
+ ✓ frontend/services/__tests__/luckysheetApi.methods.test.js > LuckysheetApi methods verification > verifyCDNVersion > should detect CDN provider from script tag 0ms
+ ✓ frontend/services/__tests__/luckysheetApi.methods.test.js > LuckysheetApi methods verification > verifyCDNVersion > should parse version from CDN URL 0ms
+ ✓ frontend/services/__tests__/luckysheetApi.methods.test.js > LuckysheetApi methods verification > diagnostic methods > should expose checkRequiredMethods for diagnostics 0ms
+ ✓ frontend/services/__tests__/luckysheetApi.methods.test.js > LuckysheetApi methods verification > diagnostic methods > should expose verifyCDNVersion for diagnostics 0ms
+ ✓ frontend/services/__tests__/luckysheetApi.methods.test.js > LuckysheetApi methods verification > diagnostic methods > should provide useful diagnostic data for troubleshooting 0ms
+stdout | frontend/services/__tests__/SpreadsheetExport.test.js
+[90m[2:36:10 PM.241][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | frontend/services/__tests__/SpreadsheetExport.test.js
+[90m[2:36:10 PM.249][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ frontend/services/__tests__/SpreadsheetExport.test.js > SpreadsheetImportExportService export conversions > converts celldata sheets into populated worksheet 5ms
+ ✓ frontend/services/__tests__/SpreadsheetExport.test.js > SpreadsheetImportExportService export conversions > prefers grid data when both formats available 0ms
+ ✓ frontend/services/__tests__/SpreadsheetExport.test.js > SpreadsheetImportExportService export conversions > expands rows and columns based on celldata bounds when sheet size missing 0ms
+stdout | frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx
+[90m[2:36:10 PM.311][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx
+[90m[2:36:10 PM.316][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Valid redirects > should allow internal spreadsheet route 1ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Valid redirects > should allow internal route with query params 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Valid redirects > should allow internal route with hash 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Valid redirects > should allow nested route 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Valid redirects > should allow root path 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Valid redirects > should allow route with special characters 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Valid redirects > should allow deep nested paths 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Valid redirects > should allow route with multiple query params 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Valid redirects > should allow route with encoded params 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Invalid/blocked redirects > should block external redirect with https: 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Invalid/blocked redirects > should block external redirect with http: 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Invalid/blocked redirects > should block protocol-relative URL 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Invalid/blocked redirects > should block redirect not starting with / 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Invalid/blocked redirects > should block javascript: protocol 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Invalid/blocked redirects > should block data: URI 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Invalid/blocked redirects > should block redirect with triple slash 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Invalid/blocked redirects > should block redirect with embedded protocol 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > URL encoding scenarios > should handle URL encoded valid path 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > URL encoding scenarios > should handle URL encoded query params 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > URL encoding scenarios > should reject URL encoded external URL 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > URL encoding scenarios > should reject URL encoded protocol-relative URL 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Edge cases > should handle empty string 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Edge cases > should handle single slash 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Edge cases > should handle path with fragment only 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Edge cases > should handle path with query string only 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Edge cases > should be case sensitive for protocols 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Component integration validation > validates redirect param format 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Component integration validation > validates malicious redirect attempt 0ms
+ ✓ frontend/presentation/components/__tests__/NetworkRedirectHandler.test.jsx > NetworkRedirectHandler - Validation Logic > Component integration validation > preserves route with all URL components 0ms
+stdout | frontend/utils/__tests__/ValidationGuards.errors.test.js
+[90m[2:36:10 PM.393][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | frontend/utils/__tests__/ValidationGuards.errors.test.js
+[90m[2:36:10 PM.400][0m ✅ [32m✅ Test environment cleaned up[0m
+
+stdout | frontend/business/__tests__/useSpreadsheet.saveMetadata.test.js
+[90m[2:36:10 PM.412][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | frontend/business/__tests__/useSpreadsheet.saveMetadata.test.js
+[90m[2:36:10 PM.425][0m ✅ [32m✅ Test environment cleaned up[0m
+
+stdout | src/sdk/business/hooks/__tests__/useSpreadsheet.saveMetadata.test.js
+[90m[2:36:10 PM.431][0m ✅ [32m✅ Test environment ready[0m
+
+ ✓ frontend/utils/__tests__/ValidationGuards.errors.test.js > ValidationGuards error reporting > Walrus connectivity error details > should capture aggregator error details 2ms
+ ✓ frontend/utils/__tests__/ValidationGuards.errors.test.js > ValidationGuards error reporting > Walrus connectivity error details > should include errorDetails in failed response 1ms
+ ✓ frontend/utils/__tests__/ValidationGuards.errors.test.js > ValidationGuards error reporting > Walrus connectivity error details > should differentiate between aggregator and publisher failures 1ms
+ ✓ frontend/utils/__tests__/ValidationGuards.errors.test.js > ValidationGuards error reporting > error diagnostics methods > should provide validation status retrieval 0ms
+ ✓ frontend/utils/__tests__/ValidationGuards.errors.test.js > ValidationGuards error reporting > error diagnostics methods > should provide validation cache clearing 0ms
+ ✓ frontend/utils/__tests__/ValidationGuards.errors.test.js > ValidationGuards error reporting > error diagnostics methods > should provide validation summary 0ms
+ ✓ frontend/utils/__tests__/ValidationGuards.errors.test.js > ValidationGuards error reporting > error diagnostics methods > should track validation events 0ms
+ ✓ frontend/utils/__tests__/ValidationGuards.errors.test.js > ValidationGuards error reporting > error recovery information > should include details for recovery 0ms
+ ✓ frontend/utils/__tests__/ValidationGuards.errors.test.js > ValidationGuards error reporting > diagnostic features > should support auto-validation for continuous monitoring 0ms
+ ✓ frontend/utils/__tests__/ValidationGuards.errors.test.js > ValidationGuards error reporting > diagnostic features > should support preflight validation with detailed results 0ms
+ ✓ frontend/utils/__tests__/ValidationGuards.errors.test.js > ValidationGuards error reporting > diagnostic features > should support focused validation for save operations 0ms
+stdout | src/sdk/business/hooks/__tests__/useSpreadsheet.saveMetadata.test.js
+[90m[2:36:10 PM.444][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ frontend/business/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Save Result Structure > should return required metadata fields in save result 7ms
+ ✓ frontend/business/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Save Result Structure > should have valid blob ID format 0ms
+ ✓ frontend/business/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Save Result Structure > should have valid transaction digest 0ms
+ ✓ frontend/business/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Save Result Structure > should have storage status as expected value 2ms
+ ✓ frontend/business/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Save Result Structure > should have valid expiry timestamp 0ms
+ ✓ frontend/business/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Storage Strategy Options > should recognize standard storage strategy 0ms
+ ✓ frontend/business/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Storage Strategy Options > should recognize delta storage strategy 0ms
+ ✓ frontend/business/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Storage Strategy Options > should recognize redundancy storage strategy 0ms
+ ✓ frontend/business/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > First Save Tracking > should mark first save with isFirstSave flag 0ms
+ ✓ frontend/business/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > First Save Tracking > should have timestamp for tracking 0ms
+ ✓ frontend/business/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > First Save Tracking > should have method field indicating blockchain save 0ms
+ ✓ frontend/business/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Expiry Information > should calculate expiry in future 0ms
+ ✓ frontend/business/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Expiry Information > should have epoch information 0ms
+ ✓ frontend/business/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Expiry Information > should calculate time remaining helper 0ms
+ ✓ frontend/business/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Content Hash Validation > should have content hash or fallback value 0ms
+ ✓ frontend/business/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Content Hash Validation > should handle missing content hash gracefully 0ms
+ ✓ frontend/business/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Metadata Fallback Handling > should handle missing blobId with null 0ms
+ ✓ frontend/business/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Metadata Fallback Handling > should handle missing transaction digest 0ms
+ ✓ src/sdk/business/hooks/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Save Result Structure > should return required metadata fields in save result 3ms
+ ✓ src/sdk/business/hooks/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Save Result Structure > should have valid blob ID format 1ms
+ ✓ src/sdk/business/hooks/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Save Result Structure > should have valid transaction digest 1ms
+ ✓ src/sdk/business/hooks/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Save Result Structure > should have storage status as expected value 1ms
+ ✓ src/sdk/business/hooks/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Save Result Structure > should have valid expiry timestamp 1ms
+ ✓ src/sdk/business/hooks/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Storage Strategy Options > should recognize standard storage strategy 1ms
+ ✓ src/sdk/business/hooks/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Storage Strategy Options > should recognize delta storage strategy 0ms
+ ✓ src/sdk/business/hooks/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Storage Strategy Options > should recognize redundancy storage strategy 0ms
+ ✓ src/sdk/business/hooks/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > First Save Tracking > should mark first save with isFirstSave flag 0ms
+ ✓ src/sdk/business/hooks/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > First Save Tracking > should have timestamp for tracking 2ms
+ ✓ src/sdk/business/hooks/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > First Save Tracking > should have method field indicating blockchain save 0ms
+ ✓ src/sdk/business/hooks/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Expiry Information > should calculate expiry in future 0ms
+ ✓ src/sdk/business/hooks/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Expiry Information > should have epoch information 0ms
+ ✓ src/sdk/business/hooks/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Expiry Information > should calculate time remaining helper 0ms
+ ✓ src/sdk/business/hooks/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Content Hash Validation > should have content hash or fallback value 0ms
+ ✓ src/sdk/business/hooks/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Content Hash Validation > should handle missing content hash gracefully 0ms
+ ✓ src/sdk/business/hooks/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Metadata Fallback Handling > should handle missing blobId with null 0ms
+ ✓ src/sdk/business/hooks/__tests__/useSpreadsheet.saveMetadata.test.js > useSpreadsheet - Save Metadata Tracking > Metadata Fallback Handling > should handle missing transaction digest 0ms
+stdout | src/sdk/utils/__tests__/ValidationGuards.errors.test.js
+[90m[2:36:10 PM.664][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | src/sdk/utils/__tests__/ValidationGuards.errors.test.js
+[90m[2:36:10 PM.673][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ src/sdk/utils/__tests__/ValidationGuards.errors.test.js > ValidationGuards error reporting > Walrus connectivity error details > should capture aggregator error details 4ms
+ ✓ src/sdk/utils/__tests__/ValidationGuards.errors.test.js > ValidationGuards error reporting > Walrus connectivity error details > should include errorDetails in failed response 2ms
+ ✓ src/sdk/utils/__tests__/ValidationGuards.errors.test.js > ValidationGuards error reporting > Walrus connectivity error details > should differentiate between aggregator and publisher failures 1ms
+ ✓ src/sdk/utils/__tests__/ValidationGuards.errors.test.js > ValidationGuards error reporting > error diagnostics methods > should provide validation status retrieval 0ms
+ ✓ src/sdk/utils/__tests__/ValidationGuards.errors.test.js > ValidationGuards error reporting > error diagnostics methods > should provide validation cache clearing 0ms
+ ✓ src/sdk/utils/__tests__/ValidationGuards.errors.test.js > ValidationGuards error reporting > error diagnostics methods > should provide validation summary 0ms
+ ✓ src/sdk/utils/__tests__/ValidationGuards.errors.test.js > ValidationGuards error reporting > error diagnostics methods > should track validation events 0ms
+ ✓ src/sdk/utils/__tests__/ValidationGuards.errors.test.js > ValidationGuards error reporting > error recovery information > should include details for recovery 0ms
+ ✓ src/sdk/utils/__tests__/ValidationGuards.errors.test.js > ValidationGuards error reporting > diagnostic features > should support auto-validation for continuous monitoring 0ms
+ ✓ src/sdk/utils/__tests__/ValidationGuards.errors.test.js > ValidationGuards error reporting > diagnostic features > should support preflight validation with detailed results 0ms
+ ✓ src/sdk/utils/__tests__/ValidationGuards.errors.test.js > ValidationGuards error reporting > diagnostic features > should support focused validation for save operations 0ms
+stdout | src/sdk/utils/__tests__/ConfigLoader.fallback.test.js
+[90m[2:36:10 PM.917][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should mark config as isFallback when fetch fails with 404
+[ConfigLoader] ℹ️ Config file not found (404), falling back to embedded config
+
+stderr | src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should mark config as isFallback when fetch fails with 404
+❌ [ConfigLoader] Config loading error: {
+  errorMessage: [32m'Config not found: 404'[39m,
+  errorType: [32m'Error'[39m,
+  errorStack: [32m'Error: Config not found: 404\n'[39m +
+    [32m'    at ConfigLoader._loadConfig (/Users/angel/Projects/test/walsheetz/src/sdk/utils/ConfigLoader.js:142:15)\n'[39m +
+    [32m'    at processTicksAndRejections (node:internal/process/task_queues:105:5)'[39m,
+  timestamp: [32m'2025-11-01T21:36:10.931Z'[39m,
+  configUrl: [32m'/app-config.json'[39m
+}
+
+stdout | src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should return fallback config with required fields on 404
+[ConfigLoader] ℹ️ Config file not found (404), falling back to embedded config
+
+stderr | src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should return fallback config with required fields on 404
+❌ [ConfigLoader] Config loading error: {
+  errorMessage: [32m'Config not found: 404'[39m,
+  errorType: [32m'Error'[39m,
+  errorStack: [32m'Error: Config not found: 404\n'[39m +
+    [32m'    at ConfigLoader._loadConfig (/Users/angel/Projects/test/walsheetz/src/sdk/utils/ConfigLoader.js:142:15)\n'[39m +
+    [32m'    at processTicksAndRejections (node:internal/process/task_queues:105:5)'[39m,
+  timestamp: [32m'2025-11-01T21:36:10.934Z'[39m,
+  configUrl: [32m'/app-config.json'[39m
+}
+
+stdout | src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should include walrus.features.epochsDefault in fallback config
+[ConfigLoader] ℹ️ Config file not found (404), falling back to embedded config
+
+stderr | src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should include walrus.features.epochsDefault in fallback config
+❌ [ConfigLoader] Config loading error: {
+  errorMessage: [32m'Config not found: 404'[39m,
+  errorType: [32m'Error'[39m,
+  errorStack: [32m'Error: Config not found: 404\n'[39m +
+    [32m'    at ConfigLoader._loadConfig (/Users/angel/Projects/test/walsheetz/src/sdk/utils/ConfigLoader.js:142:15)\n'[39m +
+    [32m'    at processTicksAndRejections (node:internal/process/task_queues:105:5)'[39m,
+  timestamp: [32m'2025-11-01T21:36:10.934Z'[39m,
+  configUrl: [32m'/app-config.json'[39m
+}
+
+stdout | src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should include contentHashInSave feature in fallback config
+[ConfigLoader] ℹ️ Config file not found (404), falling back to embedded config
+
+stderr | src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should include contentHashInSave feature in fallback config
+❌ [ConfigLoader] Config loading error: {
+  errorMessage: [32m'Config not found: 404'[39m,
+  errorType: [32m'Error'[39m,
+  errorStack: [32m'Error: Config not found: 404\n'[39m +
+    [32m'    at ConfigLoader._loadConfig (/Users/angel/Projects/test/walsheetz/src/sdk/utils/ConfigLoader.js:142:15)\n'[39m +
+    [32m'    at processTicksAndRejections (node:internal/process/task_queues:105:5)'[39m,
+  timestamp: [32m'2025-11-01T21:36:10.934Z'[39m,
+  configUrl: [32m'/app-config.json'[39m
+}
+
+stdout | src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should include wallet features in fallback config
+[ConfigLoader] ℹ️ Config file not found (404), falling back to embedded config
+
+stderr | src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should include wallet features in fallback config
+❌ [ConfigLoader] Config loading error: {
+  errorMessage: [32m'Config not found: 404'[39m,
+  errorType: [32m'Error'[39m,
+  errorStack: [32m'Error: Config not found: 404\n'[39m +
+    [32m'    at ConfigLoader._loadConfig (/Users/angel/Projects/test/walsheetz/src/sdk/utils/ConfigLoader.js:142:15)\n'[39m +
+    [32m'    at processTicksAndRejections (node:internal/process/task_queues:105:5)'[39m,
+  timestamp: [32m'2025-11-01T21:36:10.935Z'[39m,
+  configUrl: [32m'/app-config.json'[39m
+}
+
+stdout | src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should add runtime methods to fallback config
+[ConfigLoader] ℹ️ Config file not found (404), falling back to embedded config
+
+stderr | src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should add runtime methods to fallback config
+❌ [ConfigLoader] Config loading error: {
+  errorMessage: [32m'Config not found: 404'[39m,
+  errorType: [32m'Error'[39m,
+  errorStack: [32m'Error: Config not found: 404\n'[39m +
+    [32m'    at ConfigLoader._loadConfig (/Users/angel/Projects/test/walsheetz/src/sdk/utils/ConfigLoader.js:142:15)\n'[39m +
+    [32m'    at processTicksAndRejections (node:internal/process/task_queues:105:5)'[39m,
+  timestamp: [32m'2025-11-01T21:36:10.935Z'[39m,
+  configUrl: [32m'/app-config.json'[39m
+}
+
+stdout | src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should succeed with 200 response and not set isFallback
+[ConfigLoader] ✅ Config fetched successfully: { url: [90mundefined[39m, status: [33m200[39m }
+
+stdout | src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should succeed with 200 response and not set isFallback
+[ConfigLoader] ✅ Runtime config loaded successfully: {
+  version: [32m'1.0.0'[39m,
+  network: [32m'testnet'[39m,
+  timestamp: [32m'2023-11-14T22:13:20.000Z'[39m,
+  features: []
+}
+
+stdout | src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should emit config:fallback event when using fallback
+[ConfigLoader] ℹ️ Config file not found (404), falling back to embedded config
+
+stderr | src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should emit config:fallback event when using fallback
+❌ [ConfigLoader] Config loading error: {
+  errorMessage: [32m'Config not found: 404'[39m,
+  errorType: [32m'Error'[39m,
+  errorStack: [32m'Error: Config not found: 404\n'[39m +
+    [32m'    at ConfigLoader._loadConfig (/Users/angel/Projects/test/walsheetz/src/sdk/utils/ConfigLoader.js:142:15)\n'[39m +
+    [32m'    at processTicksAndRejections (node:internal/process/task_queues:105:5)'[39m,
+  timestamp: [32m'2025-11-01T21:36:10.936Z'[39m,
+  configUrl: [32m'/app-config.json'[39m
+}
+
+stdout | tests/unit/browser-walrus-service.test.js
+[90m[2:36:10 PM.936][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > persistForcedFeature should save to localStorage
+[ConfigLoader] ✅ Persisted forced feature: test.feature = true
+
+stdout | src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > fallback config should use proxied Walrus endpoints
+[ConfigLoader] ℹ️ Config file not found (404), falling back to embedded config
+
+stderr | src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > fallback config should use proxied Walrus endpoints
+❌ [ConfigLoader] Config loading error: {
+  errorMessage: [32m'Config not found: 404'[39m,
+  errorType: [32m'Error'[39m,
+  errorStack: [32m'Error: Config not found: 404\n'[39m +
+    [32m'    at ConfigLoader._loadConfig (/Users/angel/Projects/test/walsheetz/src/sdk/utils/ConfigLoader.js:142:15)\n'[39m +
+    [32m'    at processTicksAndRejections (node:internal/process/task_queues:105:5)'[39m,
+  timestamp: [32m'2025-11-01T21:36:10.941Z'[39m,
+  configUrl: [32m'/app-config.json'[39m
+}
+
+stdout | src/sdk/utils/__tests__/ConfigLoader.fallback.test.js
+[90m[2:36:10 PM.942][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should mark config as isFallback when fetch fails with 404 15ms
+ ✓ src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should return fallback config with required fields on 404 1ms
+ ✓ src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should include walrus.features.epochsDefault in fallback config 0ms
+ ✓ src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should include contentHashInSave feature in fallback config 0ms
+ ✓ src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should include wallet features in fallback config 0ms
+ ✓ src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should add runtime methods to fallback config 0ms
+ ✓ src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should succeed with 200 response and not set isFallback 1ms
+ ✓ src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should emit config:fallback event when using fallback 1ms
+ ✓ src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > persistForcedFeature should save to localStorage 3ms
+ ✓ src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > getForcedFeature should retrieve from localStorage 0ms
+ ✓ src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > getForcedFeature should return null if not found 0ms
+ ✓ src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > clearForcedFeatures should clear all localStorage keys with prefix 0ms
+ ✓ src/sdk/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > fallback config should use proxied Walrus endpoints 1ms
+ ↓ tests/unit/browser-walrus-service.test.js > BrowserWalrusService > connect > should return true when connection is successful
+ ✓ tests/unit/browser-walrus-service.test.js > BrowserWalrusService > connect > should handle connection failure gracefully 2ms
+ ✓ tests/unit/browser-walrus-service.test.js > BrowserWalrusService > connect > should handle non-200 response gracefully 0ms
+ ↓ tests/unit/browser-walrus-service.test.js > BrowserWalrusService > connect > should emit operation events during connection
+stdout | frontend/utils/__tests__/ConfigLoader.fallback.test.js
+[90m[2:36:11 PM.013][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should mark config as isFallback when fetch fails with 404
+[ConfigLoader] ℹ️ Config file not found (404), falling back to embedded config
+
+stderr | frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should mark config as isFallback when fetch fails with 404
+❌ [ConfigLoader] Config loading error: {
+  errorMessage: [32m'Config not found: 404'[39m,
+  errorType: [32m'Error'[39m,
+  errorStack: [32m'Error: Config not found: 404\n'[39m +
+    [32m'    at ConfigLoader._loadConfig (/Users/angel/Projects/test/walsheetz/frontend/utils/ConfigLoader.js:142:15)\n'[39m +
+    [32m'    at processTicksAndRejections (node:internal/process/task_queues:105:5)'[39m,
+  timestamp: [32m'2025-11-01T21:36:11.027Z'[39m,
+  configUrl: [32m'/app-config.json'[39m
+}
+
+stdout | frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should return fallback config with required fields on 404
+[ConfigLoader] ℹ️ Config file not found (404), falling back to embedded config
+
+stderr | frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should return fallback config with required fields on 404
+❌ [ConfigLoader] Config loading error: {
+  errorMessage: [32m'Config not found: 404'[39m,
+  errorType: [32m'Error'[39m,
+  errorStack: [32m'Error: Config not found: 404\n'[39m +
+    [32m'    at ConfigLoader._loadConfig (/Users/angel/Projects/test/walsheetz/frontend/utils/ConfigLoader.js:142:15)\n'[39m +
+    [32m'    at processTicksAndRejections (node:internal/process/task_queues:105:5)'[39m,
+  timestamp: [32m'2025-11-01T21:36:11.030Z'[39m,
+  configUrl: [32m'/app-config.json'[39m
+}
+
+stdout | frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should include walrus.features.epochsDefault in fallback config
+[ConfigLoader] ℹ️ Config file not found (404), falling back to embedded config
+
+stderr | frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should include walrus.features.epochsDefault in fallback config
+❌ [ConfigLoader] Config loading error: {
+  errorMessage: [32m'Config not found: 404'[39m,
+  errorType: [32m'Error'[39m,
+  errorStack: [32m'Error: Config not found: 404\n'[39m +
+    [32m'    at ConfigLoader._loadConfig (/Users/angel/Projects/test/walsheetz/frontend/utils/ConfigLoader.js:142:15)\n'[39m +
+    [32m'    at processTicksAndRejections (node:internal/process/task_queues:105:5)'[39m,
+  timestamp: [32m'2025-11-01T21:36:11.030Z'[39m,
+  configUrl: [32m'/app-config.json'[39m
+}
+
+stdout | frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should include contentHashInSave feature in fallback config
+[ConfigLoader] ℹ️ Config file not found (404), falling back to embedded config
+
+stderr | frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should include contentHashInSave feature in fallback config
+❌ [ConfigLoader] Config loading error: {
+  errorMessage: [32m'Config not found: 404'[39m,
+  errorType: [32m'Error'[39m,
+  errorStack: [32m'Error: Config not found: 404\n'[39m +
+    [32m'    at ConfigLoader._loadConfig (/Users/angel/Projects/test/walsheetz/frontend/utils/ConfigLoader.js:142:15)\n'[39m +
+    [32m'    at processTicksAndRejections (node:internal/process/task_queues:105:5)'[39m,
+  timestamp: [32m'2025-11-01T21:36:11.040Z'[39m,
+  configUrl: [32m'/app-config.json'[39m
+}
+
+stdout | frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should include wallet features in fallback config
+[ConfigLoader] ℹ️ Config file not found (404), falling back to embedded config
+
+stderr | frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should include wallet features in fallback config
+❌ [ConfigLoader] Config loading error: {
+  errorMessage: [32m'Config not found: 404'[39m,
+  errorType: [32m'Error'[39m,
+  errorStack: [32m'Error: Config not found: 404\n'[39m +
+    [32m'    at ConfigLoader._loadConfig (/Users/angel/Projects/test/walsheetz/frontend/utils/ConfigLoader.js:142:15)\n'[39m +
+    [32m'    at processTicksAndRejections (node:internal/process/task_queues:105:5)'[39m,
+  timestamp: [32m'2025-11-01T21:36:11.041Z'[39m,
+  configUrl: [32m'/app-config.json'[39m
+}
+
+stdout | frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should add runtime methods to fallback config
+[ConfigLoader] ℹ️ Config file not found (404), falling back to embedded config
+
+stderr | frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should add runtime methods to fallback config
+❌ [ConfigLoader] Config loading error: {
+  errorMessage: [32m'Config not found: 404'[39m,
+  errorType: [32m'Error'[39m,
+  errorStack: [32m'Error: Config not found: 404\n'[39m +
+    [32m'    at ConfigLoader._loadConfig (/Users/angel/Projects/test/walsheetz/frontend/utils/ConfigLoader.js:142:15)\n'[39m +
+    [32m'    at processTicksAndRejections (node:internal/process/task_queues:105:5)'[39m,
+  timestamp: [32m'2025-11-01T21:36:11.041Z'[39m,
+  configUrl: [32m'/app-config.json'[39m
+}
+
+stdout | frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should succeed with 200 response and not set isFallback
+[ConfigLoader] ✅ Config fetched successfully: { url: [90mundefined[39m, status: [33m200[39m }
+
+stdout | frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should succeed with 200 response and not set isFallback
+[ConfigLoader] ✅ Runtime config loaded successfully: {
+  version: [32m'1.0.0'[39m,
+  network: [32m'testnet'[39m,
+  timestamp: [32m'2023-11-14T22:13:20.000Z'[39m,
+  features: []
+}
+
+stdout | frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should emit config:fallback event when using fallback
+[ConfigLoader] ℹ️ Config file not found (404), falling back to embedded config
+
+stderr | frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should emit config:fallback event when using fallback
+❌ [ConfigLoader] Config loading error: {
+  errorMessage: [32m'Config not found: 404'[39m,
+  errorType: [32m'Error'[39m,
+  errorStack: [32m'Error: Config not found: 404\n'[39m +
+    [32m'    at ConfigLoader._loadConfig (/Users/angel/Projects/test/walsheetz/frontend/utils/ConfigLoader.js:142:15)\n'[39m +
+    [32m'    at processTicksAndRejections (node:internal/process/task_queues:105:5)'[39m,
+  timestamp: [32m'2025-11-01T21:36:11.043Z'[39m,
+  configUrl: [32m'/app-config.json'[39m
+}
+
+stdout | frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > persistForcedFeature should save to localStorage
+[ConfigLoader] ✅ Persisted forced feature: test.feature = true
+
+stdout | frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > fallback config should use proxied Walrus endpoints
+[ConfigLoader] ℹ️ Config file not found (404), falling back to embedded config
+
+stderr | frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > fallback config should use proxied Walrus endpoints
+❌ [ConfigLoader] Config loading error: {
+  errorMessage: [32m'Config not found: 404'[39m,
+  errorType: [32m'Error'[39m,
+  errorStack: [32m'Error: Config not found: 404\n'[39m +
+    [32m'    at ConfigLoader._loadConfig (/Users/angel/Projects/test/walsheetz/frontend/utils/ConfigLoader.js:142:15)\n'[39m +
+    [32m'    at processTicksAndRejections (node:internal/process/task_queues:105:5)'[39m,
+  timestamp: [32m'2025-11-01T21:36:11.051Z'[39m,
+  configUrl: [32m'/app-config.json'[39m
+}
+
+stdout | frontend/utils/__tests__/ConfigLoader.fallback.test.js
+[90m[2:36:11 PM.052][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should mark config as isFallback when fetch fails with 404 15ms
+ ✓ frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should return fallback config with required fields on 404 1ms
+ ✓ frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should include walrus.features.epochsDefault in fallback config 0ms
+ ✓ frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should include contentHashInSave feature in fallback config 10ms
+ ✓ frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should include wallet features in fallback config 1ms
+ ✓ frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should add runtime methods to fallback config 0ms
+ ✓ frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should succeed with 200 response and not set isFallback 1ms
+ ✓ frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > should emit config:fallback event when using fallback 6ms
+ ✓ frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > persistForcedFeature should save to localStorage 2ms
+ ✓ frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > getForcedFeature should retrieve from localStorage 0ms
+ ✓ frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > getForcedFeature should return null if not found 0ms
+ ✓ frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > clearForcedFeatures should clear all localStorage keys with prefix 0ms
+ ✓ frontend/utils/__tests__/ConfigLoader.fallback.test.js > ConfigLoader Fallback Logic > fallback config should use proxied Walrus endpoints 1ms
+stdout | frontend/services/__tests__/BrowserWalrusService.consecutive-failures.test.js
+[90m[2:36:11 PM.278][0m ✅ [32m✅ Test environment ready[0m
+
+stderr | frontend/services/__tests__/BrowserWalrusService.consecutive-failures.test.js > BrowserWalrusService Consecutive Failure Threshold > should NOT clear data on single transient failure
+❌ [ConfigLoader] Config loading error: {
+  errorMessage: [32m'Network timeout'[39m,
+  errorType: [32m'Error'[39m,
+  errorStack: [32m'Error: Network timeout\n'[39m +
+    [32m'    at /Users/angel/Projects/test/walsheetz/frontend/services/__tests__/BrowserWalrusService.consecutive-failures.test.js:50:37\n'[39m +
+    [32m'    at file:///Users/angel/Projects/test/walsheetz/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11'[39m,
+  timestamp: [32m'2025-11-01T21:36:11.291Z'[39m,
+  configUrl: [32m'/app-config.json'[39m
+}
+
+ ✓ frontend/services/__tests__/BrowserWalrusService.consecutive-failures.test.js > BrowserWalrusService Consecutive Failure Threshold > should NOT clear data on single transient failure 21ms
+ ✓ frontend/services/__tests__/BrowserWalrusService.consecutive-failures.test.js > BrowserWalrusService Consecutive Failure Threshold > should NOT clear data on two consecutive failures 1ms
+ × frontend/services/__tests__/BrowserWalrusService.consecutive-failures.test.js > BrowserWalrusService Consecutive Failure Threshold > should clear data only after 3 consecutive failures (threshold) 4ms
+   → expected "clearAllData" to be called 1 times, but got 0 times
+ × frontend/services/__tests__/BrowserWalrusService.consecutive-failures.test.js > BrowserWalrusService Consecutive Failure Threshold > should reset failure counter on successful health check 19ms
+   → expected 2 to be +0 // Object.is equality
+ × frontend/services/__tests__/BrowserWalrusService.consecutive-failures.test.js > BrowserWalrusService Consecutive Failure Threshold > should recover from threshold and not clear after reset 1ms
+   → expected "clearAllData" to be called 1 times, but got 0 times
+stdout | frontend/services/__tests__/BrowserWalrusService.consecutive-failures.test.js
+[90m[2:36:11 PM.413][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ frontend/services/__tests__/BrowserWalrusService.consecutive-failures.test.js > BrowserWalrusService Consecutive Failure Threshold > should preserve pending saves during transient failures 80ms
+ × frontend/services/__tests__/BrowserWalrusService.consecutive-failures.test.js > BrowserWalrusService Consecutive Failure Threshold > should log transient vs persistent failures differently 7ms
+   → expected undefined to be truthy
+stdout | frontend/utils/__tests__/ConfigLoader.deployment.test.js
+[90m[2:36:11 PM.631][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | frontend/utils/__tests__/ConfigLoader.deployment.test.js
+[90m[2:36:11 PM.634][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ frontend/utils/__tests__/ConfigLoader.deployment.test.js > Config deployment > app-config.json exists in public directory 1ms
+ ✓ frontend/utils/__tests__/ConfigLoader.deployment.test.js > Config deployment > app-config.json contains required network configuration 0ms
+stdout | frontend/services/__tests__/BrowserWalrusService.degraded.test.js
+[90m[2:36:11 PM.659][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | frontend/services/__tests__/BrowserWalrusService.degraded.test.js
+[90m[2:36:11 PM.673][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ frontend/services/__tests__/BrowserWalrusService.degraded.test.js > BrowserWalrusService Degraded Mode > should enter degraded mode on CORS-blocked publisher 8ms
+ ✓ frontend/services/__tests__/BrowserWalrusService.degraded.test.js > BrowserWalrusService Degraded Mode > should enter degraded mode on CORS-blocked aggregator 0ms
+ ✓ frontend/services/__tests__/BrowserWalrusService.degraded.test.js > BrowserWalrusService Degraded Mode > should NOT clear data when CORS-blocked (degraded mode) 1ms
+ ✓ frontend/services/__tests__/BrowserWalrusService.degraded.test.js > BrowserWalrusService Degraded Mode > should recover from degraded mode when endpoints heal 0ms
+ ✓ frontend/services/__tests__/BrowserWalrusService.degraded.test.js > BrowserWalrusService Degraded Mode > should detect CORS error message variations 1ms
+ ✓ frontend/services/__tests__/BrowserWalrusService.degraded.test.js > BrowserWalrusService Degraded Mode > should preserve save queue size in degraded mode logs 1ms
+stdout | src/sdk/utils/__tests__/ConfigLoader.deployment.test.js
+[90m[2:36:11 PM.720][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | src/sdk/utils/__tests__/ConfigLoader.deployment.test.js
+[90m[2:36:11 PM.747][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ × src/sdk/utils/__tests__/ConfigLoader.deployment.test.js > Config deployment > app-config.json exists in public directory 21ms
+   → expected false to be true // Object.is equality
+ × src/sdk/utils/__tests__/ConfigLoader.deployment.test.js > Config deployment > app-config.json contains required network configuration 5ms
+   → ENOENT: no such file or directory, open '/Users/angel/Projects/test/walsheetz/src/public/app-config.json'
+stdout | frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js
+[90m[2:36:12 PM.164][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should use signAndExecuteTransactionBlock when available
+[BrowserWalletManager] ✅ Wallet state updated - connected
+[HealthMonitor] ✅ Heartbeat successful (0ms) - Status: healthy
+
+stdout | frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should use signAndExecuteTransactionBlock when available
+[BrowserWalletManager] ✅ Transaction signed and executed successfully: {
+  attempt: [33m1[39m,
+  digest: [32m'0xdigest123'[39m,
+  hasEffects: [33mfalse[39m,
+  hasObjectChanges: [33mfalse[39m,
+  hasBalanceChanges: [33mfalse[39m
+}
+
+stdout | frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should fall back to signAndExecute when signAndExecuteTransactionBlock not available
+[BrowserWalletManager] ✅ Wallet state updated - connected
+[HealthMonitor] ✅ Heartbeat successful (0ms) - Status: healthy
+
+stdout | frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should fall back to signAndExecute when signAndExecuteTransactionBlock not available
+[BrowserWalletManager] ✅ Transaction signed and executed successfully: {
+  attempt: [33m1[39m,
+  digest: [32m'0xdigest456'[39m,
+  hasEffects: [33mfalse[39m,
+  hasObjectChanges: [33mfalse[39m,
+  hasBalanceChanges: [33mfalse[39m
+}
+
+stdout | frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should throw error if both methods are unavailable
+[BrowserWalletManager] ✅ Wallet state updated - connected
+[HealthMonitor] ✅ Heartbeat successful (0ms) - Status: healthy
+
+stderr | frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should throw error if both methods are unavailable
+[BrowserWalletManager] ❌ Attempt 1/3 failed: {
+  error: [32m'Wallet connection does not expose a compatible sign-and-execute method'[39m,
+  isRetryable: [33mfalse[39m,
+  isLastAttempt: [33mfalse[39m,
+  transactionType: [32m'object'[39m
+}
+
+stdout | frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should handle transactionBlock format
+[BrowserWalletManager] ✅ Wallet state updated - connected
+[HealthMonitor] ✅ Heartbeat successful (0ms) - Status: healthy
+
+stdout | frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should handle transactionBlock format
+[BrowserWalletManager] ✅ Transaction signed and executed successfully: {
+  attempt: [33m1[39m,
+  digest: [32m'0xdigest789'[39m,
+  hasEffects: [33mfalse[39m,
+  hasObjectChanges: [33mfalse[39m,
+  hasBalanceChanges: [33mfalse[39m
+}
+
+stdout | frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should add default options if not provided
+[BrowserWalletManager] ✅ Wallet state updated - connected
+[HealthMonitor] ✅ Heartbeat successful (0ms) - Status: healthy
+
+stdout | frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should add default options if not provided
+[BrowserWalletManager] ✅ Transaction signed and executed successfully: {
+  attempt: [33m1[39m,
+  digest: [32m'0xdigest999'[39m,
+  hasEffects: [33mfalse[39m,
+  hasObjectChanges: [33mfalse[39m,
+  hasBalanceChanges: [33mfalse[39m
+}
+
+stdout | frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should retry on retryable errors
+[BrowserWalletManager] ✅ Wallet state updated - connected
+[HealthMonitor] ✅ Heartbeat successful (0ms) - Status: healthy
+
+stderr | frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should retry on retryable errors
+[BrowserWalletManager] ❌ Attempt 1/3 failed: {
+  error: [32m'Connection timeout'[39m,
+  isRetryable: [33mtrue[39m,
+  isLastAttempt: [33mfalse[39m,
+  transactionType: [32m'object'[39m
+}
+
+stdout | frontend/adapters/__tests__/StorageAdapter.session-backup.test.js
+[90m[2:36:12 PM.191][0m ✅ [32m✅ Test environment ready[0m
+
+stdout | frontend/adapters/__tests__/StorageAdapter.session-backup.test.js > StorageAdapter Session Backup and Recovery > should save data to sessionStorage when saveData is called
+[StorageAdapter:storage-save-1700000000000-xm3s3bw13] ✅ Data saved to RAM {
+  totalDuration: [32m'0ms'[39m,
+  memoryTime: [32m'0ms'[39m,
+  historyUpdateTime: [32m'0ms'[39m,
+  version: [32m'1.0'[39m,
+  warning: [32m'⚠️  Data exists in memory only. Must save to blockchain to persist.'[39m
+}
+
+stdout | frontend/adapters/__tests__/StorageAdapter.session-backup.test.js > StorageAdapter Session Backup and Recovery > should restore data from sessionStorage when RAM is empty
+[StorageAdapter:storage-load-1700000000000-rfpo61ynb] ✅ Data restored from session backup {
+  restoreDuration: [32m'0ms'[39m,
+  dataSize: [33m142[39m,
+  version: [32m'1.0'[39m,
+  savedAt: [32m'2023-11-14T22:13:20.000Z'[39m
+}
+
+stdout | frontend/adapters/__tests__/StorageAdapter.session-backup.test.js > StorageAdapter Session Backup and Recovery > should survive clearAllData and restore on next load
+[StorageAdapter:storage-save-1700000000000-ltaqxywli] ✅ Data saved to RAM {
+  totalDuration: [32m'0ms'[39m,
+  memoryTime: [32m'0ms'[39m,
+  historyUpdateTime: [32m'0ms'[39m,
+  version: [32m'1.0'[39m,
+  warning: [32m'⚠️  Data exists in memory only. Must save to blockchain to persist.'[39m
+}
+
+stdout | frontend/adapters/__tests__/StorageAdapter.session-backup.test.js > StorageAdapter Session Backup and Recovery > should survive clearAllData and restore on next load
+[StorageAdapter:storage-load-1700000000000-vrlcxw06a] ✅ Data restored from session backup {
+  restoreDuration: [32m'0ms'[39m,
+  dataSize: [33m136[39m,
+  version: [32m'1.0'[39m,
+  savedAt: [32m'2023-11-14T22:13:20.000Z'[39m
+}
+
+stdout | frontend/adapters/__tests__/StorageAdapter.session-backup.test.js > StorageAdapter Session Backup and Recovery > should handle sessionStorage quota exceeded gracefully
+[StorageAdapter:storage-save-1700000000000-bt6s540cz] ✅ Data saved to RAM {
+  totalDuration: [32m'0ms'[39m,
+  memoryTime: [32m'0ms'[39m,
+  historyUpdateTime: [32m'0ms'[39m,
+  version: [32m'1.0'[39m,
+  warning: [32m'⚠️  Data exists in memory only. Must save to blockchain to persist.'[39m
+}
+
+stdout | frontend/adapters/__tests__/StorageAdapter.session-backup.test.js > StorageAdapter Session Backup and Recovery > should preserve cell count through backup cycle
+[StorageAdapter:storage-save-1700000000000-axnn6fpga] ✅ Data saved to RAM {
+  totalDuration: [32m'0ms'[39m,
+  memoryTime: [32m'0ms'[39m,
+  historyUpdateTime: [32m'0ms'[39m,
+  version: [32m'1.0'[39m,
+  warning: [32m'⚠️  Data exists in memory only. Must save to blockchain to persist.'[39m
+}
+
+stdout | frontend/adapters/__tests__/StorageAdapter.session-backup.test.js > StorageAdapter Session Backup and Recovery > should preserve cell count through backup cycle
+[StorageAdapter:storage-load-1700000000000-apbn5nvap] ✅ Data restored from session backup {
+  restoreDuration: [32m'0ms'[39m,
+  dataSize: [33m206[39m,
+  version: [32m'1.0'[39m,
+  savedAt: [32m'2023-11-14T22:13:20.000Z'[39m
+}
+
+stdout | frontend/adapters/__tests__/StorageAdapter.session-backup.test.js > StorageAdapter Session Backup and Recovery > should handle session backup with large data
+[StorageAdapter:storage-save-1700000000000-23bwq3pwc] ✅ Data saved to RAM {
+  totalDuration: [32m'0ms'[39m,
+  memoryTime: [32m'0ms'[39m,
+  historyUpdateTime: [32m'0ms'[39m,
+  version: [32m'1.0'[39m,
+  warning: [32m'⚠️  Data exists in memory only. Must save to blockchain to persist.'[39m
+}
+
+stdout | frontend/adapters/__tests__/StorageAdapter.session-backup.test.js > StorageAdapter Session Backup and Recovery > should handle session backup with large data
+[StorageAdapter:storage-load-1700000000000-j14bew3o6] ✅ Data restored from session backup {
+  restoreDuration: [32m'0ms'[39m,
+  dataSize: [33m44355[39m,
+  version: [32m'1.0'[39m,
+  savedAt: [32m'2023-11-14T22:13:20.000Z'[39m
+}
+
+stdout | frontend/adapters/__tests__/StorageAdapter.session-backup.test.js > StorageAdapter Session Backup and Recovery > should include version info in restored data
+[StorageAdapter:storage-save-1700000000000-2aixr18dn] ✅ Data saved to RAM {
+  totalDuration: [32m'0ms'[39m,
+  memoryTime: [32m'0ms'[39m,
+  historyUpdateTime: [32m'0ms'[39m,
+  version: [32m'v1.2.3'[39m,
+  warning: [32m'⚠️  Data exists in memory only. Must save to blockchain to persist.'[39m
+}
+
+stdout | frontend/adapters/__tests__/StorageAdapter.session-backup.test.js > StorageAdapter Session Backup and Recovery > should include version info in restored data
+[StorageAdapter:storage-load-1700000000000-foh6b13ig] ✅ Data restored from session backup {
+  restoreDuration: [32m'0ms'[39m,
+  dataSize: [33m118[39m,
+  version: [32m'v1.2.3'[39m,
+  savedAt: [32m'2023-11-14T22:13:20.000Z'[39m
+}
+
+stdout | frontend/adapters/__tests__/StorageAdapter.session-backup.test.js
+[90m[2:36:12 PM.199][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ frontend/adapters/__tests__/StorageAdapter.session-backup.test.js > StorageAdapter Session Backup and Recovery > should save data to sessionStorage when saveData is called 2ms
+ ✓ frontend/adapters/__tests__/StorageAdapter.session-backup.test.js > StorageAdapter Session Backup and Recovery > should restore data from sessionStorage when RAM is empty 1ms
+ ✓ frontend/adapters/__tests__/StorageAdapter.session-backup.test.js > StorageAdapter Session Backup and Recovery > should return default data if no sessionStorage backup exists 0ms
+ ✓ frontend/adapters/__tests__/StorageAdapter.session-backup.test.js > StorageAdapter Session Backup and Recovery > should survive clearAllData and restore on next load 0ms
+ ✓ frontend/adapters/__tests__/StorageAdapter.session-backup.test.js > StorageAdapter Session Backup and Recovery > should handle sessionStorage quota exceeded gracefully 0ms
+ ✓ frontend/adapters/__tests__/StorageAdapter.session-backup.test.js > StorageAdapter Session Backup and Recovery > should handle corrupted sessionStorage data gracefully 0ms
+ ✓ frontend/adapters/__tests__/StorageAdapter.session-backup.test.js > StorageAdapter Session Backup and Recovery > should preserve cell count through backup cycle 1ms
+ ✓ frontend/adapters/__tests__/StorageAdapter.session-backup.test.js > StorageAdapter Session Backup and Recovery > should handle session backup with large data 2ms
+ ✓ frontend/adapters/__tests__/StorageAdapter.session-backup.test.js > StorageAdapter Session Backup and Recovery > should include version info in restored data 0ms
+ ✓ frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should use signAndExecuteTransactionBlock when available 3ms
+ ✓ frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should fall back to signAndExecute when signAndExecuteTransactionBlock not available 1ms
+ ✓ frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should throw error if both methods are unavailable 1ms
+ ✓ frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should handle transactionBlock format 0ms
+ ✓ frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should add default options if not provided 1ms
+stdout | frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should retry on retryable errors
+[BrowserWalletManager] ✅ Wallet reconnected, will retry transaction
+
+stdout | frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should retry on retryable errors
+[BrowserWalletManager] ✅ Transaction signed and executed successfully: {
+  attempt: [33m2[39m,
+  digest: [32m'0xdigest111'[39m,
+  hasEffects: [33mfalse[39m,
+  hasObjectChanges: [33mfalse[39m,
+  hasBalanceChanges: [33mfalse[39m
+}
+
+stdout | frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should record transaction attempt on success
+[BrowserWalletManager] ✅ Wallet state updated - connected
+[HealthMonitor] ✅ Heartbeat successful (0ms) - Status: healthy
+
+stdout | frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should record transaction attempt on success
+[BrowserWalletManager] ✅ Transaction signed and executed successfully: {
+  attempt: [33m1[39m,
+  digest: [32m'0xdigest222'[39m,
+  hasEffects: [33mfalse[39m,
+  hasObjectChanges: [33mfalse[39m,
+  hasBalanceChanges: [33mfalse[39m
+}
+
+stdout | frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should record transaction attempt on failure
+[BrowserWalletManager] ✅ Wallet state updated - connected
+[HealthMonitor] ✅ Heartbeat successful (0ms) - Status: healthy
+
+stderr | frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should record transaction attempt on failure
+[BrowserWalletManager] ❌ Attempt 1/3 failed: {
+  error: [32m'Transaction failed'[39m,
+  isRetryable: [33mfalse[39m,
+  isLastAttempt: [33mfalse[39m,
+  transactionType: [32m'object'[39m
+}
+
+stdout | frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should handle legacy format with direct transaction
+[BrowserWalletManager] ✅ Wallet state updated - connected
+[HealthMonitor] ✅ Heartbeat successful (0ms) - Status: healthy
+
+stdout | frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should handle legacy format with direct transaction
+[BrowserWalletManager] ✅ Transaction signed and executed successfully: {
+  attempt: [33m1[39m,
+  digest: [32m'0xdigest333'[39m,
+  hasEffects: [33mfalse[39m,
+  hasObjectChanges: [33mfalse[39m,
+  hasBalanceChanges: [33mfalse[39m
+}
+
+stdout | frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js
+[90m[2:36:12 PM.678][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should retry on retryable errors 502ms
+ ✓ frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should record transaction attempt on success 1ms
+ ✓ frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should record transaction attempt on failure 2ms
+ ✓ frontend/services/__tests__/BrowserWalletManager.signAndExecute.test.js > BrowserWalletManager signAndExecuteTransaction > should handle legacy format with direct transaction 1ms
+stdout | frontend/presentation/components/__tests__/SaveStatusBanner.event.test.jsx
+[90m[2:36:14 PM.266][0m ✅ [32m✅ Test environment cleaned up[0m
+
+ ✓ frontend/presentation/components/__tests__/SaveStatusBanner.event.test.jsx > SaveStatusBanner Event Handling > Auto-dismiss behavior > should auto-dismiss error message after 5 seconds 5019ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/sdk/services/CSVExportRegression.test.js [ src/sdk/services/CSVExportRegression.test.js ]
+Error: Failed to resolve import "@/sdk/SpreadsheetImportExportService.js" from "src/sdk/services/CSVExportRegression.test.js". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Users/angel/Projects/test/walsheetz/src/sdk/services/CSVExportRegression.test.js:1:0
+  28 |    }
+  29 |  }));
+  30 |  const __vi_import_0__ = await import("@/sdk/SpreadsheetImportExportService.js");
+     |                                       ^
+  31 |  const __vi_import_1__ = await import("xlsx");
+  32 |  
+ ❯ TransformPluginContext._formatError node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49258:41
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49253:16
+ ❯ normalizeUrl node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64306:23
+ ❯ node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64438:39
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64365:7
+ ❯ PluginContainer.transform node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49099:18
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:51977:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/14]⎯
+
+ FAIL  src/sdk/services/CSVImportIntegration.test.js [ src/sdk/services/CSVImportIntegration.test.js ]
+Error: Failed to resolve import "@/sdk/SpreadsheetImportExportService.js" from "src/sdk/services/CSVImportIntegration.test.js". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Users/angel/Projects/test/walsheetz/src/sdk/services/CSVImportIntegration.test.js:7:49
+  5  |  
+  6  |  import { describe, test, expect, beforeEach, vi } from 'vitest';
+  7  |  import { SpreadsheetImportExportService } from "@/sdk/SpreadsheetImportExportService.js";
+     |                                                  ^
+  8  |  import { parseCSV } from "@/sdk/utils/BlobParser.js";
+  9  |  
+ ❯ TransformPluginContext._formatError node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49258:41
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49253:16
+ ❯ normalizeUrl node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64306:23
+ ❯ node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64438:39
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64365:7
+ ❯ PluginContainer.transform node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49099:18
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:51977:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/14]⎯
+
+ FAIL  src/sdk/services/GridSizeManager.test.js [ src/sdk/services/GridSizeManager.test.js ]
+Error: Failed to resolve import "@/sdk/GridSizeManager.js" from "src/sdk/services/GridSizeManager.test.js". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Users/angel/Projects/test/walsheetz/src/sdk/services/GridSizeManager.test.js:7:34
+  5  |  
+  6  |  import { describe, test, expect, beforeEach, vi } from 'vitest';
+  7  |  import { GridSizeManager } from "@/sdk/GridSizeManager.js";
+     |                                   ^
+  8  |  
+  9  |  describe('GridSizeManager', () => {
+ ❯ TransformPluginContext._formatError node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49258:41
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49253:16
+ ❯ normalizeUrl node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64306:23
+ ❯ node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64438:39
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64365:7
+ ❯ PluginContainer.transform node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49099:18
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:51977:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/14]⎯
+
+ FAIL  src/sdk/services/SpreadsheetCRUD.test.js [ src/sdk/services/SpreadsheetCRUD.test.js ]
+Error: Failed to resolve import "../../adapters/BlockchainAdapter.js" from "src/sdk/services/SpreadsheetCRUD.test.js". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Users/angel/Projects/test/walsheetz/src/sdk/services/SpreadsheetCRUD.test.js:2:36
+  1  |  import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+  2  |  import { BlockchainAdapter } from '../../adapters/BlockchainAdapter.js';
+     |                                     ^
+  3  |  import { StorageAdapter } from '../../adapters/StorageAdapter.js';
+  4  |  import {
+ ❯ TransformPluginContext._formatError node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49258:41
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49253:16
+ ❯ normalizeUrl node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64306:23
+ ❯ node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64438:39
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64365:7
+ ❯ PluginContainer.transform node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49099:18
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:51977:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/14]⎯
+
+ FAIL  src/sdk/services/SpreadsheetExport.test.js [ src/sdk/services/SpreadsheetExport.test.js ]
+Error: Failed to resolve import "@/sdk/SpreadsheetImportExportService.js" from "src/sdk/services/SpreadsheetExport.test.js". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Users/angel/Projects/test/walsheetz/src/sdk/services/SpreadsheetExport.test.js:2:49
+  1  |  import * as XLSX from 'xlsx';
+  2  |  import { SpreadsheetImportExportService } from "@/sdk/SpreadsheetImportExportService.js";
+     |                                                  ^
+  3  |  
+  4  |  describe('SpreadsheetImportExportService export conversions', () => {
+ ❯ TransformPluginContext._formatError node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49258:41
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49253:16
+ ❯ normalizeUrl node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64306:23
+ ❯ node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64438:39
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64365:7
+ ❯ PluginContainer.transform node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49099:18
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:51977:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/14]⎯
+
+ FAIL  src/sdk/services/luckysheetApi.methods.test.js [ src/sdk/services/luckysheetApi.methods.test.js ]
+Error: Failed to resolve import "@/sdk/luckysheetApi.js" from "src/sdk/services/luckysheetApi.methods.test.js". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Users/angel/Projects/test/walsheetz/src/sdk/services/luckysheetApi.methods.test.js:7:28
+  5  |  
+  6  |  import { describe, it, expect, beforeEach, vi } from 'vitest';
+  7  |  import luckysheetApi from "@/sdk/luckysheetApi.js";
+     |                             ^
+  8  |  
+  9  |  describe('LuckysheetApi methods verification', () => {
+ ❯ TransformPluginContext._formatError node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49258:41
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49253:16
+ ❯ normalizeUrl node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64306:23
+ ❯ node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64438:39
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64365:7
+ ❯ PluginContainer.transform node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49099:18
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:51977:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/14]⎯
+
+ FAIL  src/sdk/services/blockchain/BrowserWalletManager.signAndExecute.test.js [ src/sdk/services/blockchain/BrowserWalletManager.signAndExecute.test.js ]
+Error: Failed to resolve import "@/sdk/services/BrowserWalletManager.js" from "src/sdk/services/blockchain/BrowserWalletManager.signAndExecute.test.js". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Users/angel/Projects/test/walsheetz/src/sdk/services/blockchain/BrowserWalletManager.signAndExecute.test.js:5:39
+  3  |   */
+  4  |  import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
+  5  |  import { BrowserWalletManager } from "@/sdk/services/BrowserWalletManager.js";
+     |                                        ^
+  6  |  
+  7  |  describe('BrowserWalletManager signAndExecuteTransaction', () => {
+ ❯ TransformPluginContext._formatError node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49258:41
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49253:16
+ ❯ normalizeUrl node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64306:23
+ ❯ node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64438:39
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64365:7
+ ❯ PluginContainer.transform node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49099:18
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:51977:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/14]⎯
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  frontend/services/__tests__/BrowserWalrusService.consecutive-failures.test.js > BrowserWalrusService Consecutive Failure Threshold > should clear data only after 3 consecutive failures (threshold)
+AssertionError: expected "clearAllData" to be called 1 times, but got 0 times
+ ❯ frontend/services/__tests__/BrowserWalrusService.consecutive-failures.test.js:98:26
+     96|     fetchMock.mockRejectedValueOnce(new Error('Network timeout'))
+     97|     await service.performHealthCheck(false)
+     98|     expect(clearDataSpy).toHaveBeenCalledTimes(1)
+       |                          ^
+     99|     expect(service.healthStatus.consecutiveFailures).toBe(3)
+    100| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/14]⎯
+
+ FAIL  frontend/services/__tests__/BrowserWalrusService.consecutive-failures.test.js > BrowserWalrusService Consecutive Failure Threshold > should reset failure counter on successful health check
+AssertionError: expected 2 to be +0 // Object.is equality
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0[39m
+[31m+ 2[39m
+
+ ❯ frontend/services/__tests__/BrowserWalrusService.consecutive-failures.test.js:119:54
+    117|     })
+    118|     await service.performHealthCheck(false)
+    119|     expect(service.healthStatus.consecutiveFailures).toBe(0)
+       |                                                      ^
+    120|     expect(clearDataSpy).not.toHaveBeenCalled()
+    121| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/14]⎯
+
+ FAIL  frontend/services/__tests__/BrowserWalrusService.consecutive-failures.test.js > BrowserWalrusService Consecutive Failure Threshold > should recover from threshold and not clear after reset
+AssertionError: expected "clearAllData" to be called 1 times, but got 0 times
+ ❯ frontend/services/__tests__/BrowserWalrusService.consecutive-failures.test.js:133:26
+    131|       await service.performHealthCheck(false)
+    132|     }
+    133|     expect(clearDataSpy).toHaveBeenCalledTimes(1)
+       |                          ^
+    134|     expect(service.healthStatus.consecutiveFailures).toBe(3)
+    135| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/14]⎯
+
+ FAIL  frontend/services/__tests__/BrowserWalrusService.consecutive-failures.test.js > BrowserWalrusService Consecutive Failure Threshold > should log transient vs persistent failures differently
+AssertionError: expected undefined to be truthy
+
+[32m- Expected:[39m 
+true
+
+[31m+ Received:[39m 
+undefined
+
+ ❯ frontend/services/__tests__/BrowserWalrusService.consecutive-failures.test.js:182:27
+    180|       typeof msg === 'string' && msg.includes('Transient health failur…
+    181|     )
+    182|     expect(transientCall).toBeTruthy()
+       |                           ^
+    183|     expect(transientCall[0]).toContain('1/3')
+    184| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/14]⎯
+
+ FAIL  frontend/services/luckysheet/__tests__/dataTransforms.test.js > dataTransforms > buildLuckysheetFunctionObject > should include all WalSheetz functions
+AssertionError: expected false to be true // Object.is equality
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+ ❯ frontend/services/luckysheet/__tests__/dataTransforms.test.js:258:61
+    256|       expect(allFunctions.length).toBeGreaterThan(0);
+    257|       // Check that we have WZ-prefixed functions
+    258|       expect(allFunctions.some(f => f && f.includes('WZ'))).toBe(true);
+       |                                                             ^
+    259|     });
+    260| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/14]⎯
+
+ FAIL  src/sdk/utils/__tests__/ConfigLoader.deployment.test.js > Config deployment > app-config.json exists in public directory
+AssertionError: expected false to be true // Object.is equality
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+ ❯ src/sdk/utils/__tests__/ConfigLoader.deployment.test.js:11:36
+      9|   test('app-config.json exists in public directory', () => {
+     10|     const configPath = resolve(__dirname, '../../../public/app-config.…
+     11|     expect(existsSync(configPath)).toBe(true)
+       |                                    ^
+     12|   })
+     13| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/14]⎯
+
+ FAIL  src/sdk/utils/__tests__/ConfigLoader.deployment.test.js > Config deployment > app-config.json contains required network configuration
+Error: ENOENT: no such file or directory, open '/Users/angel/Projects/test/walsheetz/src/public/app-config.json'
+ ❯ src/sdk/utils/__tests__/ConfigLoader.deployment.test.js:16:45
+     14|   test('app-config.json contains required network configuration', asyn…
+     15|     const configPath = resolve(__dirname, '../../../public/app-config.…
+     16|     const config = JSON.parse(require('fs').readFileSync(configPath, '…
+       |                                             ^
+     17| 
+     18|     // Verify networks section exists
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { errno: -2, code: 'ENOENT', syscall: 'open', path: '/Users/angel/Projects/test/walsheetz/src/public/app-config.json' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/14]⎯
+
+
+ Test Files  10 failed | 36 passed (46)
+      Tests  7 failed | 448 passed | 2 skipped (457)
+   Start at  14:36:05
+   Duration  9.82s (transform 1.34s, setup 4.09s, collect 4.62s, tests 12.13s, environment 11.75s, prepare 3.92s)
+
+error: script "test:coverage" exited with code 1
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |    4.28 |    32.04 |   15.84 |    4.28 |                   
+ blockchain        |    8.26 |    37.34 |   13.11 |    8.26 |                   
+  config.js        |   98.57 |    15.38 |      40 |   98.57 | 6,13,406-407      
+  ...it-manager.js |       0 |        0 |       0 |       0 | 1-469             
+  ...am-manager.js |       0 |        0 |       0 |       0 | 1-413             
+  gas-estimator.js |       0 |        0 |       0 |       0 | 1-425             
+  ...subscriber.js |   53.77 |       60 |      50 |   53.77 | ...96-514,531-540 
+  grpc-service.js  |       0 |        0 |       0 |       0 | 1-870             
+  ...on-builder.js |       0 |        0 |       0 |       0 | 1-315             
+  ...or-service.js |       0 |        0 |       0 |       0 | 1-411             
+  ...t-registry.js |       0 |        0 |       0 |       0 | 1-250             
+  ...ql-service.js |   14.12 |      100 |    4.76 |   14.12 | ...68-692,695-703 
+  ...pc-service.js |       0 |        0 |       0 |       0 | 1-444             
+  sui-service.js   |       0 |        0 |       0 |       0 | 1-1743            
+  ...ion-runner.js |       0 |        0 |       0 |       0 | 1-211             
+  ...on-control.js |       0 |        0 |       0 |       0 | 1-367             
+  ...et-manager.js |       0 |        0 |       0 |       0 | 1-285             
+  ...us-service.js |   10.37 |    38.46 |    4.76 |   10.37 | ...2726,2729-2758 
+  ...rpc-bridge.js |       0 |        0 |       0 |       0 | 1-1549            
+ blockchain/utils  |   29.22 |    53.12 |      40 |   29.22 |                   
+  logger.js        |   78.38 |    54.83 |   41.66 |   78.38 | ...74-275,278-279 
+  rateLimiter.js   |       0 |        0 |       0 |       0 | 1-397             
+ frontend/services |     7.2 |       49 |   28.23 |     7.2 |                   
+  ...ageTracker.js |   66.73 |    53.65 |   57.89 |   66.73 | ...54,560-562,577 
+  ...rpcService.js |       0 |        0 |       0 |       0 | 1-704             
+  ...SuiService.js |       0 |        0 |       0 |       0 | 1-3283            
+  ...letManager.js |       0 |        0 |       0 |       0 | 1-908             

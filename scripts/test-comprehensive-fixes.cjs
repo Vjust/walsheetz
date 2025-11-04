@@ -43,7 +43,7 @@ function test(name, fn) {
 
 // Test 1: Walrus body stream fix
 test('Walrus response.clone() implementation', () => {
-  const walrusService = fs.readFileSync('frontend/services/BrowserWalrusService.js', 'utf8');
+  const walrusService = fs.readFileSync('src/walrus/BrowserWalrusService.js', 'utf8');
   if (walrusService.includes('response.clone()') && walrusService.includes('responseClone.arrayBuffer()')) {
     return true;
   }
@@ -52,7 +52,7 @@ test('Walrus response.clone() implementation', () => {
 
 // Test 2: Request deduplication
 test('Walrus request deduplication', () => {
-  const walrusService = fs.readFileSync('frontend/services/BrowserWalrusService.js', 'utf8');
+  const walrusService = fs.readFileSync('src/walrus/BrowserWalrusService.js', 'utf8');
   if (walrusService.includes('pendingRequests') && walrusService.includes('this.pendingRequests.has(requestKey)')) {
     return true;
   }
@@ -61,7 +61,7 @@ test('Walrus request deduplication', () => {
 
 // Test 3: Transaction queue management
 test('Transaction queue in BrowserSuiService', () => {
-  const suiService = fs.readFileSync('frontend/services/BrowserSuiService.js', 'utf8');
+  const suiService = fs.readFileSync('src/sdk/services/blockchain/BrowserSuiService.js', 'utf8');
   if (suiService.includes('transactionQueue') && suiService.includes('_processTransactionQueue') && suiService.includes('isProcessingTransaction')) {
     return true;
   }
@@ -79,7 +79,7 @@ test('Session restoration with retry logic', () => {
 
 // Test 5: Wallet health monitoring
 test('Health monitoring in BrowserWalletManager', () => {
-  const walletManager = fs.readFileSync('frontend/services/BrowserWalletManager.js', 'utf8');
+  const walletManager = fs.readFileSync('src/sdk/services/blockchain/BrowserWalletManager.js', 'utf8');
   if (walletManager.includes('healthMonitor') && walletManager.includes('startHealthMonitoring') && walletManager.includes('_performHeartbeat')) {
     return true;
   }
@@ -107,7 +107,7 @@ test('Error boundary components', () => {
 
 // Test 8: Wallet reconnection logic
 test('Wallet reconnection in BrowserWalletManager', () => {
-  const walletManager = fs.readFileSync('frontend/services/BrowserWalletManager.js', 'utf8');
+  const walletManager = fs.readFileSync('src/sdk/services/blockchain/BrowserWalletManager.js', 'utf8');
   if (walletManager.includes('reconnectWallet') && walletManager.includes('🔄 Attempting wallet reconnection')) {
     return true;
   }
@@ -116,7 +116,7 @@ test('Wallet reconnection in BrowserWalletManager', () => {
 
 // Test 9: Enhanced retry logic
 test('Enhanced retry logic with exponential backoff', () => {
-  const walletManager = fs.readFileSync('frontend/services/BrowserWalletManager.js', 'utf8');
+  const walletManager = fs.readFileSync('src/sdk/services/blockchain/BrowserWalletManager.js', 'utf8');
   if (walletManager.includes('maxRetries = 3') && walletManager.includes('isRetryableError') && walletManager.includes('exponential backoff')) {
     return true;
   }
@@ -125,7 +125,7 @@ test('Enhanced retry logic with exponential backoff', () => {
 
 // Test 10: Transaction attempt recording
 test('Transaction attempt recording for health monitoring', () => {
-  const walletManager = fs.readFileSync('frontend/services/BrowserWalletManager.js', 'utf8');
+  const walletManager = fs.readFileSync('src/sdk/services/blockchain/BrowserWalletManager.js', 'utf8');
   if (walletManager.includes('recordTransactionAttempt') && walletManager.includes('transactionHistory')) {
     return true;
   }
@@ -135,7 +135,7 @@ test('Transaction attempt recording for health monitoring', () => {
 // Test 11: Enhanced error handling
 test('Enhanced error messages and context', () => {
   const useSpreadsheet = fs.readFileSync('frontend/business/useSpreadsheet.js', 'utf8');
-  const walletManager = fs.readFileSync('frontend/services/BrowserWalletManager.js', 'utf8');
+  const walletManager = fs.readFileSync('src/sdk/services/blockchain/BrowserWalletManager.js', 'utf8');
 
   if (useSpreadsheet.includes('Engine data loading failed') &&
       walletManager.includes('Wallet communication failed after') &&
@@ -157,9 +157,9 @@ test('Connection recovery in WalletProviders', () => {
 // Test 13: Syntax validation
 test('JavaScript syntax validation', () => {
   const files = [
-    'frontend/services/BrowserWalletManager.js',
-    'frontend/services/BrowserSuiService.js',
-    'frontend/services/BrowserWalrusService.js',
+    'src/sdk/services/blockchain/BrowserWalletManager.js',
+    'src/sdk/services/blockchain/BrowserSuiService.js',
+    'src/walrus/BrowserWalrusService.js',
     'frontend/business/useSpreadsheet.js',
     'frontend/presentation/components/StatusBar.jsx'
   ];
@@ -195,7 +195,7 @@ test('Implementation documentation', () => {
 
 // Test 15: Integration completeness
 test('Integration completeness check', () => {
-  const walletManager = fs.readFileSync('frontend/services/BrowserWalletManager.js', 'utf8');
+  const walletManager = fs.readFileSync('src/sdk/services/blockchain/BrowserWalletManager.js', 'utf8');
   const statusBar = fs.readFileSync('frontend/presentation/components/StatusBar.jsx', 'utf8');
 
   // Check if health monitoring is properly connected
