@@ -33,6 +33,10 @@
   ],
   "author": "Dreamlit",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:Vjust/dreamlit-walrus-sdk.git"
+  },
   "dependencies": {
     "@mysten/walrus": "^0.2.0",
     "@mysten/sui": "^1.38.0"

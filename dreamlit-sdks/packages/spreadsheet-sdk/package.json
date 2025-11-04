@@ -53,5 +53,9 @@
     "storage"
   ],
   "author": "Dreamlit",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:Vjust/dreamlit-walrus-sdk.git"
+  }
 }
