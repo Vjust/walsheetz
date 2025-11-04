@@ -1,67 +1,23 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx",
-    "module": "ESNext",
+    "module": "ES2022",
+    "lib": ["ES2022"],
+    "moduleResolution": "bundler",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "outDir": "./dist",
-    "rootDir": ".",
-    "removeComments": false,
-    "noImplicitAny": true,
-    "noImplicitReturns": true,
-    "noImplicitThis": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "isolatedModules": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "exactOptionalPropertyTypes": true,
-    "noImplicitOverride": true,
-    "noPropertyAccessFromIndexSignature": true,
-    "noUncheckedIndexedAccess": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./frontend/*"],
-      "@/types/*": ["./frontend/types/*"],
-      "@/utils/*": ["./frontend/utils/*"],
-      "@/services/*": ["./frontend/services/*"],
-      "@/components/*": ["./frontend/presentation/components/*"],
-      "@/pages/*": ["./frontend/pages/*"],
-      "@/hooks/*": ["./frontend/hooks/*"],
-      "@/adapters/*": ["./frontend/adapters/*"],
-      "@/business/*": ["./frontend/business/*"]
-    }
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true
   },
-  "include": [
-    "frontend/**/*.ts",
-    "frontend/**/*.tsx",
-    "frontend/**/*.js",
-    "frontend/**/*.jsx",
-    "frontend/**/*.d.ts",
-    "vite.config.js",
-    "vitest.config.js"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "build",
-    "coverage",
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "**/*.spec.ts",
-    "**/*.spec.tsx"
-  ],
-  "ts-node": {
-    "esm": true
-  }
+  "exclude": ["node_modules", "dist", "**/dist", "**/*.test.ts", "**/*.test.tsx"]
 }

@@ -1,0 +1,219 @@
+.save-status-banner-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  width: 100%;
+  background: transparent;
+}
+
+.save-status-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  background-color: #fff3cd;
+  border-bottom: 2px solid #ffc107;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.save-status-banner.warning {
+  background-color: #fff3cd;
+  border-bottom-color: #ffc107;
+}
+
+.banner-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.banner-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1;
+  min-width: 250px;
+}
+
+.banner-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.message-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.main-message {
+  font-weight: 600;
+  color: #333;
+}
+
+.count-info {
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+}
+
+.warning-text {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.4;
+}
+
+.banner-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.retry-button,
+.dismiss-button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.retry-button {
+  background-color: #007bff;
+  color: white;
+  border: 1px solid #0056b3;
+}
+
+.retry-button:hover:not(:disabled) {
+  background-color: #0056b3;
+  box-shadow: 0 2px 6px rgba(0, 86, 179, 0.3);
+}
+
+.retry-button:active:not(:disabled) {
+  background-color: #004085;
+  transform: scale(0.98);
+}
+
+.retry-button:disabled {
+  background-color: #80bdff;
+  cursor: not-allowed;
+}
+
+.dismiss-button {
+  background-color: transparent;
+  color: #666;
+  border: 1px solid #ccc;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.dismiss-button:hover:not(:disabled) {
+  background-color: #f0f0f0;
+  color: #333;
+  border-color: #999;
+}
+
+.dismiss-button:disabled {
+  color: #ccc;
+  cursor: not-allowed;
+}
+
+.retry-status-message {
+  font-size: 12px;
+  color: #555;
+  padding-left: 28px;
+  font-style: italic;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .save-status-banner {
+    padding: 10px 12px;
+    gap: 6px;
+  }
+
+  .banner-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .banner-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .retry-button,
+  .dismiss-button {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .dismiss-button {
+    width: 32px;
+    height: 32px;
+  }
+
+  .message-text {
+    gap: 3px;
+  }
+
+  .main-message {
+    font-size: 13px;
+  }
+
+  .warning-text {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .banner-content {
+    gap: 4px;
+  }
+
+  .retry-button {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+
+  .main-message {
+    font-size: 12px;
+  }
+
+  .retry-status-message {
+    padding-left: 26px;
+    font-size: 11px;
+  }
+}
+
+/* Animation for entrance */
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.save-status-banner {
+  animation: slideDown 0.3s ease-out;
+}

@@ -1,0 +1,55 @@
+{
+  "name": "@dreamlit/walrus",
+  "version": "1.0.0",
+  "description": "Walrus decentralized storage adapter for browser and Node.js",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "browser": "./dist/index.js",
+      "node": "./dist/node.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "walrus",
+    "storage",
+    "decentralized",
+    "sui",
+    "blockchain"
+  ],
+  "author": "Dreamlit",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:Vjust/dreamlit-walrus-sdk.git"
+  },
+  "dependencies": {
+    "@dreamlit/shared": "workspace:*",
+    "@mysten/walrus": "^0.2.0",
+    "@mysten/sui": "^1.38.0"
+  },
+  "optionalDependencies": {
+    "undici": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "happy-dom": "^15.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^2.0.0"
+  }
+}

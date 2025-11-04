@@ -1,0 +1,342 @@
+/* Wallet Modal Styles */
+.wallet-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease;
+}
+
+.wallet-modal {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.95) 0%, 
+    rgba(230, 240, 255, 0.9) 100%);
+  border-radius: 20px;
+  box-shadow: 
+    0 20px 40px rgba(0, 100, 200, 0.2),
+    inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  max-width: 480px;
+  width: 90%;
+  max-height: 600px;
+  overflow: hidden;
+  animation: slideUp 0.3s ease;
+}
+
+.wallet-modal-header {
+  padding: 24px;
+  border-bottom: 1px solid rgba(200, 220, 240, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wallet-modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a3d5c;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #7090b0;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.close-button:hover {
+  background: rgba(200, 220, 240, 0.5);
+  color: #1a3d5c;
+}
+
+.wallet-modal-body {
+  padding: 24px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.wallet-section {
+  margin-bottom: 24px;
+}
+
+.wallet-section:last-child {
+  margin-bottom: 0;
+}
+
+.wallet-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #7090b0;
+}
+
+.wallet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wallet-item {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  background: white;
+  border: 1px solid rgba(200, 220, 240, 0.5);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.wallet-item:hover {
+  background: linear-gradient(135deg, #ffffff 0%, #f0f8ff 100%);
+  border-color: #4da6ff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 100, 200, 0.15);
+}
+
+.wallet-item.install {
+  border-style: dashed;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.wallet-icon {
+  width: 40px;
+  height: 40px;
+  margin-right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(240, 248, 255, 0.5);
+}
+
+.wallet-icon img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.wallet-name {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 500;
+  color: #1a3d5c;
+  text-align: left;
+}
+
+.install-label {
+  padding: 4px 12px;
+  background: linear-gradient(135deg, #4da6ff 0%, #0066cc 100%);
+  color: white;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.wallet-connecting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px;
+  text-align: center;
+  background: rgba(112, 144, 176, 0.05);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.connection-note {
+  font-size: 12px;
+  margin-top: 8px;
+  opacity: 0.8;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(200, 220, 240, 0.5);
+  border-top-color: #4da6ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+.wallet-connecting p {
+  margin: 0;
+  color: #7090b0;
+  font-size: 14px;
+}
+
+.wallet-error {
+  padding: 16px;
+  background: rgba(255, 59, 48, 0.1);
+  border: 1px solid rgba(255, 59, 48, 0.2);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.wallet-error p {
+  margin: 0 0 12px 0;
+  color: #d32f2f;
+  font-size: 14px;
+}
+
+.retry-button {
+  background: rgba(255, 59, 48, 0.8);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.retry-button:hover {
+  background: #d32f2f;
+}
+
+.wallet-item.connecting {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.connecting-indicator {
+  font-size: 12px;
+  color: #7090b0;
+  margin-left: auto;
+}
+
+.wallet-icon-fallback {
+  font-size: 24px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Slush-specific styles */
+.slush-description {
+  margin-bottom: 16px;
+  color: #7090b0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.install-description {
+  margin-bottom: 16px;
+  color: #7090b0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.slush-logo {
+  font-size: 32px;
+  animation: float 3s ease-in-out infinite;
+}
+
+.wallet-item.primary {
+  background: linear-gradient(135deg, #4da6ff 0%, #0066cc 100%);
+  color: white;
+  border: none;
+}
+
+.wallet-item.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(77, 166, 255, 0.3);
+}
+
+.wallet-item.primary .wallet-name {
+  color: white;
+  font-weight: 600;
+}
+
+.wallet-item.primary .connecting-indicator {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.no-wallets-message {
+  text-align: center;
+  padding: 24px;
+  color: #7090b0;
+  background: rgba(112, 144, 176, 0.05);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Scrollbar Styling */
+.wallet-modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.wallet-modal-body::-webkit-scrollbar-track {
+  background: rgba(200, 220, 240, 0.2);
+  border-radius: 4px;
+}
+
+.wallet-modal-body::-webkit-scrollbar-thumb {
+  background: rgba(160, 190, 220, 0.5);
+  border-radius: 4px;
+}
+
+.wallet-modal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(140, 170, 200, 0.7);
+}

@@ -1,0 +1,36 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs
+dist
+**/dist
+build
+**/build
+
+# Coverage reports
+coverage
+**/coverage
+
+# Lock files
+bun.lockb
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Git
+.git
+
+# Logs
+*.log
+
+# IDE
+.idea
+.vscode
+
+# Generated files
+**/*.d.ts
+
+# Legacy
+dreamlit-sdks
+Sui Ref

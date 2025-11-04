@@ -1,141 +1,74 @@
 # Dependencies
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Package manager files
-.yarn/
-.pnp.*
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-
-# Bun
-.bun/
-bun.lockb
+**/node_modules/
+.pnp
+.pnp.js
 
 # Build outputs
 dist/
+**/dist/
 build/
-.vite/
-.cache/
+**/build/
+*.tsbuildinfo
 
-# Environment variables
+# Package build artifacts
+packages/*/dist/
+packages/*/build/
+apps/*/dist/
+apps/*/build/
+
+# Test coverage
+coverage/
+**/coverage/
+.nyc_output/
+
+# Environment files
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*.local
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# IDE and editor files
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+.DS_Store
 
 # Logs
-logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
-# Runtime data
-pids/
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage directory used by tools like istanbul
-coverage/
-*.lcov
-
-# nyc test coverage
-.nyc_output
-
 # Temporary files
-.tmp/
-.temp/
 *.tmp
 *.temp
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
-
-# Microbundle cache
-.rpt2_cache/
-.rts2_cache_cjs/
-.rts2_cache_es/
-.rts2_cache_umd/
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
-# parcel-bundler cache (https://parceljs.org/)
-.parcel-cache
-
-# Next.js build output
-.next
-
-# Nuxt.js build / generate output
-.nuxt
-dist
-
-# Gatsby files
 .cache/
-# public - KEEP TRACKED: public/ contains app-config.json needed for deployment
 
-# Storybook build outputs
-.out
-.storybook-out
+# Move build artifacts (keep source only)
+*/move/**/build/
+*/move/**/locks/
 
-# Temporary folders
-tmp/
-temp/
+# Personal/local config
+.claude/
+*.db
+*.sqlite
 
-# Local development files
-*.local
+# Tool caches
+.eslintcache
+.prettiercache
 
-# Blockchain/crypto related
-.env.secrets
-wallets/
-private-keys/
-*.pem
-*.p12
-*.pfx
+# Changesets
+.changeset/**/*.md
+!.changeset/README.md
+!.changeset/config.json
 
-# Test artifacts
-test-results/
-screenshots/
-videos/
+# Generated reference docs (not source docs)
+reference/
+**/reference/
 
-# Code fetch artifacts
-codefetch/
-
-# HRM reasoning files
-hrm_reasoning.db
-hrm_reasoning.*
-
-# Reference documentation
-Sui Ref/
+# Walrus-specific
+**/walrus-sui-core/src/**/*.proto
+!**/walrus-sui-core/protos/**/*.proto
