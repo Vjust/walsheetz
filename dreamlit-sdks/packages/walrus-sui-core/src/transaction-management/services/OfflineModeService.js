@@ -532,11 +532,119 @@ class ConflictResolver {
 }
 
 // Create singleton instance
-export const offlineModeService = new OfflineModeService();
+const isBrowserEnvironment = typeof window !== 'undefined' && typeof navigator !== 'undefined';
 
-// Global access for debugging
-if (typeof window !== 'undefined') {
-  window.walSheetzOfflineMode = offlineModeService;
+class OfflineModeServiceShim {
+  async createOfflineSpreadsheet() {
+    return {
+      success: false,
+      offline: false,
+      message: 'Offline mode is unavailable in this environment'
+    };
+  }
+
+  async saveOfflineSpreadsheet() {
+    return {
+      success: false,
+      offline: false,
+      message: 'Offline mode is unavailable in this environment'
+    };
+  }
+
+  async loadOfflineSpreadsheet() {
+    throw new Error('Offline mode is unavailable in this environment');
+  }
+
+  getOfflineSpreadsheets() {
+    return [];
+  }
+
+  addToSyncQueue() {}
+
+  async processPendingOperations() {
+    return { successful: 0, failed: 0 };
+  }
+
+  async syncOperation() {
+    return { success: false, error: 'Offline mode is unavailable in this environment' };
+  }
+
+  async syncCreateSpreadsheet() {
+    return { success: false, error: 'Offline mode is unavailable in this environment' };
+  }
+
+  async syncUpdateSpreadsheet() {
+    return { success: false, error: 'Offline mode is unavailable in this environment' };
+  }
+
+  detectConflicts() {
+    return [];
+  }
+
+  resolveConflict(conflict) {
+    return conflict?.remote ?? null;
+  }
+
+  getOfflineStatus() {
+    return {
+      isOnline: true,
+      pendingOperations: 0,
+      syncQueueSize: 0,
+      localSpreadsheets: 0,
+      storageUsed: this.getStorageUsage()
+    };
+  }
+
+  getStorageUsage() {
+    return {
+      localData: 0,
+      pendingOperations: 0,
+      syncQueue: 0,
+      total: 0,
+      ramOnly: false
+    };
+  }
+
+  clearOfflineData() {}
+
+  exportOfflineData() {
+    return {
+      localDataStore: {},
+      pendingOperations: [],
+      syncQueue: [],
+      exportedAt: Date.now(),
+      version: 'shim'
+    };
+  }
+
+  importOfflineData() {
+    return {
+      success: false,
+      error: 'Offline mode is unavailable in this environment'
+    };
+  }
+
+  emitEvent() {}
+
+  destroy() {}
 }
+
+let offlineModeSingleton = null;
+
+export const getOfflineModeService = () => {
+  if (!offlineModeSingleton) {
+    offlineModeSingleton = isBrowserEnvironment
+      ? new OfflineModeService()
+      : new OfflineModeServiceShim();
+
+    if (isBrowserEnvironment && typeof window !== 'undefined') {
+      window.walSheetzOfflineMode = offlineModeSingleton;
+    }
+  }
+
+  return offlineModeSingleton;
+};
+
+export const offlineModeService = getOfflineModeService();
 
 export default offlineModeService;

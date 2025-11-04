@@ -1,10 +1,81 @@
 // Sui gRPC service for WalSheetz real-time collaboration
+import fs from 'fs';
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import { getCurrentConfig } from './config.js';
+
+const isNodeRuntime = typeof process !== 'undefined' && !!process.versions?.node;
+
+const safeFileURLToPath = (value) => {
+  if (typeof fileURLToPath === 'function') {
+    try {
+      return fileURLToPath(value);
+    } catch (error) {
+      console.warn('grpc-service: fileURLToPath invocation failed, returning raw value', error);
+    }
+  }
+
+  if (typeof value === 'string' && value.startsWith('file://')) {
+    return value.replace(/^file:\/\//, '');
+  }
+
+  return value;
+};
+
+const __filename = safeFileURLToPath(import.meta.url);
+const __dirname = path?.dirname ? path.dirname(__filename) : '';
+const safeCwd = typeof process !== 'undefined' && typeof process.cwd === 'function' ? process.cwd() : '';
+
+const googleProtosRoot = (() => {
+  if (!isNodeRuntime || typeof createRequire !== 'function') return '';
+
+  try {
+    const nodeRequire = createRequire(import.meta.url);
+    const resolved = nodeRequire.resolve('google-proto-files/package.json');
+    return path.dirname(resolved);
+  } catch (error) {
+    console.warn('grpc-service: unable to resolve google-proto-files package', error);
+    return '';
+  }
+})();
+
+const protoVersionedCandidates = [
+  __dirname ? path.join(__dirname, '..', 'protos', 'sui', 'rpc', 'v2beta2') : null,
+  __dirname ? path.join(__dirname, '..', '..', 'protos', 'sui', 'rpc', 'v2beta2') : null,
+  safeCwd ? path.join(safeCwd, 'protos', 'sui', 'rpc', 'v2beta2') : null
+].filter(Boolean);
+
+const protoRootCandidates = [
+  __dirname ? path.join(__dirname, '..', 'protos') : null,
+  __dirname ? path.join(__dirname, '..', '..', 'protos') : null,
+  safeCwd ? path.join(safeCwd, 'protos') : null
+].filter(Boolean);
+
+const hasFsAccess = typeof fs?.existsSync === 'function';
+
+const isTestRuntime = (() => {
+  if (typeof globalThis !== 'undefined' && globalThis.__walrusTest__) return true;
+  if (typeof process !== 'undefined' && process.env) {
+    if (process.env.NODE_ENV === 'test') return true;
+    if (process.env.VITEST) return true;
+    if (process.env.BUN_TEST) return true;
+    if (process.env.TEST === 'true') return true;
+    if (process.env.VITEST_WORKER_ID) return true;
+  }
+  if (typeof Bun !== 'undefined' && Bun?.env) {
+    if (Bun.env.TEST) return true;
+    if (Bun.env.VITEST) return true;
+  }
+  if (typeof import.meta !== 'undefined' && import.meta?.vitest) return true;
+  if (typeof process !== 'undefined' && Array.isArray(process.argv)) {
+    if (process.argv.some((arg) => typeof arg === 'string' && arg.includes('vitest'))) return true;
+    if (process.argv.includes('bun') && process.argv.includes('test')) return true;
+  }
+  return false;
+})();
 
 // Enhanced gRPC logging utility
 class GrpcLogger {
@@ -105,13 +176,61 @@ class GrpcLogger {
 
 const grpcLogger = new GrpcLogger();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const require = createRequire(import.meta.url);
-const googleProtosRoot = path.dirname(require.resolve('google-proto-files/package.json'));
+const resolveProtoPath = (fileName) => {
+  const candidates = protoVersionedCandidates.length > 0 ? protoVersionedCandidates : [''];
+
+  if (!hasFsAccess) {
+    return path.resolve(candidates[0], fileName);
+  }
+
+  for (const candidateDir of candidates) {
+    const resolvedPath = path.resolve(candidateDir, fileName);
+    if (fs.existsSync(resolvedPath)) {
+      return resolvedPath;
+    }
+  }
+
+  throw new Error(
+    `Unable to locate proto file "${fileName}". Checked: ${candidates.join(', ')}`
+  );
+};
+
+const getProtoIncludeDirs = () => {
+  const dirs = new Set();
+
+  if (!hasFsAccess) {
+    if (protoVersionedCandidates[0]) dirs.add(protoVersionedCandidates[0]);
+    if (protoRootCandidates[0]) dirs.add(protoRootCandidates[0]);
+    if (googleProtosRoot) dirs.add(googleProtosRoot);
+    return Array.from(dirs);
+  }
+
+  protoVersionedCandidates.forEach((dir) => {
+    if (fs.existsSync(dir)) {
+      dirs.add(dir);
+    }
+  });
+
+  protoRootCandidates.forEach((dir) => {
+    if (fs.existsSync(dir)) {
+      dirs.add(dir);
+    }
+  });
+
+  if (googleProtosRoot) {
+    dirs.add(googleProtosRoot);
+  }
+
+  return Array.from(dirs);
+};
 
 class SuiGrpcService {
-  constructor() {
+  constructor(options = {}) {
+    this.options = {
+      autoConnect: options.autoConnect !== undefined ? options.autoConnect : !isTestRuntime
+    };
+
+    this.autoConnect = this.options.autoConnect;
     this.clients = {};
     this.streams = new Map();
     this.isConnected = false;
@@ -122,14 +241,22 @@ class SuiGrpcService {
     this.initTime = Date.now();
     this.unimplementedStreams = new Set(); // Track streams that returned UNIMPLEMENTED
     this.disabledStreams = new Set(); // Track streams permanently disabled this session
+    this.scheduledTimeouts = new Set();
     
     grpcLogger.info('GRPC_SERVICE', 'constructor', 'Initializing Sui gRPC service', {
       reconnectDelay: this.reconnectDelay,
       maxReconnectDelay: this.maxReconnectDelay,
       sessionId: grpcLogger.sessionId
     });
-    
-    this.setupClients();
+
+    if (this.autoConnect) {
+      this.setupClients();
+    } else {
+      grpcLogger.debug('GRPC_SERVICE', 'constructor_autoconnect_skip', 'Auto-connect disabled for current runtime', {
+        autoConnect: this.autoConnect,
+        isTestRuntime
+      });
+    }
   }
 
   // Event handling for collaboration
@@ -216,13 +343,12 @@ class SuiGrpcService {
         }
       });
       
-      // Start with just subscription service for now
-      const protoPath = path.join(__dirname, '..', 'protos', 'sui', 'rpc', 'v2beta2');
-      const subscriptionProtoPath = path.join(protoPath, 'subscription_service.proto');
+      const subscriptionProtoPath = resolveProtoPath('subscription_service.proto');
+      const includeDirs = getProtoIncludeDirs();
 
       grpcLogger.debug('GRPC_SERVICE', 'proto_loading', 'Loading protocol buffer definitions', {
-        protoPath,
-        subscriptionProtoPath
+        subscriptionProtoPath,
+        includeDirs
       });
 
       // Load subscription service proto only for initial testing
@@ -232,11 +358,7 @@ class SuiGrpcService {
         enums: String,
         defaults: true,
         oneofs: true,
-        includeDirs: [
-          protoPath,
-          path.join(__dirname, '..', 'protos'),
-          googleProtosRoot
-        ]
+        includeDirs
       });
 
       const suiProto = grpc.loadPackageDefinition(packageDefinition);
@@ -264,14 +386,14 @@ class SuiGrpcService {
       // Try to load other services but don't fail if they're missing
       try {
         grpcLogger.debug('GRPC_SERVICE', 'live_data_loading', 'Attempting to load LiveDataService');
-        const liveDataProtoPath = path.join(protoPath, 'live_data_service.proto');
+        const liveDataProtoPath = resolveProtoPath('live_data_service.proto');
         const liveDataDef = protoLoader.loadSync([liveDataProtoPath], {
           keepCase: true,
           longs: String,
           enums: String,
           defaults: true,
           oneofs: true,
-          includeDirs: [protoPath, path.join(__dirname, '..', 'protos'), googleProtosRoot]
+          includeDirs
         });
         
         const liveDataProto = grpc.loadPackageDefinition(liveDataDef);
@@ -291,14 +413,14 @@ class SuiGrpcService {
       // Try to load transaction execution service
       try {
         grpcLogger.debug('GRPC_SERVICE', 'transaction_execution_loading', 'Attempting to load TransactionExecutionService');
-        const txExecProtoPath = path.join(protoPath, 'transaction_execution_service.proto');
+        const txExecProtoPath = resolveProtoPath('transaction_execution_service.proto');
         const txExecDef = protoLoader.loadSync([txExecProtoPath], {
           keepCase: true,
           longs: String,
           enums: String,
           defaults: true,
           oneofs: true,
-          includeDirs: [protoPath, path.join(__dirname, '..', 'protos'), googleProtosRoot]
+          includeDirs
         });
 
         const txExecProto = grpc.loadPackageDefinition(txExecDef);
@@ -321,14 +443,14 @@ class SuiGrpcService {
       // Try to load ledger service
       try {
         grpcLogger.debug('GRPC_SERVICE', 'ledger_loading', 'Attempting to load LedgerService');
-        const ledgerProtoPath = path.join(protoPath, 'ledger_service.proto');
+        const ledgerProtoPath = resolveProtoPath('ledger_service.proto');
         const ledgerDef = protoLoader.loadSync([ledgerProtoPath], {
           keepCase: true,
           longs: String,
           enums: String,
           defaults: true,
           oneofs: true,
-          includeDirs: [protoPath, path.join(__dirname, '..', 'protos'), googleProtosRoot]
+          includeDirs
         });
 
         const ledgerProto = grpc.loadPackageDefinition(ledgerDef);
@@ -553,6 +675,15 @@ class SuiGrpcService {
     return payload || {};
   }
 
+  _scheduleTimeout(callback, delay) {
+    const handle = setTimeout(() => {
+      this.scheduledTimeouts.delete(handle);
+      callback();
+    }, delay);
+    this.scheduledTimeouts.add(handle);
+    return handle;
+  }
+
   handleStreamError(streamName, error) {
     // Remove the failed stream
     this.streams.delete(streamName);
@@ -595,7 +726,7 @@ class SuiGrpcService {
     this.emit('streamError', { streamName, error: error.message });
 
     // Attempt reconnection with exponential backoff
-    setTimeout(() => {
+    this._scheduleTimeout(() => {
       this.reconnectStream(streamName);
     }, this.reconnectDelay);
 
@@ -607,7 +738,7 @@ class SuiGrpcService {
     this.streams.delete(streamName);
     
     // Attempt immediate reconnection
-    setTimeout(() => {
+    this._scheduleTimeout(() => {
       this.reconnectStream(streamName);
     }, 1000);
   }
@@ -631,7 +762,7 @@ class SuiGrpcService {
       } catch (error) {
         grpcLogger.error('GRPC_SERVICE', 'reconnect_failed', 'Failed to reconnect checkpoint stream', { error: error.message });
         // Try again after delay
-        setTimeout(() => {
+        this._scheduleTimeout(() => {
           this.reconnectStream(streamName);
         }, this.reconnectDelay);
       }
@@ -833,6 +964,9 @@ class SuiGrpcService {
     
     this.streams.clear();
     this.isConnected = false;
+
+    this.scheduledTimeouts.forEach((handle) => clearTimeout(handle));
+    this.scheduledTimeouts.clear();
     
     // Close gRPC clients
     for (const [clientName, client] of Object.entries(this.clients)) {
@@ -857,10 +991,15 @@ class SuiGrpcService {
       reconnectDelay: this.reconnectDelay
     };
   }
+
+  static create(options = {}) {
+    return new SuiGrpcService(options);
+  }
 }
 
 // Create singleton instance
-export const grpcService = new SuiGrpcService();
+export const grpcService = new SuiGrpcService({ autoConnect: !isTestRuntime });
+export const createGrpcService = (options = {}) => SuiGrpcService.create(options);
 
 // Convenience functions for external use
 export const subscribeToCheckpoints = (options) => grpcService.subscribeToCheckpoints(options);

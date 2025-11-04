@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { faucetService } from '../../services/FaucetService.js'
-import { browserWalletManager } from '@dreamlit/walrus-sui-core/blockchain'
+import { browserWalletManager } from '@dreamlit/walrus-sui-core/blockchain-integration'
 
 export function StatusBar({ saveStatus, editCount, walletConnected, walletAddress, walletBalance, walletNetwork, onBalanceRefresh }) {
   const [faucetLoading, setFaucetLoading] = useState(false)

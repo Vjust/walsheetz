@@ -25,7 +25,8 @@
  */
 import { defiStateManager } from '../DeFiStateManager.js';
 import { eventBus as EventBus, browserWalrusService } from '@dreamlit/walrus';
-import { browserWalletManager, suiGraphQLService, browserSuiService } from '@dreamlit/walrus-sui-core/blockchain';
+import { browserWalletManager, browserSuiService } from '@dreamlit/walrus-sui-core/blockchain-integration';
+import { suiGraphQLService } from '@dreamlit/walrus-sui-core/blockchain';
 import { blobLineageTracker } from '@dreamlit/walrus-sui-core/data-integrity';
 import { StorageAdapter } from '../../adapters/StorageAdapter.js';
 import { serializeRange } from '../../utils/BlobParser.js';

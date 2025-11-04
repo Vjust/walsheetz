@@ -255,7 +255,11 @@ describe('dataTransforms', () => {
       // Functions should have been added
       expect(allFunctions.length).toBeGreaterThan(0);
       // Check that we have WZ-prefixed functions
-      expect(allFunctions.some(f => f && f.includes('WZ'))).toBe(true);
+      expect(
+        allFunctions.some(
+          (f) => f && (f.startsWith('WALRUS.') || f.startsWith('SUI.'))
+        )
+      ).toBe(true);
     });
 
     it('should handle errors gracefully', () => {

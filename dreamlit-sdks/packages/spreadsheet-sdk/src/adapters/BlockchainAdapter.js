@@ -1,6 +1,6 @@
 import { IBlockchainService } from '../interfaces/IBlockchainService.js';
 // Use browser-compatible services in frontend
-import { browserWalletManager, browserSuiService } from '@dreamlit/walrus-sui-core/blockchain';
+import { browserWalletManager, browserSuiService } from '@dreamlit/walrus-sui-core/blockchain-integration';
 import { browserWalrusService, logger, LogComponent, ErrorCategory, configLoader, eventBus as transactionEventBus } from '@dreamlit/walrus';
 // Collaboration disabled for single-user MVP
 import { collaborationService } from '../services/CollaborationService.js';

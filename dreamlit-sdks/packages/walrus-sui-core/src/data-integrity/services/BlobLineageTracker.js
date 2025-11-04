@@ -17,6 +17,8 @@ class BlobLineageTracker {
     this.storageKey = 'blob_lineage_data';
     this.storageVersion = '1.0.0';
 
+    this.storage = this.createStorageAdapter();
+
     // Load from localStorage
     this.loadFromStorage();
 
@@ -421,7 +423,18 @@ class BlobLineageTracker {
   clearAll() {
     this.lineages.clear();
     this.blobToObject.clear();
-    this.saveToStorage();
+    if (this.storage && typeof this.storage.removeItem === 'function') {
+      try {
+        this.storage.removeItem(this.storageKey);
+      } catch (error) {
+        logger.warn(LogComponent.STORAGE, 'lineage_clear_fallback', 'Failed to remove storage key, attempting save fallback', {
+          error: error.message
+        });
+        this.saveToStorage();
+      }
+    } else {
+      this.saveToStorage();
+    }
 
     logger.info(LogComponent.STORAGE, 'lineage_cleared', 'All lineage data cleared');
   }
@@ -432,8 +445,11 @@ class BlobLineageTracker {
    */
   loadFromStorage() {
     try {
-      // Load from localStorage
-      const stored = localStorage.getItem(this.storageKey);
+      if (!this.storage || typeof this.storage.getItem !== 'function') {
+        return;
+      }
+
+      const stored = this.storage.getItem(this.storageKey);
       if (!stored) {
         return;
       }
@@ -476,13 +492,17 @@ class BlobLineageTracker {
    */
   saveToStorage() {
     try {
+      if (!this.storage || typeof this.storage.setItem !== 'function') {
+        return;
+      }
+
       const data = {
         version: this.storageVersion,
         lineages: Object.fromEntries(this.lineages),
         blobToObject: Object.fromEntries(this.blobToObject),
         lastUpdated: Date.now()
       };
-      localStorage.setItem(this.storageKey, JSON.stringify(data));
+      this.storage.setItem(this.storageKey, JSON.stringify(data));
       logger.debug(LogComponent.STORAGE, 'lineage_saved', 'Lineage data saved to storage');
 
     } catch (error) {
@@ -558,6 +578,35 @@ class BlobLineageTracker {
   cleanup() {
     this.saveToStorage();
     logger.info(LogComponent.STORAGE, 'lineage_cleanup', 'BlobLineageTracker cleaned up');
+  }
+
+  createStorageAdapter() {
+    try {
+      if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
+        return globalThis.localStorage;
+      }
+    } catch (error) {
+      logger.warn(LogComponent.STORAGE, 'lineage_storage_fallback', 'localStorage unavailable, using in-memory storage', {
+        error: error.message
+      });
+    }
+
+    const memoryStore = new Map();
+
+    return {
+      getItem(key) {
+        return memoryStore.has(key) ? memoryStore.get(key) : null;
+      },
+      setItem(key, value) {
+        memoryStore.set(key, value);
+      },
+      removeItem(key) {
+        memoryStore.delete(key);
+      },
+      clear() {
+        memoryStore.clear();
+      }
+    };
   }
 }
 

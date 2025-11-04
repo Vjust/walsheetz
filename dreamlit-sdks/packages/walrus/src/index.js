@@ -71,6 +71,13 @@ export {
 // ============================================================================
 export { resolveWalrusEndpoints } from './config/WalrusConfigResolver.js';
 export { withWalrusEndpoint } from './config/endpointHelper.js';
+export {
+  config as walrusConfig,
+  getCurrentConfig,
+  getSuiContractConfig,
+  isTestnet,
+  isMainnet
+} from './config/BlockchainConfig.js';
 
 // ============================================================================
 // Shared Utilities (singletons and utilities)
@@ -92,3 +99,7 @@ export {
 } from './shared/EventBus.js';
 export { default as RateLimiter } from './shared/RateLimiter.js';
 export { networkLock } from './shared/NetworkLock.js';
+export {
+  StandardizedErrorHandler,
+  standardizedErrorHandler
+} from './shared/StandardizedErrorHandler.js';

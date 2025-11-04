@@ -25,3 +25,9 @@ export * from '../data-integrity/index.js';
 
 // Note: Browser-specific services (Browser*) are NOT exported from this entry point
 // For browser usage, use the default import: import { ... } from '@dreamlit/walrus-sui-core'
+
+// Provide JSON serialization hook so JSON.stringify does not traverse circular exports
+export const toJSON = () => ({
+  module: '@dreamlit/walrus-sui-core/node',
+  exports: 'use import("@dreamlit/walrus-sui-core/node") to inspect runtime values'
+});

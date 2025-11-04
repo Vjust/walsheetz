@@ -5,43 +5,42 @@
  * operation handling, and cleanup handler registration.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 
-// Mock logger before importing AtomicOperationManager
-vi.mock('../../../utils/Logger.js', () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn()
-  },
-  LogComponent: {
-    BLOCKCHAIN_ADAPTER: 'BLOCKCHAIN_ADAPTER'
-  }
+const loggerStub = {
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn()
+};
+
+const standardizedErrorHandlerStub = {
+  processError: vi.fn(async (error, context = {}) => ({
+    userMessage: typeof error === 'string' ? error : error?.message || 'Unknown error',
+    technicalError: typeof error === 'string' ? error : error?.message || 'Unknown error',
+    category: 'TEST_ERROR',
+    recoveryActions: [],
+    requiresUserAction: false,
+    context
+  }))
+};
+
+const logComponentStub = { BLOCKCHAIN_ADAPTER: 'BLOCKCHAIN_ADAPTER' };
+
+vi.mock('@dreamlit/walrus', () => ({
+  logger: loggerStub,
+  LogComponent: logComponentStub,
+  standardizedErrorHandler: standardizedErrorHandlerStub
 }));
 
-// Mock standardized error handler
-vi.mock('../../../utils/StandardizedErrorHandler.js', () => ({
-  standardizedErrorHandler: {
-    processError: vi.fn(async (error, context) => ({
-      userMessage: 'Test error message',
-      technicalError: error.message,
-      category: 'TEST_ERROR',
-      recoveryActions: [],
-      requiresUserAction: false
-    }))
-  }
-}));
+const transactionExperienceManagerStub = {
+  prepareTransaction: vi.fn(),
+  executeWithExperience: vi.fn(),
+  emitTransactionEvent: vi.fn()
+};
 
-// Mock transaction experience manager
-vi.mock('../../../utils/TransactionExperience.js', () => ({
-  transactionExperienceManager: {
-    prepareTransaction: vi.fn(() => ({})),
-    executeWithExperience: vi.fn(async (operation, name, context) => {
-      return await operation.execute(context);
-    }),
-    emitTransactionEvent: vi.fn()
-  }
+vi.mock('../../transaction-management/utils/TransactionExperience.js', () => ({
+  transactionExperienceManager: transactionExperienceManagerStub
 }));
 
 // Test helpers
@@ -67,24 +66,50 @@ function createCleanupFn() {
 describe('AtomicOperationManager', () => {
   let AtomicOperationManager;
   let manager;
+  let walrus;
   let logger;
+  let standardizedErrorHandler;
+  let blockchainComponent;
+  let originalProcessErrorImpl;
+  let transactionExperienceManager;
+
+  beforeAll(async () => {
+    walrus = await import('@dreamlit/walrus');
+    logger = walrus.logger;
+    standardizedErrorHandler = walrus.standardizedErrorHandler;
+    blockchainComponent = walrus.LogComponent?.BLOCKCHAIN_ADAPTER ?? 'BLOCKCHAIN_ADAPTER';
+  });
 
   beforeEach(async () => {
-    // Clear all mocks
     vi.clearAllMocks();
 
-    // Import the module after mocks are set up
-    const module = await import("@/sdk/blockchain-integration/services/AtomicOperationManager.js");
+    logger = walrus.logger;
+
+    originalProcessErrorImpl = standardizedErrorHandler.processError.getMockImplementation?.() ?? standardizedErrorHandler.processError;
+    standardizedErrorHandler.processError.mockImplementation(async (error, context) => ({
+      userMessage: 'Test error message',
+      technicalError: error.message,
+      category: 'TEST_ERROR',
+      recoveryActions: [],
+      requiresUserAction: false,
+      context
+    }));
+
+    const experienceModule = await import('../../transaction-management/utils/TransactionExperience.js');
+    transactionExperienceManager = experienceModule.transactionExperienceManager;
+    transactionExperienceManager.prepareTransaction.mockImplementation(() => ({}));
+    transactionExperienceManager.executeWithExperience.mockImplementation(async (operation, name, context) => {
+      return await operation.execute(context);
+    });
+    transactionExperienceManager.emitTransactionEvent.mockImplementation(() => {});
+
+    const module = await import('../services/AtomicOperationManager.js');
     AtomicOperationManager = module.default;
     manager = new AtomicOperationManager();
-
-    // Get reference to logger for assertions
-    const loggerModule = await import("@/sdk/shared/utils/Logger.js");
-    logger = loggerModule.logger;
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    standardizedErrorHandler.processError.mockImplementation(originalProcessErrorImpl);
   });
 
   describe('executeAtomic', () => {
@@ -239,7 +264,7 @@ describe('AtomicOperationManager', () => {
 
       if (checkErrorLog) {
         expect(logger.error).toHaveBeenCalledWith(
-          'BLOCKCHAIN_ADAPTER',
+          blockchainComponent,
           'rollback_failed',
           expect.stringContaining('Rollback failed for step'),
           expect.any(Object)
@@ -324,7 +349,7 @@ describe('AtomicOperationManager', () => {
       // Success path
       await manager.executeAtomic([operation], {});
       expect(logger.debug).toHaveBeenCalledWith(
-        'BLOCKCHAIN_ADAPTER',
+        blockchainComponent,
         'atomic_cleanup',
         expect.stringContaining('Cleaned up operation tracking')
       );
@@ -333,7 +358,7 @@ describe('AtomicOperationManager', () => {
       const failingOp = createOperation('failing-op', 'Test error', { shouldFail: true, cleanup: createCleanupFn() });
       await manager.executeAtomic([failingOp], {});
       expect(logger.debug).toHaveBeenCalledWith(
-        'BLOCKCHAIN_ADAPTER',
+        blockchainComponent,
         'atomic_cleanup',
         expect.stringContaining('Cleaned up operation tracking')
       );
@@ -412,7 +437,7 @@ describe('AtomicOperationManager', () => {
 
       expectedCalls.forEach(({ level, id, text }) => {
         expect(logger[level], `${name}: ${id} not called`).toHaveBeenCalledWith(
-          'BLOCKCHAIN_ADAPTER',
+          blockchainComponent,
           id,
           expect.stringContaining(text),
           expect.any(Object)
@@ -423,7 +448,6 @@ describe('AtomicOperationManager', () => {
 
   describe('Characterization - Transaction Experience Integration', () => {
     it('should wrap parallel operations with transaction experience', async () => {
-      const { transactionExperienceManager } = await import("@/sdk/transaction-management/utils/TransactionExperience.js");
       const operations = [
       createOperation('parallel-op-1', { result: 'value1' }),
       createOperation('parallel-op-2', { result: 'value2' })];
@@ -439,9 +463,6 @@ describe('AtomicOperationManager', () => {
     });
 
     it('should NOT wrap sequential operations with transaction experience', async () => {
-      const { transactionExperienceManager } = await import("@/sdk/transaction-management/utils/TransactionExperience.js");
-      vi.clearAllMocks();
-
       const operations = [
       createOperation('step-1', { value: 1 }),
       createOperation('step-2', (ctx) => ({ value: ctx.operationResults['step-1'].value + 1 }), {
@@ -473,8 +494,6 @@ describe('AtomicOperationManager', () => {
     });
 
     it('should emit transaction progress events during parallel execution', async () => {
-      const { transactionExperienceManager } = await import("@/sdk/transaction-management/utils/TransactionExperience.js");
-
       const operations = [
       createOperation('op-1', { value: 1 }),
       createOperation('op-2', { value: 2 })];
@@ -510,7 +529,7 @@ describe('AtomicOperationManager', () => {
       expect(consumerResult.received).toBeDefined();
     });
 
-    test('should pass initial context through all operations', async () => {
+    it('should pass initial context through all operations', async () => {
       const initialContext = {
         userId: 'user-123',
         sessionId: 'session-456'

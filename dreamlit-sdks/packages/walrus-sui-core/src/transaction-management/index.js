@@ -11,7 +11,7 @@
 // Services - export both class and singleton
 export { TransactionManager, transactionManager } from './services/TransactionManager.js';
 export { transactionTracker } from './services/TransactionTracker.js';
-export { offlineModeService } from './services/OfflineModeService.js';
+export { offlineModeService, getOfflineModeService } from './services/OfflineModeService.js';
 
 // Queue - export class (no singleton exists)
 export { OfflineQueueManager } from './queue/OfflineQueueManager.js';

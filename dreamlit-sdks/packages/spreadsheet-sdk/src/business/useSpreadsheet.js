@@ -6,7 +6,7 @@ import { GridSizeManager } from '../services/GridSizeManager.js';
 // WebSocket service disabled for single-user MVP
 // import { webSocketService } from '../services/WebSocketService.js';
 import { useWalletConnectionFactory } from '../hooks/useWalletConnectionFactory.ts';
-import { browserWalletManager } from '@dreamlit/walrus-sui-core/blockchain';
+import { browserWalletManager } from '@dreamlit/walrus-sui-core/blockchain-integration';
 import { parseCellRef } from '../utils/cellUtils.js';
 import luckysheetApi from '../services/luckysheetApi.js';
 import { TestModeAdapter } from '../services/testing/TestModeAdapter.js';

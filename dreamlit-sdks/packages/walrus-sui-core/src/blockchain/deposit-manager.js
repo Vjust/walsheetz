@@ -7,6 +7,7 @@ class DepositManager {
   constructor() {
     this.config = getCurrentConfig();
     this.depositConfig = this.config.deposit;
+    this.storage = this.createStorageAdapter();
     
     // User deposit tracking (address -> balance in MIST)
     this.deposits = new Map();
@@ -49,8 +50,10 @@ class DepositManager {
 
   // Load deposits from local storage
   loadDeposits() {
+    if (!this.storage) return;
+
     try {
-      const stored = localStorage.getItem(this.storageKey);
+      const stored = this.storage.getItem(this.storageKey);
       if (stored) {
         const data = JSON.parse(stored);
         this.deposits = new Map(data.deposits || []);
@@ -63,13 +66,15 @@ class DepositManager {
 
   // Save deposits to local storage
   saveDeposits() {
+    if (!this.storage) return;
+
     try {
       const data = {
         deposits: Array.from(this.deposits.entries()),
         gasConsumption: Array.from(this.gasConsumption.entries()),
         lastUpdate: Date.now()
       };
-      localStorage.setItem(this.storageKey, JSON.stringify(data));
+      this.storage.setItem(this.storageKey, JSON.stringify(data));
     } catch (error) {
       console.warn('Failed to save deposits to storage:', error);
     }
@@ -429,9 +434,39 @@ class DepositManager {
     this.deposits.clear();
     this.gasConsumption.clear();
     this.transactionQueue.clear();
-    localStorage.removeItem(this.storageKey);
+    if (this.storage) {
+      try {
+        this.storage.removeItem(this.storageKey);
+      } catch (error) {
+        console.warn('Failed to clear deposits from storage:', error);
+      }
+    }
     
     this.emit('allDataCleared', {});
+  }
+
+  createStorageAdapter() {
+    try {
+      if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
+        return globalThis.localStorage;
+      }
+    } catch (error) {
+      console.warn('localStorage unavailable, using in-memory storage:', error);
+    }
+
+    const memoryStore = new Map();
+
+    return {
+      getItem(key) {
+        return memoryStore.has(key) ? memoryStore.get(key) : null;
+      },
+      setItem(key, value) {
+        memoryStore.set(key, value);
+      },
+      removeItem(key) {
+        memoryStore.delete(key);
+      }
+    };
   }
 
   // Get status for current user
