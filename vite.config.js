@@ -168,6 +168,46 @@ export default defineConfig({
         }
       },
 
+      // Walrus Publisher - Mainnet
+      '/walrus-publisher-mainnet': {
+        target: 'https://walrus-mainnet-publisher-1.staketab.org',
+        changeOrigin: true,
+        secure: true,
+        timeout: 45000,
+        rewrite: (path) => path.replace(/^\/walrus-publisher-mainnet/, ''),
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => {
+            proxyReq.setHeader('Accept', 'application/json');
+            proxyReq.setHeader('User-Agent', 'WalSheetz/1.0.0');
+          });
+          if (VERBOSE_PROXY) {
+            proxy.on('proxyRes', (proxyRes, req) => {
+              console.log(`[Vite Proxy] Walrus Publisher Mainnet response: ${proxyRes.statusCode} for ${req.url}`);
+            });
+          }
+        }
+      },
+
+      // Walrus Aggregator - Mainnet
+      '/walrus-aggregator-mainnet': {
+        target: 'https://aggregator.walrus.space',
+        changeOrigin: true,
+        secure: true,
+        timeout: 30000,
+        rewrite: (path) => path.replace(/^\/walrus-aggregator-mainnet/, ''),
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => {
+            proxyReq.setHeader('Accept', 'application/json');
+            proxyReq.setHeader('User-Agent', 'WalSheetz/1.0.0');
+          });
+          if (VERBOSE_PROXY) {
+            proxy.on('proxyRes', (proxyRes, req) => {
+              console.log(`[Vite Proxy] Walrus Aggregator Mainnet response: ${proxyRes.statusCode} for ${req.url}`);
+            });
+          }
+        }
+      },
+
       // WebSocket proxy - DISABLED for single-user MVP
       // Collaboration features are not used in the single-user build
       // '/ws': {

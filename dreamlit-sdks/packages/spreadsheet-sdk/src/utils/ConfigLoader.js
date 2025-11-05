@@ -340,21 +340,27 @@ class ConfigLoader {
     };
 
     // Get proxy URL for development
-    config.getProxyUrl = function(service) {
+    config.getProxyUrl = function(service, network) {
       if (typeof window === 'undefined') return null;
-      
-      const isDev = window.location.hostname === 'localhost' || 
+
+      const isDev = window.location.hostname === 'localhost' ||
                    window.location.hostname === '127.0.0.1' ||
                    window.location.hostname.includes('.local');
-      
+
       if (!isDev) return null;
-      
+
+      const currentNet = network || this.getCurrentNetwork()?.name || 'testnet';
+
       const proxyMap = {
         'sui-rpc': '/sui-rpc',
-        'walrus-publisher': '/walrus-publisher', 
-        'walrus-aggregator': '/walrus-aggregator'
+        'walrus-publisher': currentNet === 'mainnet'
+          ? '/walrus-publisher-mainnet'
+          : '/walrus-publisher',
+        'walrus-aggregator': currentNet === 'mainnet'
+          ? '/walrus-aggregator-mainnet'
+          : '/walrus-aggregator'
       };
-      
+
       return proxyMap[service] || null;
     };
 

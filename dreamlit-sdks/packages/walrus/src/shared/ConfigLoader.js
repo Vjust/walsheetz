@@ -338,7 +338,7 @@ class ConfigLoader {
     };
 
     // Get proxy URL for development
-    config.getProxyUrl = function (service) {
+    config.getProxyUrl = function (service, network) {
       if (typeof window === 'undefined') return null;
 
       const isDev = window.location.hostname === 'localhost' ||
@@ -347,10 +347,16 @@ class ConfigLoader {
 
       if (!isDev) return null;
 
+      const currentNet = network || this.getCurrentNetwork()?.name || 'testnet';
+
       const proxyMap = {
         'sui-rpc': '/sui-rpc',
-        'walrus-publisher': '/walrus-publisher',
-        'walrus-aggregator': '/walrus-aggregator'
+        'walrus-publisher': currentNet === 'mainnet'
+          ? '/walrus-publisher-mainnet'
+          : '/walrus-publisher',
+        'walrus-aggregator': currentNet === 'mainnet'
+          ? '/walrus-aggregator-mainnet'
+          : '/walrus-aggregator'
       };
 
       return proxyMap[service] || null;
