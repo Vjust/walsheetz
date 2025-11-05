@@ -15,7 +15,7 @@ import { logger, LogComponent } from '@utils/logging/Logger.js';
 import { detectSaveVersionSignature } from '@utils/blockchain/AbiHelpers.js';
 // Phase 3: Extracted hooks for better separation of concerns
 import { useSpreadsheetAutosave } from './useSpreadsheetAutosave.js';
-import { useSpreadsheetImport } from './hooks/useSpreadsheetImport.js';
+import { useSpreadsheetImport } from './useSpreadsheetImport.js';
 
 /**
  * React hook for spreadsheet business logic

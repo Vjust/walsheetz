@@ -11,7 +11,7 @@
  */
 
 import { useCallback } from 'react';
-import { getTemplateData } from '../../utils/templateData.js';
+import { getTemplateData } from '@utils/helpers/templateData.js';
 import { logger, LogComponent } from '@utils/logging/Logger.js';
 
 /**

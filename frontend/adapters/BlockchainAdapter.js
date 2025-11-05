@@ -7,16 +7,16 @@ import { browserWalrusService } from '@services/blockchain/walrus/BrowserWalrusS
 import { collaborationService } from '@services/infrastructure/CollaborationService.js';
 import { errorRecoveryService } from '@services/infrastructure/ErrorRecoveryService.js';
 import { progressiveEnhancementService } from '@services/infrastructure/ProgressiveEnhancementService.js';
-import { offlineModeService } from '../services/OfflineModeService.js';
+import { offlineModeService } from '@services/storage/OfflineModeService.js';
 import { logger, LogComponent, ErrorCategory } from '@utils/logging/Logger.js';
 import { configLoader } from '@utils/config/ConfigLoader.js';
 import { validationGuards } from '@utils/validation/ValidationGuards.js';
-import { transactionManager } from '../services/TransactionManager.js';
+import { transactionManager } from '@services/blockchain/transactions/TransactionManager.js';
 import { transactionEventBus } from '@utils/helpers/EventBus.js';
 import { NetworkError, WalletError, ContractError, ValidationError, StorageError, ErrorFactory } from '@utils/errors/errors.js';
-import { standardizedErrorHandler } from '../utils/StandardizedErrorHandler.js';
-import { transactionExperienceManager } from '../utils/TransactionExperience.js';
-import { atomicOperationManager } from '../services/blockchain/AtomicOperationManager.js';
+import { standardizedErrorHandler } from '@utils/errors/StandardizedErrorHandler.js';
+import { transactionExperienceManager } from '@utils/helpers/TransactionExperience.js';
+import { atomicOperationManager } from '@services/blockchain/AtomicOperationManager.js';
 import {
   createWalrusStorageOp,
   createTxPrepOp,
