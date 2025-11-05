@@ -1,6 +1,6 @@
 import { logger, LogComponent } from '@utils/logging/Logger.js'
-import { standardizedErrorHandler } from '../../utils/StandardizedErrorHandler.js'
-import { transactionExperienceManager } from '../../utils/TransactionExperience.js'
+import { standardizedErrorHandler } from '@utils/errors/StandardizedErrorHandler.js'
+import { transactionExperienceManager } from '@utils/helpers/TransactionExperience.js'
 import { AtomicExecutionContext } from './AtomicExecutionContext.js'
 
 /**

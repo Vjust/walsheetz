@@ -1,5 +1,5 @@
 import React from 'react'
-import './styles/NetworkBadge.css'
+import '../styles/NetworkBadge.css'
 
 export function NetworkBadge({ network, small = false }) {
   if (!network) return null

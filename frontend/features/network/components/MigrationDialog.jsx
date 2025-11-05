@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { SpreadsheetMigrator } from '../../services/SpreadsheetMigrator.js'
+import { SpreadsheetMigrator } from '@services/SpreadsheetMigrator.js'
 import { useNetwork } from '@shared/providers/NetworkProvider.jsx'
-import './styles/MigrationDialog.css'
+import '../styles/MigrationDialog.css'
 
 // EXCEPTION: localStorage used for migration resume state
 // WHY: Migrations can be long-running operations (minutes/hours). If user's page refreshes

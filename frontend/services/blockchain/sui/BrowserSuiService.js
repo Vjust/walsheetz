@@ -1,6 +1,6 @@
 // Browser-compatible Sui service using real testnet integration
 import { configLoader } from '@utils/config/ConfigLoader.js';
-import { browserWalletManager } from './BrowserWalletManager.js';
+import { browserWalletManager } from '@services/blockchain/wallet/BrowserWalletManager.js';
 import { SuiClient, SuiHTTPTransport } from '@mysten/sui/client';
 import { Transaction } from '@mysten/sui/transactions';
 import {

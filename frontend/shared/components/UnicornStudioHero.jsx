@@ -1,7 +1,7 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import ArcticSprite from './ArcticSprite.jsx'
-import '../styles/unicorn-studio-hero.css'
+import '@app/styles/unicorn-studio-hero.css'
 
 const UnicornStudioHero = ({
   onConnectWallet,

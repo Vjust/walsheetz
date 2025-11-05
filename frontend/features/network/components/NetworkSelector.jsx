@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNetwork } from '@shared/providers/NetworkProvider.jsx'
-import './styles/NetworkSelector.css'
+import '../styles/NetworkSelector.css'
 
 export function NetworkSelector({ position = 'top-right', inline = false }) {
   const { network, switchNetwork, isMainnet } = useNetwork()

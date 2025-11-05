@@ -5,7 +5,7 @@
  * Uses localStorage/StorageAdapter for persistence without actual blockchain interaction.
  */
 
-import { IBlockchainService } from '../../interfaces/IBlockchainService.js';
+import { IBlockchainService } from '@interfaces/IBlockchainService.js';
 
 export class TestModeAdapter extends IBlockchainService {
   constructor(storageAdapter) {

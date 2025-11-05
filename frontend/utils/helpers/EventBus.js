@@ -16,7 +16,7 @@
  * Future: Can be extended for other event types as needed
  */
 
-import { logger, LogComponent } from './Logger.js';
+import { logger, LogComponent } from '@utils/logging/Logger.js';
 
 /**
  * Event schemas for validation

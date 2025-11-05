@@ -4,9 +4,9 @@ import { browserWalletManager } from '@services/blockchain/wallet/BrowserWalletM
 import { browserSuiService } from '@services/blockchain/sui/BrowserSuiService.js';
 import { browserWalrusService } from '@services/blockchain/walrus/BrowserWalrusService.js';
 // Collaboration disabled for single-user MVP
-import { collaborationService } from '../services/CollaborationService.js';
-import { errorRecoveryService } from '../services/ErrorRecoveryService.js';
-import { progressiveEnhancementService } from '../services/ProgressiveEnhancementService.js';
+import { collaborationService } from '@services/infrastructure/CollaborationService.js';
+import { errorRecoveryService } from '@services/infrastructure/ErrorRecoveryService.js';
+import { progressiveEnhancementService } from '@services/infrastructure/ProgressiveEnhancementService.js';
 import { offlineModeService } from '../services/OfflineModeService.js';
 import { logger, LogComponent, ErrorCategory } from '@utils/logging/Logger.js';
 import { configLoader } from '@utils/config/ConfigLoader.js';

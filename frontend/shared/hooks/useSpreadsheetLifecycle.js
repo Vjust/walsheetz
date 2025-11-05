@@ -23,7 +23,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import luckysheetApi from '@services/integrations/luckysheet/luckysheetApi.js';
 import { luckysheetAdapter } from '@services/integrations/luckysheet/LuckysheetAdapter.js';
-import { registerWalSheetzFunctions } from '../../services/formulas/WalSheetzFunctions.js';
+import { registerWalSheetzFunctions } from '@services/integrations/formulas/WalSheetzFunctions.js';
 import { convertToLuckysheetData, calculateSheetDimensions } from '@services/integrations/luckysheet/dataTransforms.js';
 import { columnLettersToNumber, columnNumberToLetters } from '@utils/helpers/cellUtils.js';
 

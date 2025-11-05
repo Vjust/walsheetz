@@ -1,5 +1,5 @@
 // Runtime validation guards for network connectivity and package existence
-import { configLoader } from './ConfigLoader.js';
+import { configLoader } from '@utils/config/ConfigLoader.js';
 
 class ValidationGuards {
   constructor() {

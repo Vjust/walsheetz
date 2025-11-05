@@ -23,15 +23,15 @@
  * - Triple redundancy ensures WZ functions are available regardless of when autocomplete initializes
  * - Each layer reinforces the others to maximize reliability
  */
-import { defiStateManager } from '../DeFiStateManager.js';
+import { defiStateManager } from '@services/DeFiStateManager.js';
 import { EventBus } from '@utils/helpers/EventBus.js';
-import { browserWalletManager } from '../BrowserWalletManager.js';
-import { suiGraphQLService } from '../../../blockchain/sui-graphql-service.js';
-import { browserWalrusService } from '../BrowserWalrusService.js';
-import { browserSuiService } from '../BrowserSuiService.js';
-import { blobLineageTracker } from '../BlobLineageTracker.js';
-import { StorageAdapter } from '../../adapters/StorageAdapter.js';
-import { serializeRange } from '../../utils/BlobParser.js';
+import { browserWalletManager } from '@services/blockchain/wallet/BrowserWalletManager.js';
+import { suiGraphQLService } from '@blockchain/sui-graphql-service.js';
+import { browserWalrusService } from '@services/blockchain/walrus/BrowserWalrusService.js';
+import { browserSuiService } from '@services/blockchain/sui/BrowserSuiService.js';
+import { blobLineageTracker } from '@services/BlobLineageTracker.js';
+import { StorageAdapter } from '@adapters/StorageAdapter.js';
+import { serializeRange } from '@utils/helpers/BlobParser.js';
 
 class WalSheetzFormulaEngine {
   constructor() {

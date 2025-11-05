@@ -3,7 +3,7 @@
  * Domain hook for Walrus blob exploration and management
  */
 import { useState, useEffect, useCallback } from 'react';
-import { suiGraphQLService } from '../../../blockchain/sui-graphql-service.js';
+import { suiGraphQLService } from '@blockchain/sui-graphql-service.js';
 import { browserWalrusService } from '@services/blockchain/walrus/BrowserWalrusService.js';
 import { logger, LogComponent } from '@utils/logging/Logger.js';
 

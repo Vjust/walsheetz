@@ -1,5 +1,5 @@
 // Rate limiter utility with token bucket algorithm, exponential backoff, and deduplication
-import { logger } from './Logger.js';
+import { logger } from '@utils/logging/Logger.js';
 
 class RateLimiter {
   constructor({ name, maxRPS, burst, maxConcurrent }) {

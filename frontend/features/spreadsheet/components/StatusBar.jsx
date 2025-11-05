@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { faucetService } from '../../../services/FaucetService.js'
+import { faucetService } from '@services/blockchain/transactions/FaucetService.js'
 import { browserWalletManager } from '@services/blockchain/wallet/BrowserWalletManager.js'
 
 export function StatusBar({ saveStatus, editCount, walletConnected, walletAddress, walletBalance, walletNetwork, onBalanceRefresh }) {

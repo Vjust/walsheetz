@@ -6,7 +6,7 @@ export default defineConfig({
     node: 'src/node.ts',
   },
   format: ['esm'],
-  dts: false, // Disable for now - will add types incrementally
+  dts: true, // Generate TypeScript declarations
   splitting: false,
   sourcemap: true,
   clean: true,

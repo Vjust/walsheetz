@@ -1,4 +1,4 @@
-import { logger, LogComponent, ErrorCategory } from './Logger.js';
+import { logger, LogComponent, ErrorCategory } from '@utils/logging/Logger.js';
 import { ErrorFactory, NetworkError, WalletError, ContractError, ValidationError, StorageError } from './errors.js';
 
 /**

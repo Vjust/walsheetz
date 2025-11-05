@@ -3,7 +3,7 @@
  * Display wallet assets from GraphQL queries in a table format
  */
 import React, { useState, useEffect } from 'react';
-import { suiGraphQLService } from '../../../blockchain/sui-graphql-service.js';
+import { suiGraphQLService } from '@blockchain/sui-graphql-service.js';
 import { logger, LogComponent } from '@utils/logging/Logger.js';
 import '../styles/WalletAssetTable.css';
 

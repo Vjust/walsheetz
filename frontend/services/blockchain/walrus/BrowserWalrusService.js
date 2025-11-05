@@ -1,20 +1,20 @@
 // Browser-compatible Walrus service for WalSheetz - Refactored thin facade
-import { getCurrentConfig } from '../../blockchain/config.js';
+import { getCurrentConfig } from '@blockchain/config.js';
 import { configLoader } from '@utils/config/ConfigLoader.js';
-import RateLimiter from '../utils/RateLimiter.js';
+import RateLimiter from '@utils/helpers/RateLimiter.js';
 
 // Core modules
-import { resolveWalrusEndpoints } from './walrus/config/WalrusConfigResolver.js';
-import { ProxyTransport } from './walrus/transports/ProxyTransport.js';
-import { WalrusBlobClient } from './walrus/client/WalrusBlobClient.js';
-import { WalrusConnectionManager } from './walrus/client/WalrusConnectionManager.js';
-import { HealthMonitor } from './walrus/health/HealthMonitor.js';
-import { RetryQueue } from './walrus/retry/RetryQueue.js';
+import { resolveWalrusEndpoints } from './config/WalrusConfigResolver.js';
+import { ProxyTransport } from './transports/ProxyTransport.js';
+import { WalrusBlobClient } from './client/WalrusBlobClient.js';
+import { WalrusConnectionManager } from './client/WalrusConnectionManager.js';
+import { HealthMonitor } from './health/HealthMonitor.js';
+import { RetryQueue } from './retry/RetryQueue.js';
 
 // Utility modules
-import { getPoaCertificate } from './walrus/utils/PoACertificateReader.js';
-import { readBlobRange as readRange } from './walrus/utils/BlobRangeReader.js';
-import { streamBlobToGrid as streamToGrid } from './walrus/utils/GridStreamer.js';
+import { getPoaCertificate } from './utils/PoACertificateReader.js';
+import { readBlobRange as readRange } from './utils/BlobRangeReader.js';
+import { streamBlobToGrid as streamToGrid } from './utils/GridStreamer.js';
 
 class BrowserWalrusService {
   constructor() {

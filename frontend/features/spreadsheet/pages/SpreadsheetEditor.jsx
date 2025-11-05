@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { useSpreadsheetContext, MainLayout, LoadingOverlay } from '@shared/components/spreadsheet';
+import { useSpreadsheetContext, MainLayout, LoadingOverlay } from '@features/spreadsheet/components';
 import { BreadcrumbNavigation } from '@features/dashboard/components/BreadcrumbNavigation.jsx';
 import { useUnloadWarning } from '@shared/hooks/useUnloadWarning.js';
 import { logger, LogComponent } from '@utils/logging/Logger.js';
-import './styles/spreadsheet-editor.css';
+import '../styles/spreadsheet-editor.css';
 
 export function SpreadsheetEditor() {
   const { id } = useParams();

@@ -3,10 +3,10 @@ import { Header } from './Header.jsx'
 import { Spreadsheet } from './Spreadsheet.jsx'
 import { StatusBar } from './StatusBar.jsx'
 import { NotificationContainer } from './NotificationContainer.jsx'
-import { Collaboration } from '../Collaboration.jsx'
+import { Collaboration } from '@shared/components/Collaboration.jsx'
 import { LoadingOverlay } from './LoadingOverlay.jsx'
 import { useSpreadsheetContext } from './SpreadsheetProvider.jsx'
-import { configLoader } from '../../../utils/ConfigLoader.js'
+import { configLoader } from '@utils/config/ConfigLoader.js'
 
 export function MainLayout() {
   const {

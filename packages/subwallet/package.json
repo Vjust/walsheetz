@@ -53,6 +53,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "clean": "rm -rf dist",
     "dev": "tsc --watch",
     "test": "vitest",
     "test:once": "vitest run",
@@ -60,12 +61,12 @@
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "bun run build",
     "cli:ptb": "ts-node --esm scripts/run_move_ptb.ts",
     "cli:run": "node --loader ts-node/esm ./bin/dev.js",
     "cli:dev": "node --loader ts-node/esm --watch ./bin/dev.js",
     "postpack": "rm -f oclif.manifest.json",
-    "prepack": "npm run build && oclif manifest"
+    "prepack": "bun run build && oclif manifest"
   },
   "keywords": [
     "sui",
@@ -92,9 +93,6 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0",
-    "eslint": "^8.56.0",
     "prettier": "^3.2.4",
     "ts-node": "^10.9.1",
     "typescript": "^5.3.3",

@@ -17,6 +17,7 @@
   },
   "scripts": {
     "build": "tsup",
+    "clean": "rm -rf dist",
     "dev": "tsup --watch",
     "test": "vitest",
     "test:run": "vitest run"

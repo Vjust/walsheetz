@@ -1,7 +1,7 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useSpreadsheetContext } from '@features/dashboard/components/spreadsheet'
-import ArcticSprite from '@features/dashboard/components/ArcticSprite.jsx'
+import { useSpreadsheetContext } from '@features/spreadsheet/components'
+import ArcticSprite from '@shared/components/ArcticSprite.jsx'
 import '../styles/ExploreTundra.css'
 
 export function ExploreTundra() {

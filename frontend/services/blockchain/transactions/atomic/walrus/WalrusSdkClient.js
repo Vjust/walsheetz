@@ -1,6 +1,6 @@
 import { WalrusClient } from '@mysten/walrus'
 import { SuiClient } from '@mysten/sui/client'
-import { getCurrentConfig } from '../../blockchain/config.js'
+import { getCurrentConfig } from '@blockchain/config.js'
 
 export class WalrusSdkClient {
   constructor({ suiClient, suiClientUrl, network } = {}) {

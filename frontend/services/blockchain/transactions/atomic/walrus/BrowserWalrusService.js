@@ -1,5 +1,5 @@
 // Browser-compatible Walrus service for WalSheetz - Refactored thin facade
-import { getCurrentConfig } from '../../blockchain/config.js';
+import { getCurrentConfig } from '@blockchain/config.js';
 import { configLoader } from '@utils/config/ConfigLoader.js';
 import RateLimiter from '../utils/RateLimiter.js';
 

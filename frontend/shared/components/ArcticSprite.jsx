@@ -1,5 +1,5 @@
 import React from 'react'
-import '../styles/arctic-sprite.css'
+import './arctic-sprite.css'
 
 const ArcticSprite = ({ type = 'walrus' }) => {
   if (type === 'walrus') {

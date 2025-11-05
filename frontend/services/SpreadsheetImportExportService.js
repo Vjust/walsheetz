@@ -1,7 +1,7 @@
 import { logger, LogComponent } from '@utils/logging/Logger.js';
 import LuckyExcel from 'luckyexcel';
 import * as XLSX from 'xlsx';
-import { parseCSV } from '../utils/BlobParser.js'
+import { parseCSV } from '@utils/helpers/BlobParser.js'
 
 /**
  * Service for handling import and export of spreadsheet data

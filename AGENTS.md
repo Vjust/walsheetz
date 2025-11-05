@@ -1,45 +1,127 @@
-# Repository Guidelines
+# WalSheetz Repository Guidelines
 
-## Project Structure & Module Organization
-- `frontend/`: React app (presentation/components, providers, adapters, services). Entry: `frontend/main.jsx`.
-- `blockchain/`: Sui/Walrus integration (`wallet-manager.js`, `sui-service.js`, `walrus-service.js`, `config.js`).
-- `tests/`: `unit/`, `integration/`, `property/`, `e2e/`, plus `utils/` and `reports/`.
-- `scripts/`: Dev/test helpers (bridge starter, diagnostics, integration runners).
-- `protos/`: gRPC/Protobuf definitions for Sui RPC.
-- `dist/`: Production build output. `docs/` for project notes.
+> **📚 Common Guidelines**: For shared conventions (coding style, testing, git workflow), see [docs/AGENTS-SHARED.md](./docs/AGENTS-SHARED.md)
 
-## Build, Test, and Development Commands
-- Install: `bun install`
-- Dev (Vite): `bun run dev` (port 3005). Static UI at `index.html`.
-- Bridge: `bun run bridge` (WebSocket gRPC bridge). Both: `bun run dev:full`.
-- Build: `bun run build`; Preview: `bun run preview`.
-- Unit tests: `bun run test:unit`; All tests (watch): `bun run test:watch`; CI run: `bun run test:run`.
-- Integration/property: `bun run test:integration`, `bun run test:property`, Walrus: `bun run test:walrus`.
-- Coverage: `bun run test:coverage` (reports in `tests/reports/`, 80% global thresholds).
+## Quick Start
 
-## Coding Style & Naming Conventions
-- JavaScript/JSX (ES modules). 2‑space indent, single quotes, avoid semicolons.
-- React functional components; component files `PascalCase.jsx`, modules `camelCase.js`.
-- Tests: `*.test.js`, property tests `*.property.test.js`.
-- Import aliases (Vite): `@` → `frontend/`, `@blockchain` → `blockchain/`, `@tests` → `tests/`.
-- Keep changes small and cohesive; match surrounding style. No unrelated refactors.
+```bash
+bun run setup      # Automated environment setup
+bun run dev:full   # Start both bridge and frontend
+bun run test:all   # Run tests, typecheck, and lint
+```
 
-## Code Change Guidelines
-- **Minimal line changes**: Always prefer single-line fixes over multi-line refactors
-- **Surgical edits**: Change only what's necessary to fix the issue
-- **Root cause first**: Investigate deeply before adding defensive/safety code
-- **Clean history**: Avoid adding unnecessary code that obscures the real fix
+See [docs/QUICKSTART.md](./docs/QUICKSTART.md) for detailed onboarding.
 
-## Testing Guidelines
-- Framework: Vitest. Unit env: `happy-dom`; integration env: Node (see `vitest.integration.config.js`).
-- Start dev/bridge before E2E: `bun run dev:full` then `bun run test:e2e` (Playwright; Docker/neko variants available).
-- Target 80%+ coverage; include tests for new behavior and bug fixes.
+---
 
-## Commit & Pull Request Guidelines
-- Use Conventional Commits: `feat:`, `fix:`, `chore:`, `docs:`, etc. Imperative, concise subject.
-- PRs include: clear description, rationale, linked issues, screenshots for UI, and test notes.
-- Requirements: all checks pass, coverage not reduced, integration tests updated when APIs change.
+## Project-Specific Structure
 
-## Security & Configuration Tips
-- Never commit secrets/keys. Network and storage settings live in `blockchain/config.js` (`environment: 'testnet'|'mainnet'`).
-- Bridge settings via env (`BRIDGE_PORT`, `BRIDGE_HOST`, etc.). Avoid editing `Sui Ref/` unless maintaining vendored docs.
+### High-Level Layout
+- **`frontend/`** — React SPA; see [frontend/AGENTS.md](./frontend/AGENTS.md)
+- **`blockchain/`** — Sui/Walrus integration; see [blockchain/AGENTS.md](./blockchain/AGENTS.md)
+- **`packages/`** — SDK packages (walrus, walrus-sui-core, spreadsheet-sdk, subwallet, shared)
+- **`apps/`** — Demo applications
+- **`tests/`** — Test organization (unit/, integration/, property/, e2e/)
+- **`scripts/`** — Automation (setup.js, health-check.js, diagnostics)
+- **`protos/`** — gRPC/Protobuf definitions for Sui RPC
+- **`docs/`** — Documentation hub
+
+### Key Entry Points
+| Path | Purpose |
+|------|---------|
+| `frontend/main.jsx` | Frontend application entry |
+| `frontend/app/App.jsx` | Root React component |
+| `blockchain/websocket-grpc-bridge.js` | Bridge server |
+| `blockchain/config.js` | Network & RPC configuration |
+| `packages/*/src/index.ts` | Package exports |
+
+---
+
+## Repository-Specific Commands
+
+### Development Servers
+```bash
+bun run dev          # Frontend only (port 3000)
+bun run dev:bridge   # Bridge only (port 3005)
+bun run dev:full     # Both services
+```
+
+### Testing Variants
+```bash
+bun test                    # All unit tests
+bun run test:watch          # Watch mode
+bun run test:integration    # Integration tests
+bun run test:property       # Property-based tests
+bun run test:walrus         # Walrus-specific tests
+bun run test:e2e            # End-to-end (requires services running)
+bun run test:coverage       # With coverage report
+```
+
+### Diagnostics
+```bash
+bun run health       # System health check
+bun run setup        # Validate environment
+```
+
+---
+
+## Import Aliases (Vite Frontend)
+
+```javascript
+// Use these - NEVER use relative paths like ../
+import Component from '@app/App.jsx'           // app/
+import Feature from '@features/dashboard/'     // features/
+import Hook from '@shared/hooks/useWallet'     // shared/
+import Service from '@services/blockchain/'    // services/
+import Util from '@utils/helpers/cellUtils'    // utils/
+import Adapter from '@adapters/BlockchainAdapter' // adapters/
+```
+
+---
+
+## Project-Specific Conventions
+
+### Test File Organization
+- Unit tests: `**/__tests__/*.test.js` or `tests/unit/`
+- Integration: `tests/integration/`
+- Property tests: `tests/property/*.property.test.js`
+- E2E tests: `tests/e2e/` (Playwright)
+- Coverage reports: `tests/reports/`
+- **Coverage target**: 80% global threshold
+
+### Configuration Hierarchy
+1. **Environment**: `blockchain/config.js` (`environment: 'testnet'|'mainnet'`)
+2. **Bridge**: Environment variables (`BRIDGE_PORT`, `BRIDGE_HOST`)
+3. **Walrus**: `WALRUS_PUBLISHER_URL`
+4. **Secrets**: Never committed; use `.env` (gitignored)
+
+### Special Directories
+- **`Sui Ref/`** — Vendored Sui/Walrus documentation (avoid editing)
+- **`dist/`** — Build output (gitignored)
+- **`node_modules/`** — Dependencies (gitignored)
+
+---
+
+## Domain-Specific Guidelines
+
+For detailed guidance on specific areas:
+- **Frontend Development**: [frontend/AGENTS.md](./frontend/AGENTS.md)
+- **Blockchain Integration**: [blockchain/AGENTS.md](./blockchain/AGENTS.md)
+- **Package Development**: See individual package README files
+
+---
+
+## Common References
+
+| Guide | Purpose |
+|-------|---------|
+| [AGENTS-SHARED.md](./docs/AGENTS-SHARED.md) | Common conventions |
+| [QUICKSTART.md](./docs/QUICKSTART.md) | Quick start guide |
+| [README.md](./docs/README.md) | Developer guide |
+| [TESTING.md](./docs/TESTING.md) | Testing guide |
+| [DEBUG-LOGGING.md](./docs/DEBUG-LOGGING.md) | Debugging guide |
+| [CONFIGURATION.md](./docs/CONFIGURATION.md) | Configuration reference |
+
+---
+
+**Remember**: Keep changes minimal, match existing style, and consult domain-specific AGENTS.md files before introducing new patterns.

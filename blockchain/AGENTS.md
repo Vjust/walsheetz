@@ -1,5 +1,7 @@
 # AI Assistant Guide: blockchain/
 
+> **📚 Common Guidelines**: See [../docs/AGENTS-SHARED.md](../docs/AGENTS-SHARED.md) for shared conventions.
+
 ## Purpose
 - Node/Bun-oriented services that interact with Sui and Walrus on behalf of the UI.
 - Powers the gRPC/WebSocket bridge and CLI diagnostics consumed during development and testing.
@@ -19,29 +21,30 @@
 - Keep WebSocket message schemas backward compatible with `frontend/services/BrowserGrpcService.js`.
 
 ## Testing & Tooling
-- Targeted unit tests live under `tests/unit/blockchain` and `tests/unit/walrus`; run with `bun run test:unit`
-- Cross-service scenarios belong in `tests/integration` or the Walrus scripts (`bun run test:walrus`)
-- **Integration Scripts:** Most test scripts require the bridge running
-  - Start bridge: `bun run bridge` or `bun run dev:full`
-  - Key test scripts in `scripts/`:
-    - `scripts/test-blockchain-integration.js` - Blockchain integration tests
-    - `scripts/run-walrus-integration-tests.js` - Walrus storage tests
-    - `scripts/test-graphql-fallback.js` - GraphQL fallback validation
-    - `scripts/test-wallet-reliability.js` - Wallet connection tests
-  - See `docs/scripts/README.md` for complete catalog
-- **Coverage Status:** See `docs/TESTING.md` for current test surface and gaps
+- Unit tests: `tests/unit/blockchain/` and `tests/unit/walrus/`
+- Integration tests: `tests/integration/` and `bun run test:walrus`
+- **Bridge Required**: Most integration tests need bridge running (`bun run dev:bridge`)
+- **Key Test Scripts** (in `scripts/`):
+  - `test-blockchain-integration.js` — Blockchain integration tests
+  - `run-walrus-integration-tests.js` — Walrus storage tests
+  - `test-graphql-fallback.js` — GraphQL fallback validation
+  - `test-wallet-reliability.js` — Wallet connection tests
+
+See [../docs/TESTING.md](../docs/TESTING.md) for testing guide and coverage status.
 
 ## Coordination
-- Frontend code imports these modules via the `@blockchain` alias; keep exported APIs stable
-- Bridge helpers under `scripts/start-bridge*.js` mirror logic here—update them together when adding new capabilities
-- Reflect configuration and API changes in `docs/` and ensure `app-config.json` stays aligned with on-chain package IDs
-- **Key Documentation:**
-  - `docs/README.md` - Comprehensive developer guide with architecture overview
-  - `docs/TESTING.md` - Testing guide and coverage status
-  - `docs/CONFIGURATION.md` - Environment variables and feature flags
-  - `docs/scripts/README.md` - Script catalog (bridge, testing, diagnostics)
-  - `docs/bridge-server-enhancements.md` - Bridge architecture details
-- **Cross-references:**
-  - See `frontend/AGENTS.md` for UI coordination
-  - All configuration centralized in `blockchain/config.js` - use helpers like `getCurrentConfig()`, `isTestnet()`, `isMainnet()`
-  - WebSocket bridge runs on port from `config.websocket.port` (default: 8081)
+
+### Frontend Integration
+- Frontend imports via `@blockchain` alias — keep exported APIs stable
+- Bridge helpers in `scripts/start-bridge*.js` mirror logic here
+- **Configuration**: Centralized in `blockchain/config.js`
+  - Use helpers: `getCurrentConfig()`, `isTestnet()`, `isMainnet()`
+  - WebSocket bridge port: `config.websocket.port` (default: 8081)
+  - Keep `app-config.json` aligned with on-chain package IDs
+
+### Cross-References
+- [frontend/AGENTS.md](../frontend/AGENTS.md) — UI coordination patterns
+- [../docs/README.md](../docs/README.md) — Developer guide with architecture
+- [../docs/TESTING.md](../docs/TESTING.md) — Testing guide
+- [../docs/CONFIGURATION.md](../docs/CONFIGURATION.md) — Environment variables
+- [../docs/DEBUG-LOGGING.md](../docs/DEBUG-LOGGING.md) — Logging & debugging

@@ -7,7 +7,7 @@
  */
 
 import { useWalletConnection } from './useWalletConnection';
-import { mockWalletConnection } from '../services/testing/mockWalletConnection.js';
+import { mockWalletConnection } from '@services/infrastructure/testing/mockWalletConnection.js';
 import { isAuthBypassed } from '@utils/config/testMode.js';
 import type { UseWalletConnection } from '@/types/wallet';
 

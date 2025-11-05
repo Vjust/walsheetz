@@ -1,6 +1,6 @@
 // Browser-compatible wallet manager for WalSheetz
 // This acts as a bridge between the old API and the new dapp-kit hooks
-import { getCurrentConfig } from '../../blockchain/config.js';
+import { getCurrentConfig } from '@blockchain/config.js';
 import { configLoader } from '@utils/config/ConfigLoader.js';
 
 class BrowserWalletManager {

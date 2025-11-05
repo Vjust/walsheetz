@@ -1,6 +1,6 @@
 // Custom Sui blockchain functions for spreadsheet formulas
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
-import { getCurrentConfig } from '../../../blockchain/config.js';
+import { getCurrentConfig } from '@blockchain/config.js';
 import { configLoader } from '@utils/config/ConfigLoader.js';
 
 // In-memory cache with TTL

@@ -19,6 +19,8 @@ export default tseslint.config(
       '**/coverage/**',
       '**/*.d.ts',
       '**/dreamlit-sdks/**',
+      // Vendored Sui reference docs are not part of the lintable application code
+      '**/Sui Ref/**',
     ],
   },
 

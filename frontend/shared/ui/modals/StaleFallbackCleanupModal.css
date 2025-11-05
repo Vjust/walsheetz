@@ -1,0 +1,31 @@
+/* StaleFallbackCleanupModal Styles */
+
+.stale-fallback-cleanup-modal {
+  /* Modal styles */
+}
+
+.stale-fallback-cleanup-modal .modal-content {
+  max-width: 600px;
+}
+
+.stale-fallback-cleanup-modal .fallback-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.stale-fallback-cleanup-modal .fallback-item {
+  padding: 12px;
+  margin: 8px 0;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.stale-fallback-cleanup-modal .fallback-item:hover {
+  background-color: #f5f5f5;
+}
+
+.stale-fallback-cleanup-modal .cleanup-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}

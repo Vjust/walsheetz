@@ -22,7 +22,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "prepack": "npm run build",
+    "prepack": "bun run build",
     "test": "echo \"No tests yet\""
   },
   "keywords": [

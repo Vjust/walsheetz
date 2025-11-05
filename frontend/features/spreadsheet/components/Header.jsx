@@ -7,11 +7,11 @@ import { SaveDetailsModal } from './SaveDetailsModal.jsx'
 import { ImportButton } from './ImportButton.jsx'
 import { ExportButton } from './ExportButton.jsx'
 import { ImportPreviewModal } from './ImportPreviewModal.jsx'
-import { NetworkSelector } from '../NetworkSelector.jsx'
+import { NetworkSelector } from '@features/network/components/NetworkSelector.jsx'
 import { logger, LogComponent } from '@utils/logging/Logger.js'
 import luckysheetApi from '@services/integrations/luckysheet/luckysheetApi.js'
 import SpreadsheetImportExportService from '../../../services/SpreadsheetImportExportService.js'
-import { configLoader } from '../../../utils/ConfigLoader.js'
+import { configLoader } from '@utils/config/ConfigLoader.js'
 import './WalletModal.css'
 
 export function Header() {

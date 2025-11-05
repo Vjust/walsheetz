@@ -11,7 +11,7 @@ export default defineConfig({
     'data-integrity/index': 'src/data-integrity/index.ts',
   },
   format: ['esm'],
-  dts: false, // Disable for now - will add types incrementally
+  dts: true, // Generate TypeScript declarations
   splitting: false,
   sourcemap: true,
   clean: true,
