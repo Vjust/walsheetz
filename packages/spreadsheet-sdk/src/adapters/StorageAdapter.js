@@ -1,4 +1,4 @@
-import { IStorageService } from '@interfaces/IStorageService.js';
+import { IStorageService } from '../interfaces/IStorageService.js';
 
 /**
  * Storage service adapter implementing IStorageService
