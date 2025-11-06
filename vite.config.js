@@ -234,7 +234,7 @@ export default defineConfig({
       '@types': fileURLToPath(new URL('./frontend/types', import.meta.url)),
       '@blockchain': fileURLToPath(new URL('./blockchain', import.meta.url)),
       '@scripts': fileURLToPath(new URL('./scripts', import.meta.url)),
-      '@sentry/nextjs': fileURLToPath(new URL('./src/sdk/services/SentryStub.js', import.meta.url))
+      '@sentry/nextjs': fileURLToPath(new URL('./frontend/services/infrastructure/SentryStub.js', import.meta.url))
     },
     // Ensure .js extensions are resolved properly
     extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json']

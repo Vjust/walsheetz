@@ -99,7 +99,6 @@ describe('PoACertificationService', () => {
     });
 
     vi.clearAllMocks();
-    vi.resetModules();
   });
 
   describe('requestCertification', () => {

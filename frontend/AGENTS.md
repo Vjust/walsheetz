@@ -27,7 +27,7 @@
   - `blockchain/` - Blockchain services (sui/, walrus/, wallet/, transactions/)
   - `storage/` - Storage services (IndexedDB, offline mode)
   - `integrations/` - Third-party integrations (luckysheet/, formulas/)
-  - `infrastructure/` - Cross-cutting services (WebSocket, ErrorRecovery, etc.)
+  - `infrastructure/` - Cross-cutting services (WebSocket, ErrorRecovery, SentryStub, etc.)
 - `adapters/` - Service-to-UI adapters (BlockchainAdapter, StorageAdapter)
 - `core/` - Pure domain logic (queue, scheduling) - Note: SpreadsheetEngine moved to features/spreadsheet/engine
 - `utils/` - Utilities organized by concern:

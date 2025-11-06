@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { BrowserWalrusService } from '../../BrowserWalrusService.js';
+import { BrowserWalrusService } from '@services/walrus/BrowserWalrusService.js';
 
 describe('BrowserWalrusService Integration', () => {
   let service;

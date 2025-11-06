@@ -16,7 +16,7 @@ import userEvent from '@testing-library/user-event';
  */
 
 // Import component first
-import { SaveDetailsModal } from '../spreadsheet/SaveDetailsModal.jsx';
+import { SaveDetailsModal } from '@features/spreadsheet/components/SaveDetailsModal.jsx';
 // Then import the service to mock it
 import { browserWalrusService } from '@services/blockchain/walrus/BrowserWalrusService.js';
 

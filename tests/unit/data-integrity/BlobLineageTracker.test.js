@@ -65,7 +65,6 @@ describe('BlobLineageTracker', () => {
       duration: 0
     });
     vi.clearAllMocks();
-    vi.resetModules();
   });
 
   describe('trackVersion', () => {

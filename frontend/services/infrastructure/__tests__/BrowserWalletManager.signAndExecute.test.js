@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest'
-import { BrowserWalletManager } from '../BrowserWalletManager.js'
+import { BrowserWalletManager } from '@services/blockchain/wallet/BrowserWalletManager.js'
 
 describe('BrowserWalletManager signAndExecuteTransaction', () => {
   let walletManager

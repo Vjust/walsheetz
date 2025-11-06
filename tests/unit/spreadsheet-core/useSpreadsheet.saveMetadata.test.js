@@ -10,9 +10,8 @@ describe('useSpreadsheet - Save Metadata Tracking', () => {
   const FIXED_TIMESTAMP = 1700000000000;
 
   beforeEach(() => {
-    // CRITICAL: Call useFakeTimers() BEFORE setSystemTime()
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(FIXED_TIMESTAMP));
+    // Use fake timers with a fixed timestamp
+    vi.useFakeTimers({ now: FIXED_TIMESTAMP });
   });
 
   afterEach(() => {

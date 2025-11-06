@@ -4,7 +4,7 @@ import {
   decodeSpreadsheetData,
   isGzipCompressed,
   calculateContentHash
-} from '../../../walrus/utils/DataEncoder.js';
+} from '@services/walrus/utils/DataEncoder.js';
 
 describe('DataEncoder', () => {
   const sampleData = {

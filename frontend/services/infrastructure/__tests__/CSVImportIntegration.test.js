@@ -4,8 +4,8 @@
  */
 
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { SpreadsheetImportExportService } from '../SpreadsheetImportExportService.js';
-import { parseCSV } from '../../utils/BlobParser.js';
+import { SpreadsheetImportExportService } from '@services/SpreadsheetImportExportService.js';
+import { parseCSV } from '@utils/helpers/BlobParser.js';
 
 describe('CSV Import Integration', () => {
   let importService;

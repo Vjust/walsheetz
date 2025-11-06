@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // Mock the configLoader module before importing the loader
-vi.mock('../utils/ConfigLoader.js', () => ({
+vi.mock('@utils/config/ConfigLoader.js', () => ({
   configLoader: {
     getConfig: vi.fn().mockResolvedValue({
       walrus: {
@@ -23,7 +23,7 @@ import {
   getCachedWalrusSdkClient,
   clearCachedClient,
   isWalrusSdkReady
-} from '../WalrusSdkClientLoader.js';
+} from '@services/blockchain/walrus/WalrusSdkClientLoader.js';
 
 describe('WalrusSdkClientLoader', () => {
   beforeEach(() => {

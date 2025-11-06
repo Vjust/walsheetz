@@ -2,7 +2,7 @@
  * @vitest-environment node
  */
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest'
-import { BrowserWalrusService } from '../BrowserWalrusService.js'
+import { BrowserWalrusService } from '@services/walrus/BrowserWalrusService.js'
 
 describe('BrowserWalrusService Consecutive Failure Threshold', () => {
   let service

@@ -4,13 +4,13 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import luckysheetApi from '@services/integrations/luckysheet/luckysheetApi.js';
+import luckysheetApi from "@services/integrations/luckysheet/luckysheetApi.js";
 
 describe('LuckysheetApi methods verification', () => {
   beforeEach(() => {
     // Mock window and Luckysheet globals
     if (typeof window === 'undefined') {
-      global.window = {}
+      global.window = {};
     }
 
     // Always set up luckysheet mock (happy-dom provides window but not luckysheet)
@@ -26,7 +26,7 @@ describe('LuckysheetApi methods verification', () => {
       cut: () => {},
       zoom: () => {},
       getAllSheets: () => []
-    }
+    };
   });
 
   describe('checkRequiredMethods', () => {
@@ -53,9 +53,9 @@ describe('LuckysheetApi methods verification', () => {
 
     it('should list all required methods', () => {
       const requiredMethods = [
-        'create', 'destroy', 'undo', 'redo', 'refresh', 'refreshFormula',
-        'copy', 'paste', 'cut', 'zoom', 'getAllSheets'
-      ];
+      'create', 'destroy', 'undo', 'redo', 'refresh', 'refreshFormula',
+      'copy', 'paste', 'cut', 'zoom', 'getAllSheets'];
+
 
       const result = luckysheetApi.checkRequiredMethods();
 

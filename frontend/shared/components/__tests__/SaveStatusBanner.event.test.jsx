@@ -3,7 +3,7 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
-import { SaveStatusBanner } from '../spreadsheet/SaveStatusBanner.jsx';
+import { SaveStatusBanner } from '@features/spreadsheet/components/SaveStatusBanner.jsx';
 
 /**
  * SaveStatusBanner Event Handling Tests

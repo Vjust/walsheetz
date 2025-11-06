@@ -1,6 +1,6 @@
 // Unit test for GraphQL error recovery and backoff behavior
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { GraphQLEventSubscriber } from '../../../blockchain/graphql-event-subscriber.js';
+import { GraphQLEventSubscriber } from '@blockchain/graphql-event-subscriber.js';
 
 describe('GraphQL Error Recovery', () => {
   let subscriber;

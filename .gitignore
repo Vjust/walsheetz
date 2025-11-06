@@ -72,3 +72,8 @@ reference/
 # Walrus-specific
 **/walrus-sui-core/src/**/*.proto
 !**/walrus-sui-core/protos/**/*.proto
+
+# Submodule artifacts
+dreamlit-sdks/node_modules/
+dreamlit-sdks/dist/
+dreamlit-sdks/.tsbuildinfo

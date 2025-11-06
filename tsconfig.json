@@ -15,7 +15,25 @@
     "allowSyntheticDefaultImports": true,
     "isolatedModules": true,
     "allowJs": true,
-    "checkJs": false
+    "checkJs": false,
+    "baseUrl": ".",
+    "paths": {
+      "@/walrus/*": ["./src/walrus/*"],
+      "@/sdk/*": ["./src/sdk/*"],
+      "@/blockchain/*": ["./blockchain/*"],
+      "@/*": ["./frontend/*"],
+      "@app/*": ["./frontend/app/*"],
+      "@features/*": ["./frontend/features/*"],
+      "@services/*": ["./frontend/services/*"],
+      "@shared/*": ["./frontend/shared/*"],
+      "@utils/*": ["./frontend/utils/*"],
+      "@adapters/*": ["./frontend/adapters/*"],
+      "@interfaces/*": ["./frontend/interfaces/*"],
+      "@types/*": ["./frontend/types/*"],
+      "@blockchain/*": ["./blockchain/*"],
+      "@scripts/*": ["./scripts/*"],
+      "@sentry/nextjs": ["./frontend/services/infrastructure/SentryStub.js"]
+    }
   },
   "exclude": ["node_modules", "**/dist", "**/__tests__"]
 }

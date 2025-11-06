@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock the dependencies
-vi.mock('../../blockchain/config.js', () => ({
+vi.mock('@blockchain/config.js', () => ({
   getCurrentConfig: () => ({
     walrus: {
       publisherUrl: 'http://localhost:8080',
@@ -44,22 +44,22 @@ describe('WalrusService', () => {
   beforeEach(async () => {
     // Mock global fetch
     mockFetch = vi.fn();
-    vi.stubGlobal('fetch', mockFetch);
+    global.fetch = mockFetch;
 
-    // Mock crypto using vi.stubGlobal
-    vi.stubGlobal('crypto', {
+    // Mock crypto
+    global.crypto = {
       subtle: {
         digest: vi.fn().mockResolvedValue(new ArrayBuffer(32))
       }
-    });
+    };
 
     // Mock Blob
-    vi.stubGlobal('Blob', class MockBlob {
+    global.Blob = class MockBlob {
       constructor(data, options) {
         this.data = data;
         this.type = options?.type || 'application/octet-stream';
       }
-    });
+    };
 
     // Mock console methods
     vi.spyOn(console, 'log').mockImplementation(() => {});

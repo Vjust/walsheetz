@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveWalrusEndpoints } from '../../../walrus/config/WalrusConfigResolver.js';
+import { resolveWalrusEndpoints } from '@services/walrus/config/WalrusConfigResolver.js';
 
 describe('WalrusConfigResolver', () => {
   it('should resolve endpoints with proxy and direct URLs', () => {

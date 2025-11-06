@@ -1,4 +1,4 @@
-import { SpreadsheetImportExportService } from '../SpreadsheetImportExportService.js'
+import { SpreadsheetImportExportService } from '@services/SpreadsheetImportExportService.js'
 import * as XLSX from 'xlsx'
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest'
 
