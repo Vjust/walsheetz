@@ -574,16 +574,16 @@ export class SpreadsheetImportExportService {
       }
     }
 
-    // Helper to get cell from either format (prefer grid data when present)
+    // Helper to get cell from either format (prefer celldata to preserve formulas and metadata)
     const getCellAt = (r, c) => {
+      const cellDataEntry = cellLookup ? cellLookup.get(`${r}:${c}`) : undefined;
       const gridCell = hasGridData ? sheet.data?.[r]?.[c] : undefined;
-      if (gridCell !== undefined && gridCell !== null) {
-        return gridCell;
+
+      // Prefer celldata (contains formulas + metadata), fallback to grid data
+      if (cellDataEntry !== undefined) {
+        return cellDataEntry;
       }
-      if (cellLookup) {
-        return cellLookup.get(`${r}:${c}`);
-      }
-      return undefined;
+      return gridCell;
     };
 
     // Build 2D array from sheet data and collect formatting / formula info
@@ -600,7 +600,17 @@ export class SpreadsheetImportExportService {
         if (typeof cell === 'object') {
           const hasVProp = Object.prototype.hasOwnProperty.call(cell, 'v');
           const hasMProp = Object.prototype.hasOwnProperty.call(cell, 'm');
-          const cellValue = hasVProp ? cell.v : (hasMProp ? cell.m : '');
+          let cellValue = hasVProp ? cell.v : (hasMProp ? cell.m : '');
+
+          // Extract format string for date normalization
+          const styleSource = cell.s || cell;
+          const formatStr = styleSource?.ct
+            ? (typeof styleSource.ct === 'object' ? styleSource.ct.fa : styleSource.ct)
+            : null;
+
+          // Normalize date values (handles both serial numbers and ISO strings)
+          cellValue = this._normalizeDate(cellValue, formatStr);
+
           matrix[r][c] = cellValue !== undefined ? cellValue : '';
 
           // Track formulas to reapply after sheet creation
@@ -613,7 +623,6 @@ export class SpreadsheetImportExportService {
             };
           }
 
-          const styleSource = cell.s || cell;
           if (styleSource && typeof styleSource === 'object') {
             const convertedStyle = this._convertLuckysheetCellStyle(styleSource);
             if (convertedStyle) {
@@ -621,7 +630,7 @@ export class SpreadsheetImportExportService {
               cellFormats[cellRef] = convertedStyle;
             }
           }
-        } else {
+        } else{
           // Primitive value (string, number, etc.)
           matrix[r][c] = cell;
         }
@@ -781,18 +790,70 @@ export class SpreadsheetImportExportService {
 
   /**
    * Convert Luckysheet number format to Excel format
+   * Handles both object format {fa: 'Date', t: 'g'} and string format 'Date'
+   * Supports custom Excel format strings by passing them through
    * @private
    */
   _convertNumberFormat(luckysheetFormat) {
+    // Extract format string from object or use directly
+    let formatStr = typeof luckysheetFormat === 'object'
+      ? (luckysheetFormat?.fa || luckysheetFormat?.t)
+      : luckysheetFormat;
+
+    // Map common format names to Excel format strings
     const formatMap = {
       'General': '@',
       'Percent': '0%',
       'Currency': '$#,##0.00',
-      'Date': 'YYYY-MM-DD',
-      'Time': 'HH:MM:SS',
+      'Date': 'yyyy-mm-dd',
+      'Time': 'hh:mm:ss',
       'Number': '0.00'
     };
-    return formatMap[luckysheetFormat] || '@';
+
+    // Return mapped format or pass through custom format string
+    // If formatStr is undefined/null, default to '@' (text)
+    return formatMap[formatStr] || formatStr || '@';
+  }
+
+  /**
+   * Normalize date values to Excel serial number format
+   * Handles both Excel serial numbers and ISO date strings
+   * Detects date formats by pattern matching the format string
+   * @private
+   * @param {*} value - The value to normalize (can be number, string, or other)
+   * @param {string|null} formatStr - The format string (e.g., 'yyyy-mm-dd', 'Date', etc.)
+   * @returns {*} Excel serial number if date, otherwise original value
+   */
+  _normalizeDate(value, formatStr) {
+    if (!formatStr) {
+      return value;
+    }
+
+    // Detect if this is a date format by checking for date-related patterns
+    const isDateFormat = formatStr === 'Date' ||
+                        /yyyy|mm|dd|yy|m\/d|d\/m/i.test(formatStr);
+    const isTimeFormat = formatStr === 'Time' ||
+                        /hh|mm|ss|h:m|m:s/i.test(formatStr);
+
+    // Only process if this is a date/time format
+    if (!isDateFormat && !isTimeFormat) {
+      return value;
+    }
+
+    // If it's already a serial number, keep it
+    if (typeof value === 'number') {
+      return value;
+    }
+
+    // If it's an ISO string, convert to Excel serial
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+      const date = new Date(value);
+      // Excel epoch is December 30, 1899
+      const epoch = new Date(1899, 11, 30);
+      return (date - epoch) / (24 * 60 * 60 * 1000);
+    }
+
+    return value;
   }
 
   /**

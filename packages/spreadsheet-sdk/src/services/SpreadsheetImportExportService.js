@@ -602,14 +602,14 @@ export class SpreadsheetImportExportService {
           const hasMProp = Object.prototype.hasOwnProperty.call(cell, 'm');
           let cellValue = hasVProp ? cell.v : (hasMProp ? cell.m : '');
 
-          // Extract format type for date normalization
+          // Extract format string for date normalization
           const styleSource = cell.s || cell;
-          const formatType = styleSource?.ct
+          const formatStr = styleSource?.ct
             ? (typeof styleSource.ct === 'object' ? styleSource.ct.fa : styleSource.ct)
             : null;
 
           // Normalize date values (handles both serial numbers and ISO strings)
-          cellValue = this._normalizeDate(cellValue, formatType);
+          cellValue = this._normalizeDate(cellValue, formatStr);
 
           matrix[r][c] = cellValue !== undefined ? cellValue : '';
 
@@ -818,14 +818,25 @@ export class SpreadsheetImportExportService {
   /**
    * Normalize date values to Excel serial number format
    * Handles both Excel serial numbers and ISO date strings
+   * Detects date formats by pattern matching the format string
    * @private
    * @param {*} value - The value to normalize (can be number, string, or other)
-   * @param {string} formatType - The format type (e.g., 'Date', 'Time')
+   * @param {string|null} formatStr - The format string (e.g., 'yyyy-mm-dd', 'Date', etc.)
    * @returns {*} Excel serial number if date, otherwise original value
    */
-  _normalizeDate(value, formatType) {
+  _normalizeDate(value, formatStr) {
+    if (!formatStr) {
+      return value;
+    }
+
+    // Detect if this is a date format by checking for date-related patterns
+    const isDateFormat = formatStr === 'Date' ||
+                        /yyyy|mm|dd|yy|m\/d|d\/m/i.test(formatStr);
+    const isTimeFormat = formatStr === 'Time' ||
+                        /hh|mm|ss|h:m|m:s/i.test(formatStr);
+
     // Only process if this is a date/time format
-    if (!formatType || (formatType !== 'Date' && formatType !== 'Time')) {
+    if (!isDateFormat && !isTimeFormat) {
       return value;
     }
 

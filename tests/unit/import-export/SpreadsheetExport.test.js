@@ -1,16 +1,16 @@
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import * as XLSX from 'xlsx';
 
-// Mock the logger dependency
-const mockLogger = {
-  debug: () => {},
-  info: () => {},
-  warn: () => {},
-  error: () => {}
-};
-const LogComponent = 'SPREADSHEET_IMPORT_EXPORT';
-
-// Mock module before importing service
-import.meta.mockModule = import.meta.mockModule || (() => {});
+// Mock the logger module before importing the service
+vi.mock('@utils/logging/Logger.js', () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn()
+  },
+  LogComponent: 'SPREADSHEET_IMPORT_EXPORT'
+}));
 
 // Import service after mocking
 import { SpreadsheetImportExportService } from "../../../packages/spreadsheet-sdk/src/services/SpreadsheetImportExportService.js";
