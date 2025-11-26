@@ -1,3 +1,4 @@
+// @ts-nocheck - TODO: Add TypeScript types to this file
 import { logger, LogComponent, ErrorCategory } from './Logger.js';
 
 const getMessage = (error) => {

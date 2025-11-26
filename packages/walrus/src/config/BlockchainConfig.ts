@@ -1,15 +1,22 @@
 // Blockchain configuration for WalSheetz
 
+// Type definition for import.meta.env (Vite-style)
+declare global {
+  interface ImportMeta {
+    env?: Record<string, unknown> & { DEV?: boolean };
+  }
+}
+
 // Robust dev/prod detection that works in both browser and Node.js environments
 const isBrowser = typeof window !== 'undefined';
-const isDevRuntime = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV) ||
+const isDevRuntime = (typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env && (import.meta as ImportMeta).env?.DEV) ||
                      (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'development');
 
 // Force absolute endpoints even in dev (useful for environments without proxy)
 const forceAbsoluteEndpoints = (typeof process !== 'undefined' && process.env && process.env.WALRUS_USE_ABSOLUTE === 'true') || false;
 
 // Cross-platform environment variable access with proper defaults
-const env = (typeof import.meta !== 'undefined' && import.meta.env) ||
+const env: Record<string, string | undefined> = (typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env as Record<string, string | undefined>) ||
             ((typeof process !== 'undefined' && process.env) || {});
 
 export const config = {

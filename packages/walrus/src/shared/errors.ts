@@ -1,3 +1,4 @@
+// @ts-nocheck - TODO: Add TypeScript types to this file
 /**
  * Error Hierarchy for WalSheetz Application
  *

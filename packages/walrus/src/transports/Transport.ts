@@ -1,39 +1,35 @@
 // Transport interface for Walrus storage operations
 // Defines the contract for all transport implementations
 
+export interface PutBlobResult {
+  blobId: string;
+  response?: Response;
+}
+
+export interface GetBlobResult {
+  data: Uint8Array;
+  response?: Response;
+}
+
+export interface HeadBlobResult {
+  exists: boolean;
+  response?: Response;
+}
+
 /**
  * Base transport interface for Walrus blob operations
  * Implementations: ProxyTransport (via /api/walrus-*), DirectTransport (direct Walrus URLs)
  */
 export class Transport {
-  /**
-   * Store a blob
-   * @param {string} url - Publisher URL
-   * @param {Uint8Array} payload - Binary blob data
-   * @param {number} epochs - Storage duration in epochs
-   * @returns {Promise<{blobId: string, response: Response}>}
-   */
-  async putBlob(url, payload, epochs) {
+  async putBlob(url: string, payload: Uint8Array, epochs: number): Promise<PutBlobResult> {
     throw new Error('putBlob() must be implemented by subclass');
   }
 
-  /**
-   * Retrieve a blob
-   * @param {string} url - Aggregator URL
-   * @param {string} blobId - Blob ID to retrieve
-   * @returns {Promise<{data: Uint8Array, response: Response}>}
-   */
-  async getBlob(url, blobId) {
+  async getBlob(url: string, blobId: string): Promise<GetBlobResult> {
     throw new Error('getBlob() must be implemented by subclass');
   }
 
-  /**
-   * Check if a blob exists (HEAD request)
-   * @param {string} url - Aggregator URL
-   * @param {string} blobId - Blob ID to check
-   * @returns {Promise<{exists: boolean, response: Response}>}
-   */
-  async headBlob(url, blobId) {
+  async headBlob(url: string, blobId: string): Promise<HeadBlobResult> {
     throw new Error('headBlob() must be implemented by subclass');
   }
 }

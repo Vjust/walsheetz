@@ -10,6 +10,7 @@ dist/
 build/
 **/build/
 *.tsbuildinfo
+*.map
 
 # Package build artifacts
 packages/*/dist/
@@ -21,6 +22,9 @@ apps/*/build/
 coverage/
 **/coverage/
 .nyc_output/
+
+# Test reports/artifacts
+tests/e2e/reports/
 
 # Environment files
 .env

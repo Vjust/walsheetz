@@ -4,6 +4,13 @@
 import { emitConnectionChange } from "../utils/WalrusEventEmitter.js";
 
 export class WalrusConnectionManager {
+  isConnected: boolean;
+  transientFailures: number;
+  lastCheck: number | null;
+  lastSuccessfulOperation: number | null;
+  isDegraded: boolean;
+  pendingSaves: unknown[];
+
   constructor() {
     this.isConnected = false;
     this.transientFailures = 0;
@@ -28,7 +35,7 @@ export class WalrusConnectionManager {
    * Record failed operation
    * @param {Error} error - Optional error object to check for CORS
    */
-  recordFailure(error = null) {
+  recordFailure(error: Error | null = null) {
     this.transientFailures++;
 
     // Check if error is CORS-related

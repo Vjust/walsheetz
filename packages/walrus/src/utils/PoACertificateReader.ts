@@ -49,7 +49,7 @@ export async function getPoaCertificate(aggregatorUrl, blobId, transport) {
       blobId,
       poaStatus: 'error',
       certificate: null,
-      error: error.message
+      error: (error as Error).message
     };
   }
 }

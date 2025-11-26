@@ -1,3 +1,4 @@
+// @ts-nocheck - TODO: Add TypeScript types to this file
 /**
  * NetworkLock Utility
  * Simple synchronization mechanism to prevent race conditions when multiple

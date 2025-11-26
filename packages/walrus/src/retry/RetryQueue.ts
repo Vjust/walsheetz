@@ -1,6 +1,18 @@
 // Retry queue with exponential backoff for failed operations
 
+interface QueueOperation {
+  fn: (data: unknown) => Promise<unknown>;
+  data: unknown;
+  attempt: number;
+  addedAt: number;
+}
+
 export class RetryQueue {
+  queue: QueueOperation[];
+  maxSize: number;
+  processing: boolean;
+  interval: ReturnType<typeof setInterval> | null;
+
   constructor(maxSize = 50) {
     this.queue = [];
     this.maxSize = maxSize;
@@ -12,7 +24,7 @@ export class RetryQueue {
    * Add operation to retry queue
    * @param {Object} operation - { fn: async function, data: any, attempt: number }
    */
-  add(operation) {
+  add(operation: Partial<QueueOperation> & Pick<QueueOperation, 'fn' | 'data'>) {
     if (this.queue.length >= this.maxSize) {
       console.warn('[RetryQueue] Queue full, dropping oldest operation');
       this.queue.shift();

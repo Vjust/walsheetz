@@ -22,10 +22,11 @@ export async function withWalrusEndpoint(type, endpoints, fn) {
       return await fn(proxy);
     } catch (error) {
       // Log fallback on 404 or proxy errors
+      const err = error as Error & { status?: number };
       const shouldFallback =
-        error.status === 404 ||
-        error.message?.includes('ERR_INVALID_URL') ||
-        error.message?.includes('Failed to fetch');
+        err.status === 404 ||
+        err.message?.includes('ERR_INVALID_URL') ||
+        err.message?.includes('Failed to fetch');
 
       if (shouldFallback) {
         console.log(`[endpointHelper] Proxy failed for ${type}, falling back to direct: ${direct}`);

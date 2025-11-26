@@ -52,7 +52,7 @@ export async function readBlobRange(aggregatorUrl, blobId, offset, length) {
       length,
       data: null,
       totalSize: 0,
-      error: error.message
+      error: (error as Error).message
     };
   }
 }

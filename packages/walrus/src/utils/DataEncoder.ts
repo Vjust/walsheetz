@@ -1,13 +1,36 @@
 // Data encoding utilities: compression, encoding, hashing
 // Provides encode/decode/compress/decompress/hash functions for Walrus storage
 
+export interface EncodingOptions {
+  compressionThreshold?: number;
+  compressionEnabled?: boolean;
+}
+
+export interface CellData {
+  v?: unknown;
+  value?: unknown;
+  f?: string;
+  formula?: string;
+  t?: string;
+  type?: string;
+  s?: unknown;
+}
+
+export interface SpreadsheetData {
+  version?: number;
+  timestamp?: number;
+  spreadsheetId?: string;
+  metadata?: { title?: string; createdAt?: number; lastModified?: number; format?: string };
+  title?: string;
+  createdAt?: number;
+  cells?: Record<string, CellData>;
+  sheets?: unknown[];
+}
+
 /**
  * Encode spreadsheet data to binary format with optional compression
- * @param {Object} data - Spreadsheet data
- * @param {Object} options - Encoding options (compressionThreshold, compressionEnabled)
- * @returns {Promise<{data: Uint8Array, isCompressed: boolean, originalSize: number, compressedSize?: number}>}
  */
-export async function encodeSpreadsheetData(data, options = {}) {
+export async function encodeSpreadsheetData(data: SpreadsheetData, options: EncodingOptions = {}) {
   const compressionThreshold = options.compressionThreshold || 16384; // 16KB
   const compressionEnabled = options.compressionEnabled !== false;
 
@@ -56,10 +79,8 @@ export async function encodeSpreadsheetData(data, options = {}) {
 
 /**
  * Decode binary data to spreadsheet object
- * @param {Uint8Array} data - Binary data from Walrus
- * @returns {Promise<Object>} Decoded spreadsheet data
  */
-export async function decodeSpreadsheetData(data) {
+export async function decodeSpreadsheetData(data: Uint8Array): Promise<SpreadsheetData> {
   // Decompress if gzipped
   let rawData = data;
   if (isGzipCompressed(data)) {
@@ -84,7 +105,7 @@ export async function decodeSpreadsheetData(data) {
  * @param {Uint8Array} data - Data to compress
  * @returns {Promise<Uint8Array>} Compressed data
  */
-export async function compressData(data) {
+export async function compressData(data: Uint8Array): Promise<Uint8Array> {
   const stream = new ReadableStream({
     start(controller) {
       controller.enqueue(data);
@@ -94,7 +115,7 @@ export async function compressData(data) {
 
   try {
     const compressedStream = stream.pipeThrough(new CompressionStream('gzip'));
-    const chunks = [];
+    const chunks: Uint8Array[] = [];
     const reader = compressedStream.getReader();
 
     while (true) {
@@ -127,7 +148,7 @@ export async function compressData(data) {
  * @param {Uint8Array} data - Compressed data
  * @returns {Promise<Uint8Array>} Decompressed data
  */
-export async function decompressData(data) {
+export async function decompressData(data: Uint8Array): Promise<Uint8Array> {
   const stream = new ReadableStream({
     start(controller) {
       controller.enqueue(data);
@@ -137,7 +158,7 @@ export async function decompressData(data) {
 
   try {
     const decompressedStream = stream.pipeThrough(new DecompressionStream('gzip'));
-    const chunks = [];
+    const chunks: Uint8Array[] = [];
     const reader = decompressedStream.getReader();
 
     while (true) {
@@ -166,27 +187,23 @@ export async function decompressData(data) {
 
 /**
  * Check if data is gzip compressed
- * @param {Uint8Array} data - Data to check
- * @returns {boolean} True if gzipped
  */
-export function isGzipCompressed(data) {
+export function isGzipCompressed(data: Uint8Array): boolean {
   return data.length >= 2 && data[0] === 0x1f && data[1] === 0x8b;
 }
 
 /**
  * Calculate SHA-256 hash of data
- * @param {Uint8Array} data - Data to hash
- * @returns {Promise<string>} Hex-encoded hash
  */
-export async function calculateContentHash(data) {
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+export async function calculateContentHash(data: Uint8Array): Promise<string> {
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data as unknown as BufferSource);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 // Helper: Optimize cells for storage (UI format → storage format)
-function optimizeCellData(cells) {
-  const optimized = {};
+function optimizeCellData(cells: Record<string, CellData>): Record<string, CellData> {
+  const optimized: Record<string, CellData> = {};
   if (!cells || typeof cells !== 'object') return optimized;
 
   for (const [cellKey, cellData] of Object.entries(cells)) {
@@ -206,8 +223,8 @@ function optimizeCellData(cells) {
 }
 
 // Helper: Normalize cells from storage to UI format
-function normalizeCellData(cells) {
-  const normalized = {};
+function normalizeCellData(cells: Record<string, CellData>): Record<string, CellData> {
+  const normalized: Record<string, CellData> = {};
   if (!cells || typeof cells !== 'object') return normalized;
 
   for (const [cellKey, cellData] of Object.entries(cells)) {

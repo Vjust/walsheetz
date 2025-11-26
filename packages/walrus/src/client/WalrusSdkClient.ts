@@ -2,8 +2,18 @@ import { WalrusClient } from '@mysten/walrus';
 import { SuiClient } from '@mysten/sui/client';
 import { getCurrentConfig } from "../config/BlockchainConfig.js";
 
+interface WalrusSdkClientOptions {
+  suiClient?: SuiClient;
+  suiClientUrl?: string;
+  network?: string;
+}
+
 export class WalrusSdkClient {
-  constructor({ suiClient, suiClientUrl, network } = {}) {
+  suiClient: SuiClient;
+  client: WalrusClient;
+  config: ReturnType<typeof getCurrentConfig>;
+
+  constructor({ suiClient, suiClientUrl, network }: WalrusSdkClientOptions = {}) {
     const cfg = getCurrentConfig();
 
     // Use provided suiClient, or create one with proxy-aware URL from loader
@@ -15,8 +25,8 @@ export class WalrusSdkClient {
     const sdkNetwork = network || cfg.walrus.features.sdkNetwork || (cfg.environment === 'mainnet' ? 'mainnet' : 'testnet');
 
     this.client = new WalrusClient({
-      network: sdkNetwork,
-      suiClient: this.suiClient
+      network: sdkNetwork as 'mainnet' | 'testnet',
+      suiClient: this.suiClient as any
     });
 
     this.config = cfg;
@@ -31,7 +41,7 @@ export class WalrusSdkClient {
    * @param {number} options.epochs - Number of epochs to store (default from config)
    * @returns {Promise<{encodedBlob, registerTx}>} - Returns encoded blob and register transaction
    */
-  async writeJsonBlob({ json, identifier = 'walsheetz-v1.json', tags = {}, epochs }) {
+  async writeJsonBlob({ json, identifier = 'walsheetz-v1.json', tags = {}, epochs }: { json: unknown; identifier?: string; tags?: Record<string, string>; epochs?: number }): Promise<{ encodedBlob: unknown; registerTx: unknown }> {
     try {
       // Encode JSON data to Uint8Array
       const contents = new TextEncoder().encode(JSON.stringify(json));
@@ -44,7 +54,7 @@ export class WalrusSdkClient {
       const storageEpochs = epochs || defaultEpochs;
 
       // Create register transaction
-      const registerTx = await this.client.registerBlobTransaction({
+      const registerTx = await (this.client as any).registerBlobTransaction({
         blob: encodedBlob,
         epochs: storageEpochs,
         deletable: true
@@ -53,7 +63,7 @@ export class WalrusSdkClient {
       return { encodedBlob, registerTx };
     } catch (error) {
       console.error('Error creating Walrus SDK blob write:', error);
-      throw new Error(`Failed to create Walrus blob write: ${error.message}`);
+      throw new Error(`Failed to create Walrus blob write: ${(error as Error).message}`);
     }
   }
 
@@ -66,23 +76,26 @@ export class WalrusSdkClient {
   async completeUploadAndCertify(encodedBlob, signAndExecute) {
     try {
       // Upload the blob to Walrus
-      const blobId = await this.client.writeBlob(encodedBlob);
+      const writeResult = await this.client.writeBlob(encodedBlob);
 
-      if (!blobId) {
-        throw new Error('Upload failed: no blobId returned');
+      if (!writeResult) {
+        throw new Error('Upload failed: no result returned');
       }
 
+      // Extract blobId from result (may be string or object with blobId property)
+      const blobId = typeof writeResult === 'string' ? writeResult : (writeResult as any).blobId || writeResult;
+
       // Create and execute certification transaction
-      const certifyTx = await this.client.certifyBlobTransaction({ blobId });
+      const certifyTx = await (this.client as any).certifyBlobTransaction({ blobId: String(blobId) });
       const certifyResult = await signAndExecute({ transactionBlock: certifyTx });
 
       return {
-        blobId,
+        blobId: String(blobId),
         certifyResult
       };
     } catch (error) {
       console.error('Error completing Walrus upload and certification:', error);
-      throw new Error(`Failed to complete upload and certification: ${error.message}`);
+      throw new Error(`Failed to complete upload and certification: ${(error as Error).message}`);
     }
   }
 

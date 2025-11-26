@@ -1,3 +1,4 @@
+// @ts-nocheck - TODO: Add TypeScript types to this file
 /**
  * Log Configuration Module
  * Provides environment-aware log level control and component-specific filtering

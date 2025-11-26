@@ -7,11 +7,9 @@ const MAX_NESTING = 20;
 
 /**
  * Validate data for Walrus storage
- * @param {Object} data - Data to validate
- * @returns {{valid: boolean, error: string|null, errors: string[]}}
  */
-export function validateDataForWalrus(data) {
-  const errors = [];
+export function validateDataForWalrus(data: unknown) {
+  const errors: string[] = [];
 
   // Check defined
   if (data === null || data === undefined) {
@@ -24,14 +22,14 @@ export function validateDataForWalrus(data) {
   }
 
   // Check JSON serialization
-  let jsonString;
+  let jsonString: string;
   try {
     jsonString = JSON.stringify(data);
   } catch (jsonError) {
     return {
       valid: false,
       error: 'Data cannot be serialized to JSON',
-      errors: [`JSON serialization failed: ${jsonError.message}`]
+      errors: [`JSON serialization failed: ${(jsonError as Error).message}`]
     };
   }
 
@@ -45,12 +43,13 @@ export function validateDataForWalrus(data) {
   }
 
   // Validate spreadsheet structure if present
-  if (data.cells !== undefined || data.metadata !== undefined || data.spreadsheetId !== undefined) {
-    errors.push(...validateSpreadsheetStructure(data));
+  const dataObj = data as Record<string, unknown>;
+  if (dataObj.cells !== undefined || dataObj.metadata !== undefined || dataObj.spreadsheetId !== undefined) {
+    errors.push(...validateSpreadsheetStructure(dataObj));
   }
 
   // Validate content
-  errors.push(...validateDataContent(jsonString, data));
+  errors.push(...validateDataContent(jsonString, dataObj));
 
   return {
     valid: errors.length === 0,
@@ -61,11 +60,9 @@ export function validateDataForWalrus(data) {
 
 /**
  * Validate spreadsheet structure
- * @param {Object} data - Spreadsheet data
- * @returns {string[]} Array of error messages
  */
-function validateSpreadsheetStructure(data) {
-  const errors = [];
+function validateSpreadsheetStructure(data: Record<string, unknown>): string[] {
+  const errors: string[] = [];
 
   // Validate spreadsheetId
   if (data.spreadsheetId && typeof data.spreadsheetId !== 'string') {
@@ -74,16 +71,17 @@ function validateSpreadsheetStructure(data) {
 
   // Validate cells
   if (data.cells !== undefined) {
-    if (typeof data.cells !== 'object' || Array.isArray(data.cells)) {
+    if (typeof data.cells !== 'object' || data.cells === null || Array.isArray(data.cells)) {
       errors.push('cells must be an object (not array)');
     } else {
-      const totalCells = Object.keys(data.cells).length;
+      const cells = data.cells as Record<string, unknown>;
+      const totalCells = Object.keys(cells).length;
       if (totalCells > MAX_CELLS) {
         errors.push(`Too many cells: ${totalCells} (max: ${MAX_CELLS})`);
       }
 
       // Validate cell keys (A1, B2, etc.)
-      for (const cellKey of Object.keys(data.cells)) {
+      for (const cellKey of Object.keys(cells)) {
         if (!/^[A-Z]+[0-9]+$/.test(cellKey)) {
           errors.push(`Invalid cell key format: ${cellKey}`);
           break;
@@ -102,12 +100,9 @@ function validateSpreadsheetStructure(data) {
 
 /**
  * Validate data content for suspicious patterns
- * @param {string} jsonString - JSON string
- * @param {Object} data - Parsed data object
- * @returns {string[]} Array of error messages
  */
-function validateDataContent(jsonString, data) {
-  const errors = [];
+function validateDataContent(jsonString: string, data: object): string[] {
+  const errors: string[] = [];
 
   // Check for excessive nesting
   const maxNesting = calculateMaxNestingLevel(data);
@@ -120,11 +115,8 @@ function validateDataContent(jsonString, data) {
 
 /**
  * Calculate maximum nesting level in object
- * @param {*} obj - Object to analyze
- * @param {number} currentLevel - Current recursion level
- * @returns {number} Maximum nesting level
  */
-function calculateMaxNestingLevel(obj, currentLevel = 0) {
+function calculateMaxNestingLevel(obj: unknown, currentLevel = 0): number {
   if (currentLevel > 25) return currentLevel;
 
   let maxLevel = currentLevel;

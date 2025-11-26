@@ -3,8 +3,36 @@
 
 import { emitHealthStatusChange } from "../utils/WalrusEventEmitter.js";
 
+export interface HealthStatus {
+  lastCheck: number | null;
+  isHealthy: boolean;
+  publisherAvailable: boolean;
+  aggregatorAvailable: boolean;
+  lastError: string | null;
+  consecutiveFailures: number;
+  degraded?: boolean;
+  reason?: string | null;
+}
+
+interface WalrusEndpoints {
+  publisher: { proxy: string };
+  aggregator: { proxy: string };
+}
+
+interface ConnectionManager {
+  recordSuccess(): void;
+  recordFailure(error?: Error): void;
+  isDegraded: boolean;
+}
+
 export class HealthMonitor {
-  constructor(endpoints, transport, connectionManager = null) {
+  endpoints: WalrusEndpoints;
+  transport: unknown;
+  connectionManager: ConnectionManager | null;
+  healthStatus: HealthStatus;
+  interval: ReturnType<typeof setInterval> | null;
+
+  constructor(endpoints: WalrusEndpoints, transport: unknown, connectionManager: ConnectionManager | null = null) {
     this.endpoints = endpoints;
     this.transport = transport;
     this.connectionManager = connectionManager;
@@ -90,7 +118,7 @@ export class HealthMonitor {
         ...this.healthStatus,
         lastCheck: Date.now(),
         isHealthy: false,
-        lastError: error.message,
+        lastError: (error as Error).message,
         consecutiveFailures: this.healthStatus.consecutiveFailures + 1
       };
 
@@ -103,7 +131,7 @@ export class HealthMonitor {
    * Check single endpoint health
    * @private
    */
-  async _checkEndpoint(url) {
+  async _checkEndpoint(url: string) {
     try {
       const response = await fetch(`${url}/v1/api`, {
         method: 'GET',
@@ -111,13 +139,14 @@ export class HealthMonitor {
       });
       return response.ok;
     } catch (error) {
+      const err = error as Error;
       // Detect CORS errors and notify connection manager
-      if (error.message?.includes('Failed to fetch') || error.message?.includes('ERR_NAME_NOT_RESOLVED')) {
-        console.warn('[HealthMonitor] CORS or DNS error detected:', error.message);
+      if (err.message?.includes('Failed to fetch') || err.message?.includes('ERR_NAME_NOT_RESOLVED')) {
+        console.warn('[HealthMonitor] CORS or DNS error detected:', err.message);
 
         // Notify connection manager of CORS error (enters degraded mode)
         if (this.connectionManager) {
-          this.connectionManager.recordFailure(error);
+          this.connectionManager.recordFailure(err);
         }
       }
       return false;

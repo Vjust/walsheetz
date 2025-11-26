@@ -1,9 +1,20 @@
+// @ts-nocheck - TODO: Add TypeScript types to this file
 import { networkLock } from "./NetworkLock.js";
 // Note: TransactionExperience dependency removed for standalone walrus package
 // This will be available in @dreamlit/walrus-sui-core
 
 // Runtime configuration loader with cache-busting and ABI detection
 class ConfigLoader {
+  config: unknown;
+  lastFetch: number | null;
+  refreshInterval: number;
+  isLoading: boolean;
+  loadingPromise: Promise<unknown> | null;
+  abiCache: Map<string, unknown>;
+  networkValidationCache: Map<string, unknown>;
+  isFallback: boolean;
+  fallbackAttemptCount: number;
+
   constructor() {
     this.config = null;
     this.lastFetch = null;

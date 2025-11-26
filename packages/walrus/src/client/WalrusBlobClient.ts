@@ -1,13 +1,30 @@
 // Core blob client for Walrus storage operations
 // Orchestrates store/retrieve with encoding, validation, and transport abstraction
 
-import { encodeSpreadsheetData, decodeSpreadsheetData, calculateContentHash } from "../utils/DataEncoder.js";
+import { encodeSpreadsheetData, decodeSpreadsheetData, calculateContentHash, SpreadsheetData } from "../utils/DataEncoder.js";
 import { validateDataForWalrus } from "../utils/DataValidator.js";
 import { emitOperationEvent } from "../utils/WalrusEventEmitter.js";
 import { withWalrusEndpoint } from "../config/endpointHelper.js";
 
+import type { WalrusConnectionManager } from "./WalrusConnectionManager.js";
+
+interface StoreOptions {
+  epochs?: number;
+  compressionThreshold?: number;
+}
+
+interface RetrieveOptions {
+  precheck?: boolean;
+  verifyHash?: boolean;
+  expectedHash?: string;
+}
+
 export class WalrusBlobClient {
-  constructor(endpoints, transport, connectionManager) {
+  endpoints: unknown;
+  transport: any; // Dynamic transport with putBlob, getBlob, headBlob methods
+  connectionManager: WalrusConnectionManager;
+
+  constructor(endpoints: unknown, transport: unknown, connectionManager: WalrusConnectionManager) {
     this.endpoints = endpoints;
     this.transport = transport;
     this.connectionManager = connectionManager;
@@ -19,7 +36,7 @@ export class WalrusBlobClient {
    * @param {Object} options - Storage options (epochs, compressionThreshold, etc.)
    * @returns {Promise<{blobId: string, contentHash: string, size: number}>}
    */
-  async storeBlob(data, options = {}) {
+  async storeBlob(data: SpreadsheetData, options: StoreOptions = {}) {
     const startTime = Date.now();
     const epochs = options.epochs || 1;
 
@@ -69,7 +86,7 @@ export class WalrusBlobClient {
       this.connectionManager.recordFailure();
 
       const duration = Date.now() - startTime;
-      emitOperationEvent('store-failure', { error: error.message, duration });
+      emitOperationEvent('store-failure', { error: (error as Error).message, duration });
 
       throw error;
     }
@@ -81,7 +98,7 @@ export class WalrusBlobClient {
    * @param {Object} options - Retrieval options (verifyHash, etc.)
    * @returns {Promise<Object>} Decoded spreadsheet data
    */
-  async retrieveBlob(blobId, options = {}) {
+  async retrieveBlob(blobId: string, options: RetrieveOptions = {}) {
     const startTime = Date.now();
 
     try {
@@ -123,7 +140,7 @@ export class WalrusBlobClient {
       this.connectionManager.recordFailure();
 
       const duration = Date.now() - startTime;
-      emitOperationEvent('retrieve-failure', { blobId, error: error.message, duration });
+      emitOperationEvent('retrieve-failure', { blobId, error: (error as Error).message, duration });
 
       throw error;
     }

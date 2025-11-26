@@ -1,3 +1,4 @@
+// @ts-nocheck - TODO: Add TypeScript types to this file
 /**
  * Centralized Logging Service for WalSheetz Spreadsheet Application
  * Provides structured logging with contextual metadata and performance tracking

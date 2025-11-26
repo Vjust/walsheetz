@@ -1,6 +1,0 @@
-$ tsc --noEmit
-frontend/hooks/useWalletConnection.ts(46,13): error TS7030: Not all code paths return a value.
-frontend/hooks/useWalletConnectionFactory.ts(25,12): error TS2352: Conversion of type '{ readonly isConnected: boolean; readonly isConnecting: boolean; readonly connectionError: null; readonly currentAccount: { address: string; publicKey: Uint8Array<ArrayBuffer>; chains: string[]; features: string[]; }; ... 13 more ...; suiClient: { ...; }; }' to type 'UseWalletConnection' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
-  Property 'isAutoConnecting' is missing in type '{ readonly isConnected: boolean; readonly isConnecting: boolean; readonly connectionError: null; readonly currentAccount: { address: string; publicKey: Uint8Array<ArrayBuffer>; chains: string[]; features: string[]; }; ... 13 more ...; suiClient: { ...; }; }' but required in type 'UseWalletConnection'.
-frontend/presentation/components/__tests__/SaveDetailsModal.renewal.test.jsx(2,23): error TS2688: Cannot find type definition file for '@vitest/environment-happy-dom'.
-frontend/presentation/components/__tests__/SaveStatusBanner.event.test.jsx(2,23): error TS2688: Cannot find type definition file for '@vitest/environment-happy-dom'.

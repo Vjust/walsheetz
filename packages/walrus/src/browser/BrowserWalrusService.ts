@@ -18,8 +18,26 @@ import { RetryQueue } from "../retry/RetryQueue.js";
 import { getPoaCertificate } from "../utils/PoACertificateReader.js";
 import { readBlobRange as readRange } from "../utils/BlobRangeReader.js";
 import { streamBlobToGrid as streamToGrid } from "../utils/GridStreamer.js";
+import type { SpreadsheetData } from "../utils/DataEncoder.js";
+
+// Extend Window for dev tools
+declare global {
+  interface Window {
+    browserWalrusService?: BrowserWalrusService;
+  }
+}
 
 class BrowserWalrusService {
+  configLoader: typeof configLoader;
+  rateLimiterEnabled: boolean;
+  limiters: Record<string, RateLimiter>;
+  _endpoints: any; // Dynamic endpoints object
+  _transport: ProxyTransport | null;
+  _blobClient: WalrusBlobClient | null;
+  _connectionManager: WalrusConnectionManager;
+  _healthMonitor: HealthMonitor | null;
+  _retryQueue: RetryQueue;
+
   constructor() {
     const config = getCurrentConfig();
     this.configLoader = configLoader;
@@ -95,15 +113,15 @@ class BrowserWalrusService {
    * @param {Object} options - Storage options
    * @returns {Promise<{blobId: string, contentHash: string}>}
    */
-  async storeBlob(data, options = {}) {
+  async storeBlob(data: SpreadsheetData, options = {}) {
     await this._ensureInitialized();
 
     try {
-      return await this._blobClient.storeBlob(data, options);
+      return await this._blobClient!.storeBlob(data, options);
     } catch (error) {
       // Add to retry queue on failure
       this._retryQueue.add({
-        fn: async (d) => await this._blobClient.storeBlob(d, options),
+        fn: async (d) => await this._blobClient!.storeBlob(d as SpreadsheetData, options),
         data
       });
       throw error;
@@ -132,7 +150,7 @@ class BrowserWalrusService {
       options = expectedHashOrOptions;
     }
 
-    const decoded = await this._blobClient.retrieveBlob(blobId, options);
+    const decoded = await this._blobClient!.retrieveBlob(blobId, options);
 
     // Return backward-compatible format: {success, data, metadata}
     return {
@@ -152,7 +170,7 @@ class BrowserWalrusService {
    */
   async checkWalrusHealth() {
     await this._ensureInitialized();
-    return await this._healthMonitor.check();
+    return await this._healthMonitor!.check();
   }
 
   /**
@@ -236,9 +254,9 @@ class BrowserWalrusService {
    * @param {Object} options - Options {format, delimiter, maxRows, maxCols}
    * @returns {Promise<{success: boolean, data: Array<Array>, metadata: {rows: number, cols: number, format: string}}>}
    */
-  async streamBlobToGrid(blobId, startRow, startCol, options = {}) {
+  async streamBlobToGrid(blobId: string, startRow: number, startCol: number, options = {}) {
     await this._ensureInitialized();
-    return await streamToGrid(blobId, startRow, startCol, options, this._blobClient);
+    return await streamToGrid(blobId, startRow, startCol, options, this._blobClient!);
   }
 
   /**
@@ -283,9 +301,9 @@ class BrowserWalrusService {
         reason: degraded ? 'cors_blocked' : null
       };
     } catch (error) {
-      this._connectionManager.recordFailure(error);
+      this._connectionManager.recordFailure(error as Error);
 
-      const isCors = this.isCorsError(error);
+      const isCors = this.isCorsError(error as Error);
       const degraded = this._connectionManager.isDegraded;
 
       return {
@@ -331,9 +349,9 @@ class BrowserWalrusService {
         reason: degraded ? 'cors_blocked' : null
       };
     } catch (error) {
-      this._connectionManager.recordFailure(error);
+      this._connectionManager.recordFailure(error as Error);
 
-      const isCors = this.isCorsError(error);
+      const isCors = this.isCorsError(error as Error);
       const degraded = this._connectionManager.isDegraded;
 
       return {
