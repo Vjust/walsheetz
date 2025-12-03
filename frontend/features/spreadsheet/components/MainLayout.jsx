@@ -6,7 +6,7 @@ import { NotificationContainer } from './NotificationContainer.jsx'
 import { Collaboration } from '@shared/components/Collaboration.jsx'
 import { LoadingOverlay } from './LoadingOverlay.jsx'
 import { useSpreadsheetContext } from './SpreadsheetProvider.jsx'
-import { configLoader } from '@utils/config/ConfigLoader.js'
+import { configLoader } from '../../../../packages/shared/src/utils/ConfigLoader.js'
 
 export function MainLayout() {
   const {

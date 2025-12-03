@@ -3,8 +3,8 @@
  * Tracks blob version history and relationships for Walrus spreadsheets
  */
 
-import { eventBus } from "@/sdk/shared/utils/EventBus.js";
-import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
+import { eventBus } from "../../../../shared/src/utils/EventBus.js";
+import { logger, LogComponent } from "../../../../shared/src/utils/Logger.js";
 
 class BlobLineageTracker {
   constructor() {

@@ -7,9 +7,9 @@
  */
 
 import { useWalletConnection } from './useWalletConnection';
-import { mockWalletConnection } from '@services/infrastructure/testing/mockWalletConnection.js';
-import { isAuthBypassed } from '@utils/config/testMode.js';
-import type { UseWalletConnection } from '@/types/wallet';
+import { mockWalletConnection } from '../../lib/spreadsheet/services/testing/mockWalletConnection.ts';
+import { isAuthBypassed } from '../../../packages/shared/src/utils/config/testMode.js';
+import type { UseWalletConnection } from '../../../packages/shared/src/types/wallet';
 
 /**
  * Factory hook that provides either real or mock wallet connection

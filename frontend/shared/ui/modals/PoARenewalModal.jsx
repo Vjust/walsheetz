@@ -4,8 +4,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { poaRenewalManager } from '../../services/PoARenewalManager.js';
-import { EventBus } from '@utils/helpers/EventBus.js';
+import { poaRenewalManager } from '../../../../packages/walrus-sui-core/src/data-integrity/services/PoARenewalManager.js';
+import { EventBus } from '../../../../packages/shared/src/utils/helpers/EventBus.js';
 import '../styles/PoACertificationModal.css'; // Reuse certification modal styles
 
 export function PoARenewalModal({ blobId, certificate, isOpen, onClose, onSuccess, onError }) {

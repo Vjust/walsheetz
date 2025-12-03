@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { browserSuiService } from '@services/blockchain/sui/BrowserSuiService.js';
-import { browserWalrusService } from '@services/blockchain/walrus/BrowserWalrusService.js';
+import { browserSuiService } from '../../../packages/walrus-sui-core/src/blockchain-integration/services/BrowserSuiService.ts';
+import { browserWalrusService } from '../../../packages/walrus/src/browser/BrowserWalrusService.ts';
 
 const RateLimiterStatus = ({ show = false, position = 'bottom-right' }) => {
   const [metrics, setMetrics] = useState({

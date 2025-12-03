@@ -4,8 +4,8 @@
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { Spreadsheet } from '@features/spreadsheet/components';
-import { WALSHEETZ_FUNCTION_METADATA } from '@services/integrations/formulas/WalSheetzFunctions.js';
-import { logger, LogComponent } from '@utils/logging/Logger.js';
+import { WALSHEETZ_FUNCTION_METADATA } from '../../../lib/spreadsheet/services/formulas/WalSheetzFunctions.ts';
+import { logger, LogComponent } from '../../../../packages/shared/src/utils/Logger.js';
 import '../styles/SpreadsheetWorkspace.css';
 
 export function SpreadsheetWorkspace() {

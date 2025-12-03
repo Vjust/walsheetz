@@ -3,9 +3,9 @@
  * Domain hook for transforming grid data to/from Walrus blobs
  */
 import { useState, useCallback } from 'react';
-import { browserWalrusService } from '@services/blockchain/walrus/BrowserWalrusService.js';
+import { browserWalrusService } from '../../../packages/walrus/src/browser/BrowserWalrusService.ts';
 import { parseBlob, serializeRange } from '../../utils/BlobParser.js';
-import { logger, LogComponent } from '@utils/logging/Logger.js';
+import { logger, LogComponent } from '../../../packages/shared/src/utils/Logger.js';
 
 /**
  * Hook for transforming grid data between spreadsheet and Walrus blobs

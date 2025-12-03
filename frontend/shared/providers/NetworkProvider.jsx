@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import { networkLock } from '@utils/helpers/NetworkLock.js'
+import { networkLock } from '../../../packages/shared/src/utils/helpers/NetworkLock.js'
 
 const NetworkContext = createContext(null)
 

@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useSpreadsheetContext, MainLayout, LoadingOverlay } from '@features/spreadsheet/components';
 import { BreadcrumbNavigation } from '@features/dashboard/components/BreadcrumbNavigation.jsx';
 import { useUnloadWarning } from '@shared/hooks/useUnloadWarning.js';
-import { logger, LogComponent } from '@utils/logging/Logger.js';
+import { logger, LogComponent } from '../../../../packages/shared/src/utils/Logger.js';
 import '../styles/spreadsheet-editor.css';
 
 export function SpreadsheetEditor() {

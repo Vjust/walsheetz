@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { SpreadsheetMigrator } from '@services/SpreadsheetMigrator.js'
+import { SpreadsheetMigrator } from '../../../lib/spreadsheet/services/SpreadsheetMigrator.js'
 import { useNetwork } from '@shared/providers/NetworkProvider.jsx'
 import '../styles/MigrationDialog.css'
 

@@ -13,7 +13,7 @@ vi.mock('@utils/logging/Logger.js', () => ({
 }));
 
 // Import service after mocking
-import { SpreadsheetImportExportService } from "../../../packages/spreadsheet-sdk/src/services/SpreadsheetImportExportService.js";
+import { SpreadsheetImportExportService } from "../../../frontend/lib/spreadsheet/services/SpreadsheetImportExportService.js";
 
 describe('SpreadsheetImportExportService export conversions', () => {
   let service;

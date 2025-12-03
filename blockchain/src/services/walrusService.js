@@ -1,8 +1,8 @@
 // NOTE: Node/server/CLI usage only. The React UI must use @/sdk/* or @/walrus/* (Browser*Service).
 // Walrus storage service for WalSheetz
 import { getCurrentConfig } from './config.js';
-import { ResilientExecutor } from '@/sdk/shared/utils/CircuitBreaker.js';
-import { indexedDBCache } from '@/sdk/shared/services/IndexedDBCache.js';
+import { ResilientExecutor } from '../../../packages/shared/src/utils/CircuitBreaker.js';
+import { indexedDBCache } from '../../../packages/shared/src/services/IndexedDBCache.js';
 
 // SDK support for Node.js (if available)
 let WalrusClient, SuiClient;

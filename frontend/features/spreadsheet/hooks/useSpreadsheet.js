@@ -1,18 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { SpreadsheetEngine } from '@features/spreadsheet/engine/SpreadsheetEngine.js';
-import { BlockchainAdapter } from '@adapters/BlockchainAdapter.js';
-import { StorageAdapter } from '@adapters/StorageAdapter.js';
-import { GridSizeManager } from '@features/spreadsheet/engine/GridSizeManager.js';
+import { SpreadsheetEngine } from '../../../lib/spreadsheet/core/SpreadsheetEngine.ts';
+import { BlockchainAdapter } from '../../../lib/spreadsheet/adapters/BlockchainAdapter.ts';
+import { StorageAdapter } from '../../../lib/spreadsheet/adapters/StorageAdapter.ts';
+import { GridSizeManager } from '../../../lib/spreadsheet/services/GridSizeManager.ts';
 // WebSocket service disabled for single-user MVP
 // import { webSocketService } from '../services/WebSocketService.js';
 import { useWalletConnectionFactory } from '@shared/hooks/useWalletConnectionFactory.ts';
-import { browserWalletManager } from '@services/blockchain/wallet/BrowserWalletManager.js';
-import { parseCellRef } from '@utils/helpers/cellUtils.js';
-import luckysheetApi from '@services/integrations/luckysheet/luckysheetApi.js';
-import { TestModeAdapter } from '@services/infrastructure/testing/TestModeAdapter.js';
-import { isAuthBypassed } from '@utils/config/testMode.js';
-import { logger, LogComponent } from '@utils/logging/Logger.js';
-import { detectSaveVersionSignature } from '@utils/blockchain/AbiHelpers.js';
+import { browserWalletManager } from '../../../../packages/walrus-sui-core/src/blockchain-integration/services/BrowserWalletManager.ts';
+import { parseCellRef } from '../../../../packages/shared/src/utils/helpers/cellUtils.js';
+import luckysheetApi from '../../../lib/spreadsheet/services/luckysheetApi.ts';
+import { TestModeAdapter } from '../../../lib/spreadsheet/services/testing/TestModeAdapter.ts';
+import { isAuthBypassed } from '../../../../packages/shared/src/utils/config/testMode.js';
+import { logger, LogComponent } from '../../../../packages/shared/src/utils/Logger.js';
+import { detectSaveVersionSignature } from '../../../../packages/shared/src/utils/blockchain/AbiHelpers.js';
 // Phase 3: Extracted hooks for better separation of concerns
 import { useSpreadsheetAutosave } from './useSpreadsheetAutosave.js';
 import { useSpreadsheetImport } from './useSpreadsheetImport.js';

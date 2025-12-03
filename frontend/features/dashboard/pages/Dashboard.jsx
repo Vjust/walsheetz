@@ -8,7 +8,7 @@ import { NetworkBadge } from '@features/network/components/NetworkBadge.jsx';
 import { NetworkSelector } from '@features/network/components/NetworkSelector.jsx';
 import { MigrationDialog } from '@features/network/components/MigrationDialog.jsx';
 import { useNetwork } from '@shared/providers/NetworkProvider.jsx';
-import { logger, LogComponent } from '@utils/logging/Logger.js';
+import { logger, LogComponent } from '../../../../packages/shared/src/utils/Logger.js';
 import UnicornStudioHero from '@shared/components/UnicornStudioHero.jsx';
 import BlizzardParticles from '@shared/ui/effects/BlizzardParticles.jsx';
 import '../styles/dashboard.css';

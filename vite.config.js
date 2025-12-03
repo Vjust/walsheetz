@@ -219,6 +219,15 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      // @dreamlit/* package aliases - resolve to source for dev
+      '@dreamlit/walrus-sui-core/blockchain-integration': fileURLToPath(new URL('./packages/walrus-sui-core/src/blockchain-integration/index.ts', import.meta.url)),
+      '@dreamlit/walrus-sui-core/blockchain': fileURLToPath(new URL('./packages/walrus-sui-core/src/blockchain/index.ts', import.meta.url)),
+      '@dreamlit/walrus-sui-core/transaction': fileURLToPath(new URL('./packages/walrus-sui-core/src/transaction-management/index.ts', import.meta.url)),
+      '@dreamlit/walrus-sui-core/data-integrity': fileURLToPath(new URL('./packages/walrus-sui-core/src/data-integrity/index.ts', import.meta.url)),
+      '@dreamlit/walrus-sui-core': fileURLToPath(new URL('./packages/walrus-sui-core/src/index.ts', import.meta.url)),
+      '@dreamlit/walrus': fileURLToPath(new URL('./packages/walrus/src/index.ts', import.meta.url)),
+      '@dreamlit/shared': fileURLToPath(new URL('./packages/shared/src/index.ts', import.meta.url)),
+      // App aliases
       '@/walrus': fileURLToPath(new URL('./src/walrus', import.meta.url)),
       '@/sdk': fileURLToPath(new URL('./src/sdk', import.meta.url)),
       '@/web': fileURLToPath(new URL('./web', import.meta.url)),
@@ -232,7 +241,7 @@ export default defineConfig({
       '@adapters': fileURLToPath(new URL('./frontend/adapters', import.meta.url)),
       '@interfaces': fileURLToPath(new URL('./frontend/interfaces', import.meta.url)),
       '@types': fileURLToPath(new URL('./frontend/types', import.meta.url)),
-      '@blockchain': fileURLToPath(new URL('./blockchain', import.meta.url)),
+      '@blockchain': fileURLToPath(new URL('./blockchain/src', import.meta.url)),
       '@scripts': fileURLToPath(new URL('./scripts', import.meta.url)),
       '@sentry/nextjs': fileURLToPath(new URL('./frontend/services/infrastructure/SentryStub.js', import.meta.url))
     },

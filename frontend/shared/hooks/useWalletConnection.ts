@@ -10,8 +10,8 @@ import {
 } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
 import type { WalletWithRequiredFeatures } from '@mysten/wallet-standard';
-import { configLoader } from '@utils/config/ConfigLoader.js';
-import { buildSaveVersionArgs } from '@utils/blockchain/AbiHelpers.js';
+import { configLoader } from '../../../packages/shared/src/utils/ConfigLoader.js';
+import { buildSaveVersionArgs } from '../../../packages/shared/src/utils/blockchain/AbiHelpers.js';
 import type {
   WalletBalance,
   AvailableWallets,
@@ -20,7 +20,7 @@ import type {
   TransactionOptions,
   UseWalletConnection,
   WalletInfo,
-} from '@/types/wallet';
+} from '../../../packages/shared/src/types/wallet';
 
 export function useWalletConnection(): UseWalletConnection {
   const currentAccount = useCurrentAccount();

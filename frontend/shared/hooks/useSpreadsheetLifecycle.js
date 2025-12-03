@@ -21,11 +21,11 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import luckysheetApi from '@services/integrations/luckysheet/luckysheetApi.js';
-import { luckysheetAdapter } from '@services/integrations/luckysheet/LuckysheetAdapter.js';
-import { registerWalSheetzFunctions } from '@services/integrations/formulas/WalSheetzFunctions.js';
-import { convertToLuckysheetData, calculateSheetDimensions } from '@services/integrations/luckysheet/dataTransforms.js';
-import { columnLettersToNumber, columnNumberToLetters } from '@utils/helpers/cellUtils.js';
+import luckysheetApi from '../../lib/spreadsheet/services/luckysheetApi.ts';
+import { luckysheetAdapter } from '../../lib/spreadsheet/services/luckysheet/LuckysheetAdapter.ts';
+import { registerWalSheetzFunctions } from '../../lib/spreadsheet/services/formulas/WalSheetzFunctions.ts';
+import { convertToLuckysheetData, calculateSheetDimensions } from '../../lib/spreadsheet/services/luckysheet/dataTransforms.ts';
+import { columnLettersToNumber, columnNumberToLetters } from '../../../packages/shared/src/utils/helpers/cellUtils.js';
 
 const INIT_RETRY_INTERVAL = 100;
 const INIT_TIMEOUT = 10000;

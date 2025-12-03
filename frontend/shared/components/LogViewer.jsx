@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { logger, LogComponent } from '@utils/logging/Logger.js';
+import { logger, LogComponent } from '../../../packages/shared/src/utils/Logger.js';
 
 export function LogViewer() {
   const [isVisible, setIsVisible] = useState(false);

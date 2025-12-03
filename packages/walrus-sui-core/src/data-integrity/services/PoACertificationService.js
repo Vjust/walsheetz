@@ -3,8 +3,8 @@
  * Handles Proof of Availability certificate requests and status tracking for Walrus blobs
  */
 
-import { eventBus } from "@/sdk/shared/utils/EventBus.js";
-import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
+import { eventBus } from "../../../../shared/src/utils/EventBus.js";
+import { logger, LogComponent } from "../../../../shared/src/utils/Logger.js";
 
 class PoACertificationService {
   constructor() {
@@ -57,7 +57,7 @@ class PoACertificationService {
       });
 
       // Import browser sui service dynamically
-      const { browserSuiService } = await import("@/sdk/blockchain-integration/services/BrowserSuiService.js");
+      const { browserSuiService } = await import("../../blockchain-integration/services/BrowserSuiService.js");
 
       // Emit event
       eventBus.emit('poa:certification:requested', {
@@ -185,7 +185,7 @@ class PoACertificationService {
       });
 
       // Import browser walrus service dynamically
-      const { browserWalrusService } = await import("@/walrus/BrowserWalrusService.js");
+      const { browserWalrusService } = await import("../../../../walrus/src/browser/BrowserWalrusService.js");
 
       // Get PoA certificate status
       const result = await browserWalrusService.getPoACertificate(blobId);

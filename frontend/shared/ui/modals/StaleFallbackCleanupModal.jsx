@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { logger, LogComponent } from '@utils/logging/Logger.js';
+import { logger, LogComponent } from '../../../../packages/shared/src/utils/Logger.js';
 import './StaleFallbackCleanupModal.css';
 
 /**

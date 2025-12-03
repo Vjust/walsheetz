@@ -14,6 +14,9 @@ export { poaCertificationService } from './services/PoACertificationService.js';
 export { poaRenewalManager } from './services/PoARenewalManager.js';
 export { blobLineageTracker } from './services/BlobLineageTracker.js';
 
-// Interfaces (TypeScript types - consumers should import directly)
-// Note: TypeScript consumers can import types from './interfaces/graphql/index.js'
-// JavaScript consumers don't need these exports
+// Interfaces
+export type {
+  IGraphQLResponse,
+  IBlobRecord,
+  IPoAStatus
+} from './interfaces/graphql/index.js';

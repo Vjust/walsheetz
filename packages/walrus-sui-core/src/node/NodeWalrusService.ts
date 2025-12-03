@@ -18,7 +18,7 @@ import {
   WalrusConnectionManager,
   HealthMonitor,
   RetryQueue
-} from '@dreamlit/walrus';
+} from '../../../walrus/src/index.js';
 
 // Import getCurrentConfig from our own blockchain module
 import { getCurrentConfig } from '../blockchain/config.js';

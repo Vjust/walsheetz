@@ -4,8 +4,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { poaCertificationService } from '../../services/PoACertificationService.js';
-import { EventBus } from '@utils/helpers/EventBus.js';
+import { poaCertificationService } from '../../../../packages/walrus-sui-core/src/data-integrity/services/PoACertificationService.js';
+import { EventBus } from '../../../../packages/shared/src/utils/helpers/EventBus.js';
 import './PoACertificationModal.css';
 
 export function PoACertificationModal({ blobId, isOpen, onClose, onSuccess, onError }) {

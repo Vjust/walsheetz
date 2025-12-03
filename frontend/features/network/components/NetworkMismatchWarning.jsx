@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNetwork } from '@shared/providers/NetworkProvider.jsx'
-import { getCurrentConfig } from '@blockchain/config.js'
+import { getCurrentConfig } from '../../../../blockchain/src/config/config.js'
 import '../styles/NetworkMismatchWarning.css'
 
 export function NetworkMismatchWarning({ walletChain }) {

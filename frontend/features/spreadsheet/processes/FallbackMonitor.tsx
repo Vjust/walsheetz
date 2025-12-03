@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useEffect, ReactNode } from 'react'
-import { logger, LogComponent } from '@utils/logging/Logger.js'
+import { logger, LogComponent } from '../../../../packages/shared/src/utils/Logger.js'
 import { StaleFallbackCleanupModal } from '@shared/ui/modals/StaleFallbackCleanupModal.jsx'
 
 interface FallbackMonitorProps {

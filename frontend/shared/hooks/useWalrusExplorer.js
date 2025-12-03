@@ -3,9 +3,9 @@
  * Domain hook for Walrus blob exploration and management
  */
 import { useState, useEffect, useCallback } from 'react';
-import { suiGraphQLService } from '@blockchain/sui-graphql-service.js';
-import { browserWalrusService } from '@services/blockchain/walrus/BrowserWalrusService.js';
-import { logger, LogComponent } from '@utils/logging/Logger.js';
+import { suiGraphQLService } from '../../../blockchain/src/services/graphqlService.js';
+import { browserWalrusService } from '../../../packages/walrus/src/browser/BrowserWalrusService.ts';
+import { logger, LogComponent } from '../../../packages/shared/src/utils/Logger.js';
 
 /**
  * Hook for exploring Walrus blobs with GraphQL and PoA status

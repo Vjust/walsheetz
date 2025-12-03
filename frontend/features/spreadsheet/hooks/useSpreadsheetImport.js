@@ -11,8 +11,8 @@
  */
 
 import { useCallback } from 'react';
-import { getTemplateData } from '@utils/helpers/templateData.js';
-import { logger, LogComponent } from '@utils/logging/Logger.js';
+import { getTemplateData } from '../../../../packages/shared/src/utils/helpers/templateData.js';
+import { logger, LogComponent } from '../../../../packages/shared/src/utils/Logger.js';
 
 /**
  * Hook for managing spreadsheet import and initialization

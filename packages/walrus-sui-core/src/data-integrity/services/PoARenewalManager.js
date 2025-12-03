@@ -3,8 +3,8 @@
  * Monitors blob PoA certificates and manages renewal workflows
  */
 
-import { eventBus } from "@/sdk/shared/utils/EventBus.js";
-import { logger, LogComponent } from "@/sdk/shared/utils/Logger.js";
+import { eventBus } from "../../../../shared/src/utils/EventBus.js";
+import { logger, LogComponent } from "../../../../shared/src/utils/Logger.js";
 
 class PoARenewalManager {
   constructor() {
@@ -185,7 +185,7 @@ class PoARenewalManager {
       });
 
       // Import services dynamically
-      const { browserWalrusService } = await import("@/walrus/BrowserWalrusService.js");
+      const { browserWalrusService } = await import("../../../../walrus/src/browser/BrowserWalrusService.js");
 
       // Get current PoA certificate status
       const result = await browserWalrusService.getPoACertificate(blobId);
@@ -318,7 +318,7 @@ class PoARenewalManager {
       });
 
       // Import services
-      const { browserSuiService } = await import("@/sdk/blockchain-integration/services/BrowserSuiService.js");
+      const { browserSuiService } = await import("../../blockchain-integration/services/BrowserSuiService.js");
 
       // Execute renewal transaction (same as initial certification)
       const result = await browserSuiService.certifyBlob(blobId, {

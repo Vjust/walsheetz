@@ -1,9 +1,14 @@
 // Sui GraphQL Service for Walrus blob and PoA metadata queries
-import { getCurrentConfig } from './config.js';
-import { createLogger } from './utils/logger.js';
-import { IGraphQLResponse } from '../frontend/interfaces/graphql/IGraphQLResponse.js';
+import { getCurrentConfig } from '../config/config.js';
+import { logger as sharedLogger, LogComponent } from '../../../packages/shared/src/utils/Logger.js';
+import { IGraphQLResponse } from '../../../packages/walrus-sui-core/src/interfaces/graphql/IGraphQLResponse.js';
 
-const logger = createLogger('SuiGraphQLService');
+const logger = {
+  info: (msg, data) => sharedLogger.info(LogComponent.BLOCKCHAIN_ADAPTER, 'graphql', msg, data),
+  error: (msg, data) => sharedLogger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'graphql', msg, data),
+  warn: (msg, data) => sharedLogger.warn(LogComponent.BLOCKCHAIN_ADAPTER, 'graphql', msg, data),
+  debug: (msg, data) => sharedLogger.debug(LogComponent.BLOCKCHAIN_ADAPTER, 'graphql', msg, data)
+};
 
 /**
  * Service for querying Sui blockchain data via GraphQL RPC

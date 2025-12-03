@@ -27,7 +27,6 @@ export default [
       '**/.turbo/**',
       '**/coverage/**',
       '**/Sui Ref/**', // Vendored Sui reference docs (not lintable application code)
-      '**/dreamlit-sdks/**', // Vendored SDK snapshots used for reference only
       '**/*.config.js', // Config files can be flexible
     ],
   },

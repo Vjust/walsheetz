@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { browserWalrusService } from '@services/blockchain/walrus/BrowserWalrusService.js';
+import { browserWalrusService } from '../../../packages/walrus/src/browser/BrowserWalrusService.ts';
 
 /**
  * WalrusStatus - Display current Walrus service status and operations

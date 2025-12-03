@@ -16,8 +16,8 @@ import { SpreadsheetEditor } from '@features/spreadsheet/pages/SpreadsheetEditor
 import { BlobCatalog } from '@features/explore/pages/BlobCatalog.jsx'
 import { SpreadsheetWorkspace } from '@features/spreadsheet/pages/SpreadsheetWorkspace.jsx'
 import { ExploreTundra } from '@features/explore/pages/ExploreTundra.jsx'
-import { logger, LogComponent } from '@utils/logging/Logger.js'
-import '@services/integrations/luckysheet/luckysheetApi.js' // Phase 0: Expose wrapper to window for console testing
+import { logger, LogComponent } from '../../packages/shared/src/utils/Logger.js'
+import '../lib/spreadsheet/services/luckysheetApi.ts' // Phase 0: Expose wrapper to window for console testing
 import './styles/collaboration.css'
 
 function App() {

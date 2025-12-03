@@ -4,8 +4,8 @@ import App from '@app/App.jsx'
 import '@app/styles/index.css'
 
 // Single deterministic Luckysheet adapter replaces 5-layer injection
-import { luckysheetAdapter } from '@services/integrations/luckysheet/LuckysheetAdapter.js'
-import { startRenderTimeInjection } from '@services/integrations/luckysheet/injectAtRenderTime.js'
+import { luckysheetAdapter } from './lib/spreadsheet/services/luckysheet/LuckysheetAdapter.ts'
+import { startRenderTimeInjection } from './lib/spreadsheet/services/luckysheet/injectAtRenderTime.ts'
 
 console.log('🔧 [main.jsx] Initializing Luckysheet adapter...')
 

@@ -10,8 +10,8 @@ import {
   getWalrusExplorerUrl,
   getExplorerDisplayName,
   getExplorerIcon
-} from '@utils/blockchain/ExplorerLinks.js';
-import { browserWalrusService } from '@services/blockchain/walrus/BrowserWalrusService.js';
+} from '../../../../packages/shared/src/utils/blockchain/ExplorerLinks.js';
+import { browserWalrusService } from '../../../../packages/walrus/src/browser/BrowserWalrusService.ts';
 import './SaveDetailsModal.css';
 
 export function SaveDetailsModal({

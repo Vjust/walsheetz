@@ -18,7 +18,7 @@ import userEvent from '@testing-library/user-event';
 // Import component first
 import { SaveDetailsModal } from '@features/spreadsheet/components/SaveDetailsModal.jsx';
 // Then import the service to mock it
-import { browserWalrusService } from '@services/blockchain/walrus/BrowserWalrusService.js';
+import { browserWalrusService } from '../../../../packages/walrus/src/browser/BrowserWalrusService.ts';
 
 // Mock BrowserWalrusService methods
 const mockExtendBlobStorage = vi.spyOn(browserWalrusService, 'extendBlobStorage');

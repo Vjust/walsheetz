@@ -3,10 +3,10 @@
  * Browse Walrus blobs with infinite scroll, filters, and PoA status
  */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { suiGraphQLService } from '@blockchain/sui-graphql-service.js';
-import { browserWalrusService } from '@services/blockchain/walrus/BrowserWalrusService.js';
-import { IPoAStatus } from '@interfaces/graphql/IPoAStatus.js';
-import { logger, LogComponent } from '@utils/logging/Logger.js';
+import { suiGraphQLService } from '../../../../blockchain/src/services/graphqlService.js';
+import { browserWalrusService } from '../../../../packages/walrus/src/browser/BrowserWalrusService.ts';
+import { IPoAStatus } from '../../../../packages/walrus-sui-core/src/interfaces/graphql/IPoAStatus.js';
+import { logger, LogComponent } from '../../../../packages/shared/src/utils/Logger.js';
 import '../styles/BlobCatalog.css';
 
 export function BlobCatalog() {

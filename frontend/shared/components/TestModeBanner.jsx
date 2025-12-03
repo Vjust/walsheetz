@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import { isAuthBypassed } from '@utils/config/testMode.js';
+import { isAuthBypassed } from '../../../packages/shared/src/utils/config/testMode.js';
 
 export function TestModeBanner() {
   const [showDetails, setShowDetails] = useState(false);

@@ -1,5 +1,5 @@
 import { networkLock } from "./NetworkLock.js";
-import { transactionExperienceManager } from "@/sdk/transaction-management/utils/TransactionExperience.js";
+import { transactionExperienceManager } from "./helpers/TransactionExperience.js";
 
 // Runtime configuration loader with cache-busting and ABI detection
 class ConfigLoader {
