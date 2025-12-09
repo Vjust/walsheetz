@@ -4,6 +4,9 @@
 import { getCurrentConfig } from './config.js';
 
 export class GrpcTransactionBuilder {
+  config: any;
+  CLOCK_OBJECT_ID: string;
+
   constructor() {
     this.config = getCurrentConfig();
     this.CLOCK_OBJECT_ID = '0x6';
@@ -276,8 +279,8 @@ export class GrpcTransactionBuilder {
   }
 
   // Encode unsigned LEB128 (for string lengths)
-  encodeULEB128(value) {
-    const bytes = [];
+  encodeULEB128(value: number): Buffer {
+    const bytes: number[] = [];
     while (value >= 0x80) {
       bytes.push((value & 0x7f) | 0x80);
       value >>= 7;

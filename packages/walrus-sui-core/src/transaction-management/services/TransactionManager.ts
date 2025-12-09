@@ -25,7 +25,27 @@ function generateUUID() {
  * - Transaction lifecycle events
  */
 export class TransactionManager {
-  constructor(options = {}) {
+  private processingTimeout: number;
+  private debounceDelay: number;
+  private maxBatchSize: number;
+  private maxFailureCount: number;
+  private baseBackoffDelay: number;
+  private maxBackoffDelay: number;
+  private transactionStates: Map<string, any>;
+  private saveQueues: Map<string, any[]>;
+  private pendingSaves: Map<string, Promise<any>>;
+  private debounceTimers: Map<string, NodeJS.Timeout>;
+  private globalState: {
+    disabled: boolean;
+    lastGlobalFailure: null | any;
+    globalFailureCount: number;
+  };
+  private listeners: Map<string, Set<Function>>;
+  private idempotencyCache: Map<string, any>;
+  private maxIdempotencyCacheSize: number;
+  private idempotencyCacheTTL: number;
+
+  constructor(options: Record<string, any> = {}) {
     // Configuration
     this.processingTimeout = options.processingTimeout || 30000; // 30 seconds
     this.debounceDelay = options.debounceDelay || 750; // 750ms
@@ -68,7 +88,7 @@ export class TransactionManager {
   /**
    * Get or create transaction state for a spreadsheet
    */
-  _getOrCreateTransactionState(spreadsheetId) {
+  _getOrCreateTransactionState(spreadsheetId: string) {
     if (!this.transactionStates.has(spreadsheetId)) {
       this.transactionStates.set(spreadsheetId, {
         // Transaction lifecycle
@@ -97,7 +117,7 @@ export class TransactionManager {
   /**
    * Check if a transaction is currently processing for a spreadsheet
    */
-  isProcessing(spreadsheetId) {
+  isProcessing(spreadsheetId: string) {
     if (!spreadsheetId) return false;
 
     const state = this._getOrCreateTransactionState(spreadsheetId);
@@ -126,20 +146,18 @@ export class TransactionManager {
   /**
    * Start a new transaction
    */
-  startTransaction(spreadsheetId, transactionType, metadata = {}) {
+  startTransaction(spreadsheetId: string, transactionType: string, metadata: Record<string, any> = {}) {
     const state = this._getOrCreateTransactionState(spreadsheetId);
 
-    // Check if already processing
     if (this.isProcessing(spreadsheetId)) {
-      const error = new Error('Transaction already in progress');
+      const error = new Error('Transaction already in progress') as any;
       error.code = 'TRANSACTION_IN_PROGRESS';
       throw error;
     }
 
-    // Check if transactions are disabled
     if (this._isDisabled(spreadsheetId)) {
       const cooldownInfo = this._getCooldownInfo(spreadsheetId);
-      const error = new Error(`Transactions disabled for ${Math.round(cooldownInfo.remaining / 1000)}s due to repeated failures`);
+      const error = new Error(`Transactions disabled for ${Math.round(cooldownInfo.remaining / 1000)}s due to repeated failures`) as any;
       error.code = 'TRANSACTIONS_DISABLED';
       error.cooldownRemaining = cooldownInfo.remaining;
       throw error;
@@ -173,7 +191,7 @@ export class TransactionManager {
   /**
    * Update transaction state
    */
-  updateTransactionState(spreadsheetId, newState, metadata = {}) {
+  updateTransactionState(spreadsheetId: string, newState: string, metadata: Record<string, any> = {}) {
     const state = this._getOrCreateTransactionState(spreadsheetId);
 
     if (!state.isProcessing) {
@@ -211,7 +229,7 @@ export class TransactionManager {
   /**
    * Complete a transaction successfully
    */
-  completeTransaction(spreadsheetId, result = {}) {
+  completeTransaction(spreadsheetId: string, result: Record<string, any> = {}) {
     const state = this._getOrCreateTransactionState(spreadsheetId);
 
     if (!state.isProcessing) {
@@ -260,7 +278,7 @@ export class TransactionManager {
   /**
    * Fail a transaction with error handling
    */
-  failTransaction(spreadsheetId, error, recovery = {}) {
+  failTransaction(spreadsheetId: string, error: Error, recovery: Record<string, any> = {}) {
     const state = this._getOrCreateTransactionState(spreadsheetId);
 
     if (!state.isProcessing) {
@@ -292,13 +310,14 @@ export class TransactionManager {
     state.isProcessing = false;
     state.processingStartTime = null;
 
+    const errCode = (error as any).code;
     logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'transaction_failed', 'Transaction failed', {
       spreadsheetId,
       transactionId,
       duration,
       failureCount: state.failureCount,
       error: error.message,
-      code: error.code,
+      code: errCode,
       recovery
     });
 
@@ -323,7 +342,7 @@ export class TransactionManager {
   /**
    * Reset transaction state (for recovery)
    */
-  _resetTransactionState(spreadsheetId) {
+  _resetTransactionState(spreadsheetId: string) {
     const state = this._getOrCreateTransactionState(spreadsheetId);
 
     state.state = 'idle';
@@ -339,7 +358,7 @@ export class TransactionManager {
   /**
    * Get transaction state for debugging
    */
-  getTransactionState(spreadsheetId) {
+  getTransactionState(spreadsheetId: string | null) {
     if (!spreadsheetId) {
       // Return global state summary
       return {
@@ -365,7 +384,7 @@ export class TransactionManager {
   /**
    * Check if transactions are disabled for a spreadsheet
    */
-  _isDisabled(spreadsheetId) {
+  _isDisabled(spreadsheetId: string) {
     const state = this._getOrCreateTransactionState(spreadsheetId);
 
     if (!state.disabled) return false;
@@ -386,7 +405,7 @@ export class TransactionManager {
   /**
    * Get cooldown information
    */
-  _getCooldownInfo(spreadsheetId) {
+  _getCooldownInfo(spreadsheetId: string) {
     const state = this._getOrCreateTransactionState(spreadsheetId);
 
     if (!state.lastFailureTime) {
@@ -410,11 +429,11 @@ export class TransactionManager {
   /**
    * Event system for transaction lifecycle
    */
-  on(event, handler) {
+  on(event: string, handler: Function) {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
-    this.listeners.get(event).add(handler);
+    this.listeners.get(event)?.add(handler);
 
     // Return unsubscribe function
     return () => {
@@ -425,18 +444,19 @@ export class TransactionManager {
     };
   }
 
-  _emit(event, data) {
+  _emit(event: string, data: any) {
     const handlers = this.listeners.get(event);
     if (handlers) {
       handlers.forEach((handler) => {
         try {
           handler(data);
         } catch (error) {
+          const err = error as Error;
           logger.error(LogComponent.BLOCKCHAIN_ADAPTER, 'transaction_event_handler_error',
           'Error in transaction event handler', {
             event,
-            error: error.message,
-            stack: error.stack
+            error: err.message,
+            stack: err.stack
           });
         }
       });
@@ -446,7 +466,7 @@ export class TransactionManager {
   /**
    * Generate idempotency nonce for an operation
    */
-  generateIdempotencyNonce(operationType, spreadsheetId, operationData = {}) {
+  generateIdempotencyNonce(operationType: string, spreadsheetId: string, operationData: Record<string, any> = {}) {
     const nonce = generateUUID();
     const timestamp = Date.now();
 
@@ -473,7 +493,7 @@ export class TransactionManager {
   /**
    * Check if an operation is a duplicate and should be skipped
    */
-  checkIdempotency(operationHash, nonce) {
+  checkIdempotency(operationHash: string, nonce: string) {
     // Clean expired entries first
     this._cleanExpiredIdempotencyEntries();
 
@@ -512,7 +532,7 @@ export class TransactionManager {
   /**
    * Store operation result for idempotency
    */
-  storeIdempotencyResult(operationHash, nonce, result) {
+  storeIdempotencyResult(operationHash: string, nonce: string, result: any) {
     // Ensure cache doesn't exceed size limit
     if (this.idempotencyCache.size >= this.maxIdempotencyCacheSize) {
       this._evictOldestIdempotencyEntries();
@@ -535,7 +555,7 @@ export class TransactionManager {
   /**
    * Generate operation hash for deduplication
    */
-  _hashOperation(operationType, spreadsheetId, operationData) {
+  _hashOperation(operationType: string, spreadsheetId: string, operationData: Record<string, any>) {
     // Create a deterministic hash based on operation parameters
     const dataString = JSON.stringify({
       type: operationType,

@@ -7,10 +7,26 @@
  * This package extends @dreamlit/walrus with full blockchain capabilities.
  */
 
-// Re-export Walrus core functionality
-export * from '@dreamlit/walrus';
+// Re-export Walrus core functionality (except getCurrentConfig to avoid conflict)
+export {
+  BrowserWalrusService, browserWalrusService,
+  WalrusBlobClient, WalrusConnectionManager, WalrusSdkClient,
+  loadWalrusSdkClient, getCachedWalrusSdkClient, clearCachedClient, isWalrusSdkReady,
+  HealthMonitor, RetryQueue,
+  Transport, DirectTransport, ProxyTransport,
+  encodeSpreadsheetData, decodeSpreadsheetData, compressData, decompressData, isGzipCompressed, calculateContentHash,
+  validateDataForWalrus, readBlobRange, streamBlobToGrid, getPoaCertificate,
+  emitOperationEvent, emitHealthStatusChange, emitConnectionChange,
+  resolveWalrusEndpoints, withWalrusEndpoint,
+  walrusConfig, getSuiContractConfig, isTestnet, isMainnet,
+  configLoader, logger, LogLevel, LogComponent, RequestThrottle, globalThrottle,
+  EventBus, transactionEventBus, eventBus,
+  emitTransactionStart, emitTransactionStateChange, emitTransactionComplete, emitTransactionFailed,
+  emitSaveStart, emitSaveComplete, emitCellEditStart, emitCellEditComplete,
+  RateLimiter, networkLock, StandardizedErrorHandler, standardizedErrorHandler, logConfig
+} from '@dreamlit/walrus';
 
-// Blockchain Services
+// Blockchain Services (includes getCurrentConfig from blockchain config)
 export * from './blockchain/index.js';
 
 // Blockchain Integration (Browser Services)

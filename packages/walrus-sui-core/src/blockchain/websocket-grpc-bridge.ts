@@ -21,6 +21,12 @@ import { GraphQLEventSubscriber } from './graphql-event-subscriber.js';
 
 // Enhanced logging utility for the bridge
 class BridgeLogger {
+  private sessionId: string;
+  private startTime: number;
+  private logLevel: string;
+  private logLevels: Record<string, number>;
+  private throttleState: Map<string, { lastTime: number; count: number }>;
+
   constructor() {
     this.sessionId = `bridge-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     this.startTime = Date.now();
@@ -31,11 +37,11 @@ class BridgeLogger {
     this.throttleState = new Map(); // key -> { lastTime, count }
   }
 
-  shouldLog(level) {
+  shouldLog(level: string): boolean {
     return this.logLevels[level] >= this.logLevels[this.logLevel];
   }
 
-  log(level, component, action, message, metadata = {}) {
+  log(level: string, component: string, action: string, message: string, metadata: Record<string, unknown> = {}): void {
     if (!this.shouldLog(level)) return;
 
     const timestamp = new Date().toISOString();
@@ -74,35 +80,35 @@ class BridgeLogger {
     }
   }
 
-  debug(component, action, message, metadata = {}) {
+  debug(component: string, action: string, message: string, metadata: Record<string, unknown> = {}): void {
     this.log('DEBUG', component, action, message, metadata);
   }
 
-  info(component, action, message, metadata = {}) {
+  info(component: string, action: string, message: string, metadata: Record<string, unknown> = {}): void {
     this.log('INFO', component, action, message, metadata);
   }
 
-  warn(component, action, message, metadata = {}) {
+  warn(component: string, action: string, message: string, metadata: Record<string, unknown> = {}): void {
     this.log('WARN', component, action, message, metadata);
   }
 
-  error(component, action, message, metadata = {}) {
+  error(component: string, action: string, message: string, metadata: Record<string, unknown> = {}): void {
     this.log('ERROR', component, action, message, metadata);
   }
 
-  critical(component, action, message, metadata = {}) {
+  critical(component: string, action: string, message: string, metadata: Record<string, unknown> = {}): void {
     this.log('CRITICAL', component, action, message, metadata);
   }
 
-  startTimer(label) {
-    this[`timer_${label}`] = Date.now();
+  startTimer(label: string): void {
+    (this as any)[`timer_${label}`] = Date.now();
   }
 
-  endTimer(label) {
-    const startTime = this[`timer_${label}`];
+  endTimer(label: string): number {
+    const startTime = (this as any)[`timer_${label}`];
     if (startTime) {
       const duration = Date.now() - startTime;
-      delete this[`timer_${label}`];
+      delete (this as any)[`timer_${label}`];
       return duration;
     }
     return 0;
@@ -111,7 +117,7 @@ class BridgeLogger {
   /**
    * Throttled log - only log if enough time has passed since last log
    */
-  throttle(key, level, component, action, message, metadata = {}, intervalMs = 30000) {
+  throttle(key: string, level: string, component: string, action: string, message: string, metadata: Record<string, unknown> = {}, intervalMs: number = 30000): void {
     const now = Date.now();
     const state = this.throttleState.get(key) || { lastTime: 0, count: 0 };
 
@@ -133,7 +139,7 @@ class BridgeLogger {
     }
   }
 
-  throttleDebug(key, component, action, message, metadata = {}, intervalMs = 30000) {
+  throttleDebug(key: string, component: string, action: string, message: string, metadata: Record<string, unknown> = {}, intervalMs: number = 30000): void {
     this.throttle(key, 'DEBUG', component, action, message, metadata, intervalMs);
   }
 }
@@ -141,22 +147,38 @@ class BridgeLogger {
 const logger = new BridgeLogger();
 
 export class WebSocketGrpcBridge extends EventEmitter {
-  constructor(port) {
+  private config: Record<string, unknown>;
+  private port: number;
+  private wss: any;
+  private httpServer: any;
+  private clients: Map<string, any>;
+  private subscriptions: Map<string, any>;
+  private startupTime: number;
+  private rateLimiterEnabled: boolean;
+  private limiters: Record<string, any>;
+  private clientLimiters: Map<string, any>;
+  private maxQueueLength: number;
+  private metrics: Record<string, unknown>;
+  private collaborationState: Record<string, any>;
+  private graphqlSubscriber: GraphQLEventSubscriber;
+  private streamState: Record<string, any>;
+
+  constructor(port: number) {
     super();
     this.config = getCurrentConfig();
-    this.port = port || this.config.websocket.port;
+    this.port = port || (this.config as any).websocket.port;
     this.wss = null;
     this.httpServer = null;
     this.clients = new Map(); // Track connected clients
     this.subscriptions = new Map(); // Track client subscriptions
     this.startupTime = Date.now();
-    
+
     // Initialize rate limiters
-    this.rateLimiterEnabled = this.config.sui?.features?.rateLimiterEnabled !== false;
+    this.rateLimiterEnabled = (this.config as any).sui?.features?.rateLimiterEnabled !== false;
     this.limiters = {};
-    
+
     if (this.rateLimiterEnabled) {
-      const rateLimits = this.config.sui?.rateLimits || {};
+      const rateLimits = (this.config as any).sui?.rateLimits || {};
 
       // Sui transaction limiter - use config values with fallbacks
       const suiLimits = rateLimits.sui || {};
@@ -166,7 +188,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
         burst: suiLimits.burst || 6,
         maxConcurrent: suiLimits.maxConcurrent || 4
       });
-      
+
       // Per-client burst limiter
       this.clientLimiters = new Map();
       this.maxQueueLength = 100; // Maximum queue length before rejecting
@@ -235,7 +257,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
     logger.info('BRIDGE', 'constructor', 'WebSocket-gRPC bridge initializing', {
       port: this.port,
       config: {
-        sui: { grpcUrl: this.config.sui?.grpcUrl, graphqlUrl: this.config.sui?.graphqlUrl },
+        sui: { grpcUrl: (this.config as any).sui?.grpcUrl, graphqlUrl: (this.config as any).sui?.graphqlUrl },
         environment: process.env.NODE_ENV
       },
       startupTime: this.startupTime,
@@ -244,7 +266,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Start the WebSocket server
-  start() {
+  start(): void {
     logger.startTimer('bridge_start');
     logger.info('BRIDGE', 'start', 'Starting WebSocket-gRPC bridge server', {
       port: this.port,
@@ -283,9 +305,10 @@ export class WebSocketGrpcBridge extends EventEmitter {
       });
 
       this.wss.on('error', (error) => {
+        const err = error as Error;
         logger.error('BRIDGE', 'websocket_server_error', 'WebSocket server error', {
-          error: typeof error === 'string' ? error : error.message || 'Unknown error',
-          stack: error.stack
+          error: typeof err === 'string' ? err : err.message || 'Unknown error',
+          stack: err.stack
         });
       });
 
@@ -301,9 +324,10 @@ export class WebSocketGrpcBridge extends EventEmitter {
       });
 
       this.httpServer.on('error', (error) => {
+        const err = error as Error & { code?: string };
         logger.error('BRIDGE', 'http_server_error', 'HTTP server error', {
-          error: typeof error === 'string' ? error : error.message || 'Unknown error',
-          code: error.code,
+          error: typeof err === 'string' ? err : err.message || 'Unknown error',
+          code: err.code,
           port: this.port
         });
       });
@@ -318,18 +342,19 @@ export class WebSocketGrpcBridge extends EventEmitter {
       this.startMetricsCollection();
 
     } catch (error) {
+      const err = error as Error;
       const duration = logger.endTimer('bridge_start');
       logger.critical('BRIDGE', 'start_failed', 'Failed to start bridge server', {
-        error: typeof error === 'string' ? error : error.message || 'Unknown error',
-        stack: error.stack,
+        error: typeof err === 'string' ? err : err.message || 'Unknown error',
+        stack: err.stack,
         failureDuration: duration
       });
-      throw error;
+      throw err;
     }
   }
 
   // Handle HTTP requests for health checks and metrics
-  handleHttpRequest(req, res) {
+  handleHttpRequest(req: any, res: any): void {
     const url = new URL(req.url, `http://localhost:${this.port}`);
     
     logger.debug('HTTP', 'request', 'HTTP request received', {
@@ -369,7 +394,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Health check endpoint
-  handleHealthCheck(res) {
+  handleHealthCheck(res: any): void {
     const health = {
       status: 'healthy',
       timestamp: new Date().toISOString(),
@@ -383,9 +408,10 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Readiness check endpoint
-  handleReadinessCheck(res) {
+  handleReadinessCheck(res: any): void {
     const grpcStatus = grpcService.getStatus();
-    const grpcHealthy = grpcService.isConnected && grpcStatus.activeStreams.length > 0;
+    const activeStreams = (grpcStatus.activeStreams as unknown[]) || [];
+    const grpcHealthy = (grpcService as any).isConnected && activeStreams.length > 0;
     const graphqlStatus = this.graphqlSubscriber.getStatus();
     const graphqlHealthy = graphqlStatus.isActive;
 
@@ -404,7 +430,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
         grpc_service: grpcHealthy,
         graphql_fallback: graphqlHealthy,
         grpc_details: {
-          connected: grpcService.isConnected,
+          connected: (grpcService as any).isConnected,
           active_streams: grpcStatus.activeStreams,
           last_checkpoint: grpcStatus.lastCheckpointCursor
         },
@@ -419,18 +445,22 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Metrics endpoint
-  handleMetricsEndpoint(res) {
+  handleMetricsEndpoint(res: any): void {
+    const metricsConnections = this.metrics.connections as Record<string, unknown>;
+    const metricsMessages = this.metrics.messages as Record<string, unknown>;
+    const metricsGrpc = this.metrics.grpc as Record<string, unknown>;
+    const metricsLocks = this.metrics.locks as Record<string, unknown>;
     const metrics = {
       timestamp: new Date().toISOString(),
       uptime: Date.now() - this.startupTime,
       connections: {
-        total: this.metrics.connections.total,
+        total: metricsConnections.total,
         active: this.clients.size,
-        failed: this.metrics.connections.failed
+        failed: metricsConnections.failed
       },
-      messages: { ...this.metrics.messages },
-      grpc: { ...this.metrics.grpc },
-      locks: { ...this.metrics.locks },
+      messages: { ...metricsMessages },
+      grpc: { ...metricsGrpc },
+      locks: { ...metricsLocks },
       collaboration: {
         active_users: this.collaborationState.activeUsers.size,
         locked_cells: this.collaborationState.lockedCells.size,
@@ -438,16 +468,16 @@ export class WebSocketGrpcBridge extends EventEmitter {
       }
     };
 
-    logger.debug('HTTP', 'metrics', 'Metrics requested', { 
+    logger.debug('HTTP', 'metrics', 'Metrics requested', {
       activeConnections: metrics.connections.active,
-      totalMessages: metrics.messages.sent + metrics.messages.received
+      totalMessages: (metricsMessages as any).sent + (metricsMessages as any).received
     });
     res.writeHead(200);
     res.end(JSON.stringify(metrics));
   }
 
   // Status endpoint
-  handleStatusEndpoint(res) {
+  handleStatusEndpoint(res: any): void {
     const status = {
       bridge: {
         status: 'running',
@@ -465,7 +495,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
         active_users: Array.from(this.collaborationState.activeUsers.entries()),
         locked_cells: Array.from(this.collaborationState.lockedCells.entries()),
         spreadsheets: Object.fromEntries(
-          Array.from(this.collaborationState.spreadsheets.entries()).map(([id, clients]) => 
+          Array.from(this.collaborationState.spreadsheets.entries()).map(([id, clients]: [any, any]) =>
             [id, Array.from(clients)]
           )
         )
@@ -481,13 +511,14 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Start metrics collection (throttled)
-  startMetricsCollection() {
+  startMetricsCollection(): void {
     setInterval(() => {
       // Only log metrics if there's activity or debug is enabled
       if (this.clients.size > 0 || logger.shouldLog('DEBUG')) {
+        const metricsCollectionMsg = this.metrics.messages as Record<string, unknown>;
         logger.throttle('metrics-collection', 'DEBUG', 'METRICS', 'collection', 'Collecting metrics', {
           activeConnections: this.clients.size,
-          totalMessages: this.metrics.messages.sent + this.metrics.messages.received,
+          totalMessages: (metricsCollectionMsg as any).sent + (metricsCollectionMsg as any).received,
           lockedCells: this.collaborationState.lockedCells.size
         }, 300000); // Log at most every 5 minutes
       }
@@ -495,7 +526,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Handle new WebSocket connection
-  handleConnection(ws, req) {
+  handleConnection(ws: any, req: any): void {
     logger.startTimer(`connection_${ws}`);
 
     // Enforce client limits
@@ -525,8 +556,9 @@ export class WebSocketGrpcBridge extends EventEmitter {
     };
 
     this.clients.set(clientId, clientInfo);
-    this.metrics.connections.total++;
-    this.metrics.connections.active++;
+    const metricsConnInit = this.metrics.connections as Record<string, unknown>;
+    (metricsConnInit as any).total++;
+    (metricsConnInit as any).active++;
 
     logger.info('CONNECTION', 'client_connected', 'New client connected', {
       clientId: clientId,
@@ -559,7 +591,8 @@ export class WebSocketGrpcBridge extends EventEmitter {
         logger.startTimer(`message_${clientId}`);
         clientInfo.messageCount++;
         clientInfo.lastActivity = Date.now();
-        this.metrics.messages.received++;
+        const metricsMsg = this.metrics.messages as Record<string, unknown>;
+        (metricsMsg as any).received++;
         
         logger.debug('MESSAGE', 'received', 'Message received from client', {
           clientId: clientId,
@@ -575,11 +608,13 @@ export class WebSocketGrpcBridge extends EventEmitter {
           processingTime: processingTime
         });
       } catch (error) {
-        this.metrics.messages.errors++;
+        const err = error as Error;
+        const metricsErr = this.metrics.messages as Record<string, unknown>;
+        (metricsErr as any).errors++;
         logger.error('MESSAGE', 'processing_error', 'Error processing client message', {
           clientId: clientId,
-          error: typeof error === 'string' ? error : error.message || 'Unknown error',
-          stack: error.stack
+          error: typeof err === 'string' ? err : err.message || 'Unknown error',
+          stack: err.stack
         });
       }
     });
@@ -601,11 +636,13 @@ export class WebSocketGrpcBridge extends EventEmitter {
 
     // Handle errors
     ws.on('error', (error) => {
-      this.metrics.connections.failed++;
+      const err = error as Error;
+      const metricsConn = this.metrics.connections as Record<string, unknown>;
+      (metricsConn as any).failed++;
       logger.error('CONNECTION', 'websocket_error', 'WebSocket error for client', {
         clientId: clientId,
-        error: typeof error === 'string' ? error : error.message || 'Unknown error',
-        stack: error.stack,
+        error: typeof err === 'string' ? err : err.message || 'Unknown error',
+        stack: err.stack,
         address: clientInfo.address
       });
     });
@@ -640,7 +677,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Handle messages from clients
-  async handleClientMessage(clientId, data) {
+  async handleClientMessage(clientId: string, data: Buffer): Promise<void> {
     const client = this.clients.get(clientId);
     if (!client) {
       logger.warn('MESSAGE', 'client_not_found', 'Received message from unknown client', {
@@ -685,7 +722,8 @@ export class WebSocketGrpcBridge extends EventEmitter {
             action: message.action,
             requestId: message.requestId
           });
-          this.metrics.grpc.calls++;
+          const metricsGrpcTx = this.metrics.grpc as Record<string, unknown>;
+          (metricsGrpcTx as any).calls++;
           await this.handleTransaction(clientId, message);
           break;
 
@@ -749,24 +787,26 @@ export class WebSocketGrpcBridge extends EventEmitter {
           });
       }
     } catch (error) {
-      this.metrics.messages.errors++;
+      const err = error as Error;
+      const metricsParseErr = this.metrics.messages as Record<string, unknown>;
+      (metricsParseErr as any).errors++;
       logger.error('MESSAGE', 'parsing_error', 'Error parsing or handling client message', {
         clientId: clientId,
-        error: typeof error === 'string' ? error : error.message || 'Unknown error',
-        stack: error.stack,
+        error: typeof err === 'string' ? err : err.message || 'Unknown error',
+        stack: err.stack,
         rawData: data.toString().substring(0, 200) // Log first 200 chars for debugging
       });
-      
+
       this.sendToClient(client.ws, {
         type: 'error',
-        error: `Message processing error: ${typeof error === 'string' ? error : error.message || 'Unknown error'}`,
+        error: `Message processing error: ${typeof err === 'string' ? err : err.message || 'Unknown error'}`,
         timestamp: Date.now()
       });
     }
   }
 
   // Handle subscription requests
-  async handleSubscribe(clientId, message) {
+  async handleSubscribe(clientId: string, message: any): Promise<void> {
     const client = this.clients.get(clientId);
     const { channel, spreadsheetId } = message;
 
@@ -800,7 +840,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Handle unsubscribe requests
-  async handleUnsubscribe(clientId, message) {
+  async handleUnsubscribe(clientId: string, message: any): Promise<void> {
     const client = this.clients.get(clientId);
     const { channel } = message;
 
@@ -818,7 +858,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Get or create per-client rate limiter
-  getClientLimiter(clientId) {
+  getClientLimiter(clientId: string): any {
     if (!this.clientLimiters.has(clientId)) {
       this.clientLimiters.set(clientId, new RateLimiter({
         name: `client-${clientId}`,
@@ -831,7 +871,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Handle transaction requests
-  async handleTransaction(clientId, message) {
+  async handleTransaction(clientId: string, message: any): Promise<void> {
     const client = this.clients.get(clientId);
     const { action, params, requestId } = message;
     
@@ -930,18 +970,19 @@ export class WebSocketGrpcBridge extends EventEmitter {
       });
 
     } catch (error) {
-      console.error(`Transaction error for client ${clientId}:`, error);
+      const err = error as Error;
+      console.error(`Transaction error for client ${clientId}:`, err);
       this.sendToClient(client.ws, {
         type: 'transactionResult',
         requestId: requestId,
         success: false,
-        error: typeof error === 'string' ? error : error.message || 'Unknown error'
+        error: typeof err === 'string' ? err : err.message || 'Unknown error'
       });
     }
   }
 
   // Handle cell lock requests
-  async handleCellLock(clientId, message) {
+  async handleCellLock(clientId: string, message: any): Promise<void> {
     const client = this.clients.get(clientId);
     const { spreadsheetId, cellRef, requestId } = message;
 
@@ -988,12 +1029,12 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Handle cell unlock requests
-  async handleCellUnlock(clientId, message) {
+  async handleCellUnlock(clientId: string, message: any): Promise<void> {
     const { spreadsheetId, cellRef, requestId } = message;
     const lockKey = `${spreadsheetId}:${cellRef}`;
 
     if (!this.collaborationState.lockedCells.has(lockKey)) {
-      this.sendToClient(this.clients.get(clientId).ws, {
+      this.sendToClient(this.clients.get(clientId)!.ws, {
         type: 'cellUnlockResult',
         requestId: requestId,
         success: false,
@@ -1002,11 +1043,11 @@ export class WebSocketGrpcBridge extends EventEmitter {
       return;
     }
 
-    const lock = this.collaborationState.lockedCells.get(lockKey);
-    
+    const lock = this.collaborationState.lockedCells.get(lockKey)!;
+
     // Verify ownership
     if (lock.clientId !== clientId) {
-      this.sendToClient(this.clients.get(clientId).ws, {
+      this.sendToClient(this.clients.get(clientId)!.ws, {
         type: 'cellUnlockResult',
         requestId: requestId,
         success: false,
@@ -1027,7 +1068,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
       timestamp: Date.now()
     });
 
-    this.sendToClient(this.clients.get(clientId).ws, {
+    this.sendToClient(this.clients.get(clientId)!.ws, {
       type: 'cellUnlockResult',
       requestId: requestId,
       success: true
@@ -1035,7 +1076,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Handle presence updates
-  async handlePresence(clientId, message) {
+  async handlePresence(clientId: string, message: any): Promise<void> {
     const client = this.clients.get(clientId);
     const { user, status, cursor } = message;
 
@@ -1064,7 +1105,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Handle query requests
-  async handleQuery(clientId, message) {
+  async handleQuery(clientId: string, message: any): Promise<void> {
     const client = this.clients.get(clientId);
     const { queryType, params, requestId } = message;
 
@@ -1104,17 +1145,18 @@ export class WebSocketGrpcBridge extends EventEmitter {
       });
 
     } catch (error) {
-      console.error(`Query error for client ${clientId}:`, error);
+      const err = error as Error;
+      console.error(`Query error for client ${clientId}:`, err);
       this.sendToClient(client.ws, {
         type: 'queryResult',
         requestId: requestId,
-        error: typeof error === 'string' ? error : error.message || 'Unknown error'
+        error: typeof err === 'string' ? err : err.message || 'Unknown error'
       });
     }
   }
 
   // Handle ping messages from clients
-  handlePing(clientId, message) {
+  handlePing(clientId: string, message: any): void {
     const client = this.clients.get(clientId);
     if (!client) {
       logger.warn('MESSAGE', 'ping_client_not_found', 'Ping received from unknown client', {
@@ -1140,7 +1182,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Setup gRPC event listeners
-  setupGrpcListeners() {
+  setupGrpcListeners(): void {
     // Listen for blockchain events
     grpcService.on('cellLocked', (event) => {
       this.broadcastToChannel('blockchain', {
@@ -1209,7 +1251,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Handle client disconnect
-  handleDisconnect(clientId) {
+  handleDisconnect(clientId: string): void {
     const client = this.clients.get(clientId);
     if (!client) return;
 
@@ -1262,14 +1304,14 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Send message to specific client
-  sendToClient(ws, message) {
+  sendToClient(ws: any, message: any): void {
     if (ws.readyState === ws.OPEN) {
       ws.send(JSON.stringify(message));
     }
   }
 
   // Broadcast to all clients in a channel
-  broadcastToChannel(channel, message, excludeClientId = null) {
+  broadcastToChannel(channel: string, message: any, excludeClientId: string | null = null): void {
     const subscribers = this.subscriptions.get(channel);
     if (!subscribers) return;
 
@@ -1284,7 +1326,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Broadcast to all clients in a spreadsheet
-  broadcastToSpreadsheet(spreadsheetId, message, excludeClientId = null) {
+  broadcastToSpreadsheet(spreadsheetId: string, message: any, excludeClientId: string | null = null): void {
     const spreadsheetClients = this.collaborationState.spreadsheets.get(spreadsheetId);
     if (!spreadsheetClients) return;
 
@@ -1299,7 +1341,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Send current channel state to a client
-  async sendChannelState(clientId, channel) {
+  async sendChannelState(clientId: string, channel: string): Promise<void> {
     const client = this.clients.get(clientId);
     if (!client) return;
 
@@ -1322,7 +1364,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Get active users for a spreadsheet
-  getActiveUsersForSpreadsheet(spreadsheetId) {
+  getActiveUsersForSpreadsheet(spreadsheetId: string): any[] {
     const spreadsheetClients = this.collaborationState.spreadsheets.get(spreadsheetId);
     if (!spreadsheetClients) return [];
 
@@ -1340,7 +1382,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Get locked cells for a spreadsheet
-  getLockedCellsForSpreadsheet(spreadsheetId) {
+  getLockedCellsForSpreadsheet(spreadsheetId: string): any[] {
     const locks = [];
     for (const [lockKey, lock] of this.collaborationState.lockedCells) {
       if (lock.spreadsheetId === spreadsheetId) {
@@ -1354,7 +1396,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Estimate gas for a transaction
-  async estimateGas(transaction) {
+  async estimateGas(transaction: any): Promise<Record<string, string>> {
     try {
       // For now, return a reasonable gas estimate
       // In a production environment, this would call the actual blockchain service
@@ -1364,18 +1406,19 @@ export class WebSocketGrpcBridge extends EventEmitter {
         totalCost: '100000000'
       };
     } catch (error) {
-      console.error('Gas estimation error:', error);
-      throw error;
+      const err = error as Error;
+      console.error('Gas estimation error:', err);
+      throw err;
     }
   }
 
   // Generate unique client ID
-  generateClientId() {
+  generateClientId(): string {
     return `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
   // Clean up expired locks periodically
-  startCleanupTimer() {
+  startCleanupTimer(): void {
     setInterval(() => {
       const now = Date.now();
       for (const [lockKey, lock] of this.collaborationState.lockedCells) {
@@ -1396,11 +1439,11 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Start checkpoint streams with fallback logic
-  startCheckpointStreams() {
+  startCheckpointStreams(): void {
     logger.info('BRIDGE', 'stream_start', 'Starting checkpoint streams');
 
     // Check if gRPC checkpoint streaming is supported on this network
-    const supportsGrpcCheckpoints = this.config.sui.features?.supportsCheckpointStream ?? true;
+    const supportsGrpcCheckpoints = (this.config as any).sui.features?.supportsCheckpointStream ?? true;
 
     if (!supportsGrpcCheckpoints) {
       logger.info('BRIDGE', 'grpc_checkpoint_disabled', 'gRPC checkpoint streaming disabled for this network, using GraphQL fallback');
@@ -1416,9 +1459,10 @@ export class WebSocketGrpcBridge extends EventEmitter {
       this.streamState.grpcFailures = 0;
       logger.info('BRIDGE', 'grpc_subscription', 'gRPC checkpoint subscription started successfully');
     } catch (error) {
+      const err = error as Error;
       this.streamState.grpcFailures++;
       logger.error('BRIDGE', 'grpc_subscription_failed', 'Failed to start gRPC checkpoint subscription', {
-        error: error.message,
+        error: err.message,
         failures: this.streamState.grpcFailures
       });
 
@@ -1442,7 +1486,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Start GraphQL fallback
-  startGraphQLFallback() {
+  startGraphQLFallback(): void {
     if (this.streamState.active === 'graphql') {
       logger.debug('BRIDGE', 'graphql_already_active', 'GraphQL fallback already active');
       return;
@@ -1452,7 +1496,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
 
     try {
       // Pass last checkpoint from gRPC to prevent replay burst
-      const lastCheckpoint = grpcService.lastCheckpointCursor;
+      const lastCheckpoint = (grpcService as any).lastCheckpointCursor;
 
       if (lastCheckpoint) {
         logger.debug('BRIDGE', 'checkpoint_handoff', 'Passing checkpoint state to GraphQL fallback', {
@@ -1460,25 +1504,26 @@ export class WebSocketGrpcBridge extends EventEmitter {
         });
       }
 
-      this.graphqlSubscriber.start(lastCheckpoint);
+      this.graphqlSubscriber.start(lastCheckpoint || null);
       this.streamState.active = 'graphql';
       this.streamState.lastActivity = Date.now();
       this.streamState.graphqlFailures = 0;
 
       logger.info('BRIDGE', 'graphql_fallback_active', 'GraphQL fallback started successfully');
     } catch (error) {
+      const err = error as Error;
       this.streamState.graphqlFailures++;
       this.streamState.active = 'none';
 
       logger.error('BRIDGE', 'graphql_fallback_failed', 'Failed to start GraphQL fallback', {
-        error: error.message,
+        error: err.message,
         failures: this.streamState.graphqlFailures
       });
     }
   }
 
   // Stop GraphQL fallback
-  stopGraphQLFallback() {
+  stopGraphQLFallback(): void {
     if (this.streamState.active !== 'graphql') {
       return;
     }
@@ -1489,14 +1534,15 @@ export class WebSocketGrpcBridge extends EventEmitter {
       this.graphqlSubscriber.stop();
       logger.info('BRIDGE', 'graphql_fallback_stopped', 'GraphQL fallback stopped successfully');
     } catch (error) {
+      const err = error as Error;
       logger.error('BRIDGE', 'graphql_fallback_stop_failed', 'Failed to stop GraphQL fallback', {
-        error: error.message
+        error: err.message
       });
     }
   }
 
   // Broadcast message to all connected clients
-  broadcastToClients(message) {
+  broadcastToClients(message: any): void {
     const messageStr = JSON.stringify(message);
     let successCount = 0;
     let failureCount = 0;
@@ -1508,10 +1554,11 @@ export class WebSocketGrpcBridge extends EventEmitter {
           successCount++;
         }
       } catch (error) {
+        const err = error as Error;
         failureCount++;
         logger.warn('BRIDGE', 'broadcast_failed', 'Failed to send message to client', {
           clientId: client.id,
-          error: error.message
+          error: err.message
         });
       }
     }
@@ -1527,7 +1574,7 @@ export class WebSocketGrpcBridge extends EventEmitter {
   }
 
   // Stop the bridge
-  stop() {
+  stop(): void {
     logger.info('BRIDGE', 'stop', 'Stopping WebSocket-gRPC bridge');
 
     // Stop GraphQL fallback
@@ -1546,4 +1593,4 @@ export class WebSocketGrpcBridge extends EventEmitter {
 }
 
 // Export singleton instance
-export const wsGrpcBridge = new WebSocketGrpcBridge();
+export const wsGrpcBridge = new WebSocketGrpcBridge(0);

@@ -4,6 +4,11 @@ import { walrusService } from './walrus-service.js';
 import { getCurrentConfig } from './config.js';
 
 class VersionControl {
+  cellVersions: Map<string, unknown[]>;
+  spreadsheetVersions: Map<string, unknown>;
+  pendingChanges: Map<string, unknown>;
+  maxVersionsPerCell: number;
+
   constructor() {
     this.cellVersions = new Map(); // cellKey -> versions array
     this.spreadsheetVersions = new Map(); // spreadsheetId -> versions
@@ -12,19 +17,19 @@ class VersionControl {
   }
 
   // Generate unique cell key
-  generateCellKey(row, col, sheetId = 0) {
+  generateCellKey(row: number, col: number, sheetId: number = 0): string {
     return `${sheetId}_${row}_${col}`;
   }
 
   // Create version entry for a cell change
-  createCellVersion(cellKey, oldValue, newValue, metadata = {}) {
+  createCellVersion(cellKey: string, oldValue: unknown, newValue: unknown, metadata: Record<string, unknown> = {}) {
     const version = {
       id: this.generateVersionId(),
       cellKey,
       timestamp: Date.now(),
       oldValue,
       newValue,
-      author: metadata.author || 'anonymous',
+      author: (metadata.author as string) || 'anonymous',
       changeType: this.determineChangeType(oldValue, newValue),
       metadata: {
         formula: metadata.formula,
@@ -38,7 +43,7 @@ class VersionControl {
   }
 
   // Determine the type of change
-  determineChangeType(oldValue, newValue) {
+  determineChangeType(oldValue: unknown, newValue: unknown): string {
     if (oldValue === undefined || oldValue === null) {
       return 'create';
     }
@@ -49,13 +54,13 @@ class VersionControl {
   }
 
   // Generate unique version ID
-  generateVersionId() {
+  generateVersionId(): string {
     return `v_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
   // Track cell change
-  trackCellChange(row, col, oldValue, newValue, metadata = {}) {
-    const cellKey = this.generateCellKey(row, col, metadata.sheetId);
+  trackCellChange(row: number, col: number, oldValue: unknown, newValue: unknown, metadata: Record<string, unknown> = {}) {
+    const cellKey = this.generateCellKey(row, col, metadata.sheetId as number);
     const version = this.createCellVersion(cellKey, oldValue, newValue, metadata);
 
     // Add to cell versions
@@ -63,7 +68,7 @@ class VersionControl {
       this.cellVersions.set(cellKey, []);
     }
 
-    const versions = this.cellVersions.get(cellKey);
+    const versions = this.cellVersions.get(cellKey) as unknown[];
     versions.push(version);
 
     // Limit version history per cell
@@ -78,7 +83,7 @@ class VersionControl {
   }
 
   // Get version history for a cell
-  getCellHistory(row, col, sheetId = 0) {
+  getCellHistory(row: number, col: number, sheetId: number = 0) {
     const cellKey = this.generateCellKey(row, col, sheetId);
     return this.cellVersions.get(cellKey) || [];
   }
@@ -94,7 +99,7 @@ class VersionControl {
   }
 
   // Create spreadsheet version from pending changes
-  createSpreadsheetVersion(spreadsheetId, title = 'Untitled Spreadsheet') {
+  createSpreadsheetVersion(spreadsheetId: string, title: string = 'Untitled Spreadsheet') {
     const pendingChanges = this.getPendingChanges();
     
     if (pendingChanges.length === 0) {
@@ -107,18 +112,21 @@ class VersionControl {
       title,
       timestamp: Date.now(),
       changeCount: pendingChanges.length,
-      changes: pendingChanges.map(change => ({
-        cellKey: change.cellKey,
-        changeType: change.changeType,
-        oldValue: change.oldValue,
-        newValue: change.newValue,
-        timestamp: change.timestamp,
-        metadata: change.metadata
-      })),
+      changes: pendingChanges.map(change => {
+        const c = change as Record<string, unknown>;
+        return {
+          cellKey: c.cellKey,
+          changeType: c.changeType,
+          oldValue: c.oldValue,
+          newValue: c.newValue,
+          timestamp: c.timestamp,
+          metadata: c.metadata
+        };
+      }),
       metadata: {
         totalCells: this.getTotalCellCount(spreadsheetId),
-        changedCells: new Set(pendingChanges.map(c => c.cellKey)).size,
-        author: pendingChanges[0]?.author || 'anonymous'
+        changedCells: new Set(pendingChanges.map(c => (c as Record<string, unknown>).cellKey)).size,
+        author: (pendingChanges[0] as Record<string, unknown> | undefined)?.author || 'anonymous'
       }
     };
 
@@ -126,7 +134,7 @@ class VersionControl {
   }
 
   // Save version to blockchain and Walrus
-  async saveVersion(spreadsheetId, title, options = {}) {
+  async saveVersion(spreadsheetId: string, title: string, options: Record<string, unknown> = {}) {
     try {
       const version = this.createSpreadsheetVersion(spreadsheetId, title);
       
@@ -155,11 +163,12 @@ class VersionControl {
       let suiResult = null;
       
       // If successfully stored to Walrus, record on Sui blockchain
-      if (walrusResult.success && walrusResult.blobId) {
+      const walrusRes = walrusResult as Record<string, unknown>;
+      if (walrusRes.success && walrusRes.blobId) {
         const versionMetadata = {
           spreadsheetId,
           version: version.id,
-          walrusBlobId: walrusResult.blobId,
+          walrusBlobId: walrusRes.blobId,
           timestamp: version.timestamp,
           changeCount: version.changeCount,
           metadata: {
@@ -173,7 +182,8 @@ class VersionControl {
         try {
           suiResult = await suiService.storeSpreadsheetVersion(versionMetadata);
         } catch (suiError) {
-          console.warn('Failed to store on Sui blockchain, but Walrus storage succeeded:', suiError);
+          const err = suiError as Error;
+          console.warn('Failed to store on Sui blockchain, but Walrus storage succeeded:', err);
           // Continue without Sui - Walrus storage is the primary concern
         }
       }
@@ -182,12 +192,12 @@ class VersionControl {
       if (!this.spreadsheetVersions.has(spreadsheetId)) {
         this.spreadsheetVersions.set(spreadsheetId, []);
       }
-      
-      const spreadsheetVersions = this.spreadsheetVersions.get(spreadsheetId);
+
+      const spreadsheetVersions = this.spreadsheetVersions.get(spreadsheetId) as unknown[];
       spreadsheetVersions.push({
         ...version,
-        walrusBlobId: walrusResult.blobId,
-        suiTransactionDigest: suiResult?.transactionDigest
+        walrusBlobId: walrusRes.blobId,
+        suiTransactionDigest: suiResult && typeof suiResult === 'object' ? (suiResult as Record<string, unknown>).transactionDigest : undefined
       });
 
       // Clear pending changes after successful save
@@ -196,20 +206,21 @@ class VersionControl {
       return {
         success: true,
         version: version.id,
-        walrusBlobId: walrusResult.blobId,
-        suiTransactionDigest: suiResult?.transactionDigest,
+        walrusBlobId: walrusRes.blobId,
+        suiTransactionDigest: suiResult && typeof suiResult === 'object' ? (suiResult as Record<string, unknown>).transactionDigest : undefined,
         changeCount: version.changeCount,
         savedAt: version.timestamp
       };
 
     } catch (error) {
-      console.error('Failed to save version:', error);
-      throw error;
+      const err = error as Error;
+      console.error('Failed to save version:', err);
+      throw err;
     }
   }
 
   // Restore version from Walrus
-  async restoreVersion(versionId, blobId) {
+  async restoreVersion(versionId: string, blobId: string) {
     try {
       const data = await walrusService.retrieveBlob(blobId);
       
@@ -217,19 +228,21 @@ class VersionControl {
         throw new Error('Failed to retrieve version data from Walrus');
       }
 
-      const versionData = data.data;
-      
+      const versionData = data.data as Record<string, unknown>;
+
       // Apply changes from the version
-      const restoredCells = {};
-      for (const change of versionData.changes) {
-        const [sheetId, row, col] = change.cellKey.split('_');
+      const restoredCells: Record<string, unknown> = {};
+      for (const change of (versionData.changes as unknown[])) {
+        const changeObj = change as Record<string, unknown>;
+        const [sheetId, row, col] = (changeObj.cellKey as string).split('_');
         const cellCoord = `${row}_${col}`;
-        
+        const metadata = changeObj.metadata as Record<string, unknown>;
+
         restoredCells[cellCoord] = {
-          v: change.newValue,
-          f: change.metadata?.formula,
-          t: this.inferCellType(change.newValue),
-          s: change.metadata?.style
+          v: changeObj.newValue,
+          f: metadata?.formula,
+          t: this.inferCellType(changeObj.newValue),
+          s: metadata?.style
         };
       }
 
@@ -242,13 +255,14 @@ class VersionControl {
       };
 
     } catch (error) {
-      console.error('Failed to restore version:', error);
-      throw error;
+      const err = error as Error;
+      console.error('Failed to restore version:', err);
+      throw err;
     }
   }
 
   // Infer cell type from value
-  inferCellType(value) {
+  inferCellType(value: unknown): string {
     if (typeof value === 'number') return 'n';
     if (typeof value === 'boolean') return 'b';
     if (typeof value === 'string' && value.startsWith('=')) return 'f';
@@ -256,15 +270,18 @@ class VersionControl {
   }
 
   // Get spreadsheet version history
-  getSpreadsheetHistory(spreadsheetId) {
+  getSpreadsheetHistory(spreadsheetId: string) {
     return this.spreadsheetVersions.get(spreadsheetId) || [];
   }
 
   // Get total cell count for spreadsheet
-  getTotalCellCount(spreadsheetId) {
+  getTotalCellCount(spreadsheetId: string): number {
     let count = 0;
-    for (const [cellKey, versions] of this.cellVersions.entries()) {
-      if (versions.length > 0 && versions[versions.length - 1].newValue !== null) {
+    const entries = Array.from(this.cellVersions.entries());
+    for (const [cellKey, versions] of entries) {
+      const versionsList = versions as unknown[];
+      const lastVersion = versionsList[versionsList.length - 1] as Record<string, unknown>;
+      if (versionsList.length > 0 && lastVersion.newValue !== null) {
         count++;
       }
     }
@@ -272,43 +289,50 @@ class VersionControl {
   }
 
   // Compare two versions
-  compareVersions(version1, version2) {
+  compareVersions(version1: Record<string, unknown>, version2: Record<string, unknown>) {
     const changes = {
-      added: [],
-      modified: [],
-      deleted: []
+      added: [] as unknown[],
+      modified: [] as unknown[],
+      deleted: [] as unknown[]
     };
 
     // Create maps for easier comparison
     const v1Changes = new Map();
     const v2Changes = new Map();
 
-    version1.changes?.forEach(change => {
-      v1Changes.set(change.cellKey, change);
+    const v1ChangesList = (version1.changes as unknown[]) || [];
+    const v2ChangesList = (version2.changes as unknown[]) || [];
+
+    v1ChangesList.forEach(change => {
+      const changeObj = change as Record<string, unknown>;
+      v1Changes.set(changeObj.cellKey, changeObj);
     });
 
-    version2.changes?.forEach(change => {
-      v2Changes.set(change.cellKey, change);
+    v2ChangesList.forEach(change => {
+      const changeObj = change as Record<string, unknown>;
+      v2Changes.set(changeObj.cellKey, changeObj);
     });
 
     // Find differences
-    for (const [cellKey, change] of v2Changes.entries()) {
+    const v2Entries = Array.from(v2Changes.entries());
+    for (const [cellKey, change] of v2Entries) {
       const v1Change = v1Changes.get(cellKey);
-      
+
       if (!v1Change) {
         changes.added.push(change);
-      } else if (v1Change.newValue !== change.newValue) {
+      } else if ((v1Change as Record<string, unknown>).newValue !== (change as Record<string, unknown>).newValue) {
         changes.modified.push({
           cellKey,
-          from: v1Change.newValue,
-          to: change.newValue,
-          timestamp: change.timestamp
+          from: (v1Change as Record<string, unknown>).newValue,
+          to: (change as Record<string, unknown>).newValue,
+          timestamp: (change as Record<string, unknown>).timestamp
         });
       }
     }
 
     // Find deleted cells
-    for (const [cellKey, change] of v1Changes.entries()) {
+    const v1Entries = Array.from(v1Changes.entries());
+    for (const [cellKey, change] of v1Entries) {
       if (!v2Changes.has(cellKey)) {
         changes.deleted.push(change);
       }
@@ -318,27 +342,27 @@ class VersionControl {
   }
 
   // Get version statistics
-  getVersionStats(spreadsheetId) {
-    const history = this.getSpreadsheetHistory(spreadsheetId);
+  getVersionStats(spreadsheetId: string) {
+    const historyList = this.getSpreadsheetHistory(spreadsheetId) as unknown[];
     const cellVersionCount = this.cellVersions.size;
     const pendingCount = this.pendingChanges.size;
 
     return {
-      totalVersions: history.length,
+      totalVersions: historyList.length,
       totalCellVersions: cellVersionCount,
       pendingChanges: pendingCount,
-      lastSaved: history.length > 0 ? history[history.length - 1].timestamp : null,
-      oldestVersion: history.length > 0 ? history[0].timestamp : null
+      lastSaved: historyList.length > 0 ? (historyList[historyList.length - 1] as Record<string, unknown>).timestamp : null,
+      oldestVersion: historyList.length > 0 ? (historyList[0] as Record<string, unknown>).timestamp : null
     };
   }
 
   // Auto-save based on conditions
-  shouldAutoSave(spreadsheetId) {
+  shouldAutoSave(spreadsheetId: string) {
     const config = getCurrentConfig().storage;
     const pendingCount = this.pendingChanges.size;
-    
+
     // Check if we have enough changes
-    if (pendingCount >= config.editThreshold) {
+    if (pendingCount >= (config.editThreshold as number)) {
       return { should: true, reason: 'edit_threshold', count: pendingCount };
     }
 
@@ -351,17 +375,17 @@ class VersionControl {
 export const versionControl = new VersionControl();
 
 // Convenience functions
-export const trackCellChange = (row, col, oldValue, newValue, metadata) => 
+export const trackCellChange = (row: number, col: number, oldValue: unknown, newValue: unknown, metadata: Record<string, unknown>) =>
   versionControl.trackCellChange(row, col, oldValue, newValue, metadata);
 
-export const getCellHistory = (row, col, sheetId) => 
+export const getCellHistory = (row: number, col: number, sheetId: number) =>
   versionControl.getCellHistory(row, col, sheetId);
 
-export const saveVersion = (spreadsheetId, title, options) => 
+export const saveVersion = (spreadsheetId: string, title: string, options: Record<string, unknown>) =>
   versionControl.saveVersion(spreadsheetId, title, options);
 
-export const restoreVersion = (versionId, blobId) => 
+export const restoreVersion = (versionId: string, blobId: string) =>
   versionControl.restoreVersion(versionId, blobId);
 
-export const getVersionStats = (spreadsheetId) => 
+export const getVersionStats = (spreadsheetId: string) =>
   versionControl.getVersionStats(spreadsheetId);

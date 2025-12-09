@@ -10,6 +10,10 @@ import { logger, LogComponent } from "@dreamlit/walrus";
  * - Clear communication about what the user is approving
  */
 export class TransactionExperienceManager {
+  private activeTransactions: Map<string, any>;
+  private transactionQueue: any[];
+  private processingQueue: boolean;
+
   constructor() {
     this.activeTransactions = new Map(); // Track active transactions
     this.transactionQueue = []; // Queue for sequential transactions
@@ -40,12 +44,12 @@ export class TransactionExperienceManager {
   /**
    * Get transaction information based on type
    */
-  getTransactionInfo(type, metadata = {}) {
+  getTransactionInfo(type, metadata: any = {}) {
     const info = {
       spreadsheet: {
-        title: metadata.title || 'Untitled Spreadsheet',
-        cellCount: metadata.cellCount || 0,
-        isNew: !metadata.existingSpreadsheetId
+        title: (metadata as any).title || 'Untitled Spreadsheet',
+        cellCount: (metadata as any).cellCount || 0,
+        isNew: !(metadata as any).existingSpreadsheetId
       }
     };
 

@@ -2,7 +2,37 @@
 // Same API as frontend version for consistency
 
 class RateLimiter {
-  constructor({ name, maxRPS, burst, maxConcurrent }) {
+  private name: string;
+  private maxRPS: number;
+  private burst: number;
+  private maxConcurrent: number;
+  private tokens: number;
+  private lastRefill: number;
+  private refillRate: number;
+  private currentConcurrent: number;
+  private queue: Array<any>;
+  private processing: boolean;
+  private inflight: Map<string, Promise<any>>;
+  private cache: Map<string, { value: any; timestamp: number; ttl?: number }>;
+  private backoffUntil: number;
+  private consecutiveFailures: number;
+  private baseBackoffMs: number;
+  private maxBackoffMs: number;
+  private metrics: {
+    totalRequests: number;
+    successfulRequests: number;
+    failedRequests: number;
+    queuedRequests: number;
+    dedupedRequests: number;
+    cacheHits: number;
+    totalWaitTime: number;
+    last429At: number | null;
+    lastError: any;
+  };
+  private isPaused: boolean;
+  private pauseUntil: number;
+
+  constructor({ name, maxRPS, burst, maxConcurrent }: { name: string; maxRPS?: number; burst?: number; maxConcurrent?: number }) {
     this.name = name;
     this.maxRPS = maxRPS || 3;
     this.burst = burst || maxRPS * 2;
@@ -53,7 +83,7 @@ class RateLimiter {
   }
   
   // Schedule a function call with rate limiting
-  async schedule(key, fn, options = {}) {
+  async schedule(key: string, fn: () => Promise<any>, options: { timeoutMs?: number; ttlMs?: number; skipCache?: boolean } = {}) {
     const { timeoutMs = 30000, ttlMs = 0, skipCache = false } = options;
     
     this.metrics.totalRequests++;
@@ -120,7 +150,7 @@ class RateLimiter {
   }
   
   // Process queued requests
-  async processQueue() {
+  async processQueue(): Promise<void> {
     if (this.processing || this.queue.length === 0) {
       return;
     }
@@ -192,20 +222,21 @@ class RateLimiter {
   }
   
   // Execute a single request
-  async executeRequest(request) {
+  async executeRequest(request: any): Promise<void> {
     try {
       const result = await request.fn();
-      
+
       // Cache result if TTL specified
       if (request.ttlMs > 0) {
         this.setCached(request.key, result, request.ttlMs);
       }
-      
+
       this.recordSuccess();
       request.resolve(result);
     } catch (error) {
-      this.recordFailure(error);
-      request.reject(error);
+      const err = error as Error;
+      this.recordFailure(err);
+      request.reject(err);
     } finally {
       this.currentConcurrent--;
       
@@ -217,11 +248,11 @@ class RateLimiter {
   }
   
   // Refill tokens based on elapsed time
-  refillTokens() {
+  refillTokens(): void {
     const now = Date.now();
     const elapsed = now - this.lastRefill;
     const tokensToAdd = Math.floor(elapsed / this.refillRate);
-    
+
     if (tokensToAdd > 0) {
       this.tokens = Math.min(this.burst, this.tokens + tokensToAdd);
       this.lastRefill = now;
@@ -229,9 +260,9 @@ class RateLimiter {
   }
   
   // Handle HTTP response for backoff logic
-  onHttpResponse(response) {
+  onHttpResponse(response: any): void {
     if (!response) return;
-    
+
     const status = response.status;
     
     // Check for rate limit or service unavailable
@@ -257,25 +288,25 @@ class RateLimiter {
   }
   
   // Parse Retry-After header (seconds or HTTP date)
-  parseRetryAfter(retryAfter) {
+  parseRetryAfter(retryAfter: string): number {
     // Check if it's a number (seconds)
     const seconds = parseInt(retryAfter, 10);
     if (!isNaN(seconds)) {
       return seconds * 1000;
     }
-    
+
     // Try to parse as HTTP date
     const retryDate = new Date(retryAfter);
     if (!isNaN(retryDate.getTime())) {
       return Math.max(0, retryDate.getTime() - Date.now());
     }
-    
+
     // Default to 5 seconds if we can't parse
     return 5000;
   }
   
   // Calculate exponential backoff with full jitter
-  calculateBackoff() {
+  calculateBackoff(): number {
     this.consecutiveFailures++;
     const exponential = Math.min(
       this.maxBackoffMs,
@@ -286,12 +317,12 @@ class RateLimiter {
   }
   
   // Pause the limiter for specified milliseconds
-  pause(ms) {
+  pause(ms: number): void {
     const until = Date.now() + ms;
     this.isPaused = true;
     this.pauseUntil = until;
     this.backoffUntil = until;
-    
+
     // Auto-resume after pause
     setTimeout(() => {
       this.isPaused = false;
@@ -302,60 +333,60 @@ class RateLimiter {
   }
   
   // Record successful request
-  recordSuccess() {
+  recordSuccess(): void {
     this.metrics.successfulRequests++;
     this.consecutiveFailures = 0;
   }
-  
+
   // Record failed request
-  recordFailure(error) {
+  recordFailure(error: Error): void {
     this.metrics.failedRequests++;
     this.metrics.lastError = error?.message || 'Unknown error';
     this.consecutiveFailures++;
   }
   
   // Get cached value if still valid
-  getCached(key, ttlMs) {
+  getCached(key: string, ttlMs: number): any {
     const cached = this.cache.get(key);
     if (!cached) return undefined;
-    
+
     const age = Date.now() - cached.timestamp;
     if (age > ttlMs) {
       this.cache.delete(key);
       return undefined;
     }
-    
+
     return cached.value;
   }
-  
+
   // Set cached value
-  setCached(key, value, ttlMs) {
+  setCached(key: string, value: any, ttlMs: number): void {
     this.cache.set(key, {
       value,
       timestamp: Date.now(),
       ttl: ttlMs
     });
-    
+
     // Auto-cleanup after TTL
     setTimeout(() => {
       this.cache.delete(key);
     }, ttlMs);
   }
-  
+
   // Sleep helper
-  sleep(ms) {
+  sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
   
   // Get current metrics
-  getMetrics() {
+  getMetrics(): any {
     return {
       ...this.metrics,
       currentQueueLength: this.queue.length,
       currentConcurrent: this.currentConcurrent,
       tokens: this.tokens,
       backoffActive: Date.now() < this.backoffUntil,
-      avgWaitMs: this.metrics.totalRequests > 0 
+      avgWaitMs: this.metrics.totalRequests > 0
         ? Math.round(this.metrics.totalWaitTime / this.metrics.totalRequests)
         : 0,
       requestsPerSec: this.maxRPS,
@@ -363,9 +394,9 @@ class RateLimiter {
       inflightSize: this.inflight.size
     };
   }
-  
+
   // Clear the queue (emergency use)
-  clearQueue() {
+  clearQueue(): void {
     while (this.queue.length > 0) {
       const request = this.queue.shift();
       if (request.timeoutId) {
@@ -375,9 +406,9 @@ class RateLimiter {
     }
     this.metrics.queuedRequests = 0;
   }
-  
+
   // Reset limiter state
-  reset() {
+  reset(): void {
     this.clearQueue();
     this.tokens = this.burst;
     this.lastRefill = Date.now();

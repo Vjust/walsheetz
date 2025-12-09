@@ -146,6 +146,29 @@ class OperationHelpers {
  * Blockchain service adapter implementing IBlockchainService
  */
 export class BlockchainAdapter extends IBlockchainService {
+  config: any;
+  configLoader: any;
+  validationGuards: any;
+  walletManager: any;
+  suiService: any;
+  walrusService: any;
+  collaborationService: any;
+  storageAdapter: any;
+  editTracker: Map<string, any>;
+  spreadsheetObjectId: string | null;
+  syncQueue: any[];
+  transactionState: any;
+  syncStatus: any;
+  pendingSavesBySheet: Map<string, Promise<any>>;
+  saveQueueBySheet: Map<string, any[]>;
+  debounceTimers: Map<string, NodeJS.Timeout>;
+  debounceDelay: number;
+  maxBatchSize: number;
+  servicesInitialized: boolean;
+  initializingServices: boolean;
+  initializationPromise: Promise<any> | null;
+  operationHelpers: OperationHelpers;
+
   constructor(storageAdapter = null) {
     super();
     

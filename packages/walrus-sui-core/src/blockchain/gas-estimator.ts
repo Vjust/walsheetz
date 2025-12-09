@@ -3,6 +3,13 @@ import { getCurrentConfig } from './config.js';
 import { suiService } from './sui-service.js';
 
 export class GasEstimator {
+  config: any;
+  depositConfig: any;
+  lastGasPrice: number | null;
+  lastStoragePrice: number | null;
+  gasPriceCache: Map<string, any>;
+  cacheExpiry: number;
+
   constructor() {
     this.config = getCurrentConfig();
     this.depositConfig = this.config.deposit || {};
@@ -51,19 +58,21 @@ export class GasEstimator {
       
       return { gasPrice, epochInfo };
     } catch (error) {
-      console.error('Failed to get current gas price:', error);
-      
+      const err = error as Error;
+      console.error('Failed to get current gas price:', err);
+
       // Fallback to RPC if GraphQL fails
       try {
-        const gasPrice = await suiService.client.getReferenceGasPrice();
-        this.lastGasPrice = parseInt(gasPrice);
+        const networkInfo = await suiService.getNetworkInfo();
+        this.lastGasPrice = parseInt(String(networkInfo.gasPrice || 1000));
         return { gasPrice: this.lastGasPrice, epochInfo: null };
       } catch (rpcError) {
-        console.error('RPC fallback also failed:', rpcError);
+        const rpcErr = rpcError as Error;
+        console.error('RPC fallback also failed:', rpcErr);
         // Use last known gas price or default
-        return { 
+        return {
           gasPrice: this.lastGasPrice || 1000, // Default 1000 MIST
-          epochInfo: null 
+          epochInfo: null
         };
       }
     }
@@ -115,13 +124,14 @@ export class GasEstimator {
       this.lastStoragePrice = storagePrice;
       return storagePrice;
     } catch (error) {
-      console.error('Failed to get storage price:', error);
+      const err = error as Error;
+      console.error('Failed to get storage price:', err);
       return this.lastStoragePrice || 75; // Default 75 MIST per storage unit
     }
   }
 
   // Determine computation bucket based on estimated units
-  getComputationBucket(estimatedUnits) {
+  getComputationBucket(estimatedUnits: number): any {
     const buckets = this.depositConfig.computationBuckets;
     
     for (const bucket of buckets) {
@@ -135,39 +145,41 @@ export class GasEstimator {
   }
 
   // Calculate storage units for given data size
-  calculateStorageUnits(bytesStored) {
+  calculateStorageUnits(bytesStored: number): number {
     return bytesStored * this.depositConfig.storageUnitsPerByte;
   }
 
   // Calculate storage rebate for deleted data
-  calculateStorageRebate(bytesDeleted, originalStorageCost) {
+  calculateStorageRebate(bytesDeleted: number, originalStorageCost: number): number {
     const rebatePercentage = this.depositConfig.storageRebatePercentage / 100;
     return Math.floor(originalStorageCost * rebatePercentage);
   }
 
   // Estimate transaction cost using dry run
-  async estimateTransactionGas(transaction, senderAddress) {
+  async estimateTransactionGas(transaction: any, senderAddress: string): Promise<any> {
     try {
       // Serialize transaction for dry run
       const serializedBytes = typeof transaction.serialize === 'function' 
         ? await transaction.serialize()
         : transaction;
       
-      // Use Sui's dryRunTransactionBlock for accurate estimation
-      const gasEstimate = await suiService.client.dryRunTransactionBlock({
-        transactionBlock: serializedBytes
-      });
+      // Estimate gas cost manually since dryRun may not be available
+      const estimatedCost = await suiService.estimateGas(transaction, senderAddress);
+      if (!estimatedCost || estimatedCost.success === false) {
+        throw new Error('Failed to estimate gas');
+      }
 
-      const gasUsed = gasEstimate.effects.gasUsed;
-      const computationUnits = parseInt(gasUsed.computationCost) || 0;
-      const storageUnits = parseInt(gasUsed.storageCost) || 0;
-      const rebateUnits = parseInt(gasUsed.storageRebate || 0) || 0;
+      const computationUnits = parseInt(String(estimatedCost.computationCost || 0)) || 0;
+      const storageUnits = parseInt(String(estimatedCost.storageCost || 0)) || 0;
+      const rebateUnits = parseInt(String(estimatedCost.storageRebate || 0)) || 0;
       // Use reference gas price if available; fallback to 1000 for tests
       let gasPrice = 1000;
       try {
         const gp = await this.getCurrentGasPrice();
         gasPrice = gp?.gasPrice || gasPrice;
-      } catch {}
+      } catch (e) {
+        // Silently ignore errors, use default
+      }
       // Convert units to MIST values via gas price
       const computationCost = computationUnits * gasPrice;
       const storageCost = storageUnits * gasPrice;
@@ -187,14 +199,15 @@ export class GasEstimator {
         estimatedCostSUI: totalCost / 1_000_000_000
       };
     } catch (error) {
-      console.error('Dry run estimation failed:', error);
+      const err = error as Error;
+      console.error('Dry run estimation failed:', err);
       // Fallback to manual estimation
       return await this.estimateManually(transaction);
     }
   }
 
   // High-level full cost including buffer
-  async estimateFullTransactionCost(transaction, senderAddress) {
+  async estimateFullTransactionCost(transaction: any, senderAddress: string): Promise<any> {
     const gasPriceInfo = await this.getCurrentGasPrice();
     const res = await this.estimateTransactionGas(transaction, senderAddress);
     const base = res.totalCost || 0;
@@ -210,7 +223,7 @@ export class GasEstimator {
   }
 
   // Manual estimation based on transaction content
-  async estimateManually(transaction) {
+  async estimateManually(transaction: any): Promise<any> {
     try {
       const gasPrice = await this.getCurrentGasPrice();
       const storagePrice = await this.getStoragePrice();
@@ -266,18 +279,19 @@ export class GasEstimator {
         estimatedBytes
       };
     } catch (error) {
-      console.error('Manual estimation failed:', error);
+      const err = error as Error;
+      console.error('Manual estimation failed:', err);
       return {
         success: false,
-        error: error.message
+        error: err.message
       };
     }
   }
 
   // Estimate computation units from transaction commands
-  estimateComputationFromCommands(commands) {
+  estimateComputationFromCommands(commands: any[]): number {
     let totalUnits = 1000; // Base cost
-    
+
     for (const command of commands) {
       switch (command.kind) {
         case 'MoveCall':
@@ -296,28 +310,28 @@ export class GasEstimator {
           totalUnits += 200;
       }
     }
-    
+
     return totalUnits;
   }
 
   // Calculate suggested gas budget
-  calculateGasBudget(estimatedCost) {
+  calculateGasBudget(estimatedCost: number): number {
     const buffer = this.depositConfig.gasBuffer;
     const suggestedBudget = Math.ceil(estimatedCost * buffer);
-    
+
     // Ensure within limits
     const minBudget = this.depositConfig.minGasBudget;
     const maxBudget = this.depositConfig.maxGasBudget;
-    
+
     return Math.max(minBudget, Math.min(maxBudget, suggestedBudget));
   }
 
   // Get estimated operations for a given SUI amount
-  async getEstimatedOperations(suiAmount) {
+  async getEstimatedOperations(suiAmount: number): Promise<any> {
     try {
       const gasPrice = await this.getCurrentGasPrice();
       const amountInMist = suiAmount * this.depositConfig.mistPerSui;
-      
+
       const operations = {
         singleEdit: 0,
         batchSave: 0,
@@ -327,8 +341,8 @@ export class GasEstimator {
 
       for (const [operation, computationUnits] of Object.entries(this.depositConfig.estimatedGasCosts)) {
         if (operation === 'typicalStorageBytes') continue;
-        
-        const bucket = this.getComputationBucket(computationUnits);
+
+        const bucket = this.getComputationBucket(computationUnits as number);
         const estimatedCost = bucket.units * gasPrice.gasPrice;
         operations[operation] = Math.floor(amountInMist / estimatedCost);
       }
@@ -341,26 +355,27 @@ export class GasEstimator {
         amountInMist
       };
     } catch (error) {
-      console.error('Failed to calculate estimated operations:', error);
+      const err = error as Error;
+      console.error('Failed to calculate estimated operations:', err);
       return {
         success: false,
-        error: error.message
+        error: err.message
       };
     }
   }
 
   // Convert MIST to SUI
-  mistToSui(mistAmount) {
+  mistToSui(mistAmount: number): number {
     return mistAmount / this.depositConfig.mistPerSui;
   }
 
   // Convert SUI to MIST
-  suiToMist(suiAmount) {
+  suiToMist(suiAmount: number): number {
     return suiAmount * this.depositConfig.mistPerSui;
   }
 
   // Get gas usage analytics
-  getGasAnalytics(transactionHistory) {
+  getGasAnalytics(transactionHistory: any[]): any {
     const analytics = {
       totalTransactions: transactionHistory.length,
       totalGasUsed: 0,
@@ -368,7 +383,7 @@ export class GasEstimator {
       computationCostTotal: 0,
       storageCostTotal: 0,
       storageRebateTotal: 0,
-      bucketDistribution: {},
+      bucketDistribution: {} as Record<string, number>,
       costBreakdown: {
         computation: 0,
         storage: 0,
@@ -377,7 +392,7 @@ export class GasEstimator {
     };
 
     // Initialize bucket distribution
-    this.depositConfig.computationBuckets.forEach(bucket => {
+    this.depositConfig.computationBuckets.forEach((bucket: any) => {
       analytics.bucketDistribution[`${bucket.units}_units`] = 0;
     });
 
@@ -387,7 +402,7 @@ export class GasEstimator {
         analytics.computationCostTotal += tx.gasUsed.computationCost || 0;
         analytics.storageCostTotal += tx.gasUsed.storageCost || 0;
         analytics.storageRebateTotal += tx.gasUsed.storageRebate || 0;
-        
+
         // Track bucket usage
         if (tx.gasUsed.computationUnits) {
           const bucket = this.getComputationBucket(tx.gasUsed.computationUnits);
@@ -396,8 +411,8 @@ export class GasEstimator {
       }
     }
 
-    analytics.averageGasPerTransaction = analytics.totalTransactions > 0 
-      ? analytics.totalGasUsed / analytics.totalTransactions 
+    analytics.averageGasPerTransaction = analytics.totalTransactions > 0
+      ? analytics.totalGasUsed / analytics.totalTransactions
       : 0;
 
     analytics.costBreakdown = {
@@ -410,7 +425,7 @@ export class GasEstimator {
   }
 
   // Clear cache
-  clearCache() {
+  clearCache(): void {
     this.gasPriceCache.clear();
   }
 }
@@ -420,6 +435,6 @@ export const gasEstimator = new GasEstimator();
 
 // Convenience functions
 export const getCurrentGasPrice = () => gasEstimator.getCurrentGasPrice();
-export const estimateTransactionCost = (transaction) => gasEstimator.estimateTransactionCost(transaction);
+export const estimateTransactionCost = (transaction) => gasEstimator.estimateTransactionGas(transaction, '0x0');
 export const getEstimatedOperations = (suiAmount) => gasEstimator.getEstimatedOperations(suiAmount);
 export const calculateGasBudget = (estimatedCost) => gasEstimator.calculateGasBudget(estimatedCost);

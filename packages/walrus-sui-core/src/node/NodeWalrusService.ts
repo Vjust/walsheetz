@@ -18,27 +18,39 @@ import {
   WalrusConnectionManager,
   HealthMonitor,
   RetryQueue
-} from '../../../walrus/src/index.js';
+} from '@dreamlit/walrus';
 
 // Import getCurrentConfig from our own blockchain module
 import { getCurrentConfig } from '../blockchain/config.js';
 
 // Polyfill fetch for Node.js if needed
-let fetchImpl = globalThis.fetch;
-if (!fetchImpl) {
+let fetchImpl: any = globalThis.fetch;
+if (!fetchImpl || typeof fetchImpl !== 'function') {
   try {
     // Try to load undici (optional dependency)
-    const { fetch } = await import('undici');
-    fetchImpl = fetch;
-    globalThis.fetch = fetch; // Make available globally for other modules
-  } catch (err) {
+    const undici = await import('undici');
+    fetchImpl = (undici as any).fetch;
+    (globalThis as any).fetch = fetchImpl;
+  } catch (error) {
+    const err = error as Error;
     console.warn('[NodeWalrusService] undici not found. Install with: npm install undici');
     console.warn('[NodeWalrusService] Some features may not work without fetch polyfill');
   }
 }
 
 class NodeWalrusService {
-  constructor(options = {}) {
+  private configLoader: typeof configLoader;
+  private options: Record<string, unknown>;
+  private rateLimiterEnabled: boolean;
+  private limiters: Record<string, RateLimiter>;
+  private _endpoints: ReturnType<typeof resolveWalrusEndpoints> | null;
+  private _transport: DirectTransport | null;
+  private _blobClient: WalrusBlobClient | null;
+  private _connectionManager: WalrusConnectionManager;
+  private _healthMonitor: HealthMonitor | null;
+  private _retryQueue: RetryQueue;
+
+  constructor(options: Record<string, unknown> = {}) {
     const config = getCurrentConfig();
     this.configLoader = configLoader;
     this.options = options;
@@ -77,7 +89,7 @@ class NodeWalrusService {
     }
   }
 
-  async _initServices() {
+  async _initServices(): Promise<void> {
     await this._ensureInitialized();
 
     // Start health monitoring
@@ -89,7 +101,7 @@ class NodeWalrusService {
     this._retryQueue.start();
   }
 
-  async _ensureInitialized() {
+  async _ensureInitialized(): Promise<void> {
     if (this._blobClient) return;
 
     // Resolve endpoints from config
@@ -112,18 +124,19 @@ class NodeWalrusService {
    * @param {Object} options - Storage options
    * @returns {Promise<{blobId: string, contentHash: string}>}
    */
-  async storeBlob(data, options = {}) {
+  async storeBlob(data: any, options: Record<string, any> = {}): Promise<any> {
     await this._ensureInitialized();
 
     try {
       return await this._blobClient.storeBlob(data, options);
     } catch (error) {
+      const err = error as Error;
       // Add to retry queue on failure
       this._retryQueue.add({
-        fn: async (d) => await this._blobClient.storeBlob(d, options),
+        fn: async (d: any) => await this._blobClient.storeBlob(d, options),
         data
       });
-      throw error;
+      throw err;
     }
   }
 
@@ -133,7 +146,7 @@ class NodeWalrusService {
    * @param {Object} options - Retrieval options
    * @returns {Promise<{success: boolean, data: Object, blobId: string, metadata: Object}>}
    */
-  async retrieveBlob(blobId, options = {}) {
+  async retrieveBlob(blobId: string, options: Record<string, any> = {}): Promise<any> {
     await this._ensureInitialized();
 
     const decoded = await this._blobClient.retrieveBlob(blobId, options);
@@ -153,7 +166,7 @@ class NodeWalrusService {
    * Check Walrus health
    * @returns {Promise<Object>} Health status
    */
-  async checkWalrusHealth() {
+  async checkWalrusHealth(): Promise<any> {
     await this._ensureInitialized();
     return await this._healthMonitor.check();
   }
@@ -162,7 +175,7 @@ class NodeWalrusService {
    * Get retry queue status
    * @returns {Object} Queue status
    */
-  getRetryQueue() {
+  getRetryQueue(): any {
     return { size: this._retryQueue.size() };
   }
 
@@ -170,7 +183,7 @@ class NodeWalrusService {
    * Process retry queue manually
    * @returns {Promise<Object>} Processing results
    */
-  async processRetryQueue() {
+  async processRetryQueue(): Promise<any> {
     return await this._retryQueue.process();
   }
 
@@ -178,7 +191,7 @@ class NodeWalrusService {
    * Get health status
    * @returns {Object} Health status
    */
-  getHealthStatus() {
+  getHealthStatus(): any {
     return this._healthMonitor ? this._healthMonitor.getStatus() : { isHealthy: false };
   }
 
@@ -186,14 +199,14 @@ class NodeWalrusService {
    * Get connection state
    * @returns {Object} Connection state
    */
-  getConnectionState() {
+  getConnectionState(): any {
     return this._connectionManager.getState();
   }
 
   /**
    * Shutdown the service gracefully
    */
-  async shutdown() {
+  async shutdown(): Promise<void> {
     if (this._healthMonitor) {
       this._healthMonitor.stop();
     }
@@ -204,12 +217,12 @@ class NodeWalrusService {
   }
 
   // Backward compatibility aliases
-  async connect() {
+  async connect(): Promise<boolean> {
     const status = await this.checkWalrusHealth();
     return status.isHealthy;
   }
 
-  async checkHealth() {
+  async checkHealth(): Promise<any> {
     return await this.checkWalrusHealth();
   }
 

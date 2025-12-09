@@ -6,6 +6,12 @@
 import { eventBus, logger, LogComponent } from "@dreamlit/walrus";
 
 class BlobLineageTracker {
+  private lineages: Map<string, any>;
+  private blobToObject: Map<string, string>;
+  private storageKey: string;
+  private storageVersion: string;
+  private storage: any;
+
   constructor() {
     // Map of objectId -> lineage data
     this.lineages = new Map();
@@ -127,14 +133,15 @@ class BlobLineageTracker {
       };
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.STORAGE, 'lineage_track_error', 'Failed to track version', {
-        error: error.message,
+        error: err.message,
         versionData
       });
 
       return {
         success: false,
-        error: error.message
+        error: err.message
       };
     }
   }
@@ -163,14 +170,15 @@ class BlobLineageTracker {
       };
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.STORAGE, 'lineage_get_error', 'Failed to get lineage', {
         objectId,
-        error: error.message
+        error: err.message
       });
 
       return {
         success: false,
-        error: error.message,
+        error: err.message,
         timestamp: Date.now()
       };
     }
@@ -196,14 +204,15 @@ class BlobLineageTracker {
       return this.getLineageByObjectId(objectId);
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.STORAGE, 'lineage_get_error', 'Failed to get lineage', {
         blobId,
-        error: error.message
+        error: err.message
       });
 
       return {
         success: false,
-        error: error.message,
+        error: err.message,
         timestamp: Date.now()
       };
     }
@@ -322,9 +331,10 @@ class BlobLineageTracker {
       return true;
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.STORAGE, 'lineage_update_error', 'Failed to update version', {
         blobId,
-        error: error.message
+        error: err.message
       });
       return false;
     }
@@ -409,9 +419,10 @@ class BlobLineageTracker {
       return true;
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.STORAGE, 'lineage_delete_error', 'Failed to delete lineage', {
         objectId,
-        error: error.message
+        error: err.message
       });
       return false;
     }
@@ -427,8 +438,9 @@ class BlobLineageTracker {
       try {
         this.storage.removeItem(this.storageKey);
       } catch (error) {
+        const err = error as Error;
         logger.warn(LogComponent.STORAGE, 'lineage_clear_fallback', 'Failed to remove storage key, attempting save fallback', {
-          error: error.message
+          error: err.message
         });
         this.saveToStorage();
       }
@@ -481,8 +493,9 @@ class BlobLineageTracker {
       });
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.STORAGE, 'lineage_load_error', 'Failed to load lineage data', {
-        error: error.message
+        error: err.message
       });
     }
   }
@@ -506,8 +519,9 @@ class BlobLineageTracker {
       logger.debug(LogComponent.STORAGE, 'lineage_saved', 'Lineage data saved to storage');
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.STORAGE, 'lineage_save_error', 'Failed to save lineage data', {
-        error: error.message
+        error: err.message
       });
     }
   }
@@ -551,7 +565,7 @@ class BlobLineageTracker {
 
       if (data.blobToObject) {
         for (const [blobId, objectId] of Object.entries(data.blobToObject)) {
-          this.blobToObject.set(blobId, objectId);
+          this.blobToObject.set(blobId, objectId as string);
         }
       }
 
@@ -565,8 +579,9 @@ class BlobLineageTracker {
       return true;
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.STORAGE, 'lineage_import_error', 'Failed to import lineage data', {
-        error: error.message
+        error: err.message
       });
       return false;
     }
@@ -586,8 +601,9 @@ class BlobLineageTracker {
         return globalThis.localStorage;
       }
     } catch (error) {
+      const err = error as Error;
       logger.warn(LogComponent.STORAGE, 'lineage_storage_fallback', 'localStorage unavailable, using in-memory storage', {
-        error: error.message
+        error: err.message
       });
     }
 
@@ -618,7 +634,7 @@ export const blobLineageTracker = new BlobLineageTracker();
 
 // Global access
 if (typeof window !== 'undefined') {
-  window.blobLineageTracker = blobLineageTracker;
+  (window as any).blobLineageTracker = blobLineageTracker;
 
   // Save on page unload
   window.addEventListener('beforeunload', () => {

@@ -4,6 +4,10 @@ import { grpcTransactionBuilder } from './grpc-transaction-builder.js';
 import { getCurrentConfig } from './config.js';
 
 export class SuiGrpcService {
+  config: any;
+  grpcService: any;
+  transactionBuilder: any;
+
   constructor() {
     this.config = getCurrentConfig();
     this.grpcService = grpcService;
@@ -17,13 +21,14 @@ export class SuiGrpcService {
       console.log('Sui gRPC service initialized');
       return true;
     } catch (error) {
-      console.error('Failed to initialize Sui gRPC service:', error);
-      throw error;
+      const err = error as Error;
+      console.error('Failed to initialize Sui gRPC service:', err);
+      throw err;
     }
   }
 
   // Create a new spreadsheet
-  async createSpreadsheet(title, sender, signer) {
+  async createSpreadsheet(title: string, sender: string, signer: any) {
     try {
       // Build the transaction
       const transaction = this.transactionBuilder.buildCreateSpreadsheetTransaction(
@@ -40,7 +45,7 @@ export class SuiGrpcService {
 
       // Extract spreadsheet ID from events
       const spreadsheetId = this.extractSpreadsheetIdFromEvents(result.transaction?.events);
-      
+
       return {
         success: true,
         spreadsheetId: spreadsheetId,
@@ -48,17 +53,18 @@ export class SuiGrpcService {
         gasUsed: result.transaction?.effects?.gasUsed
       };
     } catch (error) {
-      console.error('Failed to create spreadsheet:', error);
+      const err = error as Error;
+      console.error('Failed to create spreadsheet:', err);
       return {
         success: false,
-        error: error.message
+        error: err.message
       };
     }
   }
 
   // Save a version
   // save_version(spreadsheet, walrus_blob_id, content_hash, cell_count, description, clock)
-  async saveVersion(spreadsheetId, blobId, contentHash, cellCount, description, sender, signer) {
+  async saveVersion(spreadsheetId: string, blobId: string, contentHash: string, cellCount: number, description: string, sender: string, signer: any) {
     try {
       // Build the transaction
       const transaction = this.transactionBuilder.buildSaveVersionTransaction(
@@ -79,7 +85,7 @@ export class SuiGrpcService {
 
       // Extract version ID from events
       const versionId = this.extractVersionIdFromEvents(result.transaction?.events);
-      
+
       return {
         success: true,
         versionId: versionId,
@@ -87,16 +93,17 @@ export class SuiGrpcService {
         gasUsed: result.transaction?.effects?.gasUsed
       };
     } catch (error) {
-      console.error('Failed to save version:', error);
+      const err = error as Error;
+      console.error('Failed to save version:', err);
       return {
         success: false,
-        error: error.message
+        error: err.message
       };
     }
   }
 
   // Lock a cell for editing
-  async lockCell(spreadsheetId, cellRef, sender, signer) {
+  async lockCell(spreadsheetId: string, cellRef: string, sender: string, signer: any) {
     try {
       // Build the transaction
       const transaction = this.transactionBuilder.buildLockCellTransaction(
@@ -119,17 +126,18 @@ export class SuiGrpcService {
         gasUsed: result.transaction?.effects?.gasUsed
       };
     } catch (error) {
-      console.error('Failed to lock cell:', error);
+      const err = error as Error;
+      console.error('Failed to lock cell:', err);
       return {
         success: false,
         locked: false,
-        error: error.message
+        error: err.message
       };
     }
   }
 
   // Unlock a cell
-  async unlockCell(spreadsheetId, cellRef, sender, signer) {
+  async unlockCell(spreadsheetId: string, cellRef: string, sender: string, signer: any) {
     try {
       // Build the transaction
       const transaction = this.transactionBuilder.buildUnlockCellTransaction(
@@ -152,17 +160,18 @@ export class SuiGrpcService {
         gasUsed: result.transaction?.effects?.gasUsed
       };
     } catch (error) {
-      console.error('Failed to unlock cell:', error);
+      const err = error as Error;
+      console.error('Failed to unlock cell:', err);
       return {
         success: false,
         unlocked: false,
-        error: error.message
+        error: err.message
       };
     }
   }
 
   // Get balance via gRPC
-  async getBalance(address, coinType = '0x2::sui::SUI') {
+  async getBalance(address: string, coinType: string = '0x2::sui::SUI') {
     try {
       const balance = await this.grpcService.getBalance(address, coinType);
       return {
@@ -172,16 +181,17 @@ export class SuiGrpcService {
         lockedBalance: '0' // gRPC v2beta2 doesn't provide this field
       };
     } catch (error) {
-      console.error('Failed to get balance:', error);
+      const err = error as Error;
+      console.error('Failed to get balance:', err);
       return {
         success: false,
-        error: error.message
+        error: err.message
       };
     }
   }
 
   // Get owned objects via gRPC
-  async getOwnedObjects(address, options = {}) {
+  async getOwnedObjects(address: string, options: any = {}) {
     try {
       const objects = await this.grpcService.getOwnedObjects(address, options);
       return {
@@ -191,16 +201,17 @@ export class SuiGrpcService {
         nextCursor: objects.nextCursor || null
       };
     } catch (error) {
-      console.error('Failed to get owned objects:', error);
+      const err = error as Error;
+      console.error('Failed to get owned objects:', err);
       return {
         success: false,
-        error: error.message
+        error: err.message
       };
     }
   }
 
   // Get object by ID via gRPC
-  async getObject(objectId, options = {}) {
+  async getObject(objectId: string, options: any = {}) {
     try {
       const object = await this.grpcService.getObject(objectId, options);
       return {
@@ -208,18 +219,19 @@ export class SuiGrpcService {
         object: object
       };
     } catch (error) {
-      console.error('Failed to get object:', error);
+      const err = error as Error;
+      console.error('Failed to get object:', err);
       return {
         success: false,
-        error: error.message
+        error: err.message
       };
     }
   }
 
   // Subscribe to events
-  subscribeToEvents(filter, callback) {
+  subscribeToEvents(filter: any, callback: (event: any) => void) {
     // Subscribe to checkpoint stream with event filtering
-    this.grpcService.on('spreadsheetEvent', (event) => {
+    this.grpcService.on('spreadsheetEvent', (event: any) => {
       if (this.matchesFilter(event, filter)) {
         callback(event);
       }
@@ -232,12 +244,12 @@ export class SuiGrpcService {
   }
 
   // Unsubscribe from events
-  unsubscribeFromEvents(callback) {
+  unsubscribeFromEvents(callback: (event: any) => void) {
     this.grpcService.removeListener('spreadsheetEvent', callback);
   }
 
   // Helper: Extract spreadsheet ID from events
-  extractSpreadsheetIdFromEvents(events) {
+  extractSpreadsheetIdFromEvents(events: any) {
     if (!events || events.length === 0) return null;
 
     for (const event of events) {
@@ -250,7 +262,7 @@ export class SuiGrpcService {
   }
 
   // Helper: Extract version ID from events
-  extractVersionIdFromEvents(events) {
+  extractVersionIdFromEvents(events: any) {
     if (!events || events.length === 0) return null;
 
     for (const event of events) {
@@ -263,7 +275,7 @@ export class SuiGrpcService {
   }
 
   // Helper: Match event against filter
-  matchesFilter(event, filter) {
+  matchesFilter(event: any, filter: any) {
     if (!filter) return true;
 
     if (filter.eventType && event.type !== filter.eventType) {
@@ -282,12 +294,12 @@ export class SuiGrpcService {
   }
 
   // Dry run a transaction (simulate without executing)
-  async dryRunTransaction(transaction, sender) {
+  async dryRunTransaction(transaction: any, sender: string) {
     try {
       // In a real implementation, this would use gRPC's dry run endpoint
       // For now, we'll just validate the transaction structure
       const isValid = this.validateTransaction(transaction);
-      
+
       return {
         success: isValid,
         effects: {
@@ -300,26 +312,27 @@ export class SuiGrpcService {
         }
       };
     } catch (error) {
-      console.error('Failed to dry run transaction:', error);
+      const err = error as Error;
+      console.error('Failed to dry run transaction:', err);
       return {
         success: false,
-        error: error.message
+        error: err.message
       };
     }
   }
 
   // Validate transaction structure
-  validateTransaction(transaction) {
+  validateTransaction(transaction: any) {
     if (!transaction) return false;
     if (!transaction.kind) return false;
     if (!transaction.inputs) return false;
     if (!transaction.transactions) return false;
-    
+
     // Validate inputs
     for (const input of transaction.inputs) {
       if (!input.type) return false;
     }
-    
+
     // Validate transactions
     for (const tx of transaction.transactions) {
       if (!tx.MoveCall) return false;
@@ -327,7 +340,7 @@ export class SuiGrpcService {
       if (!tx.MoveCall.module) return false;
       if (!tx.MoveCall.function) return false;
     }
-    
+
     return true;
   }
 
@@ -340,29 +353,30 @@ export class SuiGrpcService {
         gasPrice: gasPrice
       };
     } catch (error) {
-      console.error('Failed to get gas price:', error);
+      const err = error as Error;
+      console.error('Failed to get gas price:', err);
       return {
         success: false,
-        error: error.message,
+        error: err.message,
         gasPrice: 1000 // Default fallback
       };
     }
   }
 
   // Estimate gas for a transaction
-  async estimateGas(transaction, sender) {
+  async estimateGas(transaction: any, sender: string) {
     try {
       // Dry run to get gas estimate
       const dryRunResult = await this.dryRunTransaction(transaction, sender);
-      
+
       if (dryRunResult.success) {
         const computationCost = BigInt(dryRunResult.effects.gasUsed.computationCost);
         const storageCost = BigInt(dryRunResult.effects.gasUsed.storageCost);
         const total = computationCost + storageCost;
-        
+
         // Add 50% buffer
         const withBuffer = (total * 150n) / 100n;
-        
+
         return {
           success: true,
           estimatedGas: withBuffer.toString(),
@@ -373,22 +387,23 @@ export class SuiGrpcService {
           }
         };
       }
-      
+
       return {
         success: false,
         error: 'Failed to estimate gas'
       };
     } catch (error) {
-      console.error('Failed to estimate gas:', error);
+      const err = error as Error;
+      console.error('Failed to estimate gas:', err);
       return {
         success: false,
-        error: error.message
+        error: err.message
       };
     }
   }
 
   // Wait for transaction confirmation
-  async waitForTransaction(digest, options = {}) {
+  async waitForTransaction(digest: string, options: any = {}) {
     const timeout = options.timeout || 30000; // 30 seconds default
     const pollInterval = options.pollInterval || 1000; // 1 second default
     const startTime = Date.now();
@@ -416,7 +431,7 @@ export class SuiGrpcService {
   }
 
   // Get checkpoint for a transaction
-  async getCheckpointForTransaction(digest) {
+  async getCheckpointForTransaction(digest: string) {
     try {
       const transaction = await this.grpcService.getTransaction(digest);
       if (transaction && transaction.checkpoint) {
@@ -425,16 +440,17 @@ export class SuiGrpcService {
           checkpoint: transaction.checkpoint
         };
       }
-      
+
       return {
         success: false,
         error: 'Checkpoint not found'
       };
     } catch (error) {
-      console.error('Failed to get checkpoint:', error);
+      const err = error as Error;
+      console.error('Failed to get checkpoint:', err);
       return {
         success: false,
-        error: error.message
+        error: err.message
       };
     }
   }

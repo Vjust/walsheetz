@@ -17,6 +17,16 @@ import { logger, LogComponent } from "@dreamlit/walrus";
  * Manager for offline operation queueing and processing
  */
 export class OfflineQueueManager {
+  private offlineQueue: Array<any>;
+  private isOnline: boolean;
+  private offlineQueueProcessingTimer: NodeJS.Timeout | null;
+  private maxOfflineQueueSize: number;
+  private offlineRetryInterval: number;
+  private onProcessItem: Function;
+  private onStateChange: Function | undefined;
+  private onlineHandler: Function | null;
+  private offlineHandler: Function | null;
+
   /**
    * Create a new OfflineQueueManager
    * @param {Object} options - Configuration options
@@ -249,11 +259,11 @@ export class OfflineQueueManager {
 
     // Remove event listeners
     if (this.onlineHandler) {
-      window.removeEventListener('online', this.onlineHandler);
+      window.removeEventListener('online', this.onlineHandler as EventListener);
       this.onlineHandler = null;
     }
     if (this.offlineHandler) {
-      window.removeEventListener('offline', this.offlineHandler);
+      window.removeEventListener('offline', this.offlineHandler as EventListener);
       this.offlineHandler = null;
     }
 

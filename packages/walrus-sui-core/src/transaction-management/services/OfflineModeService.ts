@@ -6,6 +6,16 @@
 import { logger, LogComponent } from "@dreamlit/walrus";
 
 class OfflineModeService {
+  private isBrowser: boolean;
+  private isOnline: boolean;
+  private pendingOperations: any[];
+  private localDataStore: Map<string, any>;
+  private syncQueue: any[];
+  private conflictResolver: ConflictResolver;
+  private PENDING_OPERATIONS_KEY: string;
+  private LOCAL_DATA_KEY: string;
+  private SYNC_QUEUE_KEY: string;
+
   constructor() {
     // Guard browser-only APIs for Node.js compatibility
     this.isBrowser = typeof window !== 'undefined' && typeof navigator !== 'undefined';
@@ -84,8 +94,9 @@ class OfflineModeService {
       });
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.STORAGE_SERVICE, 'data_load_error', 'Failed to load persisted data', {
-        error: error.message
+        error: err.message
       });
     }
   }
@@ -108,8 +119,9 @@ class OfflineModeService {
       console.log('OfflineModeService: RAM-only mode, no browser persistence');
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.STORAGE_SERVICE, 'data_persist_error', 'Failed to persist data', {
-        error: error.message
+        error: err.message
       });
     }
   }
@@ -168,7 +180,7 @@ class OfflineModeService {
   }
 
   // Save spreadsheet data in offline mode
-  async saveOfflineSpreadsheet(spreadsheetId, data) {
+  async saveOfflineSpreadsheet(spreadsheetId: string, data: any) {
     const existingData = this.localDataStore.get(spreadsheetId);
 
     if (!existingData) {
@@ -210,7 +222,7 @@ class OfflineModeService {
   }
 
   // Load spreadsheet from offline storage
-  async loadOfflineSpreadsheet(spreadsheetId) {
+  async loadOfflineSpreadsheet(spreadsheetId: string) {
     const data = this.localDataStore.get(spreadsheetId);
 
     if (!data) {
@@ -249,7 +261,7 @@ class OfflineModeService {
   }
 
   // Add operation to sync queue
-  addToSyncQueue(operation) {
+  addToSyncQueue(operation: any) {
     this.syncQueue.push(operation);
     logger.info(LogComponent.PERFORMANCE, 'sync_queued', 'Operation added to sync queue', {
       type: operation.type,
@@ -273,18 +285,19 @@ class OfflineModeService {
     for (const operation of this.syncQueue) {
       try {
         const result = await this.syncOperation(operation);
-        results.push({ operation: operation.id, success: result.success, error: result.error });
+        results.push({ operation: operation.id, success: result.success, error: (result as any).error });
 
         if (result.success) {
           // Remove from queue
           this.syncQueue = this.syncQueue.filter((op) => op.id !== operation.id);
         }
       } catch (error) {
+        const err = error as Error;
         logger.error(LogComponent.PERFORMANCE, 'sync_operation_error', 'Sync operation failed', {
           operationId: operation.id,
-          error: error.message
+          error: err.message
         });
-        results.push({ operation: operation.id, success: false, error: error.message });
+        results.push({ operation: operation.id, success: false, error: err.message });
       }
     }
 
@@ -306,7 +319,7 @@ class OfflineModeService {
   }
 
   // Sync individual operation
-  async syncOperation(operation) {
+  async syncOperation(operation: any) {
     logger.info(LogComponent.PERFORMANCE, 'sync_operation_start', 'Syncing operation', {
       type: operation.type,
       id: operation.id
@@ -325,7 +338,7 @@ class OfflineModeService {
   }
 
   // Sync create spreadsheet operation
-  async syncCreateSpreadsheet(operation) {
+  async syncCreateSpreadsheet(operation: any) {
     // In a real implementation, this would call the blockchain adapter
     // For now, we'll simulate success
     await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate network delay
@@ -343,7 +356,7 @@ class OfflineModeService {
   }
 
   // Sync update spreadsheet operation
-  async syncUpdateSpreadsheet(operation) {
+  async syncUpdateSpreadsheet(operation: any) {
     // In a real implementation, this would call the blockchain adapter
     // For now, we'll simulate success
     await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate network delay
@@ -360,12 +373,12 @@ class OfflineModeService {
   }
 
   // Check for conflicts when syncing
-  detectConflicts(localData, remoteData) {
+  detectConflicts(localData: any, remoteData: any) {
     return this.conflictResolver.detectConflicts(localData, remoteData);
   }
 
   // Resolve conflicts
-  resolveConflict(conflict) {
+  resolveConflict(conflict: any) {
     return this.conflictResolver.resolveConflict(conflict);
   }
 
@@ -400,7 +413,8 @@ class OfflineModeService {
         ramOnly: true
       };
     } catch (error) {
-      return { error: error.message };
+      const err = error as Error;
+      return { error: err.message };
     }
   }
 
@@ -433,7 +447,7 @@ class OfflineModeService {
   }
 
   // Import offline data from backup
-  importOfflineData(data) {
+  importOfflineData(data: any) {
     try {
       if (data.localDataStore) {
         this.localDataStore = new Map(Object.entries(data.localDataStore));
@@ -455,15 +469,16 @@ class OfflineModeService {
 
       return { success: true };
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.STORAGE_SERVICE, 'offline_data_import_error', 'Failed to import offline data', {
-        error: error.message
+        error: err.message
       });
-      return { success: false, error: error.message };
+      return { success: false, error: err.message };
     }
   }
 
   // Emit events for UI updates
-  emitEvent(eventType, data = {}) {
+  emitEvent(eventType: string, data: any = {}) {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent(`offline-${eventType}`, {
         detail: { ...data, timestamp: Date.now() }
@@ -480,7 +495,7 @@ class OfflineModeService {
 
 // Conflict resolution helper class
 class ConflictResolver {
-  detectConflicts(localData, remoteData) {
+  detectConflicts(localData: any, remoteData: any) {
     const conflicts = [];
 
     // Compare timestamps
@@ -500,12 +515,12 @@ class ConflictResolver {
 
     for (const [cellKey, localCell] of Object.entries(localCells)) {
       const remoteCell = remoteCells[cellKey];
-      if (remoteCell && localCell.v !== remoteCell.v) {
+      if (remoteCell && (localCell as any).v !== (remoteCell as any).v) {
         conflicts.push({
           type: 'cell_value',
           cell: cellKey,
-          local: localCell.v,
-          remote: remoteCell.v,
+          local: (localCell as any).v,
+          remote: (remoteCell as any).v,
           resolution: 'merge' // Let user decide
         });
       }
@@ -514,7 +529,7 @@ class ConflictResolver {
     return conflicts;
   }
 
-  resolveConflict(conflict) {
+  resolveConflict(conflict: any) {
     switch (conflict.type) {
       case 'timestamp':
         return conflict.resolution === 'local' ? conflict.local : conflict.remote;
@@ -581,7 +596,7 @@ class OfflineModeServiceShim {
     return [];
   }
 
-  resolveConflict(conflict) {
+  resolveConflict(conflict: any) {
     return conflict?.remote ?? null;
   }
 
@@ -638,7 +653,7 @@ export const getOfflineModeService = () => {
       : new OfflineModeServiceShim();
 
     if (isBrowserEnvironment && typeof window !== 'undefined') {
-      window.walSheetzOfflineMode = offlineModeSingleton;
+      (window as any).walSheetzOfflineMode = offlineModeSingleton;
     }
   }
 

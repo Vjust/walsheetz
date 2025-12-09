@@ -3,9 +3,21 @@
  * Monitors blob PoA certificates and manages renewal workflows
  */
 
-import { eventBus, logger, LogComponent } from "../../../../walrus/src/index.js";
+import { eventBus, logger, LogComponent } from "@dreamlit/walrus";
 
 class PoARenewalManager {
+  private certificates: Map<string, any>;
+  private expiryChecks: Map<string, any>;
+  private renewalWarnings: Map<string, any>;
+  private config: {
+    warningThresholdDays: number;
+    criticalThresholdDays: number;
+    checkIntervalMs: number;
+    autoRenewEnabled: boolean;
+    defaultRenewDays: number;
+  };
+  private storageKey: string;
+
   constructor() {
     // Map of blobId -> certificate status
     this.certificates = new Map();
@@ -45,7 +57,7 @@ class PoARenewalManager {
    */
   setupEventListeners() {
     // Listen for blob certification events
-    eventBus.on('poa:certification:completed', (data) => {
+    eventBus.on('poa:certification:completed', (data: any) => {
       this.trackCertificate({
         blobId: data.blobId,
         status: 'certified',
@@ -55,7 +67,7 @@ class PoARenewalManager {
     });
 
     // Listen for PoA status updates
-    eventBus.on('poa:status:updated', (data) => {
+    eventBus.on('poa:status:updated', (data: any) => {
       if (data.certified && data.certificate) {
         this.trackCertificate({
           blobId: data.blobId,
@@ -67,7 +79,7 @@ class PoARenewalManager {
     });
 
     // Listen for blob storage events to start monitoring
-    eventBus.on('walrus:blob:stored', (data) => {
+    eventBus.on('walrus:blob:stored', (data: any) => {
       this.startMonitoring(data.blobId);
     });
   }
@@ -76,7 +88,7 @@ class PoARenewalManager {
    * Track a certificate
    * @param {Object} certData - Certificate data
    */
-  trackCertificate(certData) {
+  trackCertificate(certData: any) {
     try {
       const {
         blobId,
@@ -127,8 +139,9 @@ class PoARenewalManager {
       });
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.UI, 'renewal_track_error', 'Failed to track certificate', {
-        error: error.message,
+        error: err.message,
         certData
       });
     }
@@ -138,7 +151,7 @@ class PoARenewalManager {
    * Start monitoring a blob for expiry
    * @param {string} blobId - Blob ID to monitor
    */
-  startMonitoring(blobId) {
+  startMonitoring(blobId: string) {
     // Clear existing check if any
     this.stopMonitoring(blobId);
 
@@ -162,7 +175,7 @@ class PoARenewalManager {
    * Stop monitoring a blob
    * @param {string} blobId - Blob ID
    */
-  stopMonitoring(blobId) {
+  stopMonitoring(blobId: string) {
     if (this.expiryChecks.has(blobId)) {
       clearInterval(this.expiryChecks.get(blobId));
       this.expiryChecks.delete(blobId);
@@ -177,14 +190,14 @@ class PoARenewalManager {
    * Check certificate status for a blob
    * @param {string} blobId - Blob ID
    */
-  async checkCertificateStatus(blobId) {
+  async checkCertificateStatus(blobId: string) {
     try {
       logger.debug(LogComponent.UI, 'renewal_check_status', 'Checking certificate status', {
         blobId
       });
 
       // Import services dynamically
-      const { browserWalrusService } = await import("../../../../walrus/src/browser/BrowserWalrusService.js");
+      const { browserWalrusService } = await import("@dreamlit/walrus");
 
       // Get current PoA certificate status
       const result = await browserWalrusService.getPoACertificate(blobId);
@@ -209,9 +222,10 @@ class PoARenewalManager {
       this.checkRenewalStatus(blobId);
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.UI, 'renewal_check_error', 'Error checking certificate status', {
         blobId,
-        error: error.message
+        error: err.message
       });
     }
   }
@@ -220,7 +234,7 @@ class PoARenewalManager {
    * Check if renewal is needed and emit warnings
    * @param {string} blobId - Blob ID
    */
-  checkRenewalStatus(blobId) {
+  checkRenewalStatus(blobId: string) {
     try {
       const certEntry = this.certificates.get(blobId);
       if (!certEntry || !certEntry.certificate) return;
@@ -283,9 +297,10 @@ class PoARenewalManager {
       this.saveToStorage();
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.UI, 'renewal_check_error', 'Error checking renewal status', {
         blobId,
-        error: error.message
+        error: err.message
       });
     }
   }
@@ -295,7 +310,7 @@ class PoARenewalManager {
    * @param {Object} certificate - PoA certificate object
    * @returns {number|null} Expiry timestamp or null
    */
-  extractExpiryTimestamp(certificate) {
+  extractExpiryTimestamp(certificate: any) {
     // This would parse the actual certificate structure
     // For now, assume it has an expiryTimestamp field
     return certificate?.expiryTimestamp || null;
@@ -307,7 +322,7 @@ class PoARenewalManager {
    * @param {Object} options - Renewal options
    * @returns {Promise<Object>} Renewal result
    */
-  async requestRenewal(blobId, options = {}) {
+  async requestRenewal(blobId: string, options: any = {}) {
     try {
       const { durationDays = this.config.defaultRenewDays } = options;
 
@@ -381,15 +396,16 @@ class PoARenewalManager {
       }
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.UI, 'renewal_request_error', 'Error requesting renewal', {
         blobId,
-        error: error.message
+        error: err.message
       });
 
       return {
         success: false,
         blobId,
-        error: error.message
+        error: err.message
       };
     }
   }
@@ -399,7 +415,7 @@ class PoARenewalManager {
    * @param {string} level - Filter by warning level (optional)
    * @returns {Array} Array of warnings
    */
-  getRenewalWarnings(level = null) {
+  getRenewalWarnings(level: string | null = null) {
     const warnings = Array.from(this.renewalWarnings.values());
 
     if (level) {
@@ -414,7 +430,7 @@ class PoARenewalManager {
    * @param {string} blobId - Blob ID
    * @returns {Object|null} Certificate info or null
    */
-  getCertificateInfo(blobId) {
+  getCertificateInfo(blobId: string) {
     return this.certificates.get(blobId) || null;
   }
 
@@ -430,7 +446,7 @@ class PoARenewalManager {
    * Update configuration
    * @param {Object} updates - Config updates
    */
-  updateConfig(updates) {
+  updateConfig(updates: any) {
     Object.assign(this.config, updates);
     this.saveToStorage();
 
@@ -449,7 +465,7 @@ class PoARenewalManager {
    * Dismiss warning for a blob
    * @param {string} blobId - Blob ID
    */
-  dismissWarning(blobId) {
+  dismissWarning(blobId: string) {
     if (this.renewalWarnings.has(blobId)) {
       this.renewalWarnings.delete(blobId);
       this.saveToStorage();
@@ -506,7 +522,7 @@ export const poaRenewalManager = new PoARenewalManager();
 
 // Global access
 if (typeof window !== 'undefined') {
-  window.poaRenewalManager = poaRenewalManager;
+  (window as any).poaRenewalManager = poaRenewalManager;
 
   // Cleanup on page unload
   window.addEventListener('beforeunload', () => {

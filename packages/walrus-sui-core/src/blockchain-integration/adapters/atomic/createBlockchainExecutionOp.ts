@@ -76,9 +76,9 @@ export function createBlockchainExecutionOp(adapter) {
         operationId
       };
     },
-    getCleanupHandler: (result) => {
+    getCleanupHandler: (result: any) => {
       return async () => {
-        const metadata = {};
+        const metadata: Record<string, any> = {};
         if (result.blockchainResult?.digest) {
           metadata.transactionDigest = result.blockchainResult.digest;
         }

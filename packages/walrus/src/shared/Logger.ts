@@ -12,14 +12,18 @@ export { LogLevel };
 export const LogComponent = {
   SPREADSHEET_ENGINE: 'SpreadsheetEngine',
   BLOCKCHAIN_ADAPTER: 'BlockchainAdapter',
+  BLOCKCHAIN: 'Blockchain',
   WEBSOCKET_SERVICE: 'WebSocketService',
   UI_COMPONENT: 'UIComponent',
-  UI: 'UI', // Alias for UI components
+  UI: 'UI',
   WALLET_MANAGER: 'WalletManager',
   STORAGE_SERVICE: 'StorageService',
+  STORAGE: 'Storage',
   COLLABORATION: 'Collaboration',
   PERFORMANCE: 'Performance',
-  BUSINESS_LOGIC: 'BusinessLogic' // Business logic layer (useSpreadsheet hooks, business rules)
+  BUSINESS_LOGIC: 'BusinessLogic',
+  GRPC: 'GrpcService',
+  WALRUS: 'WalrusService'
 };
 
 export const ErrorCategory = {

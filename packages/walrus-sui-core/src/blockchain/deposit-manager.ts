@@ -4,6 +4,15 @@ import { gasEstimator, estimateTransactionCost } from './gas-estimator.js';
 import { walletManager } from './wallet-manager.js';
 
 class DepositManager {
+  private config: any;
+  private depositConfig: any;
+  private storage: any;
+  private deposits: Map<string, number>;
+  private gasConsumption: Map<string, any[]>;
+  private transactionQueue: Map<string, any[]>;
+  private eventListeners: Map<string, Function[]>;
+  private storageKey: string;
+
   constructor() {
     this.config = getCurrentConfig();
     this.depositConfig = this.config.deposit;
@@ -29,27 +38,28 @@ class DepositManager {
   }
 
   // Event handling
-  on(event, callback) {
+  on(event: string, callback: Function): void {
     if (!this.eventListeners.has(event)) {
       this.eventListeners.set(event, []);
     }
-    this.eventListeners.get(event).push(callback);
+    this.eventListeners.get(event)!.push(callback);
   }
 
-  emit(event, data) {
+  emit(event: string, data: any): void {
     if (this.eventListeners.has(event)) {
-      this.eventListeners.get(event).forEach(callback => {
+      this.eventListeners.get(event)!.forEach((callback: Function) => {
         try {
           callback(data);
         } catch (error) {
-          console.error('Event listener error:', error);
+          const err = error as Error;
+          console.error('Event listener error:', err);
         }
       });
     }
   }
 
   // Load deposits from local storage
-  loadDeposits() {
+  loadDeposits(): void {
     if (!this.storage) return;
 
     try {
@@ -60,12 +70,13 @@ class DepositManager {
         this.gasConsumption = new Map(data.gasConsumption || []);
       }
     } catch (error) {
-      console.warn('Failed to load deposits from storage:', error);
+      const err = error as Error;
+      console.warn('Failed to load deposits from storage:', err);
     }
   }
 
   // Save deposits to local storage
-  saveDeposits() {
+  saveDeposits(): void {
     if (!this.storage) return;
 
     try {
@@ -76,33 +87,34 @@ class DepositManager {
       };
       this.storage.setItem(this.storageKey, JSON.stringify(data));
     } catch (error) {
-      console.warn('Failed to save deposits to storage:', error);
+      const err = error as Error;
+      console.warn('Failed to save deposits to storage:', err);
     }
   }
 
   // Convert SUI to MIST
-  suiToMist(suiAmount) {
+  suiToMist(suiAmount: number): number {
     return Math.floor(suiAmount * this.depositConfig.mistPerSui);
   }
 
   // Convert MIST to SUI
-  mistToSui(mistAmount) {
+  mistToSui(mistAmount: number): number {
     return mistAmount / this.depositConfig.mistPerSui;
   }
 
   // Get user's current deposit balance
-  getBalance(userAddress) {
+  getBalance(userAddress: string): number {
     return this.deposits.get(userAddress) || 0;
   }
 
   // Get user's balance in SUI
-  getBalanceInSui(userAddress) {
+  getBalanceInSui(userAddress: string): number {
     const mistBalance = this.getBalance(userAddress);
     return this.mistToSui(mistBalance);
   }
 
   // Add deposit for a user
-  async deposit(userAddress, suiAmount) {
+  async deposit(userAddress: string, suiAmount: number): Promise<any> {
     try {
       // Validate minimum deposit
       if (suiAmount < this.depositConfig.minDepositAmount) {
@@ -144,13 +156,14 @@ class DepositManager {
         mistBalance: newBalance
       };
     } catch (error) {
-      console.error('Deposit failed:', error);
-      throw error;
+      const err = error as Error;
+      console.error('Deposit failed:', err);
+      throw err;
     }
   }
 
   // Withdraw funds for a user
-  async withdraw(userAddress, suiAmount) {
+  async withdraw(userAddress: string, suiAmount: number): Promise<any> {
     try {
       const mistAmount = this.suiToMist(suiAmount);
       const currentBalance = this.getBalance(userAddress);
@@ -192,17 +205,18 @@ class DepositManager {
         mistBalance: newBalance
       };
     } catch (error) {
-      console.error('Withdrawal failed:', error);
-      throw error;
+      const err = error as Error;
+      console.error('Withdrawal failed:', err);
+      throw err;
     }
   }
 
   // Check if user has sufficient balance for a transaction
-  async checkBalance(userAddress, estimatedCost) {
+  async checkBalance(userAddress: string, estimatedCost: number): Promise<any> {
     const currentBalance = this.getBalance(userAddress);
     const buffer = estimatedCost * (this.depositConfig.gasBuffer - 1); // Additional buffer
     const requiredBalance = estimatedCost + buffer;
-    
+
     return {
       sufficient: currentBalance >= requiredBalance,
       currentBalance,
@@ -213,19 +227,19 @@ class DepositManager {
   }
 
   // Deduct gas cost from user's deposit
-  async deductGas(userAddress, transactionResult) {
+  async deductGas(userAddress: string, transactionResult: any): Promise<any> {
     try {
       if (!transactionResult.effects || !transactionResult.effects.gasUsed) {
         throw new Error('Invalid transaction result - no gas usage data');
       }
 
       const gasUsed = transactionResult.effects.gasUsed;
-      const totalCost = parseInt(gasUsed.computationCost) + 
-                       parseInt(gasUsed.storageCost) - 
+      const totalCost = parseInt(gasUsed.computationCost) +
+                       parseInt(gasUsed.storageCost) -
                        parseInt(gasUsed.storageRebate || 0);
 
       const currentBalance = this.getBalance(userAddress);
-      
+
       if (totalCost > currentBalance) {
         // This shouldn't happen if we checked balance first, but handle gracefully
         console.warn('Gas cost exceeds deposit balance', {
@@ -233,11 +247,11 @@ class DepositManager {
           totalCost,
           currentBalance
         });
-        
+
         // Deduct what we can
         const deductedAmount = Math.min(totalCost, currentBalance);
         this.deposits.set(userAddress, currentBalance - deductedAmount);
-        
+
         this.emit('balanceInsufficient', {
           userAddress,
           requiredCost: totalCost,
@@ -274,7 +288,7 @@ class DepositManager {
       // Check if balance is low
       const newBalance = this.getBalance(userAddress);
       const lowThreshold = this.suiToMist(this.depositConfig.lowBalanceThreshold);
-      
+
       if (newBalance <= lowThreshold) {
         this.emit('lowBalance', {
           userAddress,
@@ -290,23 +304,24 @@ class DepositManager {
         gasUsed
       };
     } catch (error) {
-      console.error('Gas deduction failed:', error);
-      throw error;
+      const err = error as Error;
+      console.error('Gas deduction failed:', err);
+      throw err;
     }
   }
 
   // Log transaction (deposit/withdrawal)
-  logTransaction(userAddress, transaction) {
+  logTransaction(userAddress: string, transaction: any): void {
     if (!this.gasConsumption.has(userAddress)) {
       this.gasConsumption.set(userAddress, []);
     }
-    
-    const history = this.gasConsumption.get(userAddress);
+
+    const history = this.gasConsumption.get(userAddress)!;
     history.push({
       ...transaction,
       id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     });
-    
+
     // Keep only last 100 transactions per user
     if (history.length > 100) {
       history.splice(0, history.length - 100);
@@ -314,7 +329,7 @@ class DepositManager {
   }
 
   // Log gas usage
-  logGasUsage(userAddress, gasData) {
+  logGasUsage(userAddress: string, gasData: any): void {
     this.logTransaction(userAddress, {
       type: 'gas_usage',
       ...gasData
@@ -322,13 +337,13 @@ class DepositManager {
   }
 
   // Get user's transaction history
-  getTransactionHistory(userAddress, limit = 50) {
+  getTransactionHistory(userAddress: string, limit: number = 50): any[] {
     const history = this.gasConsumption.get(userAddress) || [];
     return history.slice(-limit).reverse(); // Most recent first
   }
 
   // Get gas usage analytics for a user
-  getGasAnalytics(userAddress) {
+  getGasAnalytics(userAddress: string): any {
     const history = this.getTransactionHistory(userAddress);
     const gasTransactions = history.filter(tx => tx.type === 'gas_usage');
     
@@ -336,23 +351,23 @@ class DepositManager {
   }
 
   // Suggest deposit amount based on usage pattern
-  async suggestDepositAmount(userAddress) {
+  async suggestDepositAmount(userAddress: string): Promise<any> {
     try {
       const history = this.getTransactionHistory(userAddress, 20);
-      const gasTransactions = history.filter(tx => tx.type === 'gas_usage');
-      
+      const gasTransactions = history.filter((tx: any) => tx.type === 'gas_usage');
+
       // Calculate average gas usage
       let avgDailyCost = 0;
       if (gasTransactions.length > 0) {
-        const totalCost = gasTransactions.reduce((sum, tx) => sum + (tx.totalCost || 0), 0);
+        const totalCost = gasTransactions.reduce((sum: number, tx: any) => sum + (tx.totalCost || 0), 0);
         const avgCostPerTransaction = totalCost / gasTransactions.length;
-        
+
         // Estimate daily transactions based on recent activity
-        const recentTxs = gasTransactions.filter(tx => 
+        const recentTxs = gasTransactions.filter((tx: any) =>
           (Date.now() - tx.timestamp) < 24 * 60 * 60 * 1000 // Last 24 hours
         );
         const avgDailyTransactions = Math.max(10, recentTxs.length); // Minimum 10
-        
+
         avgDailyCost = avgCostPerTransaction * avgDailyTransactions;
       } else {
         // No history, use estimates based on typical usage
@@ -373,7 +388,8 @@ class DepositManager {
         basedOnTransactions: gasTransactions.length
       };
     } catch (error) {
-      console.error('Failed to suggest deposit amount:', error);
+      const err = error as Error;
+      console.error('Failed to suggest deposit amount:', err);
       return {
         suggestions: {
           light: 0.01,    // 0.01 SUI
@@ -388,8 +404,8 @@ class DepositManager {
   }
 
   // Get all user balances (for admin/debugging)
-  getAllBalances() {
-    const balances = {};
+  getAllBalances(): Record<string, any> {
+    const balances: Record<string, any> = {};
     for (const [address, mistBalance] of this.deposits.entries()) {
       balances[address] = {
         sui: this.mistToSui(mistBalance),
@@ -400,7 +416,7 @@ class DepositManager {
   }
 
   // Get total deposits across all users
-  getTotalDeposits() {
+  getTotalDeposits(): any {
     let totalMist = 0;
     for (const balance of this.deposits.values()) {
       totalMist += balance;
@@ -413,24 +429,24 @@ class DepositManager {
   }
 
   // Check if user needs to top up
-  shouldTopUp(userAddress) {
+  shouldTopUp(userAddress: string): boolean {
     const balance = this.getBalance(userAddress);
     const threshold = this.suiToMist(this.depositConfig.lowBalanceThreshold);
     return balance <= threshold;
   }
 
   // Clear user data (for testing/reset)
-  clearUserData(userAddress) {
+  clearUserData(userAddress: string): void {
     this.deposits.delete(userAddress);
     this.gasConsumption.delete(userAddress);
     this.transactionQueue.delete(userAddress);
     this.saveDeposits();
-    
+
     this.emit('userDataCleared', { userAddress });
   }
 
   // Clear all data
-  clearAllData() {
+  clearAllData(): void {
     this.deposits.clear();
     this.gasConsumption.clear();
     this.transactionQueue.clear();
@@ -438,41 +454,43 @@ class DepositManager {
       try {
         this.storage.removeItem(this.storageKey);
       } catch (error) {
-        console.warn('Failed to clear deposits from storage:', error);
+        const err = error as Error;
+        console.warn('Failed to clear deposits from storage:', err);
       }
     }
-    
+
     this.emit('allDataCleared', {});
   }
 
-  createStorageAdapter() {
+  createStorageAdapter(): any {
     try {
       if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
         return globalThis.localStorage;
       }
     } catch (error) {
-      console.warn('localStorage unavailable, using in-memory storage:', error);
+      const err = error as Error;
+      console.warn('localStorage unavailable, using in-memory storage:', err);
     }
 
     const memoryStore = new Map();
 
     return {
-      getItem(key) {
+      getItem(key: string): string | null {
         return memoryStore.has(key) ? memoryStore.get(key) : null;
       },
-      setItem(key, value) {
+      setItem(key: string, value: string): void {
         memoryStore.set(key, value);
       },
-      removeItem(key) {
+      removeItem(key: string): void {
         memoryStore.delete(key);
       }
     };
   }
 
   // Get status for current user
-  getStatus() {
+  getStatus(): any {
     const currentUser = walletManager.getWalletInfo().address;
-    
+
     if (!currentUser) {
       return {
         connected: false,

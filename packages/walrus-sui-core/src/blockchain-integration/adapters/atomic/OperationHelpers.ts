@@ -12,6 +12,9 @@
  * Helper class for atomic operation utilities
  */
 export class OperationHelpers {
+  logger: any;
+  logComponent: any;
+
   /**
    * Create a new OperationHelpers instance
    * @param {Object} dependencies - Injected dependencies

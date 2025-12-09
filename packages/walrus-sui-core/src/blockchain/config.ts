@@ -2,14 +2,14 @@
 
 // Robust dev/prod detection that works in both browser and Node.js environments
 const isBrowser = typeof window !== 'undefined';
-const isDevRuntime = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV) ||
+const isDevRuntime = (typeof import.meta !== 'undefined' && (import.meta as unknown as Record<string, unknown>).env && ((import.meta as unknown as Record<string, unknown>).env as Record<string, unknown>).DEV) ||
                      (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'development');
 
 // Force absolute endpoints even in dev (useful for environments without proxy)
 const forceAbsoluteEndpoints = (typeof process !== 'undefined' && process.env && process.env.WALRUS_USE_ABSOLUTE === 'true') || false;
 
 // Cross-platform environment variable access with proper defaults
-const env = (typeof import.meta !== 'undefined' && import.meta.env) ||
+const env: Record<string, unknown> = (typeof import.meta !== 'undefined' && (import.meta as unknown as Record<string, unknown>).env as Record<string, unknown>) ||
             ((typeof process !== 'undefined' && process.env) || {});
 
 export const config = {
@@ -30,7 +30,7 @@ export const config = {
         // This must be set to true as the on-chain function expects the content_hash argument.
         contentHashInSave: true,
         // Rate limiter feature flag
-        rateLimiterEnabled: (env.RATE_LIMITER_ENABLED ?? 'true') !== 'false', // Default true
+        rateLimiterEnabled: ((env.RATE_LIMITER_ENABLED as string | undefined) ?? 'true') !== 'false', // Default true
         // gRPC checkpoint streaming support - Testnet currently returns UNIMPLEMENTED (code 12)
         // Setting to false prevents startup error spam and uses GraphQL fallback immediately
         supportsCheckpointStream: false
@@ -38,9 +38,9 @@ export const config = {
       // Rate limiting configuration
       rateLimits: {
         sui: {
-          maxRPS: parseInt(env.SUI_MAX_RPS || '3'),
-          burst: parseInt(env.SUI_BURST || '6'),
-          maxConcurrent: parseInt(env.SUI_MAX_CONCURRENT || '4')
+          maxRPS: parseInt((env.SUI_MAX_RPS as string | undefined) || '3'),
+          burst: parseInt((env.SUI_BURST as string | undefined) || '6'),
+          maxConcurrent: parseInt((env.SUI_MAX_CONCURRENT as string | undefined) || '4')
         }
       }
     },
@@ -55,15 +55,15 @@ export const config = {
       moduleVersion: 1,
       features: {
         contentHashInSave: true,
-        rateLimiterEnabled: (env.RATE_LIMITER_ENABLED ?? 'true') !== 'false',
+        rateLimiterEnabled: ((env.RATE_LIMITER_ENABLED as string | undefined) ?? 'true') !== 'false',
         // gRPC checkpoint streaming support - enabled for mainnet (may need verification)
         supportsCheckpointStream: true
       },
       rateLimits: {
         sui: {
-          maxRPS: parseInt(env.SUI_MAX_RPS || '3'),
-          burst: parseInt(env.SUI_BURST || '6'),
-          maxConcurrent: parseInt(env.SUI_MAX_CONCURRENT || '4')
+          maxRPS: parseInt((env.SUI_MAX_RPS as string | undefined) || '3'),
+          burst: parseInt((env.SUI_BURST as string | undefined) || '6'),
+          maxConcurrent: parseInt((env.SUI_MAX_CONCURRENT as string | undefined) || '4')
         }
       }
     }
@@ -97,25 +97,25 @@ export const config = {
       
       // Feature flags
       features: {
-        rateLimiterEnabled: (env.RATE_LIMITER_ENABLED ?? 'true') !== 'false', // Default true
-        useSdk: (env.WALRUS_USE_SDK ?? 'false') === 'true', // Default false for safe rollout
-        epochsDefault: parseInt(env.WALRUS_EPOCHS_DEFAULT || '50'),
-        epochMax: parseInt(env.WALRUS_EPOCH_MAX || '200'),
-        epochRenewalWarningDays: parseInt(env.WALRUS_EPOCH_RENEWAL_WARNING || '7'),
+        rateLimiterEnabled: ((env.RATE_LIMITER_ENABLED as string | undefined) ?? 'true') !== 'false', // Default true
+        useSdk: ((env.WALRUS_USE_SDK as string | undefined) ?? 'false') === 'true', // Default false for safe rollout
+        epochsDefault: parseInt((env.WALRUS_EPOCHS_DEFAULT as string | undefined) || '50'),
+        epochMax: parseInt((env.WALRUS_EPOCH_MAX as string | undefined) || '200'),
+        epochRenewalWarningDays: parseInt((env.WALRUS_EPOCH_RENEWAL_WARNING as string | undefined) || '7'),
         sdkNetwork: 'testnet'
       },
-      
+
       // Rate limiting configuration
       rateLimits: {
         walrusAggregator: {
-          maxRPS: parseInt(env.WALRUS_AGG_MAX_RPS || '3'),
-          burst: parseInt(env.WALRUS_AGG_BURST || '3'),
-          maxConcurrent: parseInt(env.WALRUS_AGG_MAX_CONCURRENT || '2')
+          maxRPS: parseInt((env.WALRUS_AGG_MAX_RPS as string | undefined) || '3'),
+          burst: parseInt((env.WALRUS_AGG_BURST as string | undefined) || '3'),
+          maxConcurrent: parseInt((env.WALRUS_AGG_MAX_CONCURRENT as string | undefined) || '2')
         },
         walrusPublisher: {
-          maxRPS: parseInt(env.WALRUS_PUB_MAX_RPS || '1'),
-          burst: parseInt(env.WALRUS_PUB_BURST || '1'),
-          maxConcurrent: parseInt(env.WALRUS_PUB_MAX_CONCURRENT || '1')
+          maxRPS: parseInt((env.WALRUS_PUB_MAX_RPS as string | undefined) || '1'),
+          burst: parseInt((env.WALRUS_PUB_BURST as string | undefined) || '1'),
+          maxConcurrent: parseInt((env.WALRUS_PUB_MAX_CONCURRENT as string | undefined) || '1')
         }
       }
     },
@@ -149,25 +149,25 @@ export const config = {
       
       // Feature flags
       features: {
-        rateLimiterEnabled: process.env.RATE_LIMITER_ENABLED !== 'false',
-        useSdk: (env.WALRUS_USE_SDK ?? 'false') === 'true', // Default false for safe rollout
-        epochsDefault: parseInt(env.WALRUS_EPOCHS_DEFAULT || '50'),
-        epochMax: parseInt(env.WALRUS_EPOCH_MAX || '200'),
-        epochRenewalWarningDays: parseInt(env.WALRUS_EPOCH_RENEWAL_WARNING || '7'),
+        rateLimiterEnabled: (typeof process !== 'undefined' && process.env && process.env.RATE_LIMITER_ENABLED !== 'false') || false,
+        useSdk: ((env.WALRUS_USE_SDK as string | undefined) ?? 'false') === 'true', // Default false for safe rollout
+        epochsDefault: parseInt((env.WALRUS_EPOCHS_DEFAULT as string | undefined) || '50'),
+        epochMax: parseInt((env.WALRUS_EPOCH_MAX as string | undefined) || '200'),
+        epochRenewalWarningDays: parseInt((env.WALRUS_EPOCH_RENEWAL_WARNING as string | undefined) || '7'),
         sdkNetwork: 'mainnet'
       },
-      
+
       // Rate limiting configuration
       rateLimits: {
         walrusAggregator: {
-          maxRPS: parseInt(env.WALRUS_AGG_MAX_RPS || '3'),
-          burst: parseInt(env.WALRUS_AGG_BURST || '3'),
-          maxConcurrent: parseInt(env.WALRUS_AGG_MAX_CONCURRENT || '2')
+          maxRPS: parseInt((env.WALRUS_AGG_MAX_RPS as string | undefined) || '3'),
+          burst: parseInt((env.WALRUS_AGG_BURST as string | undefined) || '3'),
+          maxConcurrent: parseInt((env.WALRUS_AGG_MAX_CONCURRENT as string | undefined) || '2')
         },
         walrusPublisher: {
-          maxRPS: parseInt(env.WALRUS_PUB_MAX_RPS || '1'),
-          burst: parseInt(env.WALRUS_PUB_BURST || '1'),
-          maxConcurrent: parseInt(env.WALRUS_PUB_MAX_CONCURRENT || '1')
+          maxRPS: parseInt((env.WALRUS_PUB_MAX_RPS as string | undefined) || '1'),
+          burst: parseInt((env.WALRUS_PUB_BURST as string | undefined) || '1'),
+          maxConcurrent: parseInt((env.WALRUS_PUB_MAX_CONCURRENT as string | undefined) || '1')
         }
       }
     }
@@ -182,17 +182,17 @@ export const config = {
     // Feature flags
     features: {
       compression: {
-        enabled: (env.WALRUS_COMPRESSION ?? 'true') !== 'false', // Default true
-        threshold: parseInt(env.COMPRESSION_THRESHOLD || '16384'), // 16KB default
+        enabled: ((env.WALRUS_COMPRESSION as string | undefined) ?? 'true') !== 'false', // Default true
+        threshold: parseInt((env.COMPRESSION_THRESHOLD as string | undefined) || '16384'), // 16KB default
         algorithm: 'gzip'
       },
       deltaChain: {
-        enabled: (env.ENABLE_DELTA ?? 'true') !== 'false', // Default true
-        maxChainLength: parseInt(env.DELTA_MAX_CHAIN || '5'), // Max 5 deltas before full snapshot
+        enabled: ((env.ENABLE_DELTA as string | undefined) ?? 'true') !== 'false', // Default true
+        maxChainLength: parseInt((env.DELTA_MAX_CHAIN as string | undefined) || '5'), // Max 5 deltas before full snapshot
         compressionThreshold: 8192 // 8KB for delta compression
       },
       batchPersistence: {
-        enabled: (env.BATCH_PERSISTENCE ?? 'true') !== 'false', // Default true
+        enabled: ((env.BATCH_PERSISTENCE as string | undefined) ?? 'true') !== 'false', // Default true
         storageKey: 'walsheetz_batch_',
         maxBatchAge: 30000 // 30 seconds max batch age
       }
@@ -267,7 +267,7 @@ export const config = {
 
   // UI settings
   ui: {
-    showRateLimiterStatus: (env.SHOW_RATE_LIMITER_STATUS ?? 'false') === 'true'
+    showRateLimiterStatus: ((env.SHOW_RATE_LIMITER_STATUS as string | undefined) ?? 'false') === 'true'
   },
   
   // Collaboration settings - DISABLED for single-user MVP
@@ -402,8 +402,8 @@ export const getCurrentConfig = () => {
   };
 };
 
-export const getSuiContractConfig = (network) => {
-  return config.walSheetz[network] || config.walSheetz.testnet;
+export const getSuiContractConfig = (network: string) => {
+  return config.walSheetz[network as keyof typeof config.walSheetz] || config.walSheetz.testnet;
 };
 
 export const isTestnet = () => config.environment === 'testnet';

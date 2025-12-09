@@ -103,4 +103,4 @@ export {
   StandardizedErrorHandler,
   standardizedErrorHandler
 } from './shared/StandardizedErrorHandler.js';
-export { logConfig } from './shared/LogConfig.ts';
+export { logConfig } from './shared/LogConfig.js';

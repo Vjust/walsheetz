@@ -39,7 +39,7 @@ const transactionExperienceManagerStub = {
   emitTransactionEvent: vi.fn()
 };
 
-vi.mock('../../transaction-management/utils/TransactionExperience.js', () => ({
+vi.mock('../../transaction-management/utils/TransactionExperience.ts', () => ({
   transactionExperienceManager: transactionExperienceManagerStub
 }));
 
@@ -95,7 +95,7 @@ describe('AtomicOperationManager', () => {
       context
     }));
 
-    const experienceModule = await import('../../transaction-management/utils/TransactionExperience.js');
+    const experienceModule = await import('../../transaction-management/utils/TransactionExperience.ts');
     transactionExperienceManager = experienceModule.transactionExperienceManager;
     transactionExperienceManager.prepareTransaction.mockImplementation(() => ({}));
     transactionExperienceManager.executeWithExperience.mockImplementation(async (operation, name, context) => {
@@ -103,7 +103,7 @@ describe('AtomicOperationManager', () => {
     });
     transactionExperienceManager.emitTransactionEvent.mockImplementation(() => {});
 
-    const module = await import('../services/AtomicOperationManager.js');
+    const module = await import('../services/AtomicOperationManager.ts');
     AtomicOperationManager = module.default;
     manager = new AtomicOperationManager();
   });

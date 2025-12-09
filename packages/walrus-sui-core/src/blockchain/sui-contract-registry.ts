@@ -2,6 +2,10 @@
 import { getCurrentConfig } from './config.js';
 
 class SuiContractRegistry {
+  private adapters: Map<string, any>;
+  private metadata: Map<string, any>;
+  private initialized: boolean;
+
   constructor() {
     this.adapters = new Map();
     this.metadata = new Map();
@@ -19,8 +23,9 @@ class SuiContractRegistry {
       this.initialized = true;
       console.log('[ContractRegistry] Registry initialized with adapters:', Array.from(this.adapters.keys()));
     } catch (error) {
-      console.error('[ContractRegistry] Failed to initialize registry:', error);
-      throw error;
+      const err = error as Error;
+      console.error('[ContractRegistry] Failed to initialize registry:', err);
+      throw err;
     }
   }
 
@@ -29,7 +34,7 @@ class SuiContractRegistry {
     // No default adapters registered currently
   }
 
-  registerAdapter(adapterId, AdapterClass) {
+  registerAdapter(adapterId: string, AdapterClass: any) {
     if (this.adapters.has(adapterId)) {
       console.warn(`[ContractRegistry] Adapter ${adapterId} already registered, replacing...`);
     }
@@ -52,12 +57,13 @@ class SuiContractRegistry {
 
       console.log(`[ContractRegistry] Registered adapter: ${adapterId}`);
     } catch (error) {
-      console.error(`[ContractRegistry] Failed to register adapter ${adapterId}:`, error);
-      throw new Error(`Failed to register adapter ${adapterId}: ${error.message}`);
+      const err = error as Error;
+      console.error(`[ContractRegistry] Failed to register adapter ${adapterId}:`, err);
+      throw new Error(`Failed to register adapter ${adapterId}: ${err.message}`);
     }
   }
 
-  getAdapter(adapterId) {
+  getAdapter(adapterId: string) {
     if (!this.initialized) {
       throw new Error('Contract registry not initialized. Call initialize() first.');
     }
@@ -70,7 +76,7 @@ class SuiContractRegistry {
     return adapter;
   }
 
-  hasAdapter(adapterId) {
+  hasAdapter(adapterId: string) {
     return this.adapters.has(adapterId);
   }
 
@@ -78,7 +84,7 @@ class SuiContractRegistry {
     return Array.from(this.metadata.values());
   }
 
-  getAdapterMetadata(adapterId) {
+  getAdapterMetadata(adapterId: string) {
     const metadata = this.metadata.get(adapterId);
     if (!metadata) {
       throw new Error(`Adapter metadata not found: ${adapterId}`);
@@ -86,7 +92,7 @@ class SuiContractRegistry {
     return metadata;
   }
 
-  async validateAdapter(adapterId, method, args) {
+  async validateAdapter(adapterId: string, method: string, args: any[]) {
     const adapter = this.getAdapter(adapterId);
 
     // Check if adapter supports the method
@@ -99,14 +105,15 @@ class SuiContractRegistry {
       try {
         await adapter.validateArgs(method, args);
       } catch (error) {
-        throw new Error(`Invalid arguments for ${adapterId}.${method}: ${error.message}`);
+        const err = error as Error;
+        throw new Error(`Invalid arguments for ${adapterId}.${method}: ${err.message}`);
       }
     }
 
     return true;
   }
 
-  async callAdapter(adapterId, method, args, options = {}) {
+  async callAdapter(adapterId: string, method: string, args: any[], options: any = {}) {
     await this.validateAdapter(adapterId, method, args);
     const adapter = this.getAdapter(adapterId);
 
@@ -117,12 +124,13 @@ class SuiContractRegistry {
       console.log(`[ContractRegistry] ${adapterId}.${method} completed successfully`);
       return result;
     } catch (error) {
-      console.error(`[ContractRegistry] ${adapterId}.${method} failed:`, error);
-      throw new Error(`${adapterId}.${method} failed: ${error.message}`);
+      const err = error as Error;
+      console.error(`[ContractRegistry] ${adapterId}.${method} failed:`, err);
+      throw new Error(`${adapterId}.${method} failed: ${err.message}`);
     }
   }
 
-  async describeSchema(adapterId) {
+  async describeSchema(adapterId: string) {
     const adapter = this.getAdapter(adapterId);
 
     if (adapter.describeSchema) {
@@ -140,7 +148,7 @@ class SuiContractRegistry {
     };
   }
 
-  async buildReadCall(adapterId, method, params) {
+  async buildReadCall(adapterId: string, method: string, params: any) {
     const adapter = this.getAdapter(adapterId);
 
     if (adapter.buildReadCall) {
@@ -151,7 +159,7 @@ class SuiContractRegistry {
     return await this.callAdapter(adapterId, method, params, { readOnly: true });
   }
 
-  async buildWriteCall(adapterId, method, params, signer) {
+  async buildWriteCall(adapterId: string, method: string, params: any, signer: any) {
     const adapter = this.getAdapter(adapterId);
 
     if (!signer) {
@@ -166,7 +174,7 @@ class SuiContractRegistry {
     return await this.callAdapter(adapterId, method, params, { signer, readOnly: false });
   }
 
-  async subscribeEvents(adapterId, params, callback) {
+  async subscribeEvents(adapterId: string, params: any, callback: any) {
     const adapter = this.getAdapter(adapterId);
 
     if (adapter.subscribeEvents) {
@@ -181,17 +189,18 @@ class SuiContractRegistry {
     try {
       return getCurrentConfig();
     } catch (error) {
-      console.error('[ContractRegistry] Failed to get network config:', error);
+      const err = error as Error;
+      console.error('[ContractRegistry] Failed to get network config:', err);
       throw new Error('Failed to get network configuration');
     }
   }
 
-  isNetworkSupported(adapterId, network) {
+  isNetworkSupported(adapterId: string, network: string) {
     const metadata = this.getAdapterMetadata(adapterId);
     return metadata.supportedNetworks.includes(network);
   }
 
-  async healthCheck(adapterId = null) {
+  async healthCheck(adapterId: string | null = null) {
     const results = new Map();
 
     if (adapterId) {
@@ -201,7 +210,8 @@ class SuiContractRegistry {
         const health = adapter.healthCheck ? await adapter.healthCheck() : { status: 'unknown' };
         results.set(adapterId, health);
       } catch (error) {
-        results.set(adapterId, { status: 'error', error: error.message });
+        const err = error as Error;
+        results.set(adapterId, { status: 'error', error: err.message });
       }
     } else {
       // Check all adapters
@@ -210,7 +220,8 @@ class SuiContractRegistry {
           const health = adapter.healthCheck ? await adapter.healthCheck() : { status: 'unknown' };
           results.set(id, health);
         } catch (error) {
-          results.set(id, { status: 'error', error: error.message });
+          const err = error as Error;
+          results.set(id, { status: 'error', error: err.message });
         }
       }
     }
@@ -227,7 +238,8 @@ class SuiContractRegistry {
         try {
           adapter.destroy();
         } catch (error) {
-          console.error(`[ContractRegistry] Error destroying adapter ${id}:`, error);
+          const err = error as Error;
+          console.error(`[ContractRegistry] Error destroying adapter ${id}:`, err);
         }
       }
     }
@@ -244,7 +256,7 @@ export default contractRegistry;
 
 // Convenience functions
 export const initializeRegistry = () => contractRegistry.initialize();
-export const getAdapter = (adapterId) => contractRegistry.getAdapter(adapterId);
+export const getAdapter = (adapterId: string) => contractRegistry.getAdapter(adapterId);
 export const listAdapters = () => contractRegistry.listAdapters();
-export const callContract = (adapterId, method, args, options) =>
+export const callContract = (adapterId: string, method: string, args: any[], options: any) =>
   contractRegistry.callAdapter(adapterId, method, args, options);

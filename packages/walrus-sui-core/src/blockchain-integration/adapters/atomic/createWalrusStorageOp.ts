@@ -13,7 +13,7 @@
  * @param {number} options.epochs - Storage duration in epochs (default: 50)
  * @returns {Object} Operation object with name, execute, and getCleanupHandler
  */
-export function createWalrusStorageOp(adapter, data, options = {}) {
+export function createWalrusStorageOp(adapter: any, data: any, options: Record<string, any> = {}) {
   const epochs = options.epochs || 50;
   const helpers = adapter.operationHelpers;
 

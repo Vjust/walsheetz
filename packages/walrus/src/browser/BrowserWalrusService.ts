@@ -20,10 +20,9 @@ import { readBlobRange as readRange } from "../utils/BlobRangeReader.js";
 import { streamBlobToGrid as streamToGrid } from "../utils/GridStreamer.js";
 import type { SpreadsheetData } from "../utils/DataEncoder.js";
 
-// Extend Window for dev tools
 declare global {
   interface Window {
-    browserWalrusService?: BrowserWalrusService;
+    browserWalrusService?: any;
   }
 }
 
@@ -31,7 +30,7 @@ class BrowserWalrusService {
   configLoader: typeof configLoader;
   rateLimiterEnabled: boolean;
   limiters: Record<string, RateLimiter>;
-  _endpoints: any; // Dynamic endpoints object
+  _endpoints: any;
   _transport: ProxyTransport | null;
   _blobClient: WalrusBlobClient | null;
   _connectionManager: WalrusConnectionManager;
@@ -119,12 +118,12 @@ class BrowserWalrusService {
     try {
       return await this._blobClient!.storeBlob(data, options);
     } catch (error) {
-      // Add to retry queue on failure
+      const err = error as Error;
       this._retryQueue.add({
         fn: async (d) => await this._blobClient!.storeBlob(d as SpreadsheetData, options),
         data
       });
-      throw error;
+      throw err;
     }
   }
 
@@ -134,19 +133,16 @@ class BrowserWalrusService {
    * @param {string|Object} expectedHashOrOptions - Expected hash string (legacy) or options object
    * @returns {Promise<{success: boolean, data: Object, blobId: string, metadata: Object}>}
    */
-  async retrieveBlob(blobId, expectedHashOrOptions = {}) {
+  async retrieveBlob(blobId: string, expectedHashOrOptions: any = {}) {
     await this._ensureInitialized();
 
-    // Handle legacy signature: retrieveBlob(blobId, expectedHash)
-    let options = {};
+    let options: any = {};
     if (typeof expectedHashOrOptions === 'string') {
-      // Legacy: second arg is expectedHash string
       options = {
         expectedHash: expectedHashOrOptions,
         verifyHash: true
       };
     } else if (expectedHashOrOptions) {
-      // New: second arg is options object
       options = expectedHashOrOptions;
     }
 
@@ -369,14 +365,13 @@ class BrowserWalrusService {
    * @param {Error} error - Error to check
    * @returns {boolean} True if CORS error
    */
-  isCorsError(error) {
+  isCorsError(error: Error) {
     const message = error.message || '';
     return (
       message.includes('Failed to fetch') ||
       message.includes('ERR_NAME_NOT_RESOLVED') ||
       message.includes('CORS') ||
       message.includes('NetworkError'));
-
   }
 
   // ============================================================================
@@ -388,7 +383,7 @@ class BrowserWalrusService {
    * @param {string} blobId - Blob ID
    * @returns {Promise<Object>} Blob metadata
    */
-  async getBlobMetadata(blobId) {
+  async getBlobMetadata(blobId: string) {
     // Stub: This functionality requires Sui GraphQL service from walrus-sui-core
     console.warn('@dreamlit/walrus: getBlobMetadata requires @dreamlit/walrus-sui-core package');
     return null;
@@ -417,7 +412,7 @@ class BrowserWalrusService {
    * @param {Object} options - Storage options
    * @returns {Promise<Object>} Storage result
    */
-  async storeDeltaVersion(spreadsheetId, newData, previousBlobId = null, options = {}) {
+  async storeDeltaVersion(spreadsheetId: string, newData: any, previousBlobId: string | null = null, options: Record<string, any> = {}) {
     console.warn('[BrowserWalrusService] storeDeltaVersion is not yet implemented, falling back to storeBlob');
     // TODO: Implement delta compression:
     // 1. Retrieve previous version from previousBlobId
@@ -446,7 +441,7 @@ class BrowserWalrusService {
    * @param {Object} metadata - Metadata
    * @returns {Promise<Object>} Storage result with redundancy info
    */
-  async storeWithRedundancy(data, redundancyLevel = 3, metadata = {}) {
+  async storeWithRedundancy(data: any, redundancyLevel: number = 3, metadata: Record<string, any> = {}) {
     console.warn('[BrowserWalrusService] storeWithRedundancy is not yet implemented, falling back to storeBlob');
     // TODO: Implement redundant storage:
     // 1. Store N copies in parallel using Promise.allSettled
@@ -473,7 +468,7 @@ class BrowserWalrusService {
    * @param {number} additionalEpochs - Additional epochs to purchase
    * @returns {Promise<Object>} Extension result
    */
-  async extendBlobStorage(blobId, additionalEpochs = 10) {
+  async extendBlobStorage(blobId: string, additionalEpochs: number = 10) {
     throw new Error(`[BrowserWalrusService] extendBlobStorage is not yet implemented.
       This feature requires Sui blockchain interaction to purchase additional storage epochs.
       Blob ID: ${blobId}, Requested epochs: ${additionalEpochs}`);
@@ -527,10 +522,11 @@ class BrowserWalrusService {
 
 // Export singleton instance
 export { BrowserWalrusService };
-export const browserWalrusService = new BrowserWalrusService();
+const browserWalrusService = new BrowserWalrusService();
+export { browserWalrusService };
 export default browserWalrusService;
 
 // Global exposure for legacy code
 if (typeof window !== 'undefined') {
-  window.browserWalrusService = browserWalrusService;
+  (window as any).browserWalrusService = browserWalrusService;
 }

@@ -3,6 +3,16 @@ import { grpcService } from './grpc-service.js';
 import { getCurrentConfig } from './config.js';
 
 class EventStreamManager {
+  private isRunning: boolean;
+  private subscribers: Map<string, Set<(data: unknown) => void>>;
+  private eventHistory: unknown[];
+  private maxHistorySize: number;
+  private collaborationState: {
+    activeUsers: Map<string, unknown>;
+    lockedCells: Map<string, unknown>;
+    userPresence: Map<string, unknown>;
+  };
+
   constructor() {
     this.isRunning = false;
     this.subscribers = new Map();
@@ -17,39 +27,39 @@ class EventStreamManager {
     this.setupEventHandlers();
   }
 
-  setupEventHandlers() {
+  setupEventHandlers(): void {
     // Listen to gRPC service events
-    grpcService.on('checkpoint', (data) => {
+    grpcService.on('checkpoint', (data: unknown) => {
       this.handleCheckpoint(data);
     });
 
-    grpcService.on('spreadsheetEvent', (event) => {
+    grpcService.on('spreadsheetEvent', (event: unknown) => {
       this.handleSpreadsheetEvent(event);
     });
 
-    grpcService.on('cellLocked', (data) => {
+    grpcService.on('cellLocked', (data: unknown) => {
       this.handleCellLocked(data);
     });
 
-    grpcService.on('cellUnlocked', (data) => {
+    grpcService.on('cellUnlocked', (data: unknown) => {
       this.handleCellUnlocked(data);
     });
 
-    grpcService.on('versionSaved', (data) => {
+    grpcService.on('versionSaved', (data: unknown) => {
       this.handleVersionSaved(data);
     });
 
-    grpcService.on('streamError', (error) => {
+    grpcService.on('streamError', (error: unknown) => {
       this.handleStreamError(error);
     });
 
-    grpcService.on('streamReconnected', (data) => {
+    grpcService.on('streamReconnected', (data: unknown) => {
       this.handleStreamReconnected(data);
     });
   }
 
   // Start the event stream
-  async start() {
+  async start(): Promise<void> {
     if (this.isRunning) {
       console.log('Event stream manager already running');
       return;
@@ -57,7 +67,7 @@ class EventStreamManager {
 
     try {
       console.log('Starting event stream manager...');
-      
+
       // Start checkpoint subscription with optimized field mask
       grpcService.subscribeToCheckpoints({
         fieldMask: [
@@ -73,69 +83,73 @@ class EventStreamManager {
 
       this.isRunning = true;
       console.log('Event stream manager started successfully');
-      
+
       // Emit started event
       this.emit('started');
     } catch (error) {
-      console.error('Failed to start event stream manager:', error);
-      throw error;
+      const err = error as Error;
+      console.error('Failed to start event stream manager:', err);
+      throw err;
     }
   }
 
   // Stop the event stream
-  stop() {
+  stop(): void {
     if (!this.isRunning) return;
 
     console.log('Stopping event stream manager...');
     this.isRunning = false;
-    
+
     // Clear collaboration state
     this.collaborationState.activeUsers.clear();
     this.collaborationState.lockedCells.clear();
     this.collaborationState.userPresence.clear();
-    
+
     this.emit('stopped');
   }
 
   // Subscribe to specific events
-  subscribe(eventType, callback) {
+  subscribe(eventType: string, callback: (data: unknown) => void): () => void {
     if (!this.subscribers.has(eventType)) {
       this.subscribers.set(eventType, new Set());
     }
-    this.subscribers.get(eventType).add(callback);
+    const callbacks = this.subscribers.get(eventType);
+    callbacks!.add(callback);
 
     // Return unsubscribe function
     return () => {
-      const callbacks = this.subscribers.get(eventType);
-      if (callbacks) {
-        callbacks.delete(callback);
+      const cbs = this.subscribers.get(eventType);
+      if (cbs) {
+        cbs.delete(callback);
       }
     };
   }
 
   // Emit events to subscribers
-  emit(eventType, data) {
+  emit(eventType: string, data?: unknown): void {
     const callbacks = this.subscribers.get(eventType);
     if (callbacks) {
       callbacks.forEach(callback => {
         try {
           callback(data);
         } catch (error) {
-          console.error(`Error in event callback for ${eventType}:`, error);
+          const err = error as Error;
+          console.error(`Error in event callback for ${eventType}:`, err);
         }
       });
     }
   }
 
   // Handle checkpoint data
-  handleCheckpoint(checkpoint) {
-    console.log(`Processing checkpoint ${checkpoint.sequenceNumber}`);
-    
+  handleCheckpoint(checkpoint: unknown): void {
+    const cp = checkpoint as any;
+    console.log(`Processing checkpoint ${cp.sequenceNumber}`);
+
     // Update network status
     this.emit('networkUpdate', {
-      checkpoint: checkpoint.sequenceNumber,
-      timestamp: checkpoint.timestamp,
-      transactionCount: checkpoint.transactionCount
+      checkpoint: cp.sequenceNumber,
+      timestamp: cp.timestamp,
+      transactionCount: cp.transactionCount
     });
 
     // Add to history
@@ -143,19 +157,21 @@ class EventStreamManager {
   }
 
   // Handle spreadsheet-specific events
-  handleSpreadsheetEvent(event) {
-    console.log('Spreadsheet event:', event.eventType);
-    
+  handleSpreadsheetEvent(event: unknown): void {
+    const evt = event as any;
+    console.log('Spreadsheet event:', evt.eventType);
+
     this.addToHistory('spreadsheetEvent', event);
     this.emit('spreadsheetEvent', event);
   }
 
   // Handle cell locking events
-  handleCellLocked(data) {
-    const { cellRef, userId, color } = data;
-    
+  handleCellLocked(data: unknown): void {
+    const d = data as any;
+    const { cellRef, userId, color } = d;
+
     console.log(`Cell ${cellRef} locked by user ${userId}`);
-    
+
     // Update collaboration state
     this.collaborationState.lockedCells.set(cellRef, {
       userId,
@@ -165,9 +181,11 @@ class EventStreamManager {
 
     // Update user presence
     if (this.collaborationState.userPresence.has(userId)) {
-      const user = this.collaborationState.userPresence.get(userId);
-      user.activeCell = cellRef;
-      user.lastActivity = Date.now();
+      const user = this.collaborationState.userPresence.get(userId) as any;
+      if (user) {
+        user.activeCell = cellRef;
+        user.lastActivity = Date.now();
+      }
     }
 
     // Emit to UI
@@ -181,20 +199,23 @@ class EventStreamManager {
     this.addToHistory('cellLocked', data);
   }
 
-  // Handle cell unlocking events  
-  handleCellUnlocked(data) {
-    const { cellRef, userId } = data;
-    
+  // Handle cell unlocking events
+  handleCellUnlocked(data: unknown): void {
+    const d = data as any;
+    const { cellRef, userId } = d;
+
     console.log(`Cell ${cellRef} unlocked by user ${userId}`);
-    
+
     // Update collaboration state
     this.collaborationState.lockedCells.delete(cellRef);
 
     // Update user presence
     if (this.collaborationState.userPresence.has(userId)) {
-      const user = this.collaborationState.userPresence.get(userId);
-      user.activeCell = null;
-      user.lastActivity = Date.now();
+      const user = this.collaborationState.userPresence.get(userId) as any;
+      if (user) {
+        user.activeCell = null;
+        user.lastActivity = Date.now();
+      }
     }
 
     // Emit to UI
@@ -208,11 +229,12 @@ class EventStreamManager {
   }
 
   // Handle version saved events
-  handleVersionSaved(data) {
-    console.log('Version saved:', data.version);
-    
+  handleVersionSaved(data: unknown): void {
+    const d = data as any;
+    console.log('Version saved:', d.version);
+
     this.emit('versionSaved', {
-      ...data,
+      ...(d || {}),
       timestamp: Date.now()
     });
 
@@ -220,29 +242,31 @@ class EventStreamManager {
   }
 
   // Handle stream errors
-  handleStreamError(error) {
-    console.error('Stream error:', error);
-    
+  handleStreamError(error: unknown): void {
+    const err = error as any;
+    console.error('Stream error:', err);
+
     this.emit('error', {
       type: 'streamError',
-      message: error.error,
-      stream: error.streamName,
+      message: err.error,
+      stream: err.streamName,
       timestamp: Date.now()
     });
   }
 
   // Handle stream reconnection
-  handleStreamReconnected(data) {
-    console.log('Stream reconnected:', data.streamName);
-    
+  handleStreamReconnected(data: unknown): void {
+    const d = data as any;
+    console.log('Stream reconnected:', d.streamName);
+
     this.emit('reconnected', {
-      stream: data.streamName,
+      stream: d.streamName,
       timestamp: Date.now()
     });
   }
 
   // Add user to collaboration session
-  addUser(userId, userName, color) {
+  addUser(userId: string, userName: string, color: string): void {
     this.collaborationState.userPresence.set(userId, {
       userId,
       userName,
@@ -270,13 +294,14 @@ class EventStreamManager {
   }
 
   // Remove user from collaboration session
-  removeUser(userId) {
+  removeUser(userId: string): void {
     const user = this.collaborationState.userPresence.get(userId);
     if (!user) return;
 
     // Unlock any cells this user had locked
     for (const [cellRef, lockData] of this.collaborationState.lockedCells) {
-      if (lockData.userId === userId) {
+      const ld = lockData as any;
+      if (ld.userId === userId) {
         this.collaborationState.lockedCells.delete(cellRef);
         this.emit('cellUnlocked', {
           cellRef,
@@ -289,22 +314,24 @@ class EventStreamManager {
     this.collaborationState.userPresence.delete(userId);
     this.collaborationState.activeUsers.delete(userId);
 
+    const u = user as any;
     this.emit('userLeft', {
       userId,
-      userName: user.userName,
+      userName: u.userName,
       timestamp: Date.now()
     });
 
-    console.log(`User ${user.userName} left collaboration`);
+    console.log(`User ${u.userName} left collaboration`);
   }
 
   // Update user activity
-  updateUserActivity(userId, cellRef = null) {
+  updateUserActivity(userId: string, cellRef: string | null = null): void {
     const user = this.collaborationState.userPresence.get(userId);
     if (user) {
-      user.lastActivity = Date.now();
-      user.activeCell = cellRef;
-      
+      const u = user as any;
+      u.lastActivity = Date.now();
+      u.activeCell = cellRef;
+
       this.emit('userActivity', {
         userId,
         cellRef,
@@ -314,29 +341,29 @@ class EventStreamManager {
   }
 
   // Get current collaboration state
-  getCollaborationState() {
+  getCollaborationState(): any {
     return {
       activeUsers: Array.from(this.collaborationState.activeUsers.values()),
       lockedCells: Object.fromEntries(this.collaborationState.lockedCells),
       userPresence: Array.from(this.collaborationState.userPresence.values()),
       isRunning: this.isRunning,
-      lastCheckpoint: grpcService.lastCheckpointCursor
+      lastCheckpoint: (grpcService as any).lastCheckpointCursor
     };
   }
 
   // Get event history
-  getEventHistory(eventType = null, limit = 100) {
+  getEventHistory(eventType: string | null = null, limit: number = 100): unknown[] {
     let events = this.eventHistory;
-    
+
     if (eventType) {
-      events = events.filter(event => event.type === eventType);
+      events = events.filter((event: any) => event.type === eventType);
     }
-    
+
     return events.slice(-limit);
   }
 
   // Add event to history
-  addToHistory(type, data) {
+  addToHistory(type: string, data: unknown): void {
     this.eventHistory.push({
       type,
       data,
@@ -350,31 +377,33 @@ class EventStreamManager {
   }
 
   // Check if user can edit cell
-  canEditCell(cellRef, userId) {
+  canEditCell(cellRef: string, userId: string): boolean {
     const lockData = this.collaborationState.lockedCells.get(cellRef);
-    
+
     // Cell is not locked
     if (!lockData) return true;
-    
+
     // Cell is locked by the same user
-    if (lockData.userId === userId) return true;
-    
+    const ld = lockData as any;
+    if (ld.userId === userId) return true;
+
     // Cell is locked by someone else
     return false;
   }
 
   // Get cell lock status
-  getCellLockStatus(cellRef) {
+  getCellLockStatus(cellRef: string): unknown {
     return this.collaborationState.lockedCells.get(cellRef) || null;
   }
 
   // Clean up inactive users
-  cleanupInactiveUsers(timeoutMs = 300000) { // 5 minutes default
+  cleanupInactiveUsers(timeoutMs: number = 300000): number { // 5 minutes default
     const now = Date.now();
-    const inactiveUsers = [];
+    const inactiveUsers: string[] = [];
 
     for (const [userId, user] of this.collaborationState.userPresence) {
-      if (now - user.lastActivity > timeoutMs) {
+      const u = user as any;
+      if (now - u.lastActivity > timeoutMs) {
         inactiveUsers.push(userId);
       }
     }
@@ -391,10 +420,10 @@ class EventStreamManager {
   }
 
   // Get stream status
-  getStatus() {
+  getStatus(): any {
     return {
       isRunning: this.isRunning,
-      grpcStatus: grpcService.getStatus(),
+      grpcStatus: (grpcService as any).getStatus(),
       collaborationState: this.getCollaborationState(),
       eventHistorySize: this.eventHistory.length
     };

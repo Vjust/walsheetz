@@ -1,28 +1,25 @@
-// Walrus Storage Client
-// Layer 2: Decentralized storage adapter
+// Walrus Storage Client - Browser exports
 
 // Client
-export { WalrusBlobClient } from './client/WalrusBlobClient.js';
-export { WalrusConnectionManager } from './client/WalrusConnectionManager.js';
+export { WalrusBlobClient } from '../client/WalrusBlobClient.js';
+export { WalrusConnectionManager } from '../client/WalrusConnectionManager.js';
 
 // Config
-export { resolveWalrusEndpoints as WalrusConfigResolver } from './config/WalrusConfigResolver.js';
+export { resolveWalrusEndpoints as WalrusConfigResolver } from '../config/WalrusConfigResolver.js';
 
 // Health
-export { HealthMonitor } from './health/HealthMonitor.js';
+export { HealthMonitor } from '../health/HealthMonitor.js';
 
 // Retry
-export { RetryQueue } from './retry/RetryQueue.js';
+export { RetryQueue } from '../retry/RetryQueue.js';
 
 // Transports
-export { Transport } from './transports/Transport.js';
-export { DirectTransport } from './transports/DirectTransport.js';
-export { ProxyTransport } from './transports/ProxyTransport.js';
+export { Transport } from '../transports/Transport.js';
+export { DirectTransport } from '../transports/DirectTransport.js';
+export { ProxyTransport } from '../transports/ProxyTransport.js';
 
-// Browser services (singleton instance and class)
+// Browser services
 export { BrowserWalrusService, browserWalrusService } from './BrowserWalrusService.js';
-export { WalrusSdkClient } from './WalrusSdkClient.js';
-export { WalrusSdkClientLoader } from './WalrusSdkClientLoader.js';
 
-// Default export: singleton instance
+// Default export
 export { browserWalrusService as default } from './BrowserWalrusService.js';

@@ -5,6 +5,9 @@ import { contractRegistry } from './sui-contract-registry.js';
 import { getCurrentConfig } from './config.js';
 
 class SuiTransactionRunner {
+  suiClient: SuiClient | null;
+  initialized: boolean;
+
   constructor() {
     this.suiClient = null;
     this.initialized = false;
@@ -22,8 +25,9 @@ class SuiTransactionRunner {
       this.initialized = true;
       console.log('[TransactionRunner] Initialized for', config.environment);
     } catch (error) {
-      console.error('[TransactionRunner] Initialization failed:', error);
-      throw error;
+      const err = error as Error;
+      console.error('[TransactionRunner] Initialization failed:', err);
+      throw err;
     }
   }
 
@@ -33,7 +37,7 @@ class SuiTransactionRunner {
     }
   }
 
-  async prepareTransaction({ adapterId, method, args, modifiers = {} }) {
+  async prepareTransaction({ adapterId, method, args, modifiers = {} }: { adapterId: string; method: string; args: unknown[]; modifiers?: Record<string, unknown> }) {
     await this.ensureInitialized();
 
     console.log(`[TransactionRunner] Preparing transaction for ${adapterId}.${method}`);
@@ -49,23 +53,26 @@ class SuiTransactionRunner {
       const tx = new Transaction();
 
       // Apply modifiers (gas budget, etc.)
-      if (modifiers.gasBudget) {
-        tx.setGasBudget(modifiers.gasBudget);
+      const gasBudget = modifiers.gasBudget as number | undefined;
+      if (gasBudget) {
+        tx.setGasBudget(gasBudget);
       }
 
-      if (modifiers.sender) {
-        tx.setSender(modifiers.sender);
+      const sender = modifiers.sender as string | undefined;
+      if (sender) {
+        tx.setSender(sender);
       }
 
       // Handle gas coins if specified
-      if (modifiers.gasCoins && modifiers.gasCoins.length > 0) {
-        if (modifiers.gasCoins.length > 1) {
+      const gasCoins = modifiers.gasCoins as unknown[];
+      if (gasCoins && Array.isArray(gasCoins) && gasCoins.length > 0) {
+        if (gasCoins.length > 1) {
           // Merge multiple gas coins
-          const [primaryCoin, ...coinsToMerge] = modifiers.gasCoins;
-          tx.mergeCoins(tx.object(primaryCoin), coinsToMerge.map(coin => tx.object(coin)));
-          tx.setGasPayment([tx.object(primaryCoin)]);
+          const [primaryCoin, ...coinsToMerge] = gasCoins as string[];
+          tx.mergeCoins(tx.object(primaryCoin), (coinsToMerge as string[]).map(coin => tx.object(coin)) as any);
+          tx.setGasPayment([tx.object(primaryCoin)] as any);
         } else {
-          tx.setGasPayment(modifiers.gasCoins.map(coin => tx.object(coin)));
+          tx.setGasPayment((gasCoins as string[]).map(coin => tx.object(coin)) as any);
         }
       }
 
@@ -76,87 +83,91 @@ class SuiTransactionRunner {
       return result;
 
     } catch (error) {
-      console.error(`[TransactionRunner] Failed to prepare transaction:`, error);
-      throw new Error(`Failed to prepare transaction: ${error.message}`);
+      const err = error as Error;
+      console.error(`[TransactionRunner] Failed to prepare transaction:`, err);
+      throw new Error(`Failed to prepare transaction: ${err.message}`);
     }
   }
 
-  async prepareGenericTransaction(tx, adapter, method, args, modifiers) {
+  async prepareGenericTransaction(tx: Transaction, adapter: unknown, method: string, args: unknown[], modifiers: Record<string, unknown>) {
     // Generic transaction preparation for other adapters
-    if (adapter.buildWriteCall) {
-      const result = await adapter.buildWriteCall(method, args, modifiers.signer);
+    const adapterObj = adapter as { buildWriteCall?: (method: string, args: unknown[], signer?: unknown) => Promise<unknown>; getName?: () => string };
+    if (adapterObj.buildWriteCall) {
+      const result = await adapterObj.buildWriteCall(method, args, modifiers.signer);
+      const sender = typeof modifiers.sender === 'string' ? modifiers.sender : null;
       return {
         transaction: tx,
         method,
         args,
         result,
-        estimatedGas: await this.estimateGas(tx, modifiers.sender),
-        description: `Execute ${method} on ${adapter.getName()}`
+        estimatedGas: await this.estimateGas(tx, sender),
+        description: `Execute ${method} on ${adapterObj.getName?.()}`
       };
     }
 
-    throw new Error(`Adapter ${adapter.getName()} does not support transaction building`);
+    throw new Error(`Adapter ${adapterObj.getName?.()} does not support transaction building`);
   }
 
-  async estimateGas(transaction, sender) {
+  async estimateGas(transaction: Transaction, sender: string | null) {
     if (!sender) {
       console.warn('[TransactionRunner] No sender provided for gas estimation');
       return null;
     }
 
     try {
-      const dryRunResult = await this.suiClient.dryRunTransactionBlock({
-        transactionBlock: await transaction.build({ client: this.suiClient }),
-        sender
-      });
+      const dryRunResult = await this.suiClient!.dryRunTransactionBlock({
+        transactionBlock: await transaction.build({ client: this.suiClient! }) as any
+      } as any);
 
-      if (dryRunResult.effects.status.status === 'success') {
+      if (dryRunResult.effects?.status.status === 'success') {
+        const computationCost = BigInt(dryRunResult.effects.gasUsed.computationCost);
+        const storageCost = BigInt(dryRunResult.effects.gasUsed.storageCost);
+        const storageRebate = BigInt(dryRunResult.effects.gasUsed.storageRebate);
         return {
           computationCost: dryRunResult.effects.gasUsed.computationCost,
           storageCost: dryRunResult.effects.gasUsed.storageCost,
           storageRebate: dryRunResult.effects.gasUsed.storageRebate,
-          totalGasUsed: dryRunResult.effects.gasUsed.computationCost +
-                       dryRunResult.effects.gasUsed.storageCost -
-                       dryRunResult.effects.gasUsed.storageRebate
+          totalGasUsed: (computationCost + storageCost - storageRebate).toString()
         };
       } else {
-        console.warn('[TransactionRunner] Dry run failed:', dryRunResult.effects.status);
+        console.warn('[TransactionRunner] Dry run failed:', dryRunResult.effects?.status);
         return null;
       }
     } catch (error) {
-      console.warn('[TransactionRunner] Gas estimation failed:', error.message);
+      const err = error as Error;
+      console.warn('[TransactionRunner] Gas estimation failed:', err.message);
       return null;
     }
   }
 
-  async simulateTransaction(transaction, sender) {
+  async simulateTransaction(transaction: Transaction, sender: string) {
     try {
-      const dryRunResult = await this.suiClient.dryRunTransactionBlock({
-        transactionBlock: await transaction.build({ client: this.suiClient }),
-        sender
-      });
+      const dryRunResult = await this.suiClient!.dryRunTransactionBlock({
+        transactionBlock: await transaction.build({ client: this.suiClient! }) as any
+      } as any);
 
       return {
-        success: dryRunResult.effects.status.status === 'success',
+        success: dryRunResult.effects?.status.status === 'success',
         effects: dryRunResult.effects,
-        error: dryRunResult.effects.status.error || null,
-        gasUsed: dryRunResult.effects.gasUsed,
+        error: dryRunResult.effects?.status.error || null,
+        gasUsed: dryRunResult.effects?.gasUsed,
         objectChanges: dryRunResult.objectChanges || [],
         balanceChanges: dryRunResult.balanceChanges || []
       };
     } catch (error) {
+      const err = error as Error;
       return {
         success: false,
-        error: error.message,
+        error: err.message,
         effects: null,
         gasUsed: null
       };
     }
   }
 
-  async getGasCoins(address, amount = null) {
+  async getGasCoins(address: string, amount: string | null = null) {
     try {
-      const gasCoins = await this.suiClient.getCoins({
+      const gasCoins = await this.suiClient!.getCoins({
         owner: address,
         coinType: '0x2::sui::SUI',
         limit: 10
@@ -167,9 +178,9 @@ class SuiTransactionRunner {
       }
 
       // If amount specified, find sufficient coins
-      if (amount) {
+      if (amount && typeof amount === 'string') {
         let totalAmount = 0n;
-        const sufficientCoins = [];
+        const sufficientCoins: string[] = [];
 
         for (const coin of gasCoins.data) {
           sufficientCoins.push(coin.coinObjectId);
@@ -190,8 +201,9 @@ class SuiTransactionRunner {
       // Return all coins
       return gasCoins.data.map(coin => coin.coinObjectId);
     } catch (error) {
-      console.error('[TransactionRunner] Failed to get gas coins:', error);
-      throw error;
+      const err = error as Error;
+      console.error('[TransactionRunner] Failed to get gas coins:', err);
+      throw err;
     }
   }
 

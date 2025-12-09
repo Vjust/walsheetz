@@ -3,9 +3,15 @@
  * Handles Proof of Availability certificate requests and status tracking for Walrus blobs
  */
 
-import { eventBus, logger, LogComponent } from "../../../../walrus/src/index.js";
+import { eventBus, logger, LogComponent } from "@dreamlit/walrus";
 
 class PoACertificationService {
+  private certificationRequests: Map<string, any>;
+  private pollingIntervals: Map<string, NodeJS.Timeout>;
+  private defaultPollInterval: number;
+  private maxPollAttempts: number;
+  private certificationHistory: Map<string, any[]>;
+
   constructor() {
     this.certificationRequests = new Map(); // blobId -> request status
     this.pollingIntervals = new Map(); // blobId -> interval ID
@@ -25,7 +31,7 @@ class PoACertificationService {
    * @param {Object} options - Certification options
    * @returns {Promise<Object>} Request result
    */
-  async requestCertification(blobId, options = {}) {
+  async requestCertification(blobId: string, options: Record<string, any> = {}) {
     try {
       logger.info(LogComponent.UI, 'poa_request_cert', 'Requesting PoA certification', {
         blobId,
@@ -142,9 +148,10 @@ class PoACertificationService {
       }
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.UI, 'poa_request_error', 'Failed to request certification', {
         blobId,
-        error: error.message
+        error: err.message
       });
 
       // Update request status
@@ -152,21 +159,21 @@ class PoACertificationService {
         this.certificationRequests.set(blobId, {
           ...this.certificationRequests.get(blobId),
           status: 'failed',
-          error: error.message
+          error: err.message
         });
       }
 
       // Emit error event
       eventBus.emit('poa:certification:failed', {
         blobId,
-        error: error.message,
+        error: err.message,
         timestamp: Date.now()
       });
 
       return {
         success: false,
         blobId,
-        error: error.message,
+        error: err.message,
         status: 'failed'
       };
     }
@@ -177,25 +184,27 @@ class PoACertificationService {
    * @param {string} blobId - Blob ID to check
    * @returns {Promise<Object>} Status result
    */
-  async checkCertificationStatus(blobId) {
+  async checkCertificationStatus(blobId: string) {
     try {
       logger.debug(LogComponent.UI, 'poa_check_status', 'Checking certification status', {
         blobId
       });
 
       // Import browser walrus service dynamically
-      const { browserWalrusService } = await import("../../../../walrus/src/browser/BrowserWalrusService.js");
+      const { browserWalrusService } = await import("@dreamlit/walrus");
 
       // Get PoA certificate status
       const result = await browserWalrusService.getPoACertificate(blobId);
 
       if (result.success) {
+        const certResult = result as any;
         const status = {
           blobId,
-          certified: result.poaStatus === 'certified',
-          poaStatus: result.poaStatus,
-          certificate: result.certificate,
-          checkedAt: Date.now()
+          certified: certResult.poaStatus === 'certified',
+          poaStatus: certResult.poaStatus,
+          certificate: certResult.certificate,
+          checkedAt: Date.now(),
+          success: true
         };
 
         // Emit status update event
@@ -203,7 +212,11 @@ class PoACertificationService {
 
         return {
           success: true,
-          ...status
+          blobId,
+          certified: certResult.poaStatus === 'certified',
+          poaStatus: certResult.poaStatus,
+          certificate: certResult.certificate,
+          checkedAt: Date.now()
         };
       } else {
         return {
@@ -215,15 +228,16 @@ class PoACertificationService {
       }
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.UI, 'poa_status_error', 'Failed to check status', {
         blobId,
-        error: error.message
+        error: err.message
       });
 
       return {
         success: false,
         blobId,
-        error: error.message,
+        error: err.message,
         poaStatus: 'unknown'
       };
     }
@@ -233,7 +247,7 @@ class PoACertificationService {
    * Start polling certification status
    * @param {string} blobId - Blob ID to poll
    */
-  startStatusPolling(blobId) {
+  startStatusPolling(blobId: string) {
     // Clear existing polling if any
     this.stopStatusPolling(blobId);
 
@@ -282,10 +296,11 @@ class PoACertificationService {
           });
         }
       } catch (error) {
+        const err = error as Error;
         logger.error(LogComponent.UI, 'poa_polling_error', 'Polling error', {
           blobId,
           attempt: attempts,
-          error: error.message
+          error: err.message
         });
       }
     }, this.defaultPollInterval);
@@ -297,7 +312,7 @@ class PoACertificationService {
    * Stop polling certification status
    * @param {string} blobId - Blob ID to stop polling
    */
-  stopStatusPolling(blobId) {
+  stopStatusPolling(blobId: string) {
     if (this.pollingIntervals.has(blobId)) {
       clearInterval(this.pollingIntervals.get(blobId));
       this.pollingIntervals.delete(blobId);
@@ -313,7 +328,7 @@ class PoACertificationService {
    * @param {string} blobId - Blob ID
    * @returns {Array} History entries
    */
-  getCertificationHistory(blobId) {
+  getCertificationHistory(blobId: string) {
     return this.certificationHistory.get(blobId) || [];
   }
 
@@ -322,7 +337,7 @@ class PoACertificationService {
    * @param {string} blobId - Blob ID
    * @param {Object} entry - History entry
    */
-  addToHistory(blobId, entry) {
+  addToHistory(blobId: string, entry: Record<string, any>) {
     if (!this.certificationHistory.has(blobId)) {
       this.certificationHistory.set(blobId, []);
     }
@@ -354,7 +369,7 @@ class PoACertificationService {
    * @param {string} blobId - Blob ID
    * @returns {Object|null} Request status
    */
-  getRequestStatus(blobId) {
+  getRequestStatus(blobId: string) {
     return this.certificationRequests.get(blobId) || null;
   }
 
@@ -362,7 +377,7 @@ class PoACertificationService {
    * Clear request status
    * @param {string} blobId - Blob ID
    */
-  clearRequestStatus(blobId) {
+  clearRequestStatus(blobId: string) {
     this.certificationRequests.delete(blobId);
     this.stopStatusPolling(blobId);
   }
@@ -382,8 +397,9 @@ class PoACertificationService {
         });
       }
     } catch (error) {
+      const err = error as Error;
       logger.warn(LogComponent.UI, 'poa_history_load_error', 'Failed to load history', {
-        error: error.message
+        error: err.message
       });
     }
   }
@@ -396,8 +412,9 @@ class PoACertificationService {
       const historyArray = Array.from(this.certificationHistory.entries());
       localStorage.setItem('poa_certification_history', JSON.stringify(historyArray));
     } catch (error) {
+      const err = error as Error;
       logger.warn(LogComponent.UI, 'poa_history_save_error', 'Failed to save history', {
-        error: error.message
+        error: err.message
       });
     }
   }
@@ -426,7 +443,7 @@ export const poaCertificationService = new PoACertificationService();
 
 // Global access
 if (typeof window !== 'undefined') {
-  window.poaCertificationService = poaCertificationService;
+  (window as any).poaCertificationService = poaCertificationService;
 
   // Cleanup on page unload
   window.addEventListener('beforeunload', () => {

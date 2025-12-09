@@ -55,23 +55,23 @@ const EMOJI_INDICATORS = {
  * @param {boolean} options.timestamps - Whether to include timestamps (default: true)
  * @returns {object} Logger instance
  */
-export function createLogger(component, options = {}) {
+export function createLogger(component: string, options: Record<string, unknown> = {}) {
   // Determine log level from options or environment variable
   // Support both Node.js and browser environments
   const envLogLevel = (typeof process !== 'undefined' && process.env)
     ? (process.env.LOG_LEVEL?.toUpperCase() || process.env.BRIDGE_LOG_LEVEL?.toUpperCase())
     : undefined;
-  const configuredLevel = options.logLevel?.toUpperCase() || envLogLevel || 'INFO';
-  const logLevel = LOG_LEVELS[configuredLevel] !== undefined ? LOG_LEVELS[configuredLevel] : LOG_LEVELS.INFO;
+  const configuredLevel = (options.logLevel as string | undefined)?.toUpperCase() || envLogLevel || 'INFO';
+  const logLevel = LOG_LEVELS[configuredLevel as keyof typeof LOG_LEVELS] !== undefined ? LOG_LEVELS[configuredLevel as keyof typeof LOG_LEVELS] : LOG_LEVELS.INFO;
 
   // Determine if we should use colors (default: true if stdout is a TTY)
   // In browser environments, default to false since ANSI colors don't work in console
   const useColors = options.useColors !== undefined
-    ? options.useColors
+    ? (options.useColors as boolean)
     : (typeof process !== 'undefined' && process.stdout?.isTTY) ?? false;
 
-  const useEmojis = options.useEmojis !== undefined ? options.useEmojis : true;
-  const timestamps = options.timestamps !== undefined ? options.timestamps : true;
+  const useEmojis = options.useEmojis !== undefined ? (options.useEmojis as boolean) : true;
+  const timestamps = options.timestamps !== undefined ? (options.timestamps as boolean) : true;
 
   // Throttle state
   const throttleState = {
@@ -82,21 +82,21 @@ export function createLogger(component, options = {}) {
   /**
    * Check if a log should be emitted based on level
    */
-  function shouldLog(level) {
+  function shouldLog(level: number): boolean {
     return level >= logLevel;
   }
 
   /**
    * Format timestamp in ISO format
    */
-  function formatTimestamp() {
+  function formatTimestamp(): string {
     return new Date().toISOString();
   }
 
   /**
    * Colorize text if colors are enabled
    */
-  function colorize(text, color) {
+  function colorize(text: string, color: string): string {
     if (!useColors) return text;
     return `${color}${text}${COLORS.RESET}`;
   }
@@ -104,7 +104,7 @@ export function createLogger(component, options = {}) {
   /**
    * Format a log message
    */
-  function formatMessage(level, message, metadata = {}) {
+  function formatMessage(level: number, message: string, metadata: Record<string, unknown> = {}): string {
     const levelName = LOG_LEVEL_NAMES[level] || 'INFO';
     const emoji = useEmojis ? EMOJI_INDICATORS[levelName] : '';
 
@@ -151,7 +151,7 @@ export function createLogger(component, options = {}) {
   /**
    * Core log function
    */
-  function log(level, message, metadata = {}) {
+  function log(level: number, message: string, metadata: Record<string, unknown> = {}): void {
     if (!shouldLog(level)) {
       return;
     }
@@ -169,7 +169,7 @@ export function createLogger(component, options = {}) {
   /**
    * Throttled log function
    */
-  function throttle(key, level, message, metadata = {}, intervalMs = 30000) {
+  function throttle(key: string, level: number, message: string, metadata: Record<string, unknown> = {}, intervalMs: number = 30000): void {
     const now = Date.now();
     const lastTime = throttleState.lastLogTimes.get(key) || 0;
     const count = (throttleState.logCounts.get(key) || 0) + 1;
@@ -250,31 +250,35 @@ export function createLogger(component, options = {}) {
  * Can be used as a drop-in replacement
  */
 export class GraphQLLogger {
+  private logger: ReturnType<typeof createLogger>;
+  private logLevel: string;
+  private logLevels: Record<string, number>;
+
   constructor() {
     this.logger = createLogger('GraphQLEventSubscriber');
     this.logLevel = (typeof process !== 'undefined' && process.env?.BRIDGE_LOG_LEVEL) || 'INFO';
     this.logLevels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
   }
 
-  shouldLog(level) {
+  shouldLog(level: string): boolean {
     const currentLevel = this.logLevels[this.logLevel] || 1;
     const requestedLevel = this.logLevels[level] || 1;
     return requestedLevel >= currentLevel;
   }
 
-  debug(message) {
+  debug(message: string): void {
     this.logger.debug(message);
   }
 
-  info(message) {
+  info(message: string): void {
     this.logger.info(message);
   }
 
-  warn(message) {
+  warn(message: string): void {
     this.logger.warn(message);
   }
 
-  error(message) {
+  error(message: string): void {
     this.logger.error(message);
   }
 }

@@ -6,6 +6,14 @@
 import { eventBus, logger, LogComponent } from "@dreamlit/walrus";
 
 class TransactionTracker {
+  private transactions: Map<string, any>;
+  private objectTransactions: Map<string, Set<string>>;
+  private addressTransactions: Map<string, Set<string>>;
+  private pendingTransactions: Set<string>;
+  private storageKey: string;
+  private storageVersion: string;
+  private txTypes: Record<string, string>;
+
   constructor() {
     // Map of transactionDigest -> transaction data
     this.transactions = new Map();
@@ -135,7 +143,7 @@ class TransactionTracker {
    * @param {Object} txData - Transaction data
    * @returns {Object} Tracking result
    */
-  trackTransaction(txData) {
+  trackTransaction(txData: any) {
     try {
       const {
         transactionDigest = null,
@@ -188,7 +196,7 @@ class TransactionTracker {
         if (!this.objectTransactions.has(objectId)) {
           this.objectTransactions.set(objectId, new Set());
         }
-        this.objectTransactions.get(objectId).add(txId);
+        this.objectTransactions.get(objectId)!.add(txId);
       }
 
       // Index by address
@@ -196,7 +204,7 @@ class TransactionTracker {
         if (!this.addressTransactions.has(address)) {
           this.addressTransactions.set(address, new Set());
         }
-        this.addressTransactions.get(address).add(txId);
+        this.addressTransactions.get(address)!.add(txId);
       }
 
       // Save to storage
@@ -223,14 +231,15 @@ class TransactionTracker {
       };
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.BLOCKCHAIN, 'tx_track_error', 'Failed to track transaction', {
-        error: error.message,
+        error: err.message,
         txData
       });
 
       return {
         success: false,
-        error: error.message
+        error: err.message
       };
     }
   }
@@ -241,7 +250,7 @@ class TransactionTracker {
    * @param {Object} updates - Updates to apply
    * @returns {boolean} Success status
    */
-  updateTransaction(txId, updates) {
+  updateTransaction(txId: string, updates: any) {
     try {
       const transaction = this.transactions.get(txId);
       if (!transaction) {
@@ -279,9 +288,10 @@ class TransactionTracker {
       return true;
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.BLOCKCHAIN, 'tx_update_error', 'Failed to update transaction', {
         txId,
-        error: error.message
+        error: err.message
       });
       return false;
     }
@@ -292,7 +302,7 @@ class TransactionTracker {
    * @param {string} txId - Transaction ID or digest
    * @returns {Object|null} Transaction data or null
    */
-  getTransaction(txId) {
+  getTransaction(txId: string) {
     return this.transactions.get(txId) || null;
   }
 
@@ -301,14 +311,14 @@ class TransactionTracker {
    * @param {string} objectId - Sui object ID
    * @returns {Array} Array of transactions
    */
-  getObjectTransactions(objectId) {
+  getObjectTransactions(objectId: string) {
     const txIds = this.objectTransactions.get(objectId);
     if (!txIds) return [];
 
     return Array.from(txIds).
     map((txId) => this.transactions.get(txId)).
     filter((tx) => tx !== undefined).
-    sort((a, b) => b.timestamp - a.timestamp);
+    sort((a, b) => (b.timestamp as number) - (a.timestamp as number));
   }
 
   /**
@@ -316,14 +326,14 @@ class TransactionTracker {
    * @param {string} address - Wallet address
    * @returns {Array} Array of transactions
    */
-  getAddressTransactions(address) {
+  getAddressTransactions(address: string) {
     const txIds = this.addressTransactions.get(address);
     if (!txIds) return [];
 
     return Array.from(txIds).
     map((txId) => this.transactions.get(txId)).
     filter((tx) => tx !== undefined).
-    sort((a, b) => b.timestamp - a.timestamp);
+    sort((a, b) => (b.timestamp as number) - (a.timestamp as number));
   }
 
   /**
@@ -332,10 +342,10 @@ class TransactionTracker {
    * @param {number} limit - Max number to return
    * @returns {Array} Array of transactions
    */
-  getTransactionsByType(type, limit = 50) {
+  getTransactionsByType(type: string, limit: number = 50) {
     return Array.from(this.transactions.values()).
     filter((tx) => tx.type === type).
-    sort((a, b) => b.timestamp - a.timestamp).
+    sort((a, b) => (b.timestamp as number) - (a.timestamp as number)).
     slice(0, limit);
   }
 
@@ -345,10 +355,10 @@ class TransactionTracker {
    * @param {number} limit - Max number to return
    * @returns {Array} Array of transactions
    */
-  getTransactionsByStatus(status, limit = 50) {
+  getTransactionsByStatus(status: string, limit: number = 50) {
     return Array.from(this.transactions.values()).
     filter((tx) => tx.status === status).
-    sort((a, b) => b.timestamp - a.timestamp).
+    sort((a, b) => (b.timestamp as number) - (a.timestamp as number)).
     slice(0, limit);
   }
 
@@ -357,9 +367,9 @@ class TransactionTracker {
    * @param {number} limit - Max number to return
    * @returns {Array} Array of transactions
    */
-  getRecentTransactions(limit = 50) {
+  getRecentTransactions(limit: number = 50) {
     return Array.from(this.transactions.values()).
-    sort((a, b) => b.timestamp - a.timestamp).
+    sort((a, b) => (b.timestamp as number) - (a.timestamp as number)).
     slice(0, limit);
   }
 
@@ -371,7 +381,7 @@ class TransactionTracker {
     return Array.from(this.pendingTransactions).
     map((txId) => this.transactions.get(txId)).
     filter((tx) => tx !== undefined).
-    sort((a, b) => b.timestamp - a.timestamp);
+    sort((a, b) => (b.timestamp as number) - (a.timestamp as number));
   }
 
   /**
@@ -381,8 +391,8 @@ class TransactionTracker {
   getStatistics() {
     const transactions = Array.from(this.transactions.values());
 
-    const byType = {};
-    const byStatus = {};
+    const byType: Record<string, number> = {};
+    const byStatus: Record<string, number> = {};
 
     for (const tx of transactions) {
       // Count by type
@@ -413,7 +423,7 @@ class TransactionTracker {
    * @param {string} txId - Transaction ID
    * @returns {boolean} Success status
    */
-  deleteTransaction(txId) {
+  deleteTransaction(txId: string) {
     try {
       const transaction = this.transactions.get(txId);
       if (!transaction) return false;
@@ -456,9 +466,10 @@ class TransactionTracker {
       return true;
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.BLOCKCHAIN, 'tx_delete_error', 'Failed to delete transaction', {
         txId,
-        error: error.message
+        error: err.message
       });
       return false;
     }
@@ -469,7 +480,7 @@ class TransactionTracker {
    * @param {number} maxAgeMs - Max age in milliseconds
    * @returns {number} Number of transactions deleted
    */
-  clearOldTransactions(maxAgeMs = 30 * 24 * 60 * 60 * 1000) {// Default 30 days
+  clearOldTransactions(maxAgeMs: number = 30 * 24 * 60 * 60 * 1000) {// Default 30 days
     try {
       const cutoff = Date.now() - maxAgeMs;
       const toDelete = [];
@@ -492,8 +503,9 @@ class TransactionTracker {
       return toDelete.length;
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.BLOCKCHAIN, 'tx_clear_error', 'Failed to clear old transactions', {
-        error: error.message
+        error: err.message
       });
       return 0;
     }
@@ -544,14 +556,14 @@ class TransactionTracker {
       // Load object index
       if (data.objectTransactions) {
         for (const [objectId, txIds] of Object.entries(data.objectTransactions)) {
-          this.objectTransactions.set(objectId, new Set(txIds));
+          this.objectTransactions.set(objectId, new Set((txIds as any) || []));
         }
       }
 
       // Load address index
       if (data.addressTransactions) {
         for (const [address, txIds] of Object.entries(data.addressTransactions)) {
-          this.addressTransactions.set(address, new Set(txIds));
+          this.addressTransactions.set(address, new Set((txIds as any) || []));
         }
       }
 
@@ -566,8 +578,9 @@ class TransactionTracker {
       });
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.BLOCKCHAIN, 'tx_load_error', 'Failed to load transaction history', {
-        error: error.message
+        error: err.message
       });
     }
   }
@@ -605,8 +618,9 @@ class TransactionTracker {
       logger.debug(LogComponent.BLOCKCHAIN, 'tx_saved', 'Transaction history saved (RAM-only)');
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.BLOCKCHAIN, 'tx_save_error', 'Failed to save transaction history', {
-        error: error.message
+        error: err.message
       });
     }
   }
@@ -629,28 +643,29 @@ class TransactionTracker {
    * @param {boolean} merge - Whether to merge or replace
    * @returns {boolean} Success status
    */
-  importData(data, merge = false) {
+  importData(data: any, merge = false) {
     try {
       if (!merge) {
         this.clearAll();
       }
 
-      if (data.transactions) {
+      if (data?.transactions) {
         for (const [txId, tx] of Object.entries(data.transactions)) {
-          this.trackTransaction(tx);
+          this.trackTransaction(tx as any);
         }
       }
 
       logger.info(LogComponent.BLOCKCHAIN, 'tx_imported', 'Transaction history imported', {
-        count: Object.keys(data.transactions || {}).length,
+        count: Object.keys(data?.transactions || {}).length,
         merge
       });
 
       return true;
 
     } catch (error) {
+      const err = error as Error;
       logger.error(LogComponent.BLOCKCHAIN, 'tx_import_error', 'Failed to import transaction history', {
-        error: error.message
+        error: err.message
       });
       return false;
     }
@@ -670,7 +685,7 @@ export const transactionTracker = new TransactionTracker();
 
 // Global access
 if (typeof window !== 'undefined') {
-  window.transactionTracker = transactionTracker;
+  (window as any).transactionTracker = transactionTracker;
 
   // Save on page unload
   window.addEventListener('beforeunload', () => {

@@ -1,14 +1,23 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "rootDir": "./src",
     "outDir": "./dist",
+    "module": "ESNext",
+    "target": "ES2022",
     "lib": ["ES2022", "DOM"],
+    "downlevelIteration": true,
     "noImplicitAny": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noImplicitReturns": false,
-    "strictPropertyInitialization": false
+    "strictPropertyInitialization": false,
+    "baseUrl": ".",
+    "paths": {
+      "@/sdk/*": ["./src/*"],
+      "@/sdk/blockchain-integration/*": ["./src/*"],
+      "@/sdk/shared/*": ["./src/*"],
+      "@/sdk/transaction-management/*": ["./src/*"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/__tests__/**"]

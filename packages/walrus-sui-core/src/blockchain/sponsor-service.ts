@@ -7,6 +7,13 @@ import { gasEstimator, estimateTransactionCost, calculateGasBudget } from './gas
 import { walletManager } from './wallet-manager.js';
 
 class SponsorService {
+  config: any;
+  depositConfig: any;
+  sponsorAddress: string | null;
+  gasCoins: Map<string, any>;
+  pendingTransactions: Map<string, any>;
+  demoEventsEnabled: boolean;
+
   constructor() {
     this.config = getCurrentConfig();
     this.depositConfig = this.config.deposit;
@@ -22,7 +29,7 @@ class SponsorService {
   }
 
   // Initialize sponsor service with a dedicated sponsor wallet
-  async initialize(sponsorPrivateKey = null) {
+  async initialize(sponsorPrivateKey: string | null = null): Promise<any> {
     try {
       // For now, we'll use the connected wallet as both user and sponsor
       // In production, you'd want a dedicated sponsor wallet
@@ -35,13 +42,14 @@ class SponsorService {
         return { success: false, error: 'No wallet connected' };
       }
     } catch (error) {
-      console.error('Failed to initialize sponsor service:', error);
-      return { success: false, error: error.message };
+      const err = error as Error;
+      console.error('Failed to initialize sponsor service:', err);
+      return { success: false, error: err.message };
     }
   }
 
   // Create a sponsored transaction
-  async createSponsoredTransaction(userAddress, transactionBuilder) {
+  async createSponsoredTransaction(userAddress: string, transactionBuilder: any): Promise<any> {
     try {
       if (!this.sponsorAddress) {
         throw new Error('Sponsor service not initialized');
@@ -98,16 +106,17 @@ class SponsorService {
         gasCoins: gasCoins.map(coin => coin.objectId)
       };
     } catch (error) {
-      console.error('Failed to create sponsored transaction:', error);
+      const err = error as Error;
+      console.error('Failed to create sponsored transaction:', err);
       return {
         success: false,
-        error: error.message
+        error: err.message
       };
     }
   }
 
   // Execute a sponsored transaction
-  async executeSponsoredTransaction(userAddress, transactionBuilder, options = {}) {
+  async executeSponsoredTransaction(userAddress: string, transactionBuilder: any, options: Record<string, any> = {}): Promise<any> {
     try {
       // Create sponsored transaction
       const sponsoredTx = await this.createSponsoredTransaction(userAddress, transactionBuilder);
@@ -141,35 +150,36 @@ class SponsorService {
         gasCost: gasEstimate.totalCost
       };
     } catch (error) {
-      console.error('Sponsored transaction execution failed:', error);
-      throw error;
+      const err = error as Error;
+      console.error('Sponsored transaction execution failed:', err);
+      throw err;
     }
   }
 
   // Get available gas coins for sponsorship
-  async getGasCoins(requiredAmount) {
+  async getGasCoins(requiredAmount: number): Promise<any[]> {
     try {
       if (!this.sponsorAddress) {
         throw new Error('Sponsor address not set');
       }
 
-      // Get SUI coins owned by sponsor
-      const coins = await suiService.client.getCoins({
-        owner: this.sponsorAddress,
-        coinType: '0x2::sui::SUI'
+      // Get SUI coins owned by sponsor via owned objects
+      const ownedObjects = await suiService.getOwnedObjects(this.sponsorAddress, {
+        filter: { StructType: '0x2::coin::Coin<0x2::sui::SUI>' }
       });
+      const coins = ownedObjects;
 
       if (!coins.data || coins.data.length === 0) {
         throw new Error('No SUI coins available for gas sponsorship');
       }
 
       // Sort coins by balance (largest first)
-      const sortedCoins = coins.data.sort((a, b) => 
+      const sortedCoins = coins.data.sort((a: any, b: any) =>
         parseInt(b.balance) - parseInt(a.balance)
       );
 
       // Select coins that can cover the gas budget
-      const selectedCoins = [];
+      const selectedCoins: any[] = [];
       let totalBalance = 0;
 
       for (const coin of sortedCoins) {
@@ -179,9 +189,9 @@ class SponsorService {
           digest: coin.digest,
           balance: parseInt(coin.balance)
         });
-        
+
         totalBalance += parseInt(coin.balance);
-        
+
         // Stop when we have enough
         if (totalBalance >= requiredAmount) {
           break;
@@ -192,19 +202,20 @@ class SponsorService {
         throw new Error(`Insufficient SUI balance for gas sponsorship. Required: ${requiredAmount}, Available: ${totalBalance}`);
       }
 
-      return selectedCoins.map(coin => ({
+      return selectedCoins.map((coin: any) => ({
         objectId: coin.objectId,
         version: coin.version,
         digest: coin.digest
       }));
     } catch (error) {
-      console.error('Failed to get gas coins:', error);
-      throw error;
+      const err = error as Error;
+      console.error('Failed to get gas coins:', err);
+      throw err;
     }
   }
 
   // Create sponsored transaction for storage operations
-  async sponsorStorageTransaction(userAddress, data) {
+  async sponsorStorageTransaction(userAddress: string, data: any): Promise<any> {
     return this.executeSponsoredTransaction(userAddress, (tx) => {
       // Create storage transaction
       const storageData = {
@@ -233,7 +244,7 @@ class SponsorService {
   }
 
   // Create sponsored transaction for simple operations
-  async sponsorSimpleTransaction(userAddress, operationType, operationData) {
+  async sponsorSimpleTransaction(userAddress: string, operationType: string, operationData: any): Promise<any> {
     return this.executeSponsoredTransaction(userAddress, (tx) => {
       // Emit a simple event for tracking
       if (this.demoEventsEnabled) {
@@ -254,7 +265,7 @@ class SponsorService {
   }
 
   // Get sponsor service status
-  getStatus() {
+  getStatus(): any {
     return {
       initialized: !!this.sponsorAddress,
       sponsorAddress: this.sponsorAddress,
@@ -264,7 +275,7 @@ class SponsorService {
   }
 
   // Estimate cost for a sponsored operation
-  async estimateOperationCost(operationType, data = {}) {
+  async estimateOperationCost(operationType: string, data: Record<string, any> = {}): Promise<any> {
     try {
       // Create a dummy transaction to estimate costs
       const dummyTx = new Transaction();
@@ -275,10 +286,10 @@ class SponsorService {
             dummyTx.moveCall({
               target: '0x2::event::emit',
               arguments: [
-                dummyTx.pure({
+                dummyTx.pure.string(JSON.stringify({
                   type: 'WalSheetzStorageEvent',
                   data: data
-                })
+                }))
               ]
             });
           }
@@ -289,11 +300,11 @@ class SponsorService {
             dummyTx.moveCall({
               target: '0x2::event::emit',
               arguments: [
-                dummyTx.pure({
+                dummyTx.pure.string(JSON.stringify({
                   type: 'WalSheetzOperationEvent',
                   operation: data.operation || 'edit',
                   data: data
-                })
+                }))
               ]
             });
           }
@@ -308,16 +319,17 @@ class SponsorService {
 
       return await estimateTransactionCost(dummyTx);
     } catch (error) {
-      console.error('Cost estimation failed:', error);
+      const err = error as Error;
+      console.error('Cost estimation failed:', err);
       return {
         success: false,
-        error: error.message
+        error: err.message
       };
     }
   }
 
   // Batch multiple operations for gas efficiency
-  async sponsorBatchTransaction(userAddress, operations) {
+  async sponsorBatchTransaction(userAddress: string, operations: any[]): Promise<any> {
     return this.executeSponsoredTransaction(userAddress, (tx) => {
       // Add all operations to a single transaction
       for (const operation of operations) {
@@ -335,7 +347,7 @@ class SponsorService {
               });
             }
             break;
-          
+
           case 'edit':
             if (this.demoEventsEnabled) {
               tx.moveCall({
@@ -355,7 +367,7 @@ class SponsorService {
   }
 
   // Monitor sponsor wallet balance
-  async checkSponsorBalance() {
+  async checkSponsorBalance(): Promise<any> {
     try {
       if (!this.sponsorAddress) {
         return { success: false, error: 'Sponsor not initialized' };
@@ -377,16 +389,17 @@ class SponsorService {
         coinCount: balance.coinObjectCount
       };
     } catch (error) {
-      console.error('Failed to check sponsor balance:', error);
+      const err = error as Error;
+      console.error('Failed to check sponsor balance:', err);
       return {
         success: false,
-        error: error.message
+        error: err.message
       };
     }
   }
 
   // Clean up completed transactions
-  cleanupCompletedTransactions() {
+  cleanupCompletedTransactions(): void {
     const now = Date.now();
     const maxAge = 5 * 60 * 1000; // 5 minutes
 

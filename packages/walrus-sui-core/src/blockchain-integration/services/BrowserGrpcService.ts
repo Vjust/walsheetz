@@ -3,6 +3,20 @@ import { configLoader } from "@dreamlit/walrus";
 import { SuiClient } from '@mysten/sui/client';
 
 class BrowserGrpcService {
+  private client: SuiClient | null;
+  private config: any | null;
+  private configLoader: typeof configLoader;
+  private isConnected: boolean;
+  private eventListeners: Map<string, any[]>;
+  private subscriptions: Map<any, any>;
+  private eventCallbacks: Map<string, any>;
+  private checkpointInterval: NodeJS.Timeout | null;
+  private eventSubscriptionActive: boolean;
+  private eventUnsubscribers: any[];
+  private eventPollingInterval: NodeJS.Timeout | null;
+  private _subscribeToCheckpointStream: ((callback: any) => () => void) | null;
+  private _subscribeToBlockchainEvents: ((filter: any, callback: any) => () => void) | null;
+
   constructor() {
     console.log('[BrowserGrpcService] Initializing...');
 
@@ -21,38 +35,39 @@ class BrowserGrpcService {
   }
 
   // Event handling (same interface as Node.js version)
-  on(event, callback) {
+  on(event: string, callback: (data: unknown) => void): void {
     if (!this.eventListeners.has(event)) {
       this.eventListeners.set(event, []);
     }
-    this.eventListeners.get(event).push(callback);
+    this.eventListeners.get(event)?.push(callback);
   }
 
-  off(event, callback) {
+  off(event: string, callback: (data: unknown) => void): void {
     if (this.eventListeners.has(event)) {
       const callbacks = this.eventListeners.get(event);
-      const index = callbacks.indexOf(callback);
+      const index = callbacks?.indexOf(callback) ?? -1;
       if (index > -1) {
-        callbacks.splice(index, 1);
+        callbacks?.splice(index, 1);
       }
     }
   }
 
-  emit(event, data) {
+  emit(event: string, data: unknown): void {
     if (this.eventListeners.has(event)) {
       const listeners = this.eventListeners.get(event);
-      listeners.forEach((callback) => {
+      listeners?.forEach((callback) => {
         try {
           callback(data);
         } catch (error) {
-          console.error('[BrowserGrpcService] ❌ Error in event listener:', error);
+          const err = error as Error;
+          console.error('[BrowserGrpcService] Error in event listener:', err);
         }
       });
     }
   }
 
   // Initialize connection to Sui RPC
-  async setupClients() {
+  async setupClients(): Promise<boolean> {
     console.log('[BrowserGrpcService] 🔄 Connecting to Sui JSON-RPC...');
 
     try {
@@ -76,15 +91,16 @@ class BrowserGrpcService {
 
       return true;
     } catch (error) {
-      console.error('[BrowserGrpcService] ❌ Failed to connect to Sui RPC:', error);
+      const err = error as Error;
+      console.error('[BrowserGrpcService] Failed to connect to Sui RPC:', err);
       this.isConnected = false;
-      this.emit('disconnected', { error: error.message });
+      this.emit('disconnected', { error: err.message });
       return false;
     }
   }
 
   // Subscribe to checkpoints (using polling as fallback for WebSocket)
-  subscribeToCheckpoints(options = {}) {
+  subscribeToCheckpoints(options: any = {}): { active: boolean; cancel: () => void; unsubscribeCheckpoints?: () => void } {
     if (!this.isConnected) {
       console.error('[BrowserGrpcService] ❌ Cannot subscribe - service not connected');
       throw new Error('Service not connected');
@@ -93,7 +109,7 @@ class BrowserGrpcService {
     console.log('[BrowserGrpcService] Starting checkpoint subscription...');
 
     // Create a subscription object
-    const subscription = {
+    const subscription: { active: boolean; cancel: () => void; unsubscribeCheckpoints?: () => void } = {
       active: true,
       cancel: () => {
         subscription.active = false;
@@ -104,7 +120,8 @@ class BrowserGrpcService {
             subscription.unsubscribeCheckpoints();
             console.log('[BrowserGrpcService] Checkpoint subscription cancelled');
           } catch (error) {
-            console.warn('[BrowserGrpcService] Error cancelling checkpoint subscription:', error);
+            const err = error as Error;
+            console.warn('[BrowserGrpcService] Error cancelling checkpoint subscription:', err);
           }
         }
 
@@ -119,9 +136,9 @@ class BrowserGrpcService {
 
     // Subscribe to real-time checkpoints instead of polling
     try {
-      if (this.subscribeToCheckpointStream) {
+      if (this._subscribeToCheckpointStream) {
         // Use real-time checkpoint subscription
-        const checkpointUnsubscribe = this.subscribeToCheckpointStream((checkpoint) => {
+        const checkpointUnsubscribe = this._subscribeToCheckpointStream((checkpoint) => {
           if (!subscription.active) return;
 
           this.emit('checkpoint', {
@@ -145,7 +162,7 @@ class BrowserGrpcService {
 
           try {
             // Get latest checkpoint
-            const latestCheckpoint = await this.client.getLatestCheckpointSequenceNumber();
+            const latestCheckpoint = await this.client!.getLatestCheckpointSequenceNumber();
 
             this.emit('checkpoint', {
               sequenceNumber: latestCheckpoint,
@@ -153,19 +170,21 @@ class BrowserGrpcService {
               fallback: true
             });
           } catch (error) {
-            console.warn('[BrowserGrpcService] Checkpoint polling error:', error);
+            const err = error as Error;
+            console.warn('[BrowserGrpcService] Checkpoint polling error:', err);
           }
         }, 30000); // Reduced from 5s to 30s polling interval
       }
     } catch (error) {
-      console.warn('[BrowserGrpcService] Failed to setup checkpoint subscription:', error);
+      const err = error as Error;
+      console.warn('[BrowserGrpcService] Failed to setup checkpoint subscription:', err);
     }
 
     return subscription;
   }
 
   // Execute transaction (not used directly in browser - wallet handles this)
-  async executeTransaction(transactionBytes, signatures) {
+  async executeTransaction(transactionBytes: unknown, signatures: unknown): Promise<never> {
     console.log('[BrowserGrpcService] Transaction execution delegated to wallet...');
 
     // In browser context, transactions are executed through wallet
@@ -174,25 +193,25 @@ class BrowserGrpcService {
   }
 
   // Get balance for an address
-  async getBalance(owner, coinType = '0x2::sui::SUI') {
+  async getBalance(owner: string, coinType: string = '0x2::sui::SUI'): Promise<{ totalBalance: string; coinObjectCount: number; lockedBalance: string; owner: string }> {
     try {
       console.log(`[BrowserGrpcService] Getting balance for ${owner.slice(0, 8)}...`);
 
-      const balance = await this.client.getBalance({
+      const balance = await this.client!.getBalance({
         owner: owner,
         coinType: coinType
       });
 
       console.log('[BrowserGrpcService] Balance retrieved:', {
         owner: owner.slice(0, 8) + '...',
-        balance: balance.totalBalance,
+        balance: String(balance.totalBalance),
         coinCount: balance.coinObjectCount
       });
 
       return {
-        totalBalance: balance.totalBalance,
+        totalBalance: String(balance.totalBalance),
         coinObjectCount: balance.coinObjectCount,
-        lockedBalance: balance.lockedBalance || '0',
+        lockedBalance: typeof balance.lockedBalance === 'string' ? balance.lockedBalance : String(balance.lockedBalance || '0'),
         owner: owner
       };
     } catch (error) {
@@ -202,11 +221,11 @@ class BrowserGrpcService {
   }
 
   // Get owned objects for an address
-  async getOwnedObjects(owner, options = {}) {
+  async getOwnedObjects(owner: string, options: any = {}): Promise<{ objects: Array<{ object_id: string | undefined; type: string | undefined; owner: string | undefined; version: string | undefined }>; has_next_page: boolean; next_cursor: string | null | undefined }> {
     try {
       console.log(`[BrowserGrpcService] Getting owned objects for ${owner.slice(0, 8)}...`);
 
-      const result = await this.client.getOwnedObjects({
+      const result = await this.client!.getOwnedObjects({
         owner: owner,
         filter: options.filter,
         options: {
@@ -227,8 +246,8 @@ class BrowserGrpcService {
       return {
         objects: result.data.map((obj) => ({
           object_id: obj.data?.objectId,
-          type: obj.data?.type,
-          owner: obj.data?.owner?.AddressOwner || obj.data?.owner?.ObjectOwner,
+          type: obj.data?.type || undefined,
+          owner: String((obj.data?.owner as any)?.AddressOwner || (obj.data?.owner as any)?.ObjectOwner || ''),
           version: obj.data?.version
         })),
         has_next_page: result.hasNextPage,
@@ -241,11 +260,11 @@ class BrowserGrpcService {
   }
 
   // Get transaction details
-  async getTransaction(digest, options = {}) {
+  async getTransaction(digest: string, options: any = {}): Promise<{ digest: string; effects: any; events: any[]; object_changes: any[]; balance_changes: any[]; input: any }> {
     try {
       console.log(`[BrowserGrpcService] Getting transaction ${digest}...`);
 
-      const transaction = await this.client.getTransactionBlock({
+      const transaction = await this.client!.getTransactionBlock({
         digest,
         options: {
           showEffects: true,
@@ -279,26 +298,26 @@ class BrowserGrpcService {
   }
 
   // Estimate gas for a transaction
-  async estimateGas(transactionBlock) {
+  async estimateGas(transactionBlock: unknown): Promise<{ computationCost: number; storageCost: number; storageRebate: number; totalGasUsed: number; gasPrice: number; estimatedCostSUI: string }> {
     try {
       console.log('[BrowserGrpcService] Estimating gas for transaction...');
 
       // Build the transaction if it's not already built
-      let txBytes;
-      if (typeof transactionBlock.build === 'function') {
-        txBytes = await transactionBlock.build({ client: this.client });
+      let txBytes: unknown;
+      if (typeof (transactionBlock as any).build === 'function') {
+        txBytes = await (transactionBlock as any).build({ client: this.client! });
       } else {
         txBytes = transactionBlock;
       }
 
-      const dryRunResult = await this.client.dryRunTransactionBlock({
-        transactionBlock: txBytes
+      const dryRunResult = await this.client!.dryRunTransactionBlock({
+        transactionBlock: txBytes as string | Uint8Array
       });
 
       const gasUsed = dryRunResult.effects.gasUsed;
-      const computationCost = parseInt(gasUsed.computationCost || '0');
-      const storageCost = parseInt(gasUsed.storageCost || '0');
-      const storageRebate = parseInt(gasUsed.storageRebate || '0');
+      const computationCost = parseInt((gasUsed.computationCost as string) || '0');
+      const storageCost = parseInt((gasUsed.storageCost as string) || '0');
+      const storageRebate = parseInt((gasUsed.storageRebate as string) || '0');
 
       const totalGasUsed = computationCost + storageCost - storageRebate;
 
@@ -318,7 +337,8 @@ class BrowserGrpcService {
         estimatedCostSUI: (totalGasUsed / 1_000_000_000).toFixed(6)
       };
     } catch (error) {
-      console.error('[BrowserGrpcService] Gas estimation failed:', error);
+      const err = error as Error;
+      console.error('[BrowserGrpcService] Gas estimation failed:', err);
       // Return conservative estimate
       const defaultGas = 5_000_000;
       return {
@@ -333,11 +353,11 @@ class BrowserGrpcService {
   }
 
   // Query events
-  async queryEvents(options = {}) {
+  async queryEvents(options: any = {}): Promise<{ data: any[]; nextCursor: any; hasNextPage: boolean }> {
     try {
       console.log('[BrowserGrpcService] Querying events...', options);
 
-      const queryParams = {
+      const queryParams: any = {
         query: options.query || {},
         limit: options.limit || 50,
         order: options.order || 'descending'
@@ -347,7 +367,7 @@ class BrowserGrpcService {
         queryParams.cursor = options.cursor;
       }
 
-      const events = await this.client.queryEvents(queryParams);
+      const events = await this.client!.queryEvents(queryParams);
 
       console.log('[BrowserGrpcService] Events retrieved:', {
         eventCount: events.data.length,
@@ -360,7 +380,8 @@ class BrowserGrpcService {
         hasNextPage: events.hasNextPage
       };
     } catch (error) {
-      console.error('[BrowserGrpcService] Failed to query events:', error);
+      const err = error as Error;
+      console.error('[BrowserGrpcService] Failed to query events:', err);
       return {
         data: [],
         nextCursor: null,
@@ -370,7 +391,7 @@ class BrowserGrpcService {
   }
 
   // Subscribe to events (store callback for manual triggering)
-  async subscribeToEvents(eventType, callback) {
+  async subscribeToEvents(eventType: string, callback: (event: unknown) => void): Promise<boolean> {
     console.log(`[BrowserGrpcService] Setting up subscription for ${eventType}`);
 
     // Store callback for manual triggering
@@ -385,7 +406,7 @@ class BrowserGrpcService {
   }
 
   // Start real-time event subscriptions (replaces polling)
-  startEventSubscriptions() {
+  startEventSubscriptions(): void {
     if (this.eventSubscriptionActive) {
       return; // Already subscribed
     }
@@ -403,7 +424,7 @@ class BrowserGrpcService {
       };
 
       // Subscribe to all package events and filter locally
-      const unsubscribe = this.subscribeToBlockchainEvents(eventFilter, (event) => {
+      const unsubscribe = (this._subscribeToBlockchainEvents!(eventFilter, (event) => {
         const callback = this.eventCallbacks.get('blockchain');
         if (!callback) return;
 
@@ -424,14 +445,15 @@ class BrowserGrpcService {
           timestampMs: event.timestampMs || Date.now(),
           realTime: true // Mark as real-time event
         });
-      });
+      })) as () => void;
 
       this.eventUnsubscribers.push(unsubscribe);
 
       console.log('[BrowserGrpcService] Event subscriptions started successfully');
 
     } catch (error) {
-      console.warn('[BrowserGrpcService] Failed to start event subscriptions, falling back to polling:', error);
+      const err = error as Error;
+      console.warn('[BrowserGrpcService] Failed to start event subscriptions, falling back to polling:', err);
       this.eventSubscriptionActive = false;
 
       // Fallback to polling with longer interval
@@ -440,7 +462,7 @@ class BrowserGrpcService {
   }
 
   // Fallback polling method with reduced frequency
-  startEventPollingFallback() {
+  startEventPollingFallback(): void {
     if (this.eventPollingInterval) {
       return; // Already polling
     }
@@ -484,13 +506,14 @@ class BrowserGrpcService {
           }
         }
       } catch (error) {
-        console.warn('[BrowserGrpcService] Event polling error:', error);
+        const err = error as Error;
+        console.warn('[BrowserGrpcService] Event polling error:', err);
       }
     }, 30000); // Reduced from 5s to 30s polling interval
   }
 
   // Stop event subscriptions and polling
-  stopEventSubscriptions() {
+  stopEventSubscriptions(): void {
     // Stop real-time subscriptions
     if (this.eventSubscriptionActive && this.eventUnsubscribers) {
       this.eventUnsubscribers.forEach((unsubscribe) => {
@@ -499,7 +522,8 @@ class BrowserGrpcService {
             unsubscribe();
           }
         } catch (error) {
-          console.warn('[BrowserGrpcService] Error unsubscribing from event:', error);
+          const err = error as Error;
+          console.warn('[BrowserGrpcService] Error unsubscribing from event:', err);
         }
       });
       this.eventUnsubscribers = [];
@@ -512,7 +536,7 @@ class BrowserGrpcService {
   }
 
   // Stop event polling (legacy method, kept for compatibility)
-  stopEventPolling() {
+  stopEventPolling(): void {
     if (this.eventPollingInterval) {
       clearInterval(this.eventPollingInterval);
       this.eventPollingInterval = null;
@@ -521,7 +545,7 @@ class BrowserGrpcService {
   }
 
   // Subscribe to blockchain events with filter
-  subscribeToBlockchainEvents(filter, callback) {
+  subscribeToBlockchainEvents(filter: unknown, callback: (event: unknown) => void): () => void {
     try {
       // In a real implementation, this would connect to the gRPC event stream
       // For now, we'll simulate event subscription by leveraging existing infrastructure
@@ -529,10 +553,10 @@ class BrowserGrpcService {
       console.log('[BrowserGrpcService] Subscribing to blockchain events with filter:', filter);
 
       // Create a composite unsubscribe function for multiple event types
-      const unsubscribers = [];
+      const unsubscribers: Array<() => void> = [];
 
       // Subscribe to different event types based on package filter
-      if (filter.Package) {
+      if ((filter as any).Package) {
         // Subscribe to all relevant events for this package
         const eventTypes = ['SpreadsheetCreated', 'VersionSaved', 'CellLocked', 'CellUnlocked'];
 
@@ -555,13 +579,14 @@ class BrowserGrpcService {
       };
 
     } catch (error) {
-      console.warn('[BrowserGrpcService] Error subscribing to blockchain events:', error);
+      const err = error as Error;
+      console.warn('[BrowserGrpcService] Error subscribing to blockchain events:', err);
       return () => {}; // Return no-op unsubscribe function
     }
   }
 
   // Subscribe to specific event type (placeholder for real implementation)
-  subscribeToEventType(eventType, callback) {
+  subscribeToEventType(eventType: string, callback: (event: unknown) => void): () => void {
     // This is a placeholder method that would integrate with the actual event stream
     // In a real implementation, this would connect to the gRPC event stream manager
     console.log(`[BrowserGrpcService] Subscribed to event type: ${eventType}`);
@@ -573,7 +598,7 @@ class BrowserGrpcService {
   }
 
   // Subscribe to checkpoint stream (placeholder for real implementation)
-  subscribeToCheckpointStream(callback) {
+  subscribeToCheckpointStream(callback: (checkpoint: unknown) => void): () => void {
     try {
       console.log('[BrowserGrpcService] Subscribing to checkpoint stream...');
 
@@ -585,17 +610,18 @@ class BrowserGrpcService {
       };
 
     } catch (error) {
-      console.warn('[BrowserGrpcService] Error subscribing to checkpoint stream:', error);
+      const err = error as Error;
+      console.warn('[BrowserGrpcService] Error subscribing to checkpoint stream:', err);
       return () => {}; // Return no-op unsubscribe function
     }
   }
 
   // Get current epoch information
-  async getCurrentEpoch() {
+  async getCurrentEpoch(): Promise<{ epoch: string; epochStartTimestampMs: number; epochDurationMs: number; referenceGasPrice: string }> {
     try {
       console.log('[BrowserGrpcService] Getting current epoch...');
 
-      const epochInfo = await this.client.getLatestSuiSystemState();
+      const epochInfo = await this.client!.getLatestSuiSystemState();
 
       console.log('[BrowserGrpcService] Epoch info retrieved:', {
         epoch: epochInfo.epoch,
@@ -603,23 +629,24 @@ class BrowserGrpcService {
       });
 
       return {
-        epoch: epochInfo.epoch,
-        epochStartTimestampMs: epochInfo.epochStartTimestampMs,
-        epochDurationMs: epochInfo.epochDurationMs,
-        referenceGasPrice: epochInfo.referenceGasPrice
+        epoch: String(epochInfo.epoch),
+        epochStartTimestampMs: Number(epochInfo.epochStartTimestampMs),
+        epochDurationMs: Number(epochInfo.epochDurationMs),
+        referenceGasPrice: String(epochInfo.referenceGasPrice)
       };
     } catch (error) {
-      console.error('[BrowserGrpcService] Failed to get epoch info:', error);
-      throw error;
+      const err = error as Error;
+      console.error('[BrowserGrpcService] Failed to get epoch info:', err);
+      throw err;
     }
   }
 
   // Get object details by ID
-  async getObject(objectId, options = {}) {
+  async getObject(objectId: string, options: any = {}): Promise<any> {
     try {
       console.log(`[BrowserGrpcService] Getting object ${objectId}...`);
 
-      const object = await this.client.getObject({
+      const object = await this.client!.getObject({
         id: objectId,
         options: {
           showContent: true,
@@ -634,18 +661,19 @@ class BrowserGrpcService {
       console.log('[BrowserGrpcService] Object retrieved:', {
         objectId: objectId,
         hasContent: !!object.data?.content,
-        owner: object.data?.owner?.AddressOwner || object.data?.owner?.ObjectOwner || 'Shared'
+        owner: (object.data?.owner as any)?.AddressOwner || (object.data?.owner as any)?.ObjectOwner || 'Shared'
       });
 
       return object.data;
     } catch (error) {
-      console.error('[BrowserGrpcService] Failed to get object:', error);
-      throw error;
+      const err = error as Error;
+      console.error('[BrowserGrpcService] Failed to get object:', err);
+      throw err;
     }
   }
 
   // Connection status
-  getStatus() {
+  getStatus(): { isConnected: boolean; rpcUrl: string | null; packageId: string | undefined | null; registryObjectId: string | undefined | null; eventPolling: boolean; subscriptions: number; timestamp: string } {
     const network = this.config ? this.config.getCurrentNetwork() : null;
     return {
       isConnected: this.isConnected,
@@ -659,12 +687,12 @@ class BrowserGrpcService {
   }
 
   // Check connection
-  isConnected() {
+  isConnectedStatus(): boolean {
     return this.isConnected;
   }
 
   // Cleanup
-  close() {
+  close(): void {
     console.log('[BrowserGrpcService] Closing service...');
 
     this.stopEventPolling();
@@ -677,14 +705,14 @@ class BrowserGrpcService {
     }
 
     this.isConnected = false;
-    this.emit('disconnected');
+    this.emit('disconnected', {});
   }
 
   // Mock event triggering disabled for single-user MVP
-  triggerMockEvent(eventType, data = {}) {
-
+  triggerMockEvent(eventType: string, data: any = {}): void {
     // No-op: mock events not needed in production
-  }}
+  }
+}
 
 // Create singleton instance
 export const browserGrpcService = new BrowserGrpcService();
@@ -693,11 +721,11 @@ export const browserGrpcService = new BrowserGrpcService();
 browserGrpcService.setupClients();
 
 // Convenience functions for external use (maintain compatibility)
-export const subscribeToCheckpoints = (options) => browserGrpcService.subscribeToCheckpoints(options);
-export const executeTransaction = (tx, sigs) => browserGrpcService.executeTransaction(tx, sigs);
-export const getBalance = (owner, coinType) => browserGrpcService.getBalance(owner, coinType);
-export const getOwnedObjects = (owner, options) => browserGrpcService.getOwnedObjects(owner, options);
-export const getTransaction = (digest, options) => browserGrpcService.getTransaction(digest, options);
+export const subscribeToCheckpoints = (options: any) => browserGrpcService.subscribeToCheckpoints(options);
+export const executeTransaction = (tx: unknown, sigs: unknown) => browserGrpcService.executeTransaction(tx, sigs);
+export const getBalance = (owner: string, coinType?: string) => browserGrpcService.getBalance(owner, coinType);
+export const getOwnedObjects = (owner: string, options?: any) => browserGrpcService.getOwnedObjects(owner, options);
+export const getTransaction = (digest: string, options?: any) => browserGrpcService.getTransaction(digest, options);
 
 // Export the service instance as default (same interface as grpc-service.js)
 export { browserGrpcService as grpcService };

@@ -6,6 +6,20 @@ import { createLogger } from './utils/logger.js';
 const gqlLogger = createLogger('GraphQLEventSubscriber');
 
 export class GraphQLEventSubscriber {
+  private config: any;
+  private graphqlUrl: string;
+  private isActive: boolean;
+  private pollInterval: NodeJS.Timeout | null;
+  private pollIntervalMs: number;
+  private lastCheckpoint: number | null;
+  private backoffMultiplier: number;
+  private maxBackoffMultiplier: number;
+  private eventCallbacks: Map<string, Set<Function>>;
+  private seenEventDigests: Set<string>;
+  private seenCheckpoints: Set<number>;
+  private maxCacheSize: number;
+  private shouldRestart: boolean;
+
   constructor() {
     this.config = getCurrentConfig();
     this.graphqlUrl = this.config.sui.graphqlUrl;
@@ -29,7 +43,7 @@ export class GraphQLEventSubscriber {
    * Start polling for recent events via GraphQL
    * @param {number} fromCheckpoint - Optional starting checkpoint to seed lastCheckpoint
    */
-  start(fromCheckpoint = null) {
+  start(fromCheckpoint: number | null = null) {
     if (this.isActive) {
       gqlLogger.warn('Already active, ignoring start request');
       return;
@@ -82,7 +96,7 @@ export class GraphQLEventSubscriber {
    * @param {string} eventType - Event type to listen for
    * @param {Function} callback - Callback function
    */
-  on(eventType, callback) {
+  on(eventType: string, callback: Function) {
     if (!this.eventCallbacks.has(eventType)) {
       this.eventCallbacks.set(eventType, new Set());
     }
@@ -94,7 +108,7 @@ export class GraphQLEventSubscriber {
    * @param {string} eventType - Event type
    * @param {Function} callback - Callback function
    */
-  off(eventType, callback) {
+  off(eventType: string, callback: Function) {
     if (this.eventCallbacks.has(eventType)) {
       this.eventCallbacks.get(eventType).delete(callback);
     }
@@ -310,7 +324,8 @@ export class GraphQLEventSubscriber {
           newEventCount++;
         }
       } catch (error) {
-        gqlLogger.warn(`Failed to process event: ${error.message}`);
+        const err = error as Error;
+        gqlLogger.warn(`Failed to process event: ${err.message}`);
       }
     }
 
@@ -374,7 +389,8 @@ export class GraphQLEventSubscriber {
           newCheckpointCount++;
         }
       } catch (error) {
-        gqlLogger.warn(`Failed to process checkpoint: ${error.message}`);
+        const err = error as Error;
+        gqlLogger.warn(`Failed to process checkpoint: ${err.message}`);
       }
     }
 
@@ -392,7 +408,7 @@ export class GraphQLEventSubscriber {
    * @param {Object} event - GraphQL event object
    * @returns {string|null} - Event type or null
    */
-  extractEventType(event) {
+  extractEventType(event: any) {
     const typeRepr = event.contents?.type?.repr;
     if (!typeRepr) return null;
 
@@ -406,7 +422,7 @@ export class GraphQLEventSubscriber {
     return null;
   }
 
-  parseEventContents(contents) {
+  parseEventContents(contents: any) {
     if (!contents) return {};
 
     if (typeof contents === 'string') {
@@ -425,7 +441,7 @@ export class GraphQLEventSubscriber {
    * @param {string} eventType - Event type
    * @param {Object} eventData - Event data
    */
-  emitEvent(eventType, eventData) {
+  emitEvent(eventType: string, eventData: any) {
     if (this.eventCallbacks.has(eventType)) {
       for (const callback of this.eventCallbacks.get(eventType)) {
         try {
@@ -452,7 +468,7 @@ export class GraphQLEventSubscriber {
    * Trim cache to prevent memory leak
    * @param {Set} cache - Cache to trim
    */
-  trimCache(cache) {
+  trimCache(cache: Set<any>) {
     if (cache.size > this.maxCacheSize) {
       // Convert to array, remove oldest items, convert back
       const items = Array.from(cache);
@@ -465,7 +481,7 @@ export class GraphQLEventSubscriber {
    * Handle errors and implement backoff
    * @param {Error} error - Error that occurred
    */
-  handleError(error) {
+  handleError(error: Error) {
     // Increase backoff multiplier
     this.backoffMultiplier = Math.min(this.backoffMultiplier * 2, this.maxBackoffMultiplier);
 

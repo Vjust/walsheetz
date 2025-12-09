@@ -245,7 +245,7 @@
       callStacks: traces.callStacks.length,
       startsWithCalls: startsWithCallCount
     }),
-    getAutocompleteF functions: () => autocompleteRelatedFunctions,
+    getAutocompleteFunctions: () => autocompleteRelatedFunctions,
     stopMonitoring: () => {
       String.prototype.startsWith = originalStartsWith;
       String.prototype.indexOf = originalIndexOf;

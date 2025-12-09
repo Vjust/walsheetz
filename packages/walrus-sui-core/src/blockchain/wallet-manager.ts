@@ -7,6 +7,11 @@ import {
 import { getCurrentConfig } from './config.js';
 
 class WalletManager {
+  currentWallet: any = null;
+  currentAccount: any = null;
+  isConnected: boolean = false;
+  eventListeners: Map<string, Function[]> = new Map();
+
   constructor() {
     this.currentWallet = null;
     this.currentAccount = null;
@@ -15,16 +20,16 @@ class WalletManager {
   }
 
   // Event handling
-  on(event, callback) {
+  on(event: string, callback: Function): void {
     if (!this.eventListeners.has(event)) {
       this.eventListeners.set(event, []);
     }
-    this.eventListeners.get(event).push(callback);
+    this.eventListeners.get(event)!.push(callback);
   }
 
-  off(event, callback) {
+  off(event: string, callback: Function): void {
     if (this.eventListeners.has(event)) {
-      const callbacks = this.eventListeners.get(event);
+      const callbacks = this.eventListeners.get(event)!;
       const index = callbacks.indexOf(callback);
       if (index > -1) {
         callbacks.splice(index, 1);
@@ -32,9 +37,9 @@ class WalletManager {
     }
   }
 
-  emit(event, data) {
+  emit(event: string, data?: any): void {
     if (this.eventListeners.has(event)) {
-      this.eventListeners.get(event).forEach(callback => callback(data));
+      this.eventListeners.get(event)!.forEach(callback => callback(data));
     }
   }
 
@@ -59,16 +64,16 @@ class WalletManager {
   async connect(walletName = 'Sui Wallet') {
     try {
       const wallets = await this.getAvailableWallets();
-      
+
       // Look for specific wallet by name (support both Sui Wallet and Slush Wallet)
       let targetWallet = wallets.find(wallet => {
         const name = wallet.name.toLowerCase();
         const searchName = walletName.toLowerCase();
-        return name.includes(searchName) || 
-               name.includes('slush') || 
+        return name.includes(searchName) ||
+               name.includes('slush') ||
                name.includes('sui');
       });
-      
+
       // Fallback to first available wallet
       if (!targetWallet && wallets.length > 0) {
         targetWallet = wallets[0];
@@ -81,9 +86,9 @@ class WalletManager {
       console.log('Attempting to connect to wallet:', targetWallet.name);
 
       // Request connection
-      const accounts = await targetWallet.features['standard:connect'].connect();
-      
-      if (accounts.length === 0) {
+      const accounts = await (targetWallet.features as any)['standard:connect'].connect();
+
+      if (!Array.isArray(accounts) || accounts.length === 0) {
         throw new Error('No accounts found in wallet');
       }
 
@@ -92,8 +97,8 @@ class WalletManager {
       this.isConnected = true;
 
       // Listen for account changes
-      if (targetWallet.features['standard:events']) {
-        targetWallet.features['standard:events'].on('change', (data) => {
+      if ((targetWallet.features as any)['standard:events']) {
+        (targetWallet.features as any)['standard:events'].on('change', (data: any) => {
           this.handleWalletChange(data);
         });
       }
@@ -110,11 +115,12 @@ class WalletManager {
       };
 
     } catch (error) {
-      console.error('Wallet connection failed:', error);
-      this.emit('error', error.message);
+      const err = error as Error;
+      console.error('Wallet connection failed:', err);
+      this.emit('error', err.message);
       return {
         success: false,
-        error: error.message
+        error: err.message
       };
     }
   }
@@ -122,26 +128,27 @@ class WalletManager {
   // Disconnect wallet
   async disconnect() {
     try {
-      if (this.currentWallet && this.currentWallet.features['standard:disconnect']) {
-        await this.currentWallet.features['standard:disconnect'].disconnect();
+      if (this.currentWallet && (this.currentWallet.features as any)['standard:disconnect']) {
+        await (this.currentWallet.features as any)['standard:disconnect'].disconnect();
       }
-      
+
       this.currentWallet = null;
       this.currentAccount = null;
       this.isConnected = false;
 
       this.emit('disconnected', {});
-      
+
       return { success: true };
     } catch (error) {
-      console.error('Wallet disconnection failed:', error);
-      return { success: false, error: error.message };
+      const err = error as Error;
+      console.error('Wallet disconnection failed:', err);
+      return { success: false, error: err.message };
     }
   }
 
   // Handle wallet account changes
-  handleWalletChange(data) {
-    if (data.accounts && data.accounts.length > 0) {
+  handleWalletChange(data: any): void {
+    if (data?.accounts && Array.isArray(data.accounts) && data.accounts.length > 0) {
       this.currentAccount = data.accounts[0];
       this.emit('accountChanged', {
         address: this.currentAccount.address
@@ -153,19 +160,19 @@ class WalletManager {
   }
 
   // Sign and execute transaction
-  async signAndExecuteTransaction(transaction) {
+  async signAndExecuteTransaction(transaction: any) {
     if (!this.isConnected || !this.currentWallet) {
       throw new Error('Wallet not connected');
     }
 
     const maxRetries = 2;
-    let lastError;
+    let lastError: any = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`🔐 Attempting transaction signing (attempt ${attempt}/${maxRetries})...`);
+        console.log(`Attempting transaction signing (attempt ${attempt}/${maxRetries})...`);
 
-        const signAndExecuteFeature = this.currentWallet.features['sui:signAndExecuteTransactionBlock'];
+        const signAndExecuteFeature = (this.currentWallet.features as any)['sui:signAndExecuteTransactionBlock'];
 
         if (!signAndExecuteFeature) {
           throw new Error('Wallet does not support transaction signing');
@@ -182,20 +189,21 @@ class WalletManager {
           effects: result.effects
         });
 
-        console.log('✅ Transaction executed successfully:', result.digest);
+        console.log('Transaction executed successfully:', result.digest);
         return result;
       } catch (error) {
-        console.error(`❌ Transaction signing attempt ${attempt} failed:`, error);
-        lastError = error;
+        const err = error as Error;
+        console.error(`Transaction signing attempt ${attempt} failed:`, err);
+        lastError = err;
 
         // Check if this is a message channel error that might be resolved with retry
-        if (error.message && error.message.includes('message channel closed')) {
-          console.warn(`🔄 Message channel error detected, ${maxRetries - attempt} retries remaining...`);
+        if (err.message && err.message.includes('message channel closed')) {
+          console.warn(`Message channel error detected, ${maxRetries - attempt} retries remaining...`);
 
           // Wait before retrying (exponential backoff)
           if (attempt < maxRetries) {
             const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
-            console.log(`⏳ Waiting ${delay}ms before retry...`);
+            console.log(`Waiting ${delay}ms before retry...`);
             await new Promise(resolve => setTimeout(resolve, delay));
           }
         } else {
@@ -207,7 +215,7 @@ class WalletManager {
 
     // If all retries failed, throw the last error with additional context
     console.error('Transaction signing failed after all retries:', lastError);
-    this.emit('error', `Transaction failed after ${maxRetries} attempts: ${lastError.message}`);
+    this.emit('error', `Transaction failed after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}`);
     throw lastError;
   }
 
@@ -221,13 +229,13 @@ class WalletManager {
   }
 
   // Check if wallet supports required features
-  async checkWalletCapabilities(wallet) {
+  async checkWalletCapabilities(wallet: any) {
     const requiredFeatures = [
       'standard:connect',
       'sui:signAndExecuteTransactionBlock'
     ];
 
-    const supportedFeatures = Object.keys(wallet.features);
+    const supportedFeatures = Object.keys(wallet.features || {});
     const missingFeatures = requiredFeatures.filter(
       feature => !supportedFeatures.includes(feature)
     );
@@ -243,13 +251,13 @@ class WalletManager {
   async autoReconnect() {
     try {
       const wallets = await this.getAvailableWallets();
-      
+
       for (const wallet of wallets) {
         try {
           // Check if wallet has existing connection
-          const accounts = await wallet.features['standard:connect'].connect({ silent: true });
-          
-          if (accounts && accounts.length > 0) {
+          const accounts = await (wallet.features as any)['standard:connect'].connect({ silent: true });
+
+          if (Array.isArray(accounts) && accounts.length > 0) {
             this.currentWallet = wallet;
             this.currentAccount = accounts[0];
             this.isConnected = true;
@@ -266,10 +274,11 @@ class WalletManager {
           continue;
         }
       }
-      
+
       return false;
     } catch (error) {
-      console.error('Auto-reconnect failed:', error);
+      const err = error as Error;
+      console.error('Auto-reconnect failed:', err);
       return false;
     }
   }

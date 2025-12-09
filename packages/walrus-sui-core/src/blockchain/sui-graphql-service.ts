@@ -6,11 +6,25 @@ import { createLogger } from './utils/logger.js';
 
 const logger = createLogger('SuiGraphQLService');
 
+// Stub for IGraphQLResponse when not available
+const IGraphQLResponse = {
+  empty: () => ({ items: [], pageInfo: {}, error: null }),
+  error: (msg: string, code: string) => ({ items: [], error: msg, code }),
+  success: (items: any, info: any, meta: any) => ({ items, pageInfo: info, metadata: meta })
+} as any;
+
 /**
  * Service for querying Sui blockchain data via GraphQL RPC
  * Provides presets for common Walrus blob and PoA queries
  */
 export class SuiGraphQLService {
+  config: any;
+  graphqlUrl: string;
+  cache: Map<string, any>;
+  cacheTTL: number;
+  maxRetries: number;
+  retryDelayMs: number;
+
   constructor() {
     this.config = getCurrentConfig();
     this.graphqlUrl = this.config.sui.graphqlUrl;
@@ -29,13 +43,11 @@ export class SuiGraphQLService {
    * @param {Object} options - Query options (cache, retry)
    * @returns {Promise<Object>} Query result
    */
-  async executeQuery(query, variables = {}, options = {}) {
-    const {
-      useCache = true,
-      cacheTTL = this.cacheTTL,
-      maxRetries = this.maxRetries,
-      retryDelayMs = this.retryDelayMs
-    } = options;
+  async executeQuery(query: string, variables: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
+    const useCache = (options.useCache ?? true) as boolean;
+    const cacheTTL = (options.cacheTTL ?? this.cacheTTL) as number;
+    const maxRetries = (options.maxRetries ?? this.maxRetries) as number;
+    const retryDelayMs = (options.retryDelayMs ?? this.retryDelayMs) as number;
 
     // Generate cache key
     const cacheKey = this._generateCacheKey(query, variables);
@@ -50,7 +62,7 @@ export class SuiGraphQLService {
     }
 
     // Execute query with retry logic
-    let lastError;
+    let lastError: Error | null = null;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         const response = await fetch(this.graphqlUrl, {
@@ -83,18 +95,19 @@ export class SuiGraphQLService {
 
         return result.data;
       } catch (error) {
-        lastError = error;
-        logger.warn(`Query attempt ${attempt + 1} failed: ${error.message}`);
+        const err = error as Error;
+        lastError = err;
+        logger.warn(`Query attempt ${attempt + 1} failed: ${err.message}`);
 
-        // Wait before retry (exponential backoff)
         if (attempt < maxRetries - 1) {
           await this._delay(retryDelayMs * Math.pow(2, attempt));
         }
       }
     }
 
-    logger.error('Query failed after all retries', { error: lastError.message });
-    throw lastError;
+    const err = lastError as Error;
+    logger.error('Query failed after all retries', { error: err.message });
+    throw err;
   }
 
   /**
@@ -103,13 +116,11 @@ export class SuiGraphQLService {
    * @param {Object} options - Pagination and filter options
    * @returns {Promise<Object>} Blobs and pagination info
    */
-  async getBlobsByOwner(ownerAddress, options = {}) {
+  async getBlobsByOwner(ownerAddress: string, options: Record<string, unknown> = {}) {
     const {
       first = 20,
-      after = null,
-      sortBy = 'timestamp',
-      sortOrder = 'DESC'
-    } = options;
+      after = null
+    } = options as any;
 
     const query = `
       query GetBlobsByOwner($owner: SuiAddress!, $first: Int, $after: String) {
@@ -174,12 +185,11 @@ export class SuiGraphQLService {
    * @param {Object} options - Pagination and filter options
    * @returns {Promise<Object>} Transactions and pagination info
    */
-  async getWalletHistory(address, options = {}) {
+  async getWalletHistory(address: string, options: Record<string, unknown> = {}) {
     const {
       first = 20,
-      after = null,
-      filter = {}
-    } = options;
+      after = null
+    } = options as any;
 
     const query = `
       query GetWalletHistory($address: SuiAddress!, $first: Int, $after: String) {
@@ -247,11 +257,11 @@ export class SuiGraphQLService {
    * @param {Object} options - Pagination options
    * @returns {Promise<Object>} Site assets and metadata
    */
-  async getWalrusSiteAssets(siteId, options = {}) {
+  async getWalrusSiteAssets(siteId: string, options: Record<string, unknown> = {}) {
     const {
       first = 50,
       after = null
-    } = options;
+    } = options as any;
 
     const query = `
       query GetWalrusSiteAssets($siteId: SuiAddress!, $first: Int, $after: String) {
@@ -317,7 +327,7 @@ export class SuiGraphQLService {
    * @param {string} blobId - Blob ID or object ID
    * @returns {Promise<Object>} PoA certificate status
    */
-  async getPoACertificateStatus(blobId) {
+  async getPoACertificateStatus(blobId: string) {
     const query = `
       query GetPoAStatus($blobId: SuiAddress!) {
         object(address: $blobId) {
@@ -370,7 +380,7 @@ export class SuiGraphQLService {
    * @param {string} blobId - Blob ID or object ID
    * @returns {Promise<Object>} Blob metadata
    */
-  async getBlobMetadata(blobId) {
+  async getBlobMetadata(blobId: string) {
     const query = `
       query GetBlobMetadata($blobId: SuiAddress!) {
         object(address: $blobId) {
@@ -419,9 +429,9 @@ export class SuiGraphQLService {
    * @param {Function} callback - Callback for results
    * @returns {Function} Stop function to cancel polling
    */
-  startPolling(queryFn, intervalMs, callback) {
+  startPolling(queryFn: () => Promise<unknown>, intervalMs: number, callback: (error: Error | null, result: unknown) => void) {
     let active = true;
-    let timeoutId;
+    let timeoutId: NodeJS.Timeout | undefined;
 
     const poll = async () => {
       if (!active) return;
@@ -432,8 +442,9 @@ export class SuiGraphQLService {
           callback(null, result);
         }
       } catch (error) {
+        const err = error as Error;
         if (active && callback) {
-          callback(error, null);
+          callback(err, null);
         }
       }
 
@@ -442,10 +453,8 @@ export class SuiGraphQLService {
       }
     };
 
-    // Start polling
     poll();
 
-    // Return stop function
     return () => {
       active = false;
       if (timeoutId) {
@@ -459,7 +468,7 @@ export class SuiGraphQLService {
    * Clear cache entries
    * @param {string} pattern - Optional pattern to match cache keys
    */
-  clearCache(pattern = null) {
+  clearCache(pattern: string | null = null) {
     if (!pattern) {
       this.cache.clear();
       logger.info('Cache cleared completely');
@@ -467,7 +476,7 @@ export class SuiGraphQLService {
     }
 
     let cleared = 0;
-    for (const key of this.cache.keys()) {
+    for (const key of Array.from(this.cache.keys())) {
       if (key.includes(pattern)) {
         this.cache.delete(key);
         cleared++;
@@ -477,27 +486,24 @@ export class SuiGraphQLService {
     logger.info(`Cache cleared: ${cleared} entries matching pattern "${pattern}"`);
   }
 
-  // ============================================================================
-  // Private Helper Methods
-  // ============================================================================
-
-  _generateCacheKey(query, variables) {
+  // Helper methods (private)
+  _generateCacheKey(query: string, variables: Record<string, unknown>) {
     const queryHash = this._simpleHash(query);
     const varsHash = this._simpleHash(JSON.stringify(variables));
     return `${queryHash}-${varsHash}`;
   }
 
-  _simpleHash(str) {
+  _simpleHash(str: string) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
+      hash = hash & hash;
     }
     return Math.abs(hash).toString(36);
   }
 
-  _getFromCache(key) {
+  _getFromCache(key: string) {
     const entry = this.cache.get(key);
     if (!entry) return null;
 
@@ -509,13 +515,12 @@ export class SuiGraphQLService {
     return entry.data;
   }
 
-  _setToCache(key, data, ttl) {
+  _setToCache(key: string, data: unknown, ttl: number) {
     this.cache.set(key, {
       data,
       expiresAt: Date.now() + ttl
     });
 
-    // Periodic cache cleanup
     if (this.cache.size > 1000) {
       this._cleanupCache();
     }
@@ -525,8 +530,9 @@ export class SuiGraphQLService {
     const now = Date.now();
     let cleaned = 0;
 
-    for (const [key, entry] of this.cache.entries()) {
-      if (now > entry.expiresAt) {
+    for (const [key, entry] of Array.from(this.cache.entries())) {
+      const expiresAt = (entry as Record<string, unknown>).expiresAt as number;
+      if (now > expiresAt) {
         this.cache.delete(key);
         cleaned++;
       }
@@ -535,129 +541,150 @@ export class SuiGraphQLService {
     logger.debug(`Cache cleanup: removed ${cleaned} expired entries`);
   }
 
-  async _delay(ms) {
+  async _delay(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  _transformBlobsResponse(objectsData) {
+  _transformBlobsResponse(objectsData: unknown) {
     if (!objectsData) {
       return IGraphQLResponse.empty();
     }
 
-    const blobs = objectsData.nodes.map(node => ({
-      blobId: node.address,
-      objectId: node.objectId,
-      version: node.version,
-      digest: node.digest,
-      owner: node.owner?.owner?.address || null,
-      type: node.contents?.type?.repr || null,
-      contents: this._parseJSON(node.contents?.json),
-      size: this._parseJSON(node.contents?.json)?.size || 0,
-      contentType: this._parseJSON(node.contents?.json)?.content_type || null,
-      storageRebate: node.storageRebate || 0,
-      createdAt: node.previousTransactionBlock?.effects?.timestamp || null,
-      timestamp: node.previousTransactionBlock?.effects?.timestamp || null,
-      transactionDigest: node.previousTransactionBlock?.digest || null
-    }));
-
-    return new IGraphQLResponse({
-      items: blobs,
-      pageInfo: objectsData.pageInfo || { hasNextPage: false, hasPreviousPage: false, startCursor: null, endCursor: null },
-      totalCount: blobs.length,
-      error: null,
-      metadata: { source: 'sui_graphql', queryType: 'blobs' }
+    const data = objectsData as Record<string, unknown>;
+    const blobs = ((data.nodes as unknown[]) || []).map((node: unknown) => {
+      const nodeData = node as Record<string, unknown>;
+      const owner = nodeData.owner as Record<string, unknown>;
+      const contents = nodeData.contents as Record<string, unknown>;
+      const prevTxn = nodeData.previousTransactionBlock as Record<string, unknown>;
+      const contentsParsed = this._parseJSON(contents?.json);
+      const ownerAddr = (owner?.owner as Record<string, unknown>)?.address;
+      const contentType = (contents?.type as Record<string, unknown>)?.repr;
+      return {
+        blobId: nodeData.address,
+        objectId: nodeData.objectId,
+        version: nodeData.version,
+        digest: nodeData.digest,
+        owner: ownerAddr || null,
+        type: contentType || null,
+        contents: contentsParsed,
+        size: (contentsParsed as Record<string, unknown>)?.size || 0,
+        contentType: (contentsParsed as Record<string, unknown>)?.content_type || null,
+        storageRebate: nodeData.storageRebate || 0,
+        createdAt: (prevTxn?.effects as Record<string, unknown>)?.timestamp || null,
+        timestamp: (prevTxn?.effects as Record<string, unknown>)?.timestamp || null,
+        transactionDigest: prevTxn?.digest || null
+      };
     });
+
+    return IGraphQLResponse.success(blobs, data.pageInfo || { hasNextPage: false, hasPreviousPage: false, startCursor: null, endCursor: null }, { source: 'sui_graphql', queryType: 'blobs' });
   }
 
-  _transformTransactionsResponse(transactionBlocksData) {
+  _transformTransactionsResponse(transactionBlocksData: unknown) {
     if (!transactionBlocksData) {
       return IGraphQLResponse.empty();
     }
 
-    const transactions = transactionBlocksData.nodes.map(node => ({
-      digest: node.digest,
-      sender: node.sender?.address || null,
-      status: node.effects?.status || null,
-      timestamp: node.effects?.timestamp || null,
-      gasUsed: {
-        computationCost: node.effects?.gasEffects?.gasSummary?.computationCost || 0,
-        storageCost: node.effects?.gasEffects?.gasSummary?.storageCost || 0,
-        storageRebate: node.effects?.gasEffects?.gasSummary?.storageRebate || 0
-      },
-      epoch: node.effects?.executedEpoch || null,
-      expiration: node.expiration?.epochId || null,
-      // Add coins field for WalletAssetTable compatibility
-      coins: [] // Note: actual coins need to be extracted from effects.balanceChanges
-    }));
-
-    return new IGraphQLResponse({
-      items: transactions,
-      pageInfo: transactionBlocksData.pageInfo || { hasNextPage: false, hasPreviousPage: false, startCursor: null, endCursor: null },
-      totalCount: transactions.length,
-      error: null,
-      metadata: { source: 'sui_graphql', queryType: 'transactions' }
+    const data = transactionBlocksData as Record<string, unknown>;
+    const transactions = ((data.nodes as unknown[]) || []).map((node: unknown) => {
+      const nodeData = node as Record<string, unknown>;
+      const effects = nodeData.effects as Record<string, unknown>;
+      const sender = nodeData.sender as Record<string, unknown>;
+      const gasEffects = effects?.gasEffects as Record<string, unknown>;
+      const gasSummary = gasEffects?.gasSummary as Record<string, unknown>;
+      const expiration = nodeData.expiration as Record<string, unknown>;
+      return {
+        digest: nodeData.digest,
+        sender: sender?.address || null,
+        status: effects?.status || null,
+        timestamp: effects?.timestamp || null,
+        gasUsed: {
+          computationCost: gasSummary?.computationCost || 0,
+          storageCost: gasSummary?.storageCost || 0,
+          storageRebate: gasSummary?.storageRebate || 0
+        },
+        epoch: effects?.executedEpoch || null,
+        expiration: expiration?.epochId || null,
+        coins: []
+      };
     });
+
+    return IGraphQLResponse.success(transactions, data.pageInfo || { hasNextPage: false, hasPreviousPage: false, startCursor: null, endCursor: null }, { source: 'sui_graphql', queryType: 'transactions' });
   }
 
-  _transformSiteAssetsResponse(objectData) {
+  _transformSiteAssetsResponse(objectData: unknown) {
     if (!objectData) {
       return IGraphQLResponse.empty();
     }
 
+    const data = objectData as Record<string, unknown>;
+    const siteOwner = data.owner as Record<string, unknown>;
+    const siteContents = data.contents as Record<string, unknown>;
+    const siteOwnerAddr = (siteOwner?.owner as Record<string, unknown>)?.address;
     const site = {
-      siteId: objectData.address,
-      objectId: objectData.objectId,
-      version: objectData.version,
-      digest: objectData.digest,
-      owner: objectData.owner?.owner?.address || null,
-      metadata: this._parseJSON(objectData.contents?.json)
+      siteId: data.address,
+      objectId: data.objectId,
+      version: data.version,
+      digest: data.digest,
+      owner: siteOwnerAddr || null,
+      metadata: this._parseJSON(siteContents?.json)
     };
 
-    const assets = objectData.dynamicFields?.nodes?.map(field => {
-      const value = this._parseJSON(field.value?.contents?.json);
+    const dynamicFields = data.dynamicFields as Record<string, unknown>;
+    const assets = ((dynamicFields?.nodes as unknown[]) || []).map((field: unknown) => {
+      const fieldData = field as Record<string, unknown>;
+      const fieldName = fieldData.name as Record<string, unknown>;
+      const fieldValue = fieldData.value as Record<string, unknown>;
+      const valueContents = fieldValue?.contents as Record<string, unknown>;
+      const value = this._parseJSON(valueContents?.json);
+      const nameParsed = this._parseJSON(fieldName?.json);
+      const valueType = valueContents?.type as Record<string, unknown>;
+      const nameType = fieldName?.type as Record<string, unknown>;
+      const namePath = (nameParsed as Record<string, unknown>)?.path;
+      const nameTypeRepr = nameType?.repr;
       return {
-        path: this._parseJSON(field.name?.json)?.path || field.name?.json || 'index.html',
-        name: this._parseJSON(field.name?.json),
-        type: field.name?.type?.repr || null,
-        // Map blob fields for WalrusSiteViewer
-        blobId: value?.blob_id || value?.blobId || null,
-        size: value?.size || 0,
-        contentType: value?.content_type || value?.contentType || null,
+        path: (namePath as string) || (fieldName?.json as string) || 'index.html',
+        name: nameParsed,
+        type: nameTypeRepr || null,
+        blobId: (value as Record<string, unknown>)?.blob_id || (value as Record<string, unknown>)?.blobId || null,
+        size: (value as Record<string, unknown>)?.size || 0,
+        contentType: (value as Record<string, unknown>)?.content_type || (value as Record<string, unknown>)?.contentType || null,
         value: value,
-        valueType: field.value?.contents?.type?.repr || null
+        valueType: valueType?.repr || null
       };
-    }) || [];
-
-    return new IGraphQLResponse({
-      items: assets,
-      pageInfo: objectData.dynamicFields?.pageInfo || { hasNextPage: false, hasPreviousPage: false, startCursor: null, endCursor: null },
-      totalCount: assets.length,
-      error: null,
-      metadata: { source: 'sui_graphql', queryType: 'site_assets', site }
     });
+
+    return IGraphQLResponse.success(assets, dynamicFields?.pageInfo || { hasNextPage: false, hasPreviousPage: false, startCursor: null, endCursor: null }, { source: 'sui_graphql', queryType: 'site_assets', site });
   }
 
-  _transformPoAResponse(objectData) {
+  _transformPoAResponse(objectData: unknown) {
     if (!objectData) {
       return IGraphQLResponse.error('Blob not found', 'NOT_FOUND');
     }
 
-    // Look for PoA certificate in dynamic fields
-    const poaField = objectData.dynamicFields?.nodes?.find(field => {
-      const fieldType = field.name?.type?.repr || '';
-      return fieldType.includes('poa') || fieldType.includes('certificate');
+    const data = objectData as Record<string, unknown>;
+    const dynamicFields = data.dynamicFields as Record<string, unknown>;
+    const nodes = dynamicFields?.nodes as unknown[] || [];
+
+    const poaField = nodes.find((field: unknown) => {
+      const fieldData = field as Record<string, unknown>;
+      const fieldName = fieldData.name as Record<string, unknown>;
+      const fieldType = (fieldName?.type as Record<string, unknown>)?.repr || '';
+      return (fieldType as string).includes('poa') || (fieldType as string).includes('certificate');
     });
 
-    const certificate = poaField ? this._parseJSON(poaField.value?.contents?.json) : null;
+    const poaFieldData = poaField as Record<string, unknown>;
+    const poaValue = poaFieldData?.value as Record<string, unknown>;
+    const poaValueContents = poaValue?.contents as Record<string, unknown>;
+    const certificate = poaField ? this._parseJSON(poaValueContents?.json) : null;
 
     const poaData = {
-      blobId: objectData.address,
-      objectId: objectData.objectId,
+      blobId: data.address,
+      objectId: data.objectId,
       poaStatus: certificate ? 'certified' : 'uncertified',
       certificate: certificate ? {
-        validators: certificate.validators || [],
-        timestamp: certificate.timestamp || null,
-        expiry: certificate.expiry || null,
+        validators: (certificate as Record<string, unknown>).validators || [],
+        timestamp: (certificate as Record<string, unknown>).timestamp || null,
+        expiry: (certificate as Record<string, unknown>).expiry || null,
         metadata: certificate
       } : null
     };
@@ -665,39 +692,46 @@ export class SuiGraphQLService {
     return IGraphQLResponse.success([poaData], {}, { source: 'sui_graphql', queryType: 'poa_status' });
   }
 
-  _transformBlobMetadata(objectData) {
+  _transformBlobMetadata(objectData: unknown) {
     if (!objectData) {
       return IGraphQLResponse.error('Blob not found', 'NOT_FOUND');
     }
 
-    const contents = this._parseJSON(objectData.contents?.json);
+    const data = objectData as Record<string, unknown>;
+    const dataContents = data.contents as Record<string, unknown>;
+    const contents = this._parseJSON(dataContents?.json);
+    const dataOwner = data.owner as Record<string, unknown>;
+    const dataPrevTxn = data.previousTransactionBlock as Record<string, unknown>;
+    const prevTxnEffects = dataPrevTxn?.effects as Record<string, unknown>;
+    const ownerAddr = (dataOwner?.owner as Record<string, unknown>)?.address;
+    const contentType = (dataContents?.type as Record<string, unknown>)?.repr;
 
     const blob = {
-      blobId: objectData.address,
-      objectId: objectData.objectId,
-      version: objectData.version,
-      digest: objectData.digest,
-      owner: objectData.owner?.owner?.address || null,
-      type: objectData.contents?.type?.repr || null,
-      size: contents?.size || null,
-      contentType: contents?.content_type || null,
-      encoding: contents?.encoding || null,
+      blobId: data.address,
+      objectId: data.objectId,
+      version: data.version,
+      digest: data.digest,
+      owner: ownerAddr || null,
+      type: contentType || null,
+      size: (contents as Record<string, unknown>)?.size || null,
+      contentType: (contents as Record<string, unknown>)?.content_type || null,
+      encoding: (contents as Record<string, unknown>)?.encoding || null,
       metadata: contents,
-      storageRebate: objectData.storageRebate || 0,
-      timestamp: objectData.previousTransactionBlock?.effects?.timestamp || null,
-      transactionDigest: objectData.previousTransactionBlock?.digest || null,
-      transactionStatus: objectData.previousTransactionBlock?.effects?.status || null
+      storageRebate: data.storageRebate || 0,
+      timestamp: prevTxnEffects?.timestamp || null,
+      transactionDigest: dataPrevTxn?.digest || null,
+      transactionStatus: prevTxnEffects?.status || null
     };
 
     return IGraphQLResponse.success([blob], {}, { source: 'sui_graphql', queryType: 'blob_metadata' });
   }
 
-  _parseJSON(jsonString) {
+  _parseJSON(jsonString: unknown) {
     if (!jsonString) return null;
     if (typeof jsonString === 'object') return jsonString;
 
     try {
-      return JSON.parse(jsonString);
+      return JSON.parse(jsonString as string);
     } catch {
       return null;
     }

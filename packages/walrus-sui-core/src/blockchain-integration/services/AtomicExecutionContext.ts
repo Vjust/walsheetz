@@ -10,12 +10,19 @@
  * Context object for atomic operation execution
  */
 export class AtomicExecutionContext {
+  private operations: unknown[];
+  private initialContext: Record<string, unknown>;
+  private operationResults: Map<string, Record<string, unknown>>;
+  private results: Array<Record<string, unknown>>;
+  private lastOperation: string | null;
+  private executionStartTime: number;
+
   /**
    * Create a new AtomicExecutionContext
    * @param {Array} operations - Array of operations to execute
    * @param {Object} initialContext - Initial context data (user-provided)
    */
-  constructor(operations, initialContext = {}) {
+  constructor(operations: unknown[], initialContext: Record<string, unknown> = {}) {
     this.operations = operations;
     this.initialContext = initialContext;
 
@@ -41,28 +48,28 @@ export class AtomicExecutionContext {
    * @param {boolean} success - Whether the operation succeeded
    * @param {Error} error - Optional error if operation failed
    */
-  addResult(operationName, result, success = true, error = null) {
-    const resultEntry = {
+  addResult(operationName: string, result: unknown, success: boolean = true, error: Error | null = null) {
+    const trackingEntry: Record<string, unknown> = {
       name: operationName,
       result,
       success,
       endTime: Date.now(),
       duration: this.operationResults.has(operationName)
-        ? Date.now() - (this.operationResults.get(operationName).startTime || this.executionStartTime)
+        ? Date.now() - ((this.operationResults.get(operationName) as any)?.startTime || this.executionStartTime)
         : 0
     };
 
     if (error) {
-      resultEntry.error = error;
+      trackingEntry.error = error;
     }
 
     // Store in both map (for quick lookup) and results array (for ordering)
-    this.operationResults.set(operationName, {
-      ...result,
-      _meta: { success, error }
-    });
+    const mapEntry: Record<string, unknown> = typeof result === 'object' && result !== null
+      ? { ...result as Record<string, unknown>, _meta: { success, error } }
+      : { result, _meta: { success, error } };
+    this.operationResults.set(operationName, mapEntry);
 
-    this.results.push(resultEntry);
+    this.results.push(trackingEntry);
     this.lastOperation = operationName;
   }
 
@@ -71,7 +78,7 @@ export class AtomicExecutionContext {
    * @param {string} operationName - Name of the operation
    * @returns {*} The operation result, or undefined if not found
    */
-  getResult(operationName) {
+  getResult(operationName: string) {
     const entry = this.operationResults.get(operationName);
     if (!entry) return undefined;
 
@@ -84,12 +91,12 @@ export class AtomicExecutionContext {
    * Get all operation results as an object
    * @returns {Object} Map of operationName -> result
    */
-  getAllResults() {
-    const results = {};
-    for (const [name, entry] of this.operationResults) {
+  getAllResults(): Record<string, unknown> {
+    const results: Record<string, unknown> = {};
+    this.operationResults.forEach((entry, name) => {
       const { _meta, ...result } = entry;
       results[name] = result;
-    }
+    });
     return results;
   }
 
@@ -99,7 +106,7 @@ export class AtomicExecutionContext {
    * @param {string} operationName - Name of the operation
    * @returns {Object} Context object with operationResults and initial context
    */
-  buildDependencyContext(operationName) {
+  buildDependencyContext(operationName: string): Record<string, unknown> {
     return {
       ...this.initialContext,
       operationResults: this.getAllResults(),
@@ -113,7 +120,7 @@ export class AtomicExecutionContext {
    * Update the last operation tracker
    * @param {string} operationName - Name of the operation
    */
-  updateLastOperation(operationName) {
+  updateLastOperation(operationName: string) {
     this.lastOperation = operationName;
   }
 
@@ -122,7 +129,7 @@ export class AtomicExecutionContext {
    * @param {string} operationName - Name of the operation
    * @returns {boolean} True if operation exists in results
    */
-  hasOperation(operationName) {
+  hasOperation(operationName: string): boolean {
     return this.operationResults.has(operationName);
   }
 
@@ -130,7 +137,39 @@ export class AtomicExecutionContext {
    * Get execution duration in milliseconds
    * @returns {number} Duration since context creation
    */
-  getExecutionDuration() {
+  getExecutionDuration(): number {
     return Date.now() - this.executionStartTime;
+  }
+
+  /**
+   * Get results array (public accessor for private results field)
+   * @returns {Array} The results array
+   */
+  get Results(): Array<Record<string, unknown>> {
+    return this.results;
+  }
+
+  /**
+   * Get last operation (public accessor for private lastOperation field)
+   * @returns {string | null} The last operation name or null
+   */
+  get LastOperation(): string | null {
+    return this.lastOperation;
+  }
+
+  /**
+   * Get operation results map (public accessor for private operationResults field)
+   * @returns {Map} The operation results map
+   */
+  get OperationResults(): Map<string, Record<string, unknown>> {
+    return this.operationResults;
+  }
+
+  /**
+   * Get initial context (public accessor for private initialContext field)
+   * @returns {Record<string, unknown>} The initial context
+   */
+  get InitialContext(): Record<string, unknown> {
+    return this.initialContext;
   }
 }

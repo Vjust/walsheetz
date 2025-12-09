@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 // NOTE: Node/server/CLI usage only. The React UI must use @/sdk/* or @/walrus/* (Browser*Service).
 // Walrus storage service for WalSheetz
 import { getCurrentConfig } from './config.js';
@@ -6,11 +7,15 @@ import { getCurrentConfig } from './config.js';
 
 // Stub implementations for optional features not yet extracted
 const ResilientExecutor = class {
-  constructor(config) {
+  config: unknown;
+  constructor(config: unknown) {
     this.config = config;
   }
-  async execute(fn) {
+  async execute(fn: () => Promise<unknown>) {
     return await fn();
+  }
+  getStats() {
+    return { averageExecutionTime: 0 };
   }
 };
 
@@ -30,10 +35,19 @@ try {
   WalrusClient = walrusModule.WalrusClient;
   SuiClient = suiModule.SuiClient;
 } catch (error) {
-  console.warn('[WalrusService] SDK not available in Node.js environment:', error.message);
+  const err = error as Error;
+  console.warn('[WalrusService] SDK not available in Node.js environment:', err.message);
 }
 
 class WalrusService {
+  private config: Record<string, unknown>;
+  private batchQueue: Map<string, unknown>;
+  private uploadInProgress: Set<string>;
+  private storeExecutor: InstanceType<typeof ResilientExecutor>;
+  private retrieveExecutor: InstanceType<typeof ResilientExecutor>;
+  private sdkClient: unknown | null;
+  private suiClient: unknown | null;
+
   constructor() {
     this.config = getCurrentConfig().walrus;
     this.batchQueue = new Map(); // Store batches by spreadsheet ID
@@ -81,22 +95,30 @@ class WalrusService {
     // Initialize SDK client if available in Node.js environment
     this.sdkClient = null;
     this.suiClient = null;
-    if (WalrusClient && SuiClient && this.config?.features?.useSdk) {
+    if (WalrusClient && SuiClient && (this.config as Record<string, unknown>)?.features) {
       try {
         const fullConfig = getCurrentConfig();
-        this.suiClient = new SuiClient({ url: fullConfig.sui.rpcUrl });
+        const features = ((this.config as Record<string, unknown>).features as Record<string, unknown>) || {};
+        const useSdk = (features.useSdk as boolean) || false;
 
-        const sdkNetwork = this.config.features.sdkNetwork ||
-                         (fullConfig.environment === 'mainnet' ? 'mainnet' : 'testnet');
+        if (useSdk) {
+          const fullConfigObj = fullConfig as Record<string, unknown>;
+          const suiConfig = (fullConfigObj.sui as Record<string, unknown>) || {};
+          this.suiClient = new SuiClient({ url: (suiConfig.rpcUrl as string) || '' });
 
-        this.sdkClient = new WalrusClient({
-          network: sdkNetwork,
-          suiClient: this.suiClient
-        });
+          const sdkNetwork = (features.sdkNetwork as string) ||
+                           ((fullConfigObj.environment as string) === 'mainnet' ? 'mainnet' : 'testnet');
 
-        console.log('[WalrusService] SDK initialized for Node.js environment');
+          this.sdkClient = new WalrusClient({
+            network: sdkNetwork,
+            suiClient: this.suiClient
+          } as any);
+
+          console.log('[WalrusService] SDK initialized for Node.js environment');
+        }
       } catch (sdkError) {
-        console.warn('[WalrusService] Failed to initialize SDK, will use HTTP fallback:', sdkError.message);
+        const err = sdkError as Error;
+        console.warn('[WalrusService] Failed to initialize SDK, will use HTTP fallback:', err.message);
         this.sdkClient = null;
         this.suiClient = null;
       }
@@ -104,23 +126,25 @@ class WalrusService {
   }
 
   // Convert spreadsheet data to binary JSON for efficient storage with optional compression
-  async encodeSpreadsheetData(data, options = {}) {
+  async encodeSpreadsheetData(data: unknown, options: Record<string, unknown> = {}) {
     try {
       // Create optimized data structure
+      const dataObj = data as Record<string, unknown>;
+      const optionsObj = options as Record<string, unknown>;
       const optimizedData = {
-        version: data.version || 1,
+        version: (dataObj.version as number) || 1,
         timestamp: Date.now(),
-        spreadsheetId: data.spreadsheetId,
+        spreadsheetId: dataObj.spreadsheetId,
         metadata: {
-          title: data.title || 'Untitled Spreadsheet',
-          createdAt: data.createdAt || Date.now(),
+          title: (dataObj.title as string) || 'Untitled Spreadsheet',
+          createdAt: (dataObj.createdAt as number) || Date.now(),
           lastModified: Date.now(),
           format: 'walsheetz-v1',
-          chunk: this.buildChunkMetadata(data.metadata?.chunk, options.chunk)
+          chunk: this.buildChunkMetadata((dataObj.metadata as Record<string, unknown> | undefined)?.chunk as Record<string, unknown>, optionsObj.chunk as Record<string, unknown>)
         },
-        changes: data.changes || [],
-        cells: this.optimizeCellData(data.cells || {}),
-        sheets: data.sheets || []
+        changes: (dataObj.changes as unknown[]) || [],
+        cells: this.optimizeCellData((dataObj.cells as Record<string, unknown>) || {}),
+        sheets: (dataObj.sheets as unknown[]) || []
       };
 
       // Convert to binary JSON (using TextEncoder for efficiency)
@@ -129,8 +153,8 @@ class WalrusService {
       const rawData = encoder.encode(jsonString);
       
       // Enhanced compression with multiple algorithms and lower threshold
-      const compressionThreshold = options.compressionThreshold || 4096; // Lowered to 4KB
-      const preferredAlgorithm = options.compressionAlgorithm || 'auto';
+      const compressionThreshold = (optionsObj.compressionThreshold as number) || 4096; // Lowered to 4KB
+      const preferredAlgorithm = (optionsObj.compressionAlgorithm as string) || 'auto';
       const shouldCompress = rawData.length > compressionThreshold &&
                             typeof CompressionStream !== 'undefined';
 
@@ -138,7 +162,7 @@ class WalrusService {
         console.log(`📦 Compressing data (${rawData.length} bytes > ${compressionThreshold} threshold, algorithm: ${preferredAlgorithm})`);
 
         try {
-          let bestResult = null;
+          let bestResult: Record<string, unknown> | null = null;
           const algorithms = this.getAvailableCompressionAlgorithms(preferredAlgorithm);
 
           // Try each algorithm and pick the best one
@@ -147,7 +171,7 @@ class WalrusService {
               const compressedData = await this.compressDataWithAlgorithm(rawData, algorithm);
               const compressionRatio = rawData.length / compressedData.length;
 
-              const result = {
+              const result: Record<string, unknown> = {
                 data: compressedData,
                 compressed: true,
                 originalSize: rawData.length,
@@ -157,7 +181,7 @@ class WalrusService {
               };
 
               // Pick the best compression ratio
-              if (!bestResult || result.compressionRatio > bestResult.compressionRatio) {
+              if (!bestResult || (result.compressionRatio as number) > (bestResult.compressionRatio as number)) {
                 bestResult = result;
               }
 
@@ -168,18 +192,20 @@ class WalrusService {
                 break;
               }
             } catch (algoError) {
-              console.warn(`  ${algorithm} compression failed:`, typeof algoError === 'string' ? algoError : algoError.message || 'Unknown error');
+              const err = algoError as Error;
+              console.warn(`  ${algorithm} compression failed:`, typeof algoError === 'string' ? algoError : err.message || 'Unknown error');
             }
           }
 
           if (bestResult) {
-            console.log(`✅ Best compression: ${bestResult.algorithm} with ${bestResult.compressionRatio.toFixed(2)}x ratio`);
+            console.log(`✅ Best compression: ${bestResult.algorithm} with ${((bestResult.compressionRatio as number) * 100).toFixed(2)}% ratio`);
             return bestResult;
           } else {
             throw new Error('All compression algorithms failed');
           }
         } catch (compressError) {
-          console.warn('Enhanced compression failed, falling back to raw data:', typeof compressError === 'string' ? compressError : compressError.message || 'Unknown error');
+          const err = compressError as Error;
+          console.warn('Enhanced compression failed, falling back to raw data:', typeof compressError === 'string' ? compressError : err.message || 'Unknown error');
           return {
             data: rawData,
             compressed: false,
@@ -187,7 +213,7 @@ class WalrusService {
             compressedSize: rawData.length,
             compressionRatio: 1.0,
             algorithm: 'none',
-            compressionError: typeof compressError === 'string' ? compressError : compressError.message || 'Unknown error'
+            compressionError: typeof compressError === 'string' ? compressError : err.message || 'Unknown error'
           };
         }
       }
@@ -202,30 +228,31 @@ class WalrusService {
         algorithm: 'none'
       };
     } catch (error) {
-      console.error('Failed to encode spreadsheet data:', error);
-      throw error;
+      const err = error as Error;
+      console.error('Failed to encode spreadsheet data:', err);
+      throw err;
     }
   }
   
   // Compress data using CompressionStream API (gzip)
-  async compressData(data) {
-    const stream = new ReadableStream({
+  async compressData(data: Uint8Array): Promise<Uint8Array> {
+    const stream = new ReadableStream<Uint8Array>({
       start(controller) {
         controller.enqueue(data);
         controller.close();
       }
     });
-    
-    const compressedStream = stream.pipeThrough(new CompressionStream('gzip'));
+
+    const compressedStream = stream.pipeThrough(new CompressionStream('gzip') as any);
     const reader = compressedStream.getReader();
-    const chunks = [];
-    
+    const chunks: Uint8Array[] = [];
+
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      chunks.push(value);
+      chunks.push(value as Uint8Array);
     }
-    
+
     // Combine chunks into single Uint8Array
     const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
     const result = new Uint8Array(totalLength);
@@ -234,27 +261,27 @@ class WalrusService {
       result.set(chunk, offset);
       offset += chunk.length;
     }
-    
+
     return result;
   }
   
   // Decompress data using DecompressionStream API (gzip)
-  async decompressData(compressedData) {
-    const stream = new ReadableStream({
+  async decompressData(compressedData: Uint8Array): Promise<Uint8Array> {
+    const stream = new ReadableStream<Uint8Array>({
       start(controller) {
         controller.enqueue(compressedData);
         controller.close();
       }
     });
 
-    const decompressedStream = stream.pipeThrough(new DecompressionStream('gzip'));
+    const decompressedStream = stream.pipeThrough(new DecompressionStream('gzip') as any);
     const reader = decompressedStream.getReader();
-    const chunks = [];
+    const chunks: Uint8Array[] = [];
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      chunks.push(value);
+      chunks.push(value as Uint8Array);
     }
 
     // Combine chunks into single Uint8Array
@@ -272,15 +299,15 @@ class WalrusService {
   // ENHANCED COMPRESSION SYSTEM
 
   // Get available compression algorithms based on browser support
-  getAvailableCompressionAlgorithms(preferred = 'auto') {
-    const algorithms = [];
+  getAvailableCompressionAlgorithms(preferred = 'auto'): string[] {
+    const algorithms: string[] = [];
 
     // Check what's available in the browser
     if (typeof CompressionStream !== 'undefined') {
       // Add algorithms in order of preference for spreadsheet data
       try {
         // Brotli is usually best for text data like JSON
-        new CompressionStream('br');
+        new CompressionStream('br' as CompressionFormat);
         algorithms.push('br');
       } catch (e) {
         // Brotli not supported
@@ -288,7 +315,7 @@ class WalrusService {
 
       try {
         // Gzip is widely supported and good for JSON
-        new CompressionStream('gzip');
+        new CompressionStream('gzip' as CompressionFormat);
         algorithms.push('gzip');
       } catch (e) {
         // Gzip not supported (very rare)
@@ -296,7 +323,7 @@ class WalrusService {
 
       try {
         // Deflate as fallback
-        new CompressionStream('deflate');
+        new CompressionStream('deflate' as CompressionFormat);
         algorithms.push('deflate');
       } catch (e) {
         // Deflate not supported
@@ -312,26 +339,26 @@ class WalrusService {
   }
 
   // Compress data with specific algorithm
-  async compressDataWithAlgorithm(data, algorithm) {
+  async compressDataWithAlgorithm(data: Uint8Array, algorithm: string): Promise<Uint8Array> {
     if (algorithm === 'none') {
       return data;
     }
 
-    const stream = new ReadableStream({
+    const stream = new ReadableStream<Uint8Array>({
       start(controller) {
         controller.enqueue(data);
         controller.close();
       }
     });
 
-    const compressedStream = stream.pipeThrough(new CompressionStream(algorithm));
+    const compressedStream = stream.pipeThrough(new CompressionStream(algorithm as CompressionFormat) as any);
     const reader = compressedStream.getReader();
-    const chunks = [];
+    const chunks: Uint8Array[] = [];
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      chunks.push(value);
+      chunks.push(value as Uint8Array);
     }
 
     // Combine chunks into single Uint8Array
@@ -347,26 +374,26 @@ class WalrusService {
   }
 
   // Decompress data with automatic algorithm detection
-  async decompressDataWithAlgorithm(compressedData, algorithm) {
+  async decompressDataWithAlgorithm(compressedData: Uint8Array, algorithm: string): Promise<Uint8Array> {
     if (algorithm === 'none') {
       return compressedData;
     }
 
-    const stream = new ReadableStream({
+    const stream = new ReadableStream<Uint8Array>({
       start(controller) {
         controller.enqueue(compressedData);
         controller.close();
       }
     });
 
-    const decompressedStream = stream.pipeThrough(new DecompressionStream(algorithm));
+    const decompressedStream = stream.pipeThrough(new DecompressionStream(algorithm as CompressionFormat) as any);
     const reader = decompressedStream.getReader();
-    const chunks = [];
+    const chunks: Uint8Array[] = [];
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      chunks.push(value);
+      chunks.push(value as Uint8Array);
     }
 
     // Combine chunks into single Uint8Array
@@ -382,29 +409,31 @@ class WalrusService {
   }
 
   // Calculate SHA-256 hash of data for integrity verification
-  async calculateContentHash(data) {
+  async calculateContentHash(data: unknown) {
     try {
       const encoded = await this.encodeSpreadsheetData(data);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', encoded.data);
+      const dataToHash = (encoded.data as any) instanceof Uint8Array ? encoded.data : new Uint8Array(encoded.data as any);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', dataToHash as BufferSource);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      
+
       return {
         hash: hashHex,
         algorithm: 'SHA-256',
-        dataSize: encoded.data.length,
+        dataSize: (dataToHash as Uint8Array).length,
         timestamp: Date.now()
       };
     } catch (error) {
-      console.error('Failed to calculate content hash:', error);
-      throw error;
+      const err = error as Error;
+      console.error('Failed to calculate content hash:', err);
+      throw err;
     }
   }
 
   // Calculate SHA-256 hash from already-encoded binary data
-  async calculateHashFromBinary(binaryData) {
+  async calculateHashFromBinary(binaryData: Uint8Array) {
     try {
-      const hashBuffer = await crypto.subtle.digest('SHA-256', binaryData);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', binaryData as BufferSource);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
       
@@ -415,15 +444,16 @@ class WalrusService {
         timestamp: Date.now()
       };
     } catch (error) {
-      console.error('Failed to calculate hash from binary data:', error);
-      throw error;
+      const err = error as Error;
+      console.error('Failed to calculate hash from binary data:', err);
+      throw err;
     }
   }
 
   // Optimize cell data structure for storage
   // Accept both UI shape ({ value, formula, type, s }) and storage shape ({ v, f, t, s })
-  optimizeCellData(cells) {
-    const optimized = {};
+  optimizeCellData(cells: Record<string, unknown>): Record<string, unknown> {
+    const optimized: Record<string, unknown> = {};
 
     // Handle null or undefined input
     if (!cells || typeof cells !== 'object') {
@@ -433,10 +463,11 @@ class WalrusService {
     for (const [cellKey, cellData] of Object.entries(cells)) {
       if (!cellData || typeof cellData !== 'object') continue;
 
-      const value = cellData.v !== undefined ? cellData.v : cellData.value;
-      const formula = cellData.f !== undefined ? cellData.f : cellData.formula;
-      const type = cellData.t !== undefined ? cellData.t : cellData.type;
-      const style = cellData.s;
+      const cellObj = cellData as Record<string, unknown>;
+      const value = cellObj.v !== undefined ? cellObj.v : cellObj.value;
+      const formula = cellObj.f !== undefined ? cellObj.f : cellObj.formula;
+      const type = cellObj.t !== undefined ? cellObj.t : cellObj.type;
+      const style = cellObj.s;
 
       if (value !== undefined || formula !== undefined) {
         optimized[cellKey] = { v: value, f: formula, t: type, s: style };
@@ -447,55 +478,47 @@ class WalrusService {
   }
 
   // Store blob to Walrus with integrity verification, compression, and resilient execution
-  async storeBlob(data, metadata = {}) {
+  async storeBlob(data: unknown, metadata: Record<string, unknown> = {}) {
     // Note: SDK path in Node.js environment requires server-side keypair or transaction proxy
     // For now, server-side continues to use HTTP API. SDK path would require additional setup.
     // Client-side (BrowserWalrusService) uses SDK with wallet integration.
 
     // Step 1: Encode data with optional compression
     const encodedResult = await this.encodeSpreadsheetData(data, {
-      compressionThreshold: metadata.compressionThreshold || 16384
+      compressionThreshold: (metadata.compressionThreshold as number) || 16384
     });
     
     // Step 2: Calculate hash from the final data (compressed or raw)
-    const contentHash = await this.calculateHashFromBinary(encodedResult.data);
+    const contentHash = await this.calculateHashFromBinary(encodedResult.data as Uint8Array);
     console.log(`📍 Content hash calculated: ${contentHash.hash.substring(0, 16)}...`);
     
     // Log compression stats if compressed
-    if (encodedResult.compressed) {
-      console.log(`📦 Data compressed: ${encodedResult.originalSize} → ${encodedResult.compressedSize} bytes (${encodedResult.compressionRatio.toFixed(2)}x)`);
+    const encodedObj = encodedResult as Record<string, unknown>;
+    if (encodedObj.compressed) {
+      console.log(`📦 Data compressed: ${encodedObj.originalSize} → ${encodedObj.compressedSize} bytes (${((encodedObj.compressionRatio as number) || 1).toFixed(2)}x)`);
     }
 
     // Execute store operation with circuit breaker and retry logic
-    return this.storeExecutor.execute(async () => {
+    return (this.storeExecutor as any).execute(async () => {
       return this._performStoreOperation(
-        data, 
-        encodedResult, 
-        contentHash, 
+        data,
+        encodedResult,
+        contentHash,
         {
           ...metadata,
-          compression: encodedResult.algorithm,
-          originalSize: encodedResult.originalSize,
-          compressedSize: encodedResult.compressedSize,
-          compressionRatio: encodedResult.compressionRatio
+          compression: encodedObj.algorithm,
+          originalSize: encodedObj.originalSize,
+          compressedSize: encodedObj.compressedSize,
+          compressionRatio: encodedObj.compressionRatio
         }
       );
-    }, async (error) => {
-      // Fallback: try local storage or provide degraded functionality
-      console.warn('🔄 Store operation failed, attempting fallback...', typeof error === 'string' ? error : (error && error.message) || 'Unknown error');
-      return {
-        success: false,
-        error: `Walrus storage unavailable: ${typeof error === 'string' ? error : (error && error.message) || 'Unknown error'}`,
-        fallback: 'local_storage',
-        contentHash
-      };
     });
   }
 
   // Internal method for the actual store operation with timeout support
-  async _performStoreOperation(data, encodedResult, contentHash, metadata = {}) {
+  async _performStoreOperation(data: unknown, encodedResult: Record<string, unknown>, contentHash: Record<string, unknown>, metadata: Record<string, unknown> = {}) {
     // Handle both old format (direct binaryData) and new format (encodedResult object)
-    const binaryData = encodedResult.data || encodedResult;
+    const binaryData = ((encodedResult.data as Uint8Array) || (encodedResult as any)) as Uint8Array;
 
     // CONTENT DEDUPLICATION CHECK
     const deduplicationResult = await this.checkContentDeduplication(data, encodedResult, contentHash);
@@ -505,7 +528,7 @@ class WalrusService {
     }
 
     // Create blob directly for Walrus API
-    const blob = new Blob([binaryData], { type: 'application/octet-stream' });
+    const blob = new Blob([binaryData as any], { type: 'application/octet-stream' });
 
     // Default to 50 epochs for testnet (about 100 days)
     const epochs = 50;
@@ -516,7 +539,7 @@ class WalrusService {
     
     // Create AbortController for timeout (default 20 seconds for PUT)
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), metadata.timeout || 20000);
+    const timeout = setTimeout(() => controller.abort(), (metadata.timeout as number) || 20000);
     
     try {
       const response = await fetch(url, {
@@ -535,101 +558,105 @@ class WalrusService {
         try {
           errorText = await response.text();
         } catch (readError) {
-          errorText = `Unable to read error response: ${typeof readError === 'string' ? readError : readError.message || 'Unknown error'}`;
+          const err = readError as Error;
+          errorText = `Unable to read error response: ${typeof readError === 'string' ? readError : err.message || 'Unknown error'}`;
         }
-        
+
         // Capture server correlation ID if present
-        const correlationId = response.headers.get('x-correlation-id') || 
-                             response.headers.get('x-request-id') || 
-                             response.headers.get('request-id') || 
+        const correlationId = response.headers.get('x-correlation-id') ||
+                             response.headers.get('x-request-id') ||
+                             response.headers.get('request-id') ||
                              'not-provided';
-        
+
         // Enhanced error with debugging context and correlation ID
         const errorContext = {
           httpStatus: response.status,
           httpStatusText: response.statusText,
-          publisherUrl: this.config.publisherUrl,
-          dataSize: binaryData.length,
+          publisherUrl: (this.config as Record<string, unknown>).publisherUrl,
+          dataSize: (binaryData as any).length || ((binaryData as any) as ArrayBuffer).byteLength,
           contentType: response.headers.get('content-type'),
           correlationId,
-          responseHeaders: Object.fromEntries(response.headers.entries()),
+          responseHeaders: Object.fromEntries((response.headers as any).entries() || []),
           errorBody: errorText,
           timestamp: new Date().toISOString()
         };
-        
+
         console.error('Walrus HTTP request failed:', errorContext);
         throw new Error(`Walrus storage HTTP ${response.status} (${response.statusText}): ${errorText}. CorrelationId: ${correlationId}`);
       }
 
-      const result = await response.json();
+      const result = await response.json() as Record<string, unknown>;
 
       // Capture correlation ID from successful response
-      const correlationId = response.headers.get('x-correlation-id') || 
-                           response.headers.get('x-request-id') || 
+      const correlationId = response.headers.get('x-correlation-id') ||
+                           response.headers.get('x-request-id') ||
                            'not-provided';
 
       // Handle both response types (newlyCreated and alreadyCertified)
       if (result.newlyCreated) {
-        const blobId = result.newlyCreated.blobObject.blobId;
+        const newlyCreated = result.newlyCreated as Record<string, unknown>;
+        const blobObject = newlyCreated.blobObject as Record<string, unknown>;
+        const blobId = blobObject.blobId as string;
 
         // Add to deduplication registry for future efficiency
         this.addToContentRegistry(contentHash, blobId, {
-          originalSize: encodedResult.originalSize || binaryData.length,
-          algorithm: encodedResult.algorithm || 'none'
+          originalSize: (encodedResult.originalSize as number) || binaryData.length,
+          algorithm: (encodedResult.algorithm as string) || 'none'
         });
 
         return {
           success: true,
           blobId: blobId,
-          size: binaryData.length,
-          endEpoch: result.newlyCreated.blobObject.storage.endEpoch,
-          suiObjectId: result.newlyCreated.blobObject.id,
+          size: (binaryData as any).length || ((binaryData as unknown) as ArrayBuffer).byteLength,
+          endEpoch: ((blobObject.storage as Record<string, unknown>).endEpoch),
+          suiObjectId: blobObject.id,
           status: 'newly_created',
-          url: `${this.config.blobUrl}/${blobId}`,
-          publisherUrl: this.config.publisherUrl,
+          url: `${(this.config as Record<string, unknown>).blobUrl}/${blobId}`,
+          publisherUrl: (this.config as Record<string, unknown>).publisherUrl,
           correlationId,
           // Include content hash for integrity verification
           contentHash: contentHash,
           metadata: {
             ...metadata,
-            originalSize: encodedResult.originalSize || binaryData.length,
-            compressedSize: encodedResult.compressedSize || binaryData.length,
-            compressionRatio: encodedResult.compressionRatio || 1.0,
-            algorithm: encodedResult.algorithm || 'none',
+            originalSize: (encodedResult.originalSize as number) || binaryData.length,
+            compressedSize: (encodedResult.compressedSize as number) || binaryData.length,
+            compressionRatio: (encodedResult.compressionRatio as number) || 1.0,
+            algorithm: (encodedResult.algorithm as string) || 'none',
             uploadedAt: Date.now(),
-            contentHash: contentHash.hash,
+            contentHash: (contentHash.hash as string),
             hashAlgorithm: contentHash.algorithm
           }
         };
       } else if (result.alreadyCertified) {
-        const blobId = result.alreadyCertified.blobId;
+        const alreadyCertified = result.alreadyCertified as Record<string, unknown>;
+        const blobId = alreadyCertified.blobId as string;
 
         // Add to deduplication registry for future efficiency
         this.addToContentRegistry(contentHash, blobId, {
-          originalSize: encodedResult.originalSize || binaryData.length,
-          algorithm: encodedResult.algorithm || 'none'
+          originalSize: (encodedResult.originalSize as number) || binaryData.length,
+          algorithm: (encodedResult.algorithm as string) || 'none'
         });
 
         return {
           success: true,
           blobId: blobId,
-          size: binaryData.length,
-          endEpoch: result.alreadyCertified.endEpoch,
-          eventTxDigest: result.alreadyCertified.event.txDigest,
+          size: (binaryData as any).length || ((binaryData as unknown) as ArrayBuffer).byteLength,
+          endEpoch: alreadyCertified.endEpoch,
+          eventTxDigest: ((alreadyCertified.event as Record<string, unknown>).txDigest),
           status: 'already_certified',
-          url: `${this.config.blobUrl}/${blobId}`,
-          publisherUrl: this.config.publisherUrl,
+          url: `${(this.config as Record<string, unknown>).blobUrl}/${blobId}`,
+          publisherUrl: (this.config as Record<string, unknown>).publisherUrl,
           correlationId,
           // Include content hash for integrity verification
           contentHash: contentHash,
           metadata: {
             ...metadata,
-            originalSize: encodedResult.originalSize || binaryData.length,
-            compressedSize: encodedResult.compressedSize || binaryData.length,
-            compressionRatio: encodedResult.compressionRatio || 1.0,
-            algorithm: encodedResult.algorithm || 'none',
+            originalSize: (encodedResult.originalSize as number) || binaryData.length,
+            compressedSize: (encodedResult.compressedSize as number) || binaryData.length,
+            compressionRatio: (encodedResult.compressionRatio as number) || 1.0,
+            algorithm: (encodedResult.algorithm as string) || 'none',
             uploadedAt: Date.now(),
-            contentHash: contentHash.hash,
+            contentHash: (contentHash.hash as string),
             hashAlgorithm: contentHash.algorithm
           }
         };
@@ -637,99 +664,106 @@ class WalrusService {
         throw new Error('Unexpected response format from Walrus');
       }
     } catch (error) {
+      const err = error as Error & { name?: string; code?: string; publisherUrl?: unknown; dataSize?: number };
       clearTimeout(timeout);
-      
+
       // Handle timeout specifically
-      if (error.name === 'AbortError') {
-        const timeoutError = new Error(`Walrus store operation timed out after ${metadata.timeout || 20000}ms`);
+      if (err.name === 'AbortError') {
+        const timeoutError = new Error(`Walrus store operation timed out after ${(metadata.timeout as number) || 20000}ms`) as Error & { code?: string; publisherUrl?: unknown; dataSize?: number };
         timeoutError.code = 'TIMEOUT';
-        timeoutError.publisherUrl = this.config.publisherUrl;
+        timeoutError.publisherUrl = (this.config as Record<string, unknown>).publisherUrl;
         timeoutError.dataSize = binaryData.length;
         throw timeoutError;
       }
-      
+
       // Re-throw other errors
-      throw error;
+      throw err;
     }
   }
 
   // Get store operation statistics
   getStoreStats() {
-    return this.storeExecutor.getStats();
+    return (this.storeExecutor as any).getStats();
   }
   
   // Store blob to multiple endpoints for redundancy
-  async storeBlobWithRedundancy(data, metadata = {}) {
-    const config = getCurrentConfig().walrus;
-    
+  async storeBlobWithRedundancy(data: unknown, metadata: Record<string, unknown> = {}) {
+    const fullConfig = getCurrentConfig() as Record<string, unknown>;
+    const config = (fullConfig.walrus as Record<string, unknown>) || {};
+
     // Check if redundancy is enabled
-    if (!config.redundancy?.enabled || !config.publishers || config.publishers.length <= 1) {
+    const redundancy = (config.redundancy as Record<string, unknown>) || {};
+    const publishers = (config.publishers as string[]) || [];
+    if (!(redundancy.enabled as boolean) || publishers.length <= 1) {
       console.log('🔔 Redundancy not enabled or insufficient endpoints, using single store');
       return this.storeBlob(data, metadata);
     }
     
-    console.log(`🛡️ Starting redundant storage to ${config.publishers.length} endpoints`);
-    
+    console.log(`🛡️ Starting redundant storage to ${publishers.length} endpoints`);
+
     // Step 1: Encode data with optional compression
     const encodedResult = await this.encodeSpreadsheetData(data, {
-      compressionThreshold: metadata.compressionThreshold || 16384
+      compressionThreshold: (metadata.compressionThreshold as number) || 16384
     });
-    
+
     // Step 2: Calculate hash from the final data
-    const contentHash = await this.calculateHashFromBinary(encodedResult.data);
-    console.log(`📍 Content hash for redundancy: ${contentHash.hash.substring(0, 16)}...`);
-    
+    const contentHash = await this.calculateHashFromBinary((encodedResult.data as Uint8Array));
+    console.log(`📍 Content hash for redundancy: ${(contentHash.hash as string).substring(0, 16)}...`);
+
     // Step 3: Store to multiple endpoints
-    const storePromises = [];
-    const maxEndpoints = Math.min(config.redundancy.maxEndpoints, config.publishers.length);
-    
+    const storePromises: Promise<any>[] = [];
+    const maxRedundancy = (redundancy.maxEndpoints as number) || 3;
+    const maxEndpoints = Math.min(maxRedundancy, publishers.length);
+
     for (let i = 0; i < maxEndpoints; i++) {
-      const publisherUrl = config.publishers[i];
+      const publisherUrl = (publishers[i] as string);
+      const encodedObj = encodedResult as Record<string, unknown>;
       const endpointMetadata = {
         ...metadata,
         publisherUrl,
         endpointIndex: i,
-        compression: encodedResult.algorithm,
-        originalSize: encodedResult.originalSize,
-        compressedSize: encodedResult.compressedSize,
-        compressionRatio: encodedResult.compressionRatio
+        compression: encodedObj.algorithm,
+        originalSize: encodedObj.originalSize,
+        compressedSize: encodedObj.compressedSize,
+        compressionRatio: encodedObj.compressionRatio
       };
-      
+
       // Create promise for each endpoint
       const storePromise = this._storeToEndpoint(
         publisherUrl,
-        encodedResult.data,
+        (encodedObj.data as Uint8Array),
         contentHash,
         endpointMetadata
-      ).catch(error => ({
+      ).catch((error: any) => ({
         success: false,
         error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
         publisherUrl,
         endpointIndex: i
       }));
-      
+
       storePromises.push(storePromise);
     }
-    
+
     // Wait for all store operations
     const results = await Promise.allSettled(storePromises);
-    
+
     // Analyze results
-    const successfulStores = [];
-    const failedStores = [];
-    const blobIds = [];
-    
+    const successfulStores: any[] = [];
+    const failedStores: any[] = [];
+    const blobIds: string[] = [];
+
     for (const result of results) {
-      if (result.status === 'fulfilled' && result.value.success) {
+      if (result.status === 'fulfilled' && (result.value as any).success) {
         successfulStores.push(result.value);
-        blobIds.push(result.value.blobId);
+        blobIds.push((result.value as any).blobId);
       } else {
-        failedStores.push(result.reason || result.value);
+        failedStores.push((result as any).reason || (result as any).value);
       }
     }
-    
+
     // Check if minimum successful stores met
-    if (successfulStores.length >= config.redundancy.minSuccessful) {
+    const minSuccessful = ((redundancy.minSuccessful as number) || 1);
+    if (successfulStores.length >= minSuccessful) {
       console.log(`✅ Redundant storage successful: ${successfulStores.length}/${maxEndpoints} endpoints`);
       
       // Return the first successful result with redundancy info
@@ -745,10 +779,10 @@ class WalrusService {
         }
       };
     } else {
-      console.error(`❌ Redundant storage failed: only ${successfulStores.length}/${config.redundancy.minSuccessful} succeeded`);
+      console.error(`❌ Redundant storage failed: only ${successfulStores.length}/${minSuccessful} succeeded`);
       return {
         success: false,
-        error: `Insufficient successful stores: ${successfulStores.length}/${config.redundancy.minSuccessful}`,
+        error: `Insufficient successful stores: ${successfulStores.length}/${minSuccessful}`,
         redundancyInfo: {
           totalAttempts: maxEndpoints,
           successful: successfulStores.length,
@@ -760,17 +794,17 @@ class WalrusService {
   }
   
   // Store to a specific endpoint
-  async _storeToEndpoint(publisherUrl, binaryData, contentHash, metadata = {}) {
+  async _storeToEndpoint(publisherUrl: string, binaryData: Uint8Array, contentHash: Record<string, unknown>, metadata: Record<string, unknown> = {}) {
     console.log(`📤 Storing to endpoint: ${publisherUrl}`);
     
     // Create blob
-    const blob = new Blob([binaryData], { type: 'application/octet-stream' });
+    const blob = new Blob([binaryData as any], { type: 'application/octet-stream' });
     const epochs = 50;
     const url = `${publisherUrl}/v1/blobs?epochs=${epochs}`;
     
     // Create AbortController for timeout
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), metadata.timeout || 20000);
+    const timeout = setTimeout(() => controller.abort(), ((metadata as any).timeout as number) || 20000);
     
     try {
       const response = await fetch(url, {
@@ -794,16 +828,16 @@ class WalrusService {
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
       
-      const result = await response.json();
-      
+      const result = await response.json() as any;
+
       // Handle response types
-      if (result.newlyCreated || result.alreadyCertified) {
-        const blobId = result.newlyCreated?.blobObject?.blobId || result.alreadyCertified?.blobId;
+      if ((result as any).newlyCreated || (result as any).alreadyCertified) {
+        const blobId = (result as any).newlyCreated?.blobObject?.blobId || (result as any).alreadyCertified?.blobId;
         return {
           success: true,
           blobId,
           publisherUrl,
-          size: binaryData.length,
+          size: (binaryData as any).length || ((binaryData as unknown) as ArrayBuffer).byteLength,
           contentHash,
           metadata
         };
@@ -811,20 +845,21 @@ class WalrusService {
         throw new Error('Unexpected response format');
       }
     } catch (error) {
+      const err = error as Error & { name?: string };
       clearTimeout(timeout);
-      
-      if (error.name === 'AbortError') {
+
+      if (err.name === 'AbortError') {
         throw new Error(`Timeout after ${metadata.timeout || 20000}ms`);
       }
-      throw error;
+      throw err;
     }
   }
 
   // Retrieve blob from Walrus with integrity verification and resilient execution
-  async retrieveBlob(blobId, expectedHash = null) {
+  async retrieveBlob(blobId: string, expectedHash: string | null = null) {
     // INDEXEDDB CACHE CHECK FIRST
     try {
-      const cachedResult = await indexedDBCache.getCachedVersion(blobId);
+      const cachedResult = await (indexedDBCache as any).getCachedVersion(blobId);
       if (cachedResult) {
         console.log(`📦 Cache hit for blob ${blobId.substring(0, 8)}...`);
 
@@ -849,13 +884,13 @@ class WalrusService {
     }
 
     // If cache miss or hash mismatch, fetch from network
-    return this.retrieveExecutor.execute(async () => {
+    return (this.retrieveExecutor as any).execute(async () => {
       const result = await this._performRetrieveOperation(blobId, expectedHash);
 
       // Cache successful results for future use
       if (result.success && result.data) {
         try {
-          await indexedDBCache.cacheVersion(blobId, result.data, {
+          await (indexedDBCache as any).cacheVersion(blobId, result.data, {
             contentHash: expectedHash || result.contentHash,
             cachedFrom: 'walrus',
             blobUrl: result.url
@@ -866,31 +901,33 @@ class WalrusService {
       }
 
       return result;
-    }, async (error) => {
+    }).catch(async (error) => {
       // Enhanced fallback: try cache again as last resort
-      console.warn('🔄 Retrieve operation failed, attempting cache fallback...', typeof error === 'string' ? error : (error && error.message) || 'Unknown error');
+      const err = error as Error;
+      console.warn('🔄 Retrieve operation failed, attempting cache fallback...', typeof error === 'string' ? error : (err && err.message) || 'Unknown error');
 
       try {
-        const cachedResult = await indexedDBCache.getCachedVersion(blobId);
+        const cachedResult = await (indexedDBCache as any).getCachedVersion(blobId);
         if (cachedResult) {
           console.log(`📦 Using stale cache as fallback for blob ${blobId.substring(0, 8)}...`);
           return {
             success: true,
-            data: cachedResult.data,
+            data: (cachedResult as Record<string, unknown>).data,
             fromCache: true,
             stale: true, // Indicate this is potentially stale data
-            cacheInfo: cachedResult.cacheInfo,
-            fallbackReason: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
+            cacheInfo: (cachedResult as Record<string, unknown>).cacheInfo,
+            fallbackReason: typeof error === 'string' ? error : (err && err.message) || 'Unknown error',
             warning: 'Using cached data due to network failure'
           };
         }
       } catch (fallbackCacheError) {
-        console.error('Fallback cache lookup also failed:', typeof fallbackCacheError === 'string' ? fallbackCacheError : fallbackCacheError.message || 'Unknown error');
+        const fallbackErr = fallbackCacheError as Error;
+        console.error('Fallback cache lookup also failed:', typeof fallbackCacheError === 'string' ? fallbackCacheError : fallbackErr.message || 'Unknown error');
       }
 
       return {
         success: false,
-        error: `Walrus retrieval unavailable: ${typeof error === 'string' ? error : (error && error.message) || 'Unknown error'}`,
+        error: `Walrus retrieval unavailable: ${typeof error === 'string' ? error : (err && err.message) || 'Unknown error'}`,
         fallback: 'cache_or_local',
         blobId
       };
@@ -898,7 +935,7 @@ class WalrusService {
   }
 
   // Internal method for the actual retrieve operation with timeout and HEAD validation
-  async _performRetrieveOperation(blobId, expectedHash = null, timeout = 20000) {
+  async _performRetrieveOperation(blobId: string, expectedHash: string | null = null, timeout = 20000): Promise<Record<string, unknown>> {
     console.log(`📥 Attempting to retrieve blob: ${blobId}`);
     
     // First, perform HEAD request to validate blob exists and get metadata
@@ -924,11 +961,12 @@ class WalrusService {
         console.log(`📋 Blob metadata - Size: ${contentLength || 'unknown'}, Type: ${contentType || 'unknown'}`);
       }
     } catch (error) {
+      const err = error as Error & { name?: string };
       clearTimeout(headTimeout);
-      if (error.name === 'AbortError') {
+      if (err.name === 'AbortError') {
         throw new Error(`HEAD request timed out for blob ${blobId}`);
       }
-      throw error;
+      throw err;
     }
     
     // Now perform the actual GET request with timeout
@@ -963,7 +1001,7 @@ class WalrusService {
                           dataView.getUint8(0) === 0x1f && 
                           dataView.getUint8(1) === 0x8b;
       
-      let decompressedData = binaryData;
+      let decompressedData: ArrayBuffer | Uint8Array = binaryData;
       if (isCompressed) {
         console.log('📦 Detected compressed data, decompressing...');
         try {
@@ -976,24 +1014,24 @@ class WalrusService {
           decompressedData = binaryData;
         }
       }
-      
+
       // Decode binary JSON back to object
       const decoder = new TextDecoder();
-      const jsonString = decoder.decode(decompressedData);
+      const jsonString = decoder.decode(decompressedData as any);
       let data = JSON.parse(jsonString);
 
       // Normalize cell shape for consumers (convert {v,f,t,s} -> {value, formula, type, s})
-      if (data && typeof data === 'object' && data.cells && typeof data.cells === 'object') {
-        const anyCell = Object.values(data.cells)[0];
-        if (anyCell && (anyCell.v !== undefined || anyCell.f !== undefined)) {
-          const uiCells = {};
-          for (const [key, cell] of Object.entries(data.cells)) {
+      if (data && typeof data === 'object' && (data as any).cells && typeof (data as any).cells === 'object') {
+        const anyCell = Object.values((data as any).cells)[0];
+        if (anyCell && ((anyCell as any).v !== undefined || (anyCell as any).f !== undefined)) {
+          const uiCells: Record<string, any> = {};
+          for (const [key, cell] of Object.entries((data as any).cells)) {
             if (!cell || typeof cell !== 'object') continue;
             uiCells[key] = {
-              value: cell.v,
-              formula: cell.f,
-              type: cell.t,
-              s: cell.s
+              value: (cell as any).v,
+              formula: (cell as any).f,
+              type: (cell as any).t,
+              s: (cell as any).s
             };
           }
           data = { ...data, cells: uiCells };
@@ -1038,29 +1076,30 @@ class WalrusService {
         correlationId
       };
     } catch (error) {
+      const err = error as Error & { name?: string; code?: string; aggregatorUrl?: unknown; blobId?: unknown };
       clearTimeout(getTimeout);
-      
+
       // Handle timeout specifically
-      if (error.name === 'AbortError') {
-        const timeoutError = new Error(`Walrus retrieve operation timed out after ${timeout}ms`);
+      if (err.name === 'AbortError') {
+        const timeoutError = new Error(`Walrus retrieve operation timed out after ${timeout}ms`) as Error & { code?: string; aggregatorUrl?: unknown; blobId?: unknown };
         timeoutError.code = 'TIMEOUT';
         timeoutError.aggregatorUrl = this.config.aggregatorUrl;
         timeoutError.blobId = blobId;
         throw timeoutError;
       }
-      
+
       // Re-throw other errors
-      throw error;
+      throw err;
     }
   }
 
   // Get retrieve operation statistics
   getRetrieveStats() {
-    return this.retrieveExecutor.getStats();
+    return (this.retrieveExecutor as any).getStats();
   }
 
   // Verify blob integrity without full retrieval (lightweight verification)
-  async verifyBlobIntegrity(blobId, expectedHash) {
+  async verifyBlobIntegrity(blobId: string, expectedHash: string | null) {
     try {
       console.log(`🔍 Performing lightweight integrity check for blob: ${blobId}`);
       
@@ -1095,10 +1134,11 @@ class WalrusService {
         error: result.error
       };
     } catch (error) {
-      console.error(`Failed to verify blob integrity: ${typeof error === 'string' ? error : (error && error.message) || 'Unknown error'}`);
+      const err = error as Error;
+      console.error(`Failed to verify blob integrity: ${typeof error === 'string' ? error : (err && err.message) || 'Unknown error'}`);
       return {
         success: false,
-        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
+        error: typeof error === 'string' ? error : (err && err.message) || 'Unknown error',
         blobId,
         accessible: false,
         integrityVerified: false
@@ -1107,7 +1147,7 @@ class WalrusService {
   }
 
   // Enhanced integrity verification with detailed reporting
-  async performComprehensiveIntegrityCheck(blobId, expectedHash, metadata = {}) {
+  async performComprehensiveIntegrityCheck(blobId: string, expectedHash: string, metadata: Record<string, unknown> = {}) {
     console.log(`🔒 Starting comprehensive integrity check for blob: ${blobId}`);
     
     const startTime = Date.now();
@@ -1118,7 +1158,10 @@ class WalrusService {
       startTime,
       steps: [],
       success: false,
-      integrityVerified: false
+      integrityVerified: false,
+      error: null as string | null,
+      endTime: null as number | null,
+      totalDuration: null as number | null
     };
     
     try {
@@ -1192,16 +1235,17 @@ class WalrusService {
       
       return report;
     } catch (error) {
-      report.error = typeof error === 'string' ? error : (error && error.message) || 'Unknown error';
+      const err = error as Error;
+      report.error = typeof error === 'string' ? error : (err && err.message) || 'Unknown error';
       report.endTime = Date.now();
       report.totalDuration = report.endTime - report.startTime;
-      console.error(`🔒 Comprehensive integrity check failed for ${blobId}:`, error);
+      console.error(`🔒 Comprehensive integrity check failed for ${blobId}:`, err);
       return report;
     }
   }
 
   // Batch storage using Walrus Quilt
-  async storeBatch(spreadsheetId, changes, options = {}) {
+  async storeBatch(spreadsheetId: string, changes: unknown[], options: Record<string, unknown> = {}) {
     try {
       // Get existing batch or create new one
       if (!this.batchQueue.has(spreadsheetId)) {
@@ -1215,16 +1259,16 @@ class WalrusService {
         });
       }
 
-      const batch = this.batchQueue.get(spreadsheetId);
-      
+      const batch = this.batchQueue.get(spreadsheetId) as any;
+
       // Add changes to batch
-      batch.changes.push(...changes);
-      batch.metadata.lastUpdated = Date.now();
-      batch.metadata.totalChanges = batch.changes.length;
+      (batch as any).changes.push(...changes);
+      (batch as any).metadata.lastUpdated = Date.now();
+      (batch as any).metadata.totalChanges = (batch as any).changes.length;
       
       // Add custom tags if provided
-      if (options.tags) {
-        batch.metadata.tags.push(...options.tags);
+      if ((options.tags as unknown[]) && Array.isArray(options.tags)) {
+        (batch as any).metadata.tags.push(...(options.tags as unknown[]));
       }
       
       // Persist batch after adding changes
@@ -1240,19 +1284,20 @@ class WalrusService {
       return {
         success: true,
         batched: true,
-        batchSize: batch.changes.length,
+        batchSize: (batch as any).changes.length,
         message: 'Changes added to batch, waiting for upload threshold'
       };
     } catch (error) {
-      console.error('Failed to batch changes:', error);
-      throw error;
+      const err = error as Error;
+      console.error('Failed to batch changes:', err);
+      throw err;
     }
   }
 
   // ADAPTIVE BATCHING SYSTEM
 
   // Determine if batch should be uploaded using adaptive criteria
-  shouldUploadBatchAdaptive(batch, options = {}) {
+  shouldUploadBatchAdaptive(batch: Record<string, unknown>, options: Record<string, unknown> = {}): boolean {
     const config = getCurrentConfig().storage;
     const now = Date.now();
 
@@ -1264,7 +1309,7 @@ class WalrusService {
 
     // 2. Calculate current batch size in bytes
     const estimatedSize = this.estimateBatchSize(batch);
-    console.log(`📊 Batch analysis: ${batch.changes.length} changes, ~${estimatedSize} bytes`);
+    console.log(`📊 Batch analysis: ${(batch as any).changes.length} changes, ~${estimatedSize} bytes`);
 
     // 3. Size-based thresholds (adaptive)
     const sizeThresholds = {
@@ -1283,7 +1328,7 @@ class WalrusService {
       max: 120000        // 2 minutes absolute maximum
     };
 
-    const batchAge = now - batch.metadata.batchStarted;
+    const batchAge = now - (batch as any).metadata.batchStarted;
 
     // 5. Adaptive logic based on size and time
     if (estimatedSize >= sizeThresholds.max) {
@@ -1312,8 +1357,8 @@ class WalrusService {
       return true;
     }
 
-    if (batch.changes.length >= (options.maxChanges || 100)) {
-      console.log(`📊 Maximum change count exceeded (${batch.changes.length})`);
+    if ((batch as any).changes.length >= (options.maxChanges || 100)) {
+      console.log(`📊 Maximum change count exceeded (${(batch as any).changes.length})`);
       return true;
     }
 
@@ -1330,13 +1375,13 @@ class WalrusService {
     }
 
     // 8. User activity adaptive logic
-    const isUserActive = this.isUserActivelyEditing(batch.metadata.spreadsheetId);
+    const isUserActive = this.isUserActivelyEditing((batch as any).metadata.spreadsheetId);
     if (!isUserActive && estimatedSize >= sizeThresholds.small) {
       console.log(`👤 User inactive, uploading pending changes`);
       return true;
     }
 
-    console.log(`⏳ Batch not ready for upload yet (${estimatedSize} bytes, ${batchAge}ms, ${batch.changes.length} changes)`);
+    console.log(`⏳ Batch not ready for upload yet (${estimatedSize} bytes, ${batchAge}ms, ${(batch as any).changes.length} changes)`);
     return false;
   }
 
@@ -1344,14 +1389,15 @@ class WalrusService {
   estimateBatchSize(batch) {
     try {
       // Simple estimation based on JSON serialization
-      const sampleChanges = batch.changes.slice(0, Math.min(5, batch.changes.length));
+      const sampleChanges = (batch as any).changes.slice(0, Math.min(5, (batch as any).changes.length));
       const sampleSize = JSON.stringify(sampleChanges).length;
       const avgChangeSize = sampleSize / sampleChanges.length || 100; // fallback to 100 bytes
 
-      return batch.changes.length * avgChangeSize;
+      return (batch as any).changes.length * avgChangeSize;
     } catch (error) {
+      const err = error as Error;
       // Fallback estimation
-      return batch.changes.length * 150; // Conservative estimate
+      return (batch as any).changes.length * 150; // Conservative estimate
     }
   }
 
@@ -1359,8 +1405,8 @@ class WalrusService {
   getNetworkPerformanceScore() {
     try {
       // Use browser Connection API if available
-      if (navigator.connection) {
-        const connection = navigator.connection;
+      if ((navigator as any).connection) {
+        const connection = (navigator as any).connection;
         let score = 0.5; // baseline
 
         // Adjust based on effective connection type
@@ -1399,6 +1445,7 @@ class WalrusService {
 
       return 0.6; // Default moderate score
     } catch (error) {
+      const err = error as Error;
       return 0.5; // Safe fallback
     }
   }
@@ -1413,15 +1460,16 @@ class WalrusService {
       const now = Date.now();
 
       // Check if recent changes were made
-      const hasRecentChanges = batch.metadata.lastUpdated &&
-        (now - batch.metadata.lastUpdated) < recentChangeWindow;
+      const hasRecentChanges = (batch as any).metadata.lastUpdated &&
+        (now - (batch as any).metadata.lastUpdated) < recentChangeWindow;
 
       // Check batch frequency (multiple changes in short time = active editing)
-      const isFrequentChanges = batch.changes.length >= 3 &&
-        (now - batch.metadata.batchStarted) < 30000; // 30 seconds
+      const isFrequentChanges = (batch as any).changes.length >= 3 &&
+        (now - (batch as any).metadata.batchStarted) < 30000; // 30 seconds
 
       return hasRecentChanges || isFrequentChanges;
     } catch (error) {
+      const err = error as Error;
       return false;
     }
   }
@@ -1436,8 +1484,8 @@ class WalrusService {
       this.uploadInProgress.add(spreadsheetId);
       this.markUploadInProgress(spreadsheetId, true);
       
-      const batch = this.batchQueue.get(spreadsheetId);
-      if (!batch || batch.changes.length === 0) {
+      const batch = this.batchQueue.get(spreadsheetId) as any;
+      if (!batch || (batch as any).changes.length === 0) {
         this.uploadInProgress.delete(spreadsheetId);
         this.markUploadInProgress(spreadsheetId, false);
         throw new Error('No changes to upload');
@@ -1447,12 +1495,12 @@ class WalrusService {
       const quiltData = {
         spreadsheetId,
         version: Date.now(), // Use timestamp as version
-        changes: batch.changes,
-        metadata: batch.metadata,
+        changes: (batch as any).changes,
+        metadata: (batch as any).metadata,
         quilt: {
           format: 'walsheetz-quilt-v1',
           compression: 'binary-json',
-          tags: batch.metadata.tags
+          tags: (batch as any).metadata.tags
         }
       };
 
@@ -1467,15 +1515,16 @@ class WalrusService {
       return {
         success: true,
         blobId: result.blobId,
-        batchSize: batch.changes.length,
+        batchSize: (batch as any).changes.length,
         uploadedAt: Date.now(),
         metadata: result.metadata
       };
     } catch (error) {
+      const err = error as Error;
       this.uploadInProgress.delete(spreadsheetId);
       this.markUploadInProgress(spreadsheetId, false);
-      console.error('Failed to upload batch:', error);
-      throw error;
+      console.error('Failed to upload batch:', err);
+      throw err;
     }
   }
 
@@ -1486,7 +1535,7 @@ class WalrusService {
       const binaryData = encoded.data;
 
       // Create blob with raw binary data (no FormData - not supported by Walrus)
-      const blob = new Blob([binaryData], { type: 'application/octet-stream' });
+      const blob = new Blob([binaryData as any], { type: 'application/octet-stream' });
       
       // Store metadata locally for application use (cannot send to Walrus API)
       const metadata = {
@@ -1494,9 +1543,9 @@ class WalrusService {
         spreadsheetId: data.spreadsheetId,
         version: data.version,
         format: data.quilt?.format || 'walsheetz-v1',
-        changeCount: data.changes?.length || 0,
+        changeCount: (data as any).changes?.length || 0,
         timestamp: Date.now(),
-        size: binaryData.length,
+        size: (binaryData as any).length || (binaryData as ArrayBuffer).byteLength,
         tags: [
           'walsheetz',
           'spreadsheet',
@@ -1528,30 +1577,30 @@ class WalrusService {
         throw new Error(`Walrus storage failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
-      const result = await response.json();
-      
+      const result = await response.json() as any;
+
       // Handle both response types (newlyCreated and alreadyCertified)
-      if (result.newlyCreated) {
+      if ((result as any).newlyCreated) {
         return {
           success: true,
-          blobId: result.newlyCreated.blobObject.blobId,
-          size: binaryData.length,
-          endEpoch: result.newlyCreated.blobObject.storage.endEpoch,
-          suiObjectId: result.newlyCreated.blobObject.id,
+          blobId: (result as any).newlyCreated.blobObject.blobId,
+          size: (binaryData as any).length || ((binaryData as unknown) as ArrayBuffer).byteLength,
+          endEpoch: (result as any).newlyCreated.blobObject.storage.endEpoch,
+          suiObjectId: (result as any).newlyCreated.blobObject.id,
           status: 'newly_created',
           metadata: metadata,
-          url: `${this.config.blobUrl}/${result.newlyCreated.blobObject.blobId}`
+          url: `${this.config.blobUrl}/${(result as any).newlyCreated.blobObject.blobId}`
         };
-      } else if (result.alreadyCertified) {
+      } else if ((result as any).alreadyCertified) {
         return {
           success: true,
-          blobId: result.alreadyCertified.blobId,
-          size: binaryData.length,
-          endEpoch: result.alreadyCertified.endEpoch,
-          eventTxDigest: result.alreadyCertified.event.txDigest,
+          blobId: (result as any).alreadyCertified.blobId,
+          size: (binaryData as any).length || ((binaryData as unknown) as ArrayBuffer).byteLength,
+          endEpoch: (result as any).alreadyCertified.endEpoch,
+          eventTxDigest: (result as any).alreadyCertified.event.txDigest,
           status: 'already_certified',
           metadata: metadata,
-          url: `${this.config.blobUrl}/${result.alreadyCertified.blobId}`
+          url: `${this.config.blobUrl}/${(result as any).alreadyCertified.blobId}`
         };
       } else {
         // Enhanced error with response details for debugging
@@ -1560,27 +1609,28 @@ class WalrusService {
           responseContent: result,
           expectedFields: ['newlyCreated', 'alreadyCertified'],
           publisherUrl: this.config.publisherUrl,
-          dataSize: binaryData.length
+          dataSize: (binaryData as any).length || (binaryData as ArrayBuffer).byteLength
         };
         console.error('Unexpected Walrus response format:', errorDetails);
         throw new Error(`Unexpected response format from Walrus: ${JSON.stringify(errorDetails, null, 2)}`);
       }
     } catch (error) {
+      const err = error as Error & { name?: string };
       // Enhanced error logging with context
       const debugInfo = {
         method: 'storeWithQuilt',
         spreadsheetId: data?.spreadsheetId,
         dataSize: data ? JSON.stringify(data).length : 0,
         publisherUrl: this.config.publisherUrl,
-        errorType: error.name,
-        errorMessage: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
+        errorType: err.name,
+        errorMessage: typeof error === 'string' ? error : (err && err.message) || 'Unknown error',
         timestamp: new Date().toISOString()
       };
-      
+
       console.error('Walrus storeWithQuilt operation failed:', debugInfo);
-      
+
       // Re-throw with enhanced context
-      throw new Error(`Walrus storage failed for spreadsheet ${data?.spreadsheetId || 'unknown'}: ${typeof error === 'string' ? error : (error && error.message) || 'Unknown error'}. Debug info: ${JSON.stringify(debugInfo)}`);
+      throw new Error(`Walrus storage failed for spreadsheet ${data?.spreadsheetId || 'unknown'}: ${typeof error === 'string' ? error : (err && err.message) || 'Unknown error'}. Debug info: ${JSON.stringify(debugInfo)}`);
     }
   }
 
@@ -1598,16 +1648,17 @@ class WalrusService {
         throw new Error(`Query failed: ${response.status}`);
       }
 
-      const results = await response.json();
-      
+      const results = await response.json() as any;
+
       return {
         success: true,
-        results: results.blobs || [],
-        total: results.total || 0
+        results: (results as any).blobs || [],
+        total: (results as any).total || 0
       };
     } catch (error) {
-      console.error('Failed to query by tags:', error);
-      throw error;
+      const err = error as Error;
+      console.error('Failed to query by tags:', err);
+      throw err;
     }
   }
 
@@ -1637,11 +1688,12 @@ class WalrusService {
       }
 
       stats.versions.sort((a, b) => b - a); // Most recent first
-      
+
       return stats;
     } catch (error) {
-      console.error('Failed to get storage stats:', error);
-      throw error;
+      const err = error as Error;
+      console.error('Failed to get storage stats:', err);
+      throw err;
     }
   }
 
@@ -1658,9 +1710,9 @@ class WalrusService {
 
     return {
       hasBatch: true,
-      changeCount: batch.changes.length,
-      batchStarted: batch.metadata.batchStarted,
-      lastUpdated: batch.metadata.lastUpdated,
+      changeCount: (batch as any).changes.length,
+      batchStarted: (batch as any).metadata.batchStarted,
+      lastUpdated: (batch as any).metadata.lastUpdated,
       uploadInProgress: this.uploadInProgress.has(spreadsheetId)
     };
   }
@@ -1764,8 +1816,9 @@ class WalrusService {
       
       return result;
     } catch (error) {
-      console.error(`Failed to store delta version: ${typeof error === 'string' ? error : (error && error.message) || 'Unknown error'}`);
-      throw error;
+      const err = error as Error;
+      console.error(`Failed to store delta version: ${typeof error === 'string' ? error : (err && err.message) || 'Unknown error'}`);
+      throw err;
     }
   }
 
@@ -1854,8 +1907,8 @@ class WalrusService {
       }
       
       // Modify existing cells
-      for (const [cellKey, change] of Object.entries(delta.modified || {})) {
-        reconstructed.cells[cellKey] = change.new;
+      for (const [cellKey, change] of Object.entries((delta as any).modified || {})) {
+        (reconstructed as any).cells[cellKey] = (change as any).new;
       }
       
       // Delete cells
@@ -1875,10 +1928,11 @@ class WalrusService {
       
       console.log(`✅ Data reconstructed from delta successfully`);
       return reconstructed;
-      
+
     } catch (error) {
-      console.error(`Failed to reconstruct from delta: ${typeof error === 'string' ? error : (error && error.message) || 'Unknown error'}`);
-      throw error;
+      const err = error as Error;
+      console.error(`Failed to reconstruct from delta: ${typeof error === 'string' ? error : (err && err.message) || 'Unknown error'}`);
+      throw err;
     }
   }
 
@@ -1909,10 +1963,11 @@ class WalrusService {
         reconstructed: false
       };
     } catch (error) {
-      console.error(`Failed to retrieve blob with reconstruction: ${typeof error === 'string' ? error : (error && error.message) || 'Unknown error'}`);
+      const err = error as Error;
+      console.error(`Failed to retrieve blob with reconstruction: ${typeof error === 'string' ? error : (err && err.message) || 'Unknown error'}`);
       return {
         success: false,
-        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
+        error: typeof error === 'string' ? error : (err && err.message) || 'Unknown error',
         blobId,
         reconstructed: false
       };
@@ -2019,12 +2074,13 @@ class WalrusService {
         contentHash: contentHashInfo,
         metadata: enhancedMetadata
       };
-      
+
     } catch (error) {
-      console.error(`Failed to store data with redundancy: ${typeof error === 'string' ? error : (error && error.message) || 'Unknown error'}`);
+      const err = error as Error;
+      console.error(`Failed to store data with redundancy: ${typeof error === 'string' ? error : (err && err.message) || 'Unknown error'}`);
       return {
         success: false,
-        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
+        error: typeof error === 'string' ? error : (err && err.message) || 'Unknown error',
         redundancyInfo: null
       };
     }
@@ -2075,11 +2131,12 @@ class WalrusService {
             };
           }
         } catch (error) {
-          console.warn(`⚠️ Failed to retrieve from ${blobId}: ${typeof error === 'string' ? error : (error && error.message) || 'Unknown error'}`);
+          const err = error as Error;
+          console.warn(`⚠️ Failed to retrieve from ${blobId}: ${typeof error === 'string' ? error : (err && err.message) || 'Unknown error'}`);
           retrieval.attemptResults.push({
             blobId,
             success: false,
-            error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error'
+            error: typeof error === 'string' ? error : (err && err.message) || 'Unknown error'
           });
         }
       }
@@ -2092,12 +2149,13 @@ class WalrusService {
         redundancyInfo: retrieval,
         usedFallback: false
       };
-      
+
     } catch (error) {
-      console.error(`Failed to retrieve data with redundancy: ${typeof error === 'string' ? error : (error && error.message) || 'Unknown error'}`);
+      const err = error as Error;
+      console.error(`Failed to retrieve data with redundancy: ${typeof error === 'string' ? error : (err && err.message) || 'Unknown error'}`);
       return {
         success: false,
-        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
+        error: typeof error === 'string' ? error : (err && err.message) || 'Unknown error',
         redundancyInfo: null
       };
     }
@@ -2146,6 +2204,7 @@ class WalrusService {
           
           return status;
         } catch (error) {
+          const err = error as Error;
           healthCheck.unhealthyBlobs++;
           healthCheck.accessFailures++;
           return {
@@ -2154,7 +2213,7 @@ class WalrusService {
             accessible: false,
             integrityVerified: false,
             healthy: false,
-            error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
+            error: typeof error === 'string' ? error : (err && err.message) || 'Unknown error',
             dataSize: 0
           };
         }
@@ -2185,114 +2244,122 @@ class WalrusService {
       
       return healthCheck;
     } catch (error) {
-      console.error(`Failed to check redundancy health: ${typeof error === 'string' ? error : (error && error.message) || 'Unknown error'}`);
+      const err = error as Error;
+      console.error(`Failed to check redundancy health: ${typeof error === 'string' ? error : (err && err.message) || 'Unknown error'}`);
       return {
         totalBlobs: blobIds.length,
         healthyBlobs: 0,
         unhealthyBlobs: blobIds.length,
         overallHealth: 'critical',
         redundancyLevel: 'failed',
-        error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error'
+        error: typeof error === 'string' ? error : (err && err.message) || 'Unknown error'
       };
     }
   }
   
   // Load persisted batches from localStorage
   loadPersistedBatches() {
-    if (typeof window === 'undefined' || !window.localStorage) {
+    const storage = typeof window !== 'undefined' ? window.localStorage : null;
+    if (!storage) {
       return; // Not in browser environment
     }
-    
+
     const config = getCurrentConfig().storage.features.batchPersistence;
     if (!config.enabled) {
       return;
     }
-    
+
     try {
       const storagePrefix = config.storageKey || 'walsheetz_batch_';
-      const keys = Object.keys(localStorage).filter(key => key.startsWith(storagePrefix));
-      
+      const keys = Object.keys(storage).filter(key => key.startsWith(storagePrefix));
+
       for (const key of keys) {
         try {
           const spreadsheetId = key.replace(storagePrefix, '');
-          const batchData = JSON.parse(localStorage.getItem(key));
-          
+          const batchData = JSON.parse(storage.getItem(key) || '{}');
+
           // Validate batch age
-          const age = Date.now() - batchData.metadata.batchStarted;
+          const age = Date.now() - (batchData as any).metadata.batchStarted;
           if (age > config.maxBatchAge * 2) {
             // Too old, discard
-            localStorage.removeItem(key);
-            console.log(`🗑️ Discarded stale batch for ${spreadsheetId} (age: ${age}ms)`);
+            storage.removeItem(key);
+            console.log(`Discarded stale batch for ${spreadsheetId} (age: ${age}ms)`);
             continue;
           }
-          
+
           // Check if upload was in progress
           const uploadKey = `${storagePrefix}upload_${spreadsheetId}`;
-          const uploadInProgress = localStorage.getItem(uploadKey);
-          
+          const uploadInProgress = storage.getItem(uploadKey);
+
           if (uploadInProgress) {
             // Clear the flag and restore the batch
-            localStorage.removeItem(uploadKey);
+            storage.removeItem(uploadKey);
           }
-          
+
           // Restore batch to memory
           this.batchQueue.set(spreadsheetId, batchData);
-          console.log(`✅ Restored batch for ${spreadsheetId} with ${batchData.changes.length} changes`);
-          
+          console.log(`Restored batch for ${spreadsheetId} with ${(batchData as any).changes.length} changes`);
+
         } catch (error) {
-          console.error(`Failed to restore batch from ${key}:`, error);
-          localStorage.removeItem(key);
+          const err = error as Error;
+          console.error(`Failed to restore batch from ${key}:`, err);
+          storage.removeItem(key);
         }
       }
     } catch (error) {
-      console.error('Failed to load persisted batches:', error);
+      const err = error as Error;
+      console.error('Failed to load persisted batches:', err);
     }
   }
   
   // Persist batch to localStorage
-  persistBatch(spreadsheetId) {
-    if (typeof window === 'undefined' || !window.localStorage) {
+  persistBatch(spreadsheetId: any) {
+    const storage = typeof window !== 'undefined' ? window.localStorage : null;
+    if (!storage) {
       return; // Not in browser environment
     }
-    
+
     const config = getCurrentConfig().storage.features.batchPersistence;
     if (!config.enabled) {
       return;
     }
-    
+
     try {
       const batch = this.batchQueue.get(spreadsheetId);
       if (!batch) {
         return;
       }
-      
+
       const storageKey = `${config.storageKey || 'walsheetz_batch_'}${spreadsheetId}`;
-      localStorage.setItem(storageKey, JSON.stringify(batch));
-      console.log(`💾 Persisted batch for ${spreadsheetId} with ${batch.changes.length} changes`);
-      
+      storage.setItem(storageKey, JSON.stringify(batch));
+      console.log(`Persisted batch for ${spreadsheetId} with ${(batch as any).changes.length} changes`);
+
     } catch (error) {
-      console.error(`Failed to persist batch for ${spreadsheetId}:`, error);
+      const err = error as Error;
+      console.error(`Failed to persist batch for ${spreadsheetId}:`, err);
     }
   }
   
   // Clear persisted batch
-  clearPersistedBatch(spreadsheetId) {
-    if (typeof window === 'undefined' || !window.localStorage) {
+  clearPersistedBatch(spreadsheetId: any) {
+    const storage = typeof window !== 'undefined' ? window.localStorage : null;
+    if (!storage) {
       return;
     }
-    
+
     const config = getCurrentConfig().storage.features.batchPersistence;
     const storageKey = `${config.storageKey || 'walsheetz_batch_'}${spreadsheetId}`;
     const uploadKey = `${config.storageKey || 'walsheetz_batch_'}upload_${spreadsheetId}`;
-    
-    localStorage.removeItem(storageKey);
-    localStorage.removeItem(uploadKey);
-    console.log(`🗑️ Cleared persisted batch for ${spreadsheetId}`);
+
+    storage.removeItem(storageKey);
+    storage.removeItem(uploadKey);
+    console.log(`Cleared persisted batch for ${spreadsheetId}`);
   }
-  
+
   // Mark upload in progress
-  markUploadInProgress(spreadsheetId, inProgress = true) {
-    if (typeof window === 'undefined' || !window.localStorage) {
+  markUploadInProgress(spreadsheetId: any, inProgress = true) {
+    const storage = typeof window !== 'undefined' ? window.localStorage : null;
+    if (!storage) {
       return;
     }
 
@@ -2300,9 +2367,9 @@ class WalrusService {
     const uploadKey = `${config.storageKey || 'walsheetz_batch_'}upload_${spreadsheetId}`;
 
     if (inProgress) {
-      localStorage.setItem(uploadKey, Date.now().toString());
+      storage.setItem(uploadKey, Date.now().toString());
     } else {
-      localStorage.removeItem(uploadKey);
+      storage.removeItem(uploadKey);
     }
   }
 
@@ -2310,22 +2377,25 @@ class WalrusService {
 
   // Store content hash registry for deduplication
   getContentHashRegistry() {
-    if (typeof window === 'undefined' || !window.localStorage) {
+    const storage = typeof window !== 'undefined' ? window.localStorage : null;
+    if (!storage) {
       return {};
     }
 
     try {
-      const registry = localStorage.getItem('walsheetz_content_registry');
+      const registry = storage.getItem('walsheetz_content_registry');
       return registry ? JSON.parse(registry) : {};
     } catch (error) {
-      console.warn('Failed to load content hash registry:', error);
+      const err = error as Error;
+      console.warn('Failed to load content hash registry:', err);
       return {};
     }
   }
 
   // Save content hash registry
-  saveContentHashRegistry(registry) {
-    if (typeof window === 'undefined' || !window.localStorage) {
+  saveContentHashRegistry(registry: any) {
+    const storage = typeof window !== 'undefined' ? window.localStorage : null;
+    if (!storage) {
       return;
     }
 
@@ -2336,15 +2406,16 @@ class WalrusService {
 
       if (entries.length > maxEntries) {
         // Keep only the most recent entries
-        const sortedEntries = entries.sort((a, b) => b[1].timestamp - a[1].timestamp);
+        const sortedEntries = entries.sort((a, b) => ((b[1] as any).timestamp as number) - ((a[1] as any).timestamp as number));
         const limitedRegistry = Object.fromEntries(sortedEntries.slice(0, maxEntries));
-        localStorage.setItem('walsheetz_content_registry', JSON.stringify(limitedRegistry));
-        console.log(`📝 Trimmed content registry to ${maxEntries} entries`);
+        storage.setItem('walsheetz_content_registry', JSON.stringify(limitedRegistry));
+        console.log(`Trimmed content registry to ${maxEntries} entries`);
       } else {
-        localStorage.setItem('walsheetz_content_registry', JSON.stringify(registry));
+        storage.setItem('walsheetz_content_registry', JSON.stringify(registry));
       }
     } catch (error) {
-      console.warn('Failed to save content hash registry:', error);
+      const err = error as Error;
+      console.warn('Failed to save content hash registry:', err);
     }
   }
 
@@ -2403,7 +2474,8 @@ class WalrusService {
 
       return null; // No deduplication possible
     } catch (error) {
-      console.warn('Content deduplication check failed:', error);
+      const err = error as Error;
+      console.warn('Content deduplication check failed:', err);
       return null;
     }
   }
@@ -2416,13 +2488,14 @@ class WalrusService {
         blobId,
         timestamp: Date.now(),
         accessCount: 1,
-        size: metadata.originalSize || 0,
-        algorithm: metadata.algorithm || 'none'
+        size: ((metadata as any).originalSize as number) || 0,
+        algorithm: ((metadata as any).algorithm as string) || 'none'
       };
       this.saveContentHashRegistry(registry);
       console.log(`📝 Added to content registry: ${contentHash.hash.substring(0, 16)}... → ${blobId.substring(0, 16)}...`);
     } catch (error) {
-      console.warn('Failed to add to content registry:', error);
+      const err = error as Error;
+      console.warn('Failed to add to content registry:', err);
     }
   }
 
@@ -2445,9 +2518,9 @@ class WalrusService {
 
     return {
       totalEntries: entries.length,
-      totalAccesses: entries.reduce((sum, entry) => sum + (entry.accessCount || 1), 0),
-      oldestEntry: entries.length > 0 ? Math.min(...entries.map(e => e.timestamp)) : null,
-      newestEntry: entries.length > 0 ? Math.max(...entries.map(e => e.timestamp)) : null,
+      totalAccesses: entries.reduce((sum: number, entry) => (sum as number) + ((((entry as any).accessCount as number) || 1) as number), 0),
+      oldestEntry: entries.length > 0 ? Math.min(...entries.map(e => ((e as any).timestamp as number))) : null,
+      newestEntry: entries.length > 0 ? Math.max(...entries.map(e => ((e as any).timestamp as number))) : null,
       registrySize: JSON.stringify(registry).length
     };
   }
@@ -2474,7 +2547,8 @@ class WalrusService {
         }
       };
     } catch (error) {
-      console.error('Failed to get cache stats:', error);
+      const err = error as Error;
+      console.error('Failed to get cache stats:', err);
       return null;
     }
   }
@@ -2486,17 +2560,19 @@ class WalrusService {
       await indexedDBCache.clearCache();
 
       // Clear deduplication registry
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const registryKeys = Object.keys(localStorage).filter(key =>
+      const storage = typeof window !== 'undefined' ? window.localStorage : null;
+      if (storage) {
+        const registryKeys = Object.keys(storage).filter(key =>
           key.startsWith('walsheetz_content_registry')
         );
-        registryKeys.forEach(key => localStorage.removeItem(key));
+        registryKeys.forEach(key => storage.removeItem(key));
       }
 
-      console.log('🧹 All caches cleared successfully');
+      console.log('All caches cleared successfully');
       return true;
     } catch (error) {
-      console.error('Failed to clear caches:', error);
+      const err = error as Error;
+      console.error('Failed to clear caches:', err);
       return false;
     }
   }
@@ -2509,7 +2585,7 @@ class WalrusService {
       const preloadPromises = versionIds.map(async (versionId) => {
         try {
           // Check if already cached
-          const cached = await indexedDBCache.getCachedVersion(versionId);
+          const cached = await (indexedDBCache as any).getCachedVersion(versionId);
           if (cached) {
             console.log(`📦 Version ${versionId.substring(0, 8)}... already cached`);
             return;
@@ -2521,14 +2597,16 @@ class WalrusService {
             console.log(`📦 Preloaded version ${versionId.substring(0, 8)}...`);
           }
         } catch (error) {
-          console.warn(`Failed to preload version ${versionId}:`, typeof error === 'string' ? error : (error && error.message) || 'Unknown error');
+          const err = error as Error;
+          console.warn(`Failed to preload version ${versionId}:`, typeof error === 'string' ? error : (err && err.message) || 'Unknown error');
         }
       });
 
       await Promise.allSettled(preloadPromises);
       console.log(`✅ Cache preloading completed for spreadsheet ${spreadsheetId.substring(0, 8)}...`);
     } catch (error) {
-      console.error('Cache preloading failed:', error);
+      const err = error as Error;
+      console.error('Cache preloading failed:', err);
     }
   }
 
@@ -2635,7 +2713,7 @@ class WalrusService {
           ...currentData,
           deltaInfo: {
             type: 'delta',
-            parentBlobId: metadata.parentBlobId,
+            parentBlobId: (metadata as any).parentBlobId,
             operations: delta.operations,
             efficiency: efficiency
           },
@@ -2680,7 +2758,8 @@ class WalrusService {
         };
       }
     } catch (error) {
-      console.error('Delta storage failed, falling back to full storage:', error);
+      const err = error as Error;
+      console.error('Delta storage failed, falling back to full storage:', err);
 
       // Fallback to full storage
       const result = await this.storeBlob(currentData, {
@@ -2692,7 +2771,7 @@ class WalrusService {
         ...result,
         deltaInfo: {
           type: 'full_fallback',
-          error: typeof error === 'string' ? error : (error && error.message) || 'Unknown error',
+          error: typeof error === 'string' ? error : (err && err.message) || 'Unknown error',
           operations: Object.keys(currentData.cells || {}).length
         }
       };
@@ -2710,14 +2789,14 @@ class WalrusService {
       }
 
       // Delta version - need to reconstruct
-      if (!metadata.parentBlobId) {
+      if (!(metadata as any).parentBlobId) {
         throw new Error('Parent blob ID required for delta reconstruction');
       }
 
-      console.log(`🔄 Reconstructing delta version from parent: ${metadata.parentBlobId.substring(0, 16)}...`);
+      console.log(`🔄 Reconstructing delta version from parent: ${(metadata as any).parentBlobId.substring(0, 16)}...`);
 
       // Recursively get parent data
-      const parentData = await this.retrieveDeltaVersion(metadata.parentBlobId);
+      const parentData = await this.retrieveDeltaVersion((metadata as any).parentBlobId);
 
       // Apply delta to reconstruct full data
       const reconstructedCells = this.applyCellDelta(parentData.cells, data.cells);
@@ -2729,49 +2808,50 @@ class WalrusService {
         reconstructionChain: (parentData.reconstructionChain || 0) + 1
       };
     } catch (error) {
-      console.error('Delta reconstruction failed:', error);
-      throw error;
+      const err = error as Error;
+      console.error('Delta reconstruction failed:', err);
+      throw err;
     }
   }
 
-  getRenewalThresholdDays(options = {}) {
+  getRenewalThresholdDays(options: Record<string, unknown> = {}) {
     const config = getCurrentConfig();
-    const override = options.renewalWarningDays;
-    const defaultWarning = config.storage?.features?.chunk?.renewalWarningDays ||
-      config.walrus?.features?.renewalWarningDays ||
+    const override = (options as Record<string, unknown>).renewalWarningDays;
+    const defaultWarning = ((config.storage as any)?.features as any)?.chunk?.renewalWarningDays ||
+      ((config.walrus as any)?.features as any)?.renewalWarningDays ||
       7;
-    return Math.max(1, override || defaultWarning);
+    return Math.max(1, (override as number) || (defaultWarning as number));
   }
 
-  buildChunkMetadata(existingChunk = {}, overrides = {}) {
+  buildChunkMetadata(existingChunk: Record<string, unknown> = {}, overrides: Record<string, unknown> = {}) {
     const config = getCurrentConfig();
     const now = Date.now();
     const chunkOptions = overrides || {};
 
-    const epochsDefault = chunkOptions.epochs ||
-      existingChunk.epochsPurchased ||
-      config.walrus?.features?.epochsDefault ||
+    const epochsDefault = (chunkOptions as Record<string, unknown>).epochs ||
+      (existingChunk as Record<string, unknown>).epochsPurchased ||
+      ((config.walrus as any)?.features as any)?.epochsDefault ||
       50;
 
-    const epochSeconds = config.walrus?.features?.epochSeconds || 60 * 60 * 24 * 2;
-    const epochStart = existingChunk.epochStart || chunkOptions.epochStart || Math.floor(now / 1000 / epochSeconds);
-    const epochEnd = epochStart + epochsDefault;
+    const epochSeconds = (((config.walrus as any)?.features as any)?.epochSeconds as number) || 60 * 60 * 24 * 2;
+    const epochStart = (existingChunk as Record<string, unknown>).epochStart || (chunkOptions as Record<string, unknown>).epochStart || Math.floor(now / 1000 / (epochSeconds as number));
+    const epochEnd = (epochStart as number) + (epochsDefault as number);
 
-    const expiryTimestamp = chunkOptions.expiryTimestamp ||
-      existingChunk.expiryTimestamp ||
-      (epochEnd * epochSeconds * 1000);
+    const expiryTimestamp = (chunkOptions as Record<string, unknown>).expiryTimestamp ||
+      (existingChunk as Record<string, unknown>).expiryTimestamp ||
+      ((epochEnd as number) * (epochSeconds as number) * 1000);
 
     return {
       epochsPurchased: epochsDefault,
       epochStart,
       epochEnd,
       expiryTimestamp,
-      renewalCount: existingChunk.renewalCount || 0,
-      lastRenewedAt: existingChunk.lastRenewedAt || now,
-      renewalWarningDays: this.getRenewalThresholdDays(chunkOptions),
-      purchaseReceipt: chunkOptions.purchaseReceipt || existingChunk.purchaseReceipt || null,
-      walrusPublisher: chunkOptions.publisherUrl || this.config.publisherUrl,
-      walrusBlobId: chunkOptions.blobId || existingChunk.walrusBlobId || null
+      renewalCount: (existingChunk as Record<string, unknown>).renewalCount || 0,
+      lastRenewedAt: (existingChunk as Record<string, unknown>).lastRenewedAt || now,
+      renewalWarningDays: this.getRenewalThresholdDays(chunkOptions as Record<string, unknown>),
+      purchaseReceipt: (chunkOptions as Record<string, unknown>).purchaseReceipt || (existingChunk as Record<string, unknown>).purchaseReceipt || null,
+      walrusPublisher: ((chunkOptions as Record<string, unknown>).publisherUrl as string) || ((this.config as Record<string, unknown>).publisherUrl as string),
+      walrusBlobId: ((chunkOptions as Record<string, unknown>).blobId as string) || ((existingChunk as Record<string, unknown>).walrusBlobId as string) || null
     };
   }
 }
