@@ -11,6 +11,52 @@
 export { BrowserWalrusService, browserWalrusService } from './browser/BrowserWalrusService.js';
 
 // ============================================================================
+// Core Modules (Pure Functions)
+// ============================================================================
+export {
+  compressDataWithAlgorithm,
+  decompressDataWithAlgorithm,
+  detectCompressionAlgorithm,
+  isCompressed,
+  type CompressionAlgorithm,
+  type CompressionResult
+} from './core/compression.js';
+
+export {
+  createCellDelta,
+  applyCellDelta,
+  reconstructFromDelta,
+  calculateDeltaEfficiency,
+  type CellDelta,
+  type CellChange,
+  type SpreadsheetDelta
+} from './core/delta.js';
+
+export {
+  verifyBlobIntegrity,
+  performComprehensiveIntegrityCheck,
+  type BlobIntegrityResult,
+  type IntegrityCheckStep,
+  type ComprehensiveIntegrityReport
+} from './core/integrity.js';
+
+// ============================================================================
+// Batch Management
+// ============================================================================
+export { BatchManager, type BatchManagerOptions } from './batch/BatchManager.js';
+export { BrowserBatchPersistence } from './batch/adapters/BrowserBatchPersistence.js';
+export { NodeBatchPersistence } from './batch/adapters/NodeBatchPersistence.js';
+export type { IBatchPersistence, Batch } from './batch/interfaces.js';
+
+// ============================================================================
+// Deduplication
+// ============================================================================
+export { DeduplicationManager } from './deduplication/DeduplicationManager.js';
+export { BrowserDeduplicationRegistry } from './deduplication/adapters/BrowserDeduplicationRegistry.js';
+export { NodeDeduplicationRegistry } from './deduplication/adapters/NodeDeduplicationRegistry.js';
+export type { IDeduplicationRegistry, DeduplicationEntry } from './deduplication/interfaces.js';
+
+// ============================================================================
 // Client Modules
 // ============================================================================
 export { WalrusBlobClient } from './client/WalrusBlobClient.js';
