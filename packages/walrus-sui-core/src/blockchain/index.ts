@@ -8,7 +8,7 @@
 export { suiService } from './sui-service.js';
 export { suiGraphQLService } from './sui-graphql-service.js';
 export { suiGrpcService } from './sui-grpc-service.js';
-export { walrusService } from './walrus-service.js';
+export { nodeWalrusService as walrusService } from '@dreamlit/walrus/node';
 export { walletManager } from './wallet-manager.js';
 
 // Support Services (singleton exports)

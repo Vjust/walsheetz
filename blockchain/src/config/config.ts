@@ -274,6 +274,7 @@ export const config = {
   // Collaboration features are not used in the single-user build
   collaboration: {
     enabled: false,  // Collaboration disabled
+    bridgeEnabled: (env.ENABLE_BRIDGE ?? 'false') === 'true',  // NEW: Feature flag for bridge startup
     // Kept for reference but not used:
     // userTimeoutMs: 300000,
     // cellLockTimeoutMs: 60000,

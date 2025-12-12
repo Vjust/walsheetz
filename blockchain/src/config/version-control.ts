@@ -1,6 +1,6 @@
 // Version control system for WalSheetz
 import { suiService } from './sui-service.js';
-import { walrusService } from './walrus-service.js';
+import { nodeWalrusService as walrusService } from '@dreamlit/walrus/node';
 import { getCurrentConfig } from './config.js';
 
 class VersionControl {

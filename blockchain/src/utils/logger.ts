@@ -10,7 +10,7 @@ const LOG_LEVELS = {
   INFO: 1,
   WARN: 2,
   ERROR: 3,
-  CRITICAL: 4
+  CRITICAL: 4,
 };
 
 const LOG_LEVEL_NAMES = Object.keys(LOG_LEVELS);
@@ -20,29 +20,21 @@ const COLORS = {
   RESET: '\x1b[0m',
   BRIGHT: '\x1b[1m',
   DIM: '\x1b[2m',
-
-  // Foreground colors
-  BLACK: '\x1b[30m',
   RED: '\x1b[31m',
   GREEN: '\x1b[32m',
   YELLOW: '\x1b[33m',
   BLUE: '\x1b[34m',
-  MAGENTA: '\x1b[35m',
   CYAN: '\x1b[36m',
   WHITE: '\x1b[37m',
-
-  // Background colors
-  BG_RED: '\x1b[41m',
-  BG_YELLOW: '\x1b[43m',
 };
 
 // Emoji indicators for each log level
 const EMOJI_INDICATORS = {
   DEBUG: '🔍',
-  INFO: 'ℹ️ ',
-  WARN: '⚠️ ',
+  INFO: 'ℹ️',
+  WARN: '⚠️',
   ERROR: '❌',
-  CRITICAL: '🚨'
+  CRITICAL: '🚨',
 };
 
 /**

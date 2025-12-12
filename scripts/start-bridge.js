@@ -13,6 +13,13 @@ import { getCurrentConfig } from '../blockchain/config.js';
 import { createLogger } from './utils/logger.js';
 
 const config = getCurrentConfig();
+
+// Check if bridge is enabled via feature flag
+if (!config.collaboration.bridgeEnabled) {
+  console.log('Bridge disabled. Set ENABLE_BRIDGE=true to enable.');
+  process.exit(0);
+}
+
 const PORT = process.env.BRIDGE_PORT || config.websocket.port;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const LOG_LEVEL = process.env.BRIDGE_LOG_LEVEL || 'INFO';

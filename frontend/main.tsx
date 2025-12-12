@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from '@app/App.jsx'
+import { BlockchainAdapterProvider } from '@lib/spreadsheet/contexts/BlockchainAdapterContext'
 import '@app/styles/index.css'
 
 // Single deterministic Luckysheet adapter replaces 5-layer injection
@@ -36,5 +37,7 @@ initializeLuckysheet()
 
 // Render React app immediately (adapter will handle Luckysheet when ready)
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <App />
+  <BlockchainAdapterProvider>
+    <App />
+  </BlockchainAdapterProvider>
 )

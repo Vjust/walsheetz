@@ -419,6 +419,6 @@ export class LuckysheetAdapter {
 export const luckysheetAdapter = new LuckysheetAdapter();
 
 // Expose for debugging
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && import.meta.env?.DEV) {
   window.__luckysheetAdapter = luckysheetAdapter;
 }

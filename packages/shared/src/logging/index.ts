@@ -13,6 +13,9 @@ export interface Logger {
   warn(message: string, meta?: Record<string, unknown>): void
   error(message: string, error?: Error, meta?: Record<string, unknown>): void
   child(context: Record<string, unknown>): Logger
+  startTimer?(label: string): void
+  endTimer?(label: string): number | null
+  throttle?(key: string, level: LogLevel, message: string, intervalMs?: number): void
 }
 
 /**

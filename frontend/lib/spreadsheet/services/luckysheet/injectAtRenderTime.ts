@@ -358,7 +358,7 @@ export function isRenderTimeInjectionActive() {
 }
 
 // Expose for debugging
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && import.meta.env?.DEV) {
   window.__wzRenderTimeInject = {
     start: startRenderTimeInjection,
     stop: stopRenderTimeInjection,

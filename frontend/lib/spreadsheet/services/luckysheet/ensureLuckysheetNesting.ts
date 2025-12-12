@@ -217,7 +217,7 @@ export function listWZFunctions(container, prefix = '') {
 }
 
 // Expose for debugging
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && import.meta.env?.DEV) {
   window.__wzNesting = {
     ensure: ensureLuckysheetFunctionTree,
     ensureBatch: ensureLuckysheetFunctionTreeBatch,

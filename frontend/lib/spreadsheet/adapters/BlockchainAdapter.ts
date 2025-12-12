@@ -3727,27 +3727,5 @@ Current state:`, window.WalSheetzDebug.getTransactionState());
     }
   };
 
-  console.log('🛠️ WalSheetz Debug Tools loaded. Type WalSheetzDebug.help() for commands.');
-
-  // Also expose the blockchain adapter globally for error recovery
-  if (window.spreadsheetEngine?.blockchainService) {
-    window.walSheetzBlockchainAdapter = window.spreadsheetEngine.blockchainService;
-  }
-}
-
-// Also expose blockchain adapter globally in production for error recovery
-if (typeof window !== 'undefined') {
-  // Check periodically for spreadsheet engine availability
-  const exposeAdapter = () => {
-    // Guard against window being undefined during test teardown
-    if (typeof window !== 'undefined' && window && window.spreadsheetEngine?.blockchainService) {
-      window.walSheetzBlockchainAdapter = window.spreadsheetEngine.blockchainService
-    }
-  }
-
-  // Try immediately
-  exposeAdapter()
-
-  // Also try after a brief delay to handle async initialization
-  setTimeout(exposeAdapter, 100)
+  console.log('WalSheetz Debug Tools loaded. Type WalSheetzDebug.help() for commands.');
 }

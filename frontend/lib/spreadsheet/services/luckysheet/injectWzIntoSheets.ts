@@ -440,7 +440,7 @@ export function getInjectionDiagnostics() {
 }
 
 // Expose for debugging in browser console
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && import.meta.env?.DEV) {
   window.__wzInject = {
     inject: injectWzIntoSheets,
     patchInternalStore: patchInternalStoreFunctionlist,

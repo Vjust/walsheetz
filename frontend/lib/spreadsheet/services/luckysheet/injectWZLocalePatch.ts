@@ -176,7 +176,7 @@ export function getPreInitDiagnostics() {
 }
 
 // Expose for debugging
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && import.meta.env?.DEV) {
   window.__wzPreInit = {
     patch: patchLuckysheetGlobalsBeforeInit,
     isPatched: isPreInitPatchApplied,
