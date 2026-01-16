@@ -1,35 +1,14 @@
-import { SpreadsheetImportExportService } from "@/sdk/import-export/services/SpreadsheetImportExportService.js";
-import * as XLSX from 'xlsx';
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 
-// Mock XLSX module to prevent actual file writing
-vi.mock('xlsx', () => ({
-  writeFile: vi.fn(),
-  utils: {
-    book_new: vi.fn(() => ({ Sheets: {}, SheetNames: [] })),
-    aoa_to_sheet: vi.fn((data) => ({ '!ref': 'A1:Z100' })),
-    json_to_sheet: vi.fn((data) => ({ '!ref': 'A1:Z100' })),
-    sheet_add_aoa: vi.fn((sheet, data, opts) => sheet),
-    book_append_sheet: vi.fn((book, sheet, name) => {
-      book.Sheets[name] = sheet;
-      book.SheetNames.push(name);
-      return book;
-    }),
-    encode_col: vi.fn((col) => {
-      let result = '';
-      let num = col + 1;
-      while (num > 0) {
-        result = String.fromCharCode(num % 26 + 65) + result;
-        num = Math.floor(num / 26) - 1;
-      }
-      return result;
-    }),
-    encode_row: vi.fn((row) => String(row + 1)),
-    encode_cell: vi.fn((cell) => {
-      const col = cell.c !== undefined ? cell.c : 0;
-      const row = cell.r !== undefined ? cell.r : 0;
-      return String.fromCharCode(65 + col % 26) + String(row + 1);
-    })
+vi.mock('@dreamlit/walrus', () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn()
+  },
+  LogComponent: {
+    UI_COMPONENT: 'UI_COMPONENT'
   }
 }));
 
@@ -37,8 +16,10 @@ describe('SpreadsheetImportExportService CSV Export Regression Tests', () => {
   let service;
   let originalWindow;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    const { SpreadsheetImportExportService } = await import('@lib/spreadsheet/services/SpreadsheetImportExportService');
     service = new SpreadsheetImportExportService();
+    vi.spyOn(service, '_writeWorkbookToFile').mockImplementation(() => {});
     // Store original window for restoration
     originalWindow = global.window;
   });
@@ -46,7 +27,7 @@ describe('SpreadsheetImportExportService CSV Export Regression Tests', () => {
   afterEach(() => {
     // Restore window
     global.window = originalWindow;
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('exportToCSV with celldata format', () => {
@@ -74,7 +55,7 @@ describe('SpreadsheetImportExportService CSV Export Regression Tests', () => {
         filename: 'test.csv'
       });
 
-      expect(XLSX.writeFile).toHaveBeenCalledWith(expect.any(Object), 'test.csv', { bookType: 'csv' });
+      expect(service._writeWorkbookToFile).toHaveBeenCalledWith(expect.any(Object), 'test.csv', { bookType: 'csv' });
       vi.clearAllMocks();
     });
 
@@ -98,7 +79,7 @@ describe('SpreadsheetImportExportService CSV Export Regression Tests', () => {
       };
 
       await service.exportToCSV(luckysheetData, { filename: 'test.csv' });
-      expect(XLSX.writeFile).toHaveBeenCalled();
+      expect(service._writeWorkbookToFile).toHaveBeenCalled();
       vi.clearAllMocks();
     });
   });
@@ -128,7 +109,7 @@ describe('SpreadsheetImportExportService CSV Export Regression Tests', () => {
       await service.exportToCSV(luckysheetData, { filename: 'test.csv' });
 
       expect(global.window.luckysheet.getluckysheetfile).toHaveBeenCalled();
-      expect(XLSX.writeFile).toHaveBeenCalled();
+      expect(service._writeWorkbookToFile).toHaveBeenCalled();
       vi.clearAllMocks();
     });
 
@@ -159,7 +140,7 @@ describe('SpreadsheetImportExportService CSV Export Regression Tests', () => {
       await service.exportToCSV(luckysheetData, { filename: 'test.csv' });
 
       expect(global.window.luckysheet.getAllSheets).toHaveBeenCalled();
-      expect(XLSX.writeFile).toHaveBeenCalled();
+      expect(service._writeWorkbookToFile).toHaveBeenCalled();
       vi.clearAllMocks();
     });
 
@@ -184,7 +165,7 @@ describe('SpreadsheetImportExportService CSV Export Regression Tests', () => {
 
       await service.exportToCSV(luckysheetData, { filename: 'test.csv' });
 
-      expect(XLSX.writeFile).toHaveBeenCalled();
+      expect(service._writeWorkbookToFile).toHaveBeenCalled();
       vi.clearAllMocks();
     });
 
@@ -276,7 +257,7 @@ describe('SpreadsheetImportExportService CSV Export Regression Tests', () => {
       };
 
       await service.exportToCSV(luckysheetData, { filename: 'test.csv' });
-      expect(XLSX.writeFile).toHaveBeenCalled();
+      expect(service._writeWorkbookToFile).toHaveBeenCalled();
       vi.clearAllMocks();
     });
 
@@ -301,7 +282,7 @@ describe('SpreadsheetImportExportService CSV Export Regression Tests', () => {
       };
 
       await service.exportToCSV(luckysheetData, { filename: 'test.csv' });
-      expect(XLSX.writeFile).toHaveBeenCalled();
+      expect(service._writeWorkbookToFile).toHaveBeenCalled();
       vi.clearAllMocks();
     });
   });
@@ -320,7 +301,7 @@ describe('SpreadsheetImportExportService CSV Export Regression Tests', () => {
 
       await service.exportToCSV(luckysheetData, { filename: 'custom_name.csv' });
 
-      expect(XLSX.writeFile).toHaveBeenCalledWith(expect.any(Object), 'custom_name.csv', {
+      expect(service._writeWorkbookToFile).toHaveBeenCalledWith(expect.any(Object), 'custom_name.csv', {
         bookType: 'csv'
       });
 
@@ -340,7 +321,7 @@ describe('SpreadsheetImportExportService CSV Export Regression Tests', () => {
 
       await service.exportToCSV(luckysheetData, {});
 
-      const [, filename] = XLSX.writeFile.mock.calls[0];
+      const [, filename] = service._writeWorkbookToFile.mock.calls[0];
       expect(filename).toMatch(/MySheet_\d{4}-\d{2}-\d{2}\.csv/);
 
       vi.clearAllMocks();

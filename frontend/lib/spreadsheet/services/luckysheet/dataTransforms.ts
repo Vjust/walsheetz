@@ -5,7 +5,7 @@
  * Consolidates duplicate logic from Spreadsheet.jsx and useSpreadsheetLifecycle.js.
  */
 
-import { columnLettersToNumber } from '../../utils/cellUtils.js';
+import { columnLettersToNumber } from '@dreamlit/shared';
 import { WALSHEETZ_FUNCTION_METADATA, WALSHEETZ_FUNCTIONS } from '../formulas/WalSheetzFunctions.js';
 import { ensureLuckysheetFunctionTree } from './ensureLuckysheetNesting.js';
 

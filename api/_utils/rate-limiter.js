@@ -167,25 +167,4 @@ function rateLimitResponse(resetAt) {
   )
 }
 
-/**
- * Verify Origin header for CSRF protection
- * @returns {boolean} True if origin is valid
- */
-export function verifyOrigin(req, allowedOrigins) {
-  const origin = req.headers.get('origin')
 
-  // No origin header (same-origin request or non-browser)
-  if (!origin) {
-    return true
-  }
-
-  return allowedOrigins.some(allowed => {
-    if (allowed === '*') return true
-    if (allowed.startsWith('*.')) {
-      // Wildcard subdomain match
-      const domain = allowed.slice(2)
-      return origin.endsWith(domain) || origin.endsWith('.' + domain)
-    }
-    return origin === allowed || origin === `https://${allowed}`
-  })
-}

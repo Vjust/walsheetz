@@ -36,18 +36,18 @@ const COLORS = {
   BG_YELLOW: '\x1b[43m',
 };
 
-// Emoji indicators for each log level
+// Optional markers for each log level
 const EMOJI_INDICATORS = {
-  DEBUG: '🔍',
-  INFO: 'ℹ️ ',
-  WARN: '⚠️ ',
-  ERROR: '❌',
-  CRITICAL: '🚨'
+  DEBUG: '',
+  INFO: '',
+  WARN: '',
+  ERROR: '',
+  CRITICAL: ''
 };
 
 /**
  * Create a logger instance
- * @param {string} component - Component name (e.g., 'GraphQLSubscriber', 'Bridge', 'ScriptName')
+ * @param {string} component - Component name (e.g., 'SuiService', 'ScriptName')
  * @param {object} options - Logger options
  * @param {string} options.logLevel - Minimum log level (DEBUG, INFO, WARN, ERROR, CRITICAL)
  * @param {boolean} options.useColors - Whether to use ANSI colors (default: true in TTY)
@@ -59,7 +59,7 @@ export function createLogger(component, options = {}) {
   // Determine log level from options or environment variable
   // Support both Node.js and browser environments
   const envLogLevel = (typeof process !== 'undefined' && process.env)
-    ? (process.env.LOG_LEVEL?.toUpperCase() || process.env.BRIDGE_LOG_LEVEL?.toUpperCase())
+    ? process.env.LOG_LEVEL?.toUpperCase()
     : undefined;
   const configuredLevel = options.logLevel?.toUpperCase() || envLogLevel || 'INFO';
   const logLevel = LOG_LEVELS[configuredLevel] !== undefined ? LOG_LEVELS[configuredLevel] : LOG_LEVELS.INFO;
@@ -70,7 +70,7 @@ export function createLogger(component, options = {}) {
     ? options.useColors
     : (typeof process !== 'undefined' && process.stdout?.isTTY) ?? false;
 
-  const useEmojis = options.useEmojis !== undefined ? options.useEmojis : true;
+  const useEmojis = options.useEmojis !== undefined ? options.useEmojis : false;
   const timestamps = options.timestamps !== undefined ? options.timestamps : true;
 
   // Throttle state
@@ -137,7 +137,7 @@ export function createLogger(component, options = {}) {
 
     parts.push(colorize(`${levelName}`, levelColor));
     parts.push(colorize(`[${component}]`, COLORS.CYAN));
-    parts.push(emoji);
+    if (emoji) parts.push(emoji);
     parts.push(message);
 
     // Add metadata if present
@@ -252,7 +252,7 @@ export function createLogger(component, options = {}) {
 export class GraphQLLogger {
   constructor() {
     this.logger = createLogger('GraphQLEventSubscriber');
-    this.logLevel = (typeof process !== 'undefined' && process.env?.BRIDGE_LOG_LEVEL) || 'INFO';
+    this.logLevel = (typeof process !== 'undefined' && process.env?.LOG_LEVEL) || 'INFO';
     this.logLevels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
   }
 

@@ -42,23 +42,23 @@ export function LoadingOverlay({
   const getSpinnerIcon = () => {
     // Show error states first
     if (error || type === 'error') {
-      return '❌';
+      return 'X';
     }
     if (type === 'warning') {
-      return '⚠️';
+      return '!';
     }
 
     switch (type) {
       case 'blockchain':
-        return '⛓️';
+        return 'B';
       case 'wallet':
-        return '👛';
+        return 'W';
       case 'storage':
-        return '💾';
+        return 'S';
       case 'network':
-        return '🌐';
+        return 'N';
       default:
-        return '⟳';
+        return '';
     }
   };
 
@@ -117,7 +117,7 @@ export function LoadingOverlay({
               onClick={onCancel}
               title="Cancel operation"
             >
-              ✕
+              x
             </button>
           )}
         </div>
@@ -131,7 +131,7 @@ export function LoadingOverlay({
                 className={`step-item ${index < (currentStep || 0) ? 'completed' : index === (currentStep || 0) ? 'active' : 'pending'}`}
               >
                 <div className="step-icon">
-                  {index < (currentStep || 0) ? '✓' : index + 1}
+                  {index + 1}
                 </div>
                 <div className="step-text">{step}</div>
               </div>
@@ -161,12 +161,12 @@ export function LoadingOverlay({
         <div className="loading-type-info">
           {error && errorType === 'wallet_required' && (
             <div className="type-info error-info">
-              <small>💡 Connect your wallet to access blockchain features and save data securely</small>
+              <small>Connect your wallet to access blockchain features and save data securely</small>
             </div>
           )}
           {error && errorType === 'save_failed' && (
             <div className="type-info error-info">
-              <small>💡 Save failed: {details || error || 'Unknown error'}. Your changes are saved locally - try again or check your wallet/network connection.</small>
+              <small>Save failed: {details || error || 'Unknown error'}. Your changes are saved locally - try again or check your wallet/network connection.</small>
             </div>
           )}
           {error && errorType === 'first_save_failed' && (
@@ -190,37 +190,37 @@ export function LoadingOverlay({
           )}
           {error && errorType === 'walrus_unavailable' && (
             <div className="type-info error-info">
-              <small>💡 Walrus storage is temporarily unavailable. Check your network connection and try again in a few moments.</small>
+              <small>Walrus storage is temporarily unavailable. Check your network connection and try again in a few moments.</small>
             </div>
           )}
           {error && errorType === 'error' && errorType !== 'wallet_required' && errorType !== 'save_failed' && errorType !== 'first_save_failed' && errorType !== 'walrus_unavailable' && (
             <div className="type-info error-info">
-              <small>⚠️ An unexpected error occurred. Please try again.</small>
+              <small>An unexpected error occurred. Please try again.</small>
             </div>
           )}
           {type === 'warning' && !error && (
             <div className="type-info warning-info">
-              <small>⚠️ {details || 'Please review the warning message above'}</small>
+              <small>{details || 'Please review the warning message above'}</small>
             </div>
           )}
           {!error && type === 'blockchain' && (
             <div className="type-info">
-              <small>⚠️ This operation requires blockchain confirmation and may take 10-30 seconds</small>
+              <small>This operation requires blockchain confirmation and may take 10-30 seconds</small>
             </div>
           )}
           {!error && type === 'wallet' && (
             <div className="type-info">
-              <small>👛 Please approve the transaction in your wallet</small>
+              <small>Please approve the transaction in your wallet</small>
             </div>
           )}
           {!error && type === 'storage' && (
             <div className="type-info">
-              <small>💾 Uploading data to decentralized storage...</small>
+              <small>Uploading data to decentralized storage...</small>
             </div>
           )}
           {!error && type === 'network' && (
             <div className="type-info">
-              <small>🌐 Connecting to blockchain network...</small>
+              <small>Connecting to blockchain network...</small>
             </div>
           )}
         </div>

@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import { isAuthBypassed } from '../../../packages/shared/src/utils/config/testMode.js';
+import { isAuthBypassed } from '@lib/spreadsheet/utils/testMode';
 
 export function TestModeBanner() {
   const [showDetails, setShowDetails] = useState(false);
@@ -20,7 +20,7 @@ export function TestModeBanner() {
     if (confirm('Clear all test data? This will delete all test spreadsheets from localStorage.')) {
       const testKey = 'walsheetz_test_spreadsheets';
       localStorage.removeItem(testKey);
-      console.log('🧪 Test data cleared');
+      console.log('Test data cleared');
       alert('Test data cleared successfully!');
       window.location.reload();
     }
@@ -46,7 +46,7 @@ export function TestModeBanner() {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <span style={{ fontSize: '20px' }}>🧪</span>
+        <span style={{ fontSize: '12px', fontWeight: 700 }}>TEST</span>
         <div>
           <strong>Test Mode Active</strong>
           <span style={{ marginLeft: '12px', opacity: 0.9 }}>
@@ -54,7 +54,7 @@ export function TestModeBanner() {
           </span>
           {showDetails && (
             <div style={{ marginTop: '4px', fontSize: '12px', opacity: 0.9 }}>
-              Data is stored in localStorage only. Collaboration and Walrus features are disabled.
+              Data is stored in localStorage only. Blockchain and Walrus features are disabled.
             </div>
           )}
         </div>

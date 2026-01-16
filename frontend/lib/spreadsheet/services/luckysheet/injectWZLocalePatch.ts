@@ -77,10 +77,10 @@ function convertToLuckysheetFormula(name, metadata) {
  * @returns {number} - Number of WZ functions patched into globals
  */
 export function patchLuckysheetGlobalsBeforeInit() {
-  console.log('[WZ Pre-Init] 🎯 Patching global Luckysheet structures BEFORE create()...');
+  console.log('[WZ Pre-Init] Patching global Luckysheet structures before create()...');
 
   if (preInitPatchApplied) {
-    console.log('[WZ Pre-Init] ⚠️  Pre-init patch already applied, skipping');
+    console.log('[WZ Pre-Init] Pre-init patch already applied, skipping');
     return 0;
   }
 
@@ -88,7 +88,7 @@ export function patchLuckysheetGlobalsBeforeInit() {
 
   // Ensure globals exist
   if (typeof window === 'undefined') {
-    console.error('[WZ Pre-Init] ❌ window not available');
+    console.error('[WZ Pre-Init] window not available');
     return 0;
   }
 
@@ -116,7 +116,9 @@ export function patchLuckysheetGlobalsBeforeInit() {
   });
 
   if (objAdded > 0) {
-    console.log(`[WZ Pre-Init] ✅ Added ${objAdded} WZ functions to window.luckysheet_function (nested with execution wrappers)`);
+    console.log(
+      `[WZ Pre-Init] Added ${objAdded} WZ functions to window.luckysheet_function (nested with execution wrappers)`
+    );
     totalPatched += objAdded;
   }
 
@@ -141,12 +143,12 @@ export function patchLuckysheetGlobalsBeforeInit() {
   });
 
   if (arrAdded > 0) {
-    console.log(`[WZ Pre-Init] ✅ Added ${arrAdded} WZ functions to window.luckysheet_configsetting.functionlist`);
+    console.log(`[WZ Pre-Init] Added ${arrAdded} WZ functions to window.luckysheet_configsetting.functionlist`);
     totalPatched += arrAdded;
   }
 
   preInitPatchApplied = true;
-  console.log(`[WZ Pre-Init] ✅ Pre-init patching complete: ${totalPatched} entries added to globals`);
+  console.log(`[WZ Pre-Init] Pre-init patching complete: ${totalPatched} entries added to globals`);
 
   return totalPatched;
 }

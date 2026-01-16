@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { logger, LogComponent } from '../../../packages/shared/src/utils/Logger.js';
+import { logger, LogComponent } from '@dreamlit/walrus';
 
 export function LogViewer() {
   const [isVisible, setIsVisible] = useState(false);
@@ -8,7 +8,7 @@ export function LogViewer() {
     component: '',
     level: '',
     action: '',
-    since: ''
+    since: '',
   });
   const [metrics, setMetrics] = useState(null);
 
@@ -20,13 +20,13 @@ export function LogViewer() {
     };
 
     updateLogs();
-    
+
     // Update logs every 2 seconds when viewer is visible
     let interval;
     if (isVisible) {
       interval = setInterval(updateLogs, 2000);
     }
-    
+
     return () => {
       if (interval) clearInterval(interval);
     };
@@ -59,10 +59,10 @@ export function LogViewer() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
+
     logger.logUserAction('logs_exported', {
       logCount: exportData.logs.length,
-      filter
+      filter,
     });
   };
 
@@ -70,18 +70,24 @@ export function LogViewer() {
     const newDebugMode = !logger.debugMode;
     logger.setDebugMode(newDebugMode);
     logger.logUserAction('debug_mode_toggle', {
-      debugMode: newDebugMode
+      debugMode: newDebugMode,
     });
   };
 
   const getLevelColor = (level) => {
     switch (level) {
-      case 'DEBUG': return '#6c757d';
-      case 'INFO': return '#007bff';
-      case 'WARN': return '#ffc107';
-      case 'ERROR': return '#dc3545';
-      case 'CRITICAL': return '#6f42c1';
-      default: return '#000';
+      case 'DEBUG':
+        return '#6c757d';
+      case 'INFO':
+        return '#007bff';
+      case 'WARN':
+        return '#ffc107';
+      case 'ERROR':
+        return '#dc3545';
+      case 'CRITICAL':
+        return '#6f42c1';
+      default:
+        return '#000';
     }
   };
 
@@ -92,12 +98,8 @@ export function LogViewer() {
   if (!isVisible) {
     return (
       <div className="log-viewer-toggle">
-        <button
-          onClick={toggleVisibility}
-          className="debug-button"
-          title="Open Debug Log Viewer"
-        >
-          🔍 Debug Logs
+        <button onClick={toggleVisibility} className="debug-button" title="Open Debug Log Viewer">
+          Debug Logs
         </button>
       </div>
     );
@@ -106,9 +108,12 @@ export function LogViewer() {
   return (
     <div className="log-viewer">
       <div className="log-viewer-header">
-        <h3>🔧 Debug Log Viewer</h3>
+        <h3>Debug Log Viewer</h3>
         <div className="log-viewer-controls">
-          <button onClick={toggleDebugMode} className={`debug-mode-btn ${logger.debugMode ? 'active' : ''}`}>
+          <button
+            onClick={toggleDebugMode}
+            className={`debug-mode-btn ${logger.debugMode ? 'active' : ''}`}
+          >
             Debug Mode: {logger.debugMode ? 'ON' : 'OFF'}
           </button>
           <button onClick={clearLogs} className="clear-btn">
@@ -124,20 +129,22 @@ export function LogViewer() {
       </div>
 
       <div className="log-viewer-filters">
-        <select 
-          value={filter.component} 
-          onChange={(e) => setFilter({...filter, component: e.target.value})}
+        <select
+          value={filter.component}
+          onChange={(e) => setFilter({ ...filter, component: e.target.value })}
           className="filter-select"
         >
           <option value="">All Components</option>
-          {Object.values(LogComponent).map(comp => (
-            <option key={comp} value={comp}>{comp}</option>
+          {Object.values(LogComponent).map((comp) => (
+            <option key={comp} value={comp}>
+              {comp}
+            </option>
           ))}
         </select>
 
-        <select 
-          value={filter.level} 
-          onChange={(e) => setFilter({...filter, level: e.target.value})}
+        <select
+          value={filter.level}
+          onChange={(e) => setFilter({ ...filter, level: e.target.value })}
           className="filter-select"
         >
           <option value="">All Levels</option>
@@ -152,7 +159,7 @@ export function LogViewer() {
           type="text"
           placeholder="Filter by action..."
           value={filter.action}
-          onChange={(e) => setFilter({...filter, action: e.target.value})}
+          onChange={(e) => setFilter({ ...filter, action: e.target.value })}
           className="filter-input"
         />
       </div>
@@ -169,7 +176,8 @@ export function LogViewer() {
             <strong>Errors:</strong> {Object.values(metrics.errorCounts).reduce((a, b) => a + b, 0)}
           </div>
           <div className="metric">
-            <strong>User Actions:</strong> {Object.values(metrics.userActions).reduce((a, b) => a + b, 0)}
+            <strong>User Actions:</strong>{' '}
+            {Object.values(metrics.userActions).reduce((a, b) => a + b, 0)}
           </div>
         </div>
       )}
@@ -182,10 +190,7 @@ export function LogViewer() {
             <div key={index} className={`log-entry log-${log.level.toLowerCase()}`}>
               <div className="log-header">
                 <span className="log-timestamp">{formatTimestamp(log.timestamp)}</span>
-                <span 
-                  className="log-level" 
-                  style={{color: getLevelColor(log.level)}}
-                >
+                <span className="log-level" style={{ color: getLevelColor(log.level) }}>
                   {log.level}
                 </span>
                 <span className="log-component">{log.component}</span>
@@ -293,7 +298,8 @@ export function LogViewer() {
           background: #2a2a2a;
         }
 
-        .filter-select, .filter-input {
+        .filter-select,
+        .filter-input {
           background: #333;
           color: white;
           border: 1px solid #555;
@@ -338,7 +344,8 @@ export function LogViewer() {
           border-left-color: #ffc107;
         }
 
-        .log-entry.log-error, .log-entry.log-critical {
+        .log-entry.log-error,
+        .log-entry.log-critical {
           border-left-color: #dc3545;
         }
 

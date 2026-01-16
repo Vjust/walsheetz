@@ -1,35 +1,49 @@
-import { logger, LogComponent } from './Logger.js'
+import { logger, LogComponent } from '@dreamlit/shared';
 
 const TelemetryLogLevel = {
   info: 'info',
   warn: 'warn',
-  error: 'error'
-}
+  error: 'error',
+};
 
 export function recordTelemetry(event, metadata = {}, level = TelemetryLogLevel.info) {
   const payload = {
     event,
     timestamp: Date.now(),
-    ...metadata
-  }
+    ...metadata,
+  };
 
   switch (level) {
     case TelemetryLogLevel.warn:
-      logger.warn(LogComponent.PERFORMANCE, `telemetry_${event}`, 'Telemetry warning event', payload)
-      break
+      logger.warn(
+        LogComponent.PERFORMANCE,
+        `telemetry_${event}`,
+        'Telemetry warning event',
+        payload
+      );
+      break;
     case TelemetryLogLevel.error:
-      logger.error(LogComponent.PERFORMANCE, `telemetry_${event}`, 'Telemetry error event', payload)
-      break
+      logger.error(
+        LogComponent.PERFORMANCE,
+        `telemetry_${event}`,
+        'Telemetry error event',
+        payload
+      );
+      break;
     default:
-      logger.info(LogComponent.PERFORMANCE, `telemetry_${event}`, 'Telemetry event recorded', payload)
+      logger.info(
+        LogComponent.PERFORMANCE,
+        `telemetry_${event}`,
+        'Telemetry event recorded',
+        payload
+      );
   }
 
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('telemetry:event', { detail: payload }))
+    window.dispatchEvent(new CustomEvent('telemetry:event', { detail: payload }));
   }
 
-  return payload
+  return payload;
 }
 
-export { TelemetryLogLevel }
-
+export { TelemetryLogLevel };

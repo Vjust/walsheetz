@@ -3,8 +3,8 @@
  * Display wallet assets from GraphQL queries in a table format
  */
 import React, { useState, useEffect } from 'react';
-import { suiGraphQLService } from '../../../blockchain/src/services/graphqlService.js';
-import { logger, LogComponent } from '../../../packages/shared/src/utils/Logger.js';
+import { suiGraphQLService } from '@dreamlit/walrus-sui-core/blockchain';
+import { logger, LogComponent } from '@dreamlit/walrus';
 import '../styles/WalletAssetTable.css';
 
 export function WalletAssetTable({ walletAddress, onAssetClick }) {

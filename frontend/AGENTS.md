@@ -1,6 +1,6 @@
 # AI Assistant Guide: frontend/
 
-> **📚 Common Guidelines**: See [../docs/AGENTS-SHARED.md](../docs/AGENTS-SHARED.md) for shared conventions.
+> **Common Guidelines**: See root AGENTS.md for shared conventions.
 
 ## Purpose
 - Browser SPA for WalSheetz; orchestrates all UI interactions.
@@ -44,7 +44,7 @@
 
 ### Import Aliases (ALWAYS use these — never `../`)
 ```javascript
-import Component from '@app/App.jsx'              // app/
+import Component from '@app/App'              // app/
 import Feature from '@features/dashboard/'        // features/
 import Hook from '@shared/hooks/useWallet'        // shared/
 import Service from '@services/blockchain/'       // services/
@@ -64,25 +64,17 @@ import Adapter from '@adapters/BlockchainAdapter' // adapters/
 - Follow feature-based organization: related components, hooks, and pages should live together in feature modules.
 
 ## Testing & Tooling
-- **Planned:** Unit tests for UI modules will live under `tests/unit/frontend` (Vitest + happy-dom)
-  - ⚠️ **Current Status:** Frontend unit tests not yet implemented
-  - Run all unit tests (blockchain only currently): `bun run test:unit`
-  - See `docs/TESTING.md` for coverage gaps and planned tests
-- Integration flows touching backend services belong in `tests/integration` or Playwright specs under `tests/e2e`
-- Keep feature components aligned with their domain hooks when business logic changes
+- Unit tests for UI modules live under `tests/unit/` (Vitest + happy-dom)
+- Run all tests: `bun run test`
+- Integration flows belong in `tests/e2e/` (Playwright)
 - Tests can be colocated with features in `__tests__/` directories
 
 ## Coordination
 
 ### Backend Integration
-- Browser services often require mirrored updates in `blockchain/` and `scripts/`
-- Configuration: Never hardcode endpoints — use `blockchain/config.js`
+- Configuration: Use `packages/walrus-sui-core/src/blockchain/config.ts`
 - Keep `app-config.json` aligned with on-chain package IDs
-- Bridge: Consumes via `services/blockchain/BrowserGrpcService.js`
 
 ### Cross-References
-- [blockchain/AGENTS.md](../blockchain/AGENTS.md) — Backend coordination patterns
-- [../docs/QUICKSTART.md](../docs/QUICKSTART.md) — Quick start guide
-- [../docs/TESTING.md](../docs/TESTING.md) — Testing patterns & coverage
-- [../docs/DEBUG-LOGGING.md](../docs/DEBUG-LOGGING.md) — Debug workflows
-- [../docs/CONFIGURATION.md](../docs/CONFIGURATION.md) — Environment variables
+- [Root AGENTS.md](../AGENTS.md) - Repository guidelines
+- [move/AGENTS.md](../move/AGENTS.md) - Move contract patterns

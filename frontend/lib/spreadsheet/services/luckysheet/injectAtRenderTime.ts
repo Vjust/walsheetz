@@ -168,7 +168,7 @@ function insertWZFunctionIntoFormula(formulaName) {
         const event = new Event('input', { bubbles: true });
         formulaEditor.dispatchEvent(event);
 
-        console.log(`[Render-Time Inject] ✅ Inserted "${formulaName}(" into formula bar`);
+        console.log(`[Render-Time Inject] Inserted "${formulaName}(" into formula bar`);
         return true;
       }
     }
@@ -185,12 +185,12 @@ function insertWZFunctionIntoFormula(formulaName) {
         const event = new Event('input', { bubbles: true });
         inputBox.dispatchEvent(event);
 
-        console.log(`[Render-Time Inject] ✅ Inserted "${formulaName}(" into input box`);
+        console.log(`[Render-Time Inject] Inserted "${formulaName}(" into input box`);
         return true;
       }
     }
 
-    console.warn('[Render-Time Inject] ⚠️  Could not find formula editor to insert function');
+    console.warn('[Render-Time Inject] Could not find formula editor to insert function');
     return false;
   } catch (e) {
     console.error('[Render-Time Inject] Error inserting function:', e);
@@ -231,7 +231,7 @@ function injectIntoAutocomplete(autocompleteContainer) {
     }
 
     if (window.__wzDebug) {
-      console.log('[Render-Time Inject] 🎯 Autocomplete dropdown detected, injecting WZ functions...');
+      console.log('[Render-Time Inject] Autocomplete dropdown detected, injecting WZ functions...');
     }
 
     // Find matching WZ functions
@@ -289,7 +289,7 @@ function injectIntoAutocomplete(autocompleteContainer) {
     // Mark this container as injected for this search term
     autocompleteContainer._wzLastSearchTerm = searchTerm;
 
-    console.log(`[Render-Time Inject] ✅ Injected ${wzMatches.length} WZ functions for "${searchTerm}"`);
+    console.log(`[Render-Time Inject] Injected ${wzMatches.length} WZ functions for "${searchTerm}"`);
   } catch (e) {
     console.error('[Render-Time Inject] Error injecting WZ functions:', e);
   }
@@ -304,7 +304,7 @@ export function startRenderTimeInjection() {
     return;
   }
 
-  console.log('[Render-Time Inject] 🚀 Starting display-time injection...');
+  console.log('[Render-Time Inject] Starting display-time injection...');
 
   observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
@@ -318,7 +318,7 @@ export function startRenderTimeInjection() {
             (className.includes('luckysheet-formula-search') ||
              className.includes('formula-search-c'))) {
 
-          console.log(`[Render-Time Inject] 📋 Autocomplete container detected: ${className}`);
+          console.log(`[Render-Time Inject] Autocomplete container detected: ${className}`);
 
           // Inject WZ functions with a small delay to ensure Luckysheet has finished rendering
           setTimeout(() => {
@@ -335,7 +335,7 @@ export function startRenderTimeInjection() {
   });
 
   isActive = true;
-  console.log('[Render-Time Inject] ✅ DOM monitoring active');
+  console.log('[Render-Time Inject] DOM monitoring active');
 }
 
 /**
@@ -347,7 +347,7 @@ export function stopRenderTimeInjection() {
     observer = null;
   }
   isActive = false;
-  console.log('[Render-Time Inject] ⏹️  DOM monitoring stopped');
+  console.log('[Render-Time Inject] DOM monitoring stopped');
 }
 
 /**

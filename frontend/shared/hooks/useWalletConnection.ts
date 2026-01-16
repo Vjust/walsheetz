@@ -10,8 +10,8 @@ import {
 } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
 import type { WalletWithRequiredFeatures } from '@mysten/wallet-standard';
-import { configLoader } from '../../../packages/shared/src/utils/ConfigLoader.js';
-import { buildSaveVersionArgs } from '../../../packages/shared/src/utils/blockchain/AbiHelpers.js';
+import { configLoader } from '@dreamlit/walrus';
+import { buildSaveVersionArgs } from '@dreamlit/walrus-sui-core/blockchain-integration';
 import type {
   WalletBalance,
   AvailableWallets,
@@ -20,7 +20,7 @@ import type {
   TransactionOptions,
   UseWalletConnection,
   WalletInfo,
-} from '../../../packages/shared/src/types/wallet';
+} from '@dreamlit/shared';
 
 export function useWalletConnection(): UseWalletConnection {
   const currentAccount = useCurrentAccount();
@@ -50,7 +50,7 @@ export function useWalletConnection(): UseWalletConnection {
       const timer = setTimeout(() => {
         console.log('[useWalletConnection] Auto-connect phase completed', {
           hasAccount: !!currentAccount?.address,
-          walletsCount: wallets.length
+          walletsCount: wallets.length,
         });
         autoConnectCompletedRef.current = true;
         setIsAutoConnecting(false);
@@ -76,14 +76,14 @@ export function useWalletConnection(): UseWalletConnection {
     try {
       const balanceResult = await suiClient.getBalance({
         owner: currentAccount.address,
-        coinType: '0x2::sui::SUI'
+        coinType: '0x2::sui::SUI',
       });
 
       setBalance({
         totalBalance: balanceResult.totalBalance,
         // Convert from MIST to SUI (1 SUI = 10^9 MIST)
         sui: (BigInt(balanceResult.totalBalance) / BigInt(1000000000)).toString(),
-        mist: balanceResult.totalBalance
+        mist: balanceResult.totalBalance,
       });
     } catch (error) {
       console.error('Failed to fetch balance:', error);
@@ -92,57 +92,61 @@ export function useWalletConnection(): UseWalletConnection {
   };
 
   // Connect to a specific wallet
-  const connectWallet = useCallback((wallet: Wallet): Promise<unknown> => {
-    console.log('Attempting to connect wallet:', wallet.name);
+  const connectWallet = useCallback(
+    (wallet: Wallet): Promise<unknown> => {
+      console.log('Attempting to connect wallet:', wallet.name);
 
-    // Set connecting state
-    setIsConnecting(true);
-    setConnectionError(null);
-    setSelectedWallet(wallet);
-    isConnectingRef.current = true;
+      // Set connecting state
+      setIsConnecting(true);
+      setConnectionError(null);
+      setSelectedWallet(wallet);
+      isConnectingRef.current = true;
 
-    // Return a promise for better async handling
-    return new Promise((resolve, reject) => {
-      connect(
-        { wallet: wallet as WalletWithRequiredFeatures },
-        {
-          onSuccess: (result: unknown) => {
-            console.log('Wallet connection successful:', result);
-            isConnectingRef.current = false;
-            if (timeoutIdRef.current) {
-              clearTimeout(timeoutIdRef.current);
-              timeoutIdRef.current = null;
-            }
-            setIsConnecting(false);
-            setConnectionError(null);
-            resolve(result);
-          },
-          onError: (error: Error) => {
-            console.error('Wallet connection failed:', error);
-            isConnectingRef.current = false;
-            if (timeoutIdRef.current) {
-              clearTimeout(timeoutIdRef.current);
-              timeoutIdRef.current = null;
-            }
-            setIsConnecting(false);
-            const errorMessage = error?.message || error?.toString() || 'Failed to connect wallet';
-            setConnectionError(errorMessage);
-            reject(new Error(errorMessage));
+      // Return a promise for better async handling
+      return new Promise((resolve, reject) => {
+        connect(
+          { wallet: wallet as WalletWithRequiredFeatures },
+          {
+            onSuccess: (result: unknown) => {
+              console.log('Wallet connection successful:', result);
+              isConnectingRef.current = false;
+              if (timeoutIdRef.current) {
+                clearTimeout(timeoutIdRef.current);
+                timeoutIdRef.current = null;
+              }
+              setIsConnecting(false);
+              setConnectionError(null);
+              resolve(result);
+            },
+            onError: (error: Error) => {
+              console.error('Wallet connection failed:', error);
+              isConnectingRef.current = false;
+              if (timeoutIdRef.current) {
+                clearTimeout(timeoutIdRef.current);
+                timeoutIdRef.current = null;
+              }
+              setIsConnecting(false);
+              const errorMessage =
+                error?.message || error?.toString() || 'Failed to connect wallet';
+              setConnectionError(errorMessage);
+              reject(new Error(errorMessage));
+            },
           }
-        }
-      );
+        );
 
-      // Add timeout to prevent hanging
-      timeoutIdRef.current = setTimeout(() => {
-        if (isConnectingRef.current) {
-          isConnectingRef.current = false;
-          setIsConnecting(false);
-          setConnectionError('Connection timeout - please try again');
-          reject(new Error('Connection timeout'));
-        }
-      }, 30000);
-    });
-  }, [connect]);
+        // Add timeout to prevent hanging
+        timeoutIdRef.current = setTimeout(() => {
+          if (isConnectingRef.current) {
+            isConnectingRef.current = false;
+            setIsConnecting(false);
+            setConnectionError('Connection timeout - please try again');
+            reject(new Error('Connection timeout'));
+          }
+        }, 30000);
+      });
+    },
+    [connect]
+  );
 
   // Disconnect wallet
   const disconnectWallet = useCallback((): void => {
@@ -153,123 +157,134 @@ export function useWalletConnection(): UseWalletConnection {
   }, [disconnect]);
 
   // Sign a transaction
-  const sign = useCallback((transaction: Transaction): Promise<unknown> => {
-    return new Promise((resolve, reject) => {
-      signTransaction(
-        { transaction },
-        {
-          onSuccess: (result: unknown) => {
-            resolve(result);
-          },
-          onError: (error: Error) => {
-            reject(error);
+  const sign = useCallback(
+    (transaction: Transaction): Promise<unknown> => {
+      return new Promise((resolve, reject) => {
+        signTransaction(
+          { transaction },
+          {
+            onSuccess: (result: unknown) => {
+              resolve(result);
+            },
+            onError: (error: Error) => {
+              reject(error);
+            },
           }
-        }
-      );
-    });
-  }, [signTransaction]);
+        );
+      });
+    },
+    [signTransaction]
+  );
 
   // Sign and execute a transaction
-  const signAndExecute = useCallback((transaction: Transaction, options: TransactionOptions = {}): Promise<TransactionResult> => {
-    console.log('[useWalletConnection] 📝 signAndExecute called with:', {
-      hasTransaction: !!transaction,
-      transactionType: transaction?.constructor?.name,
-      optionsKeys: Object.keys(options)
-    });
+  const signAndExecute = useCallback(
+    (transaction: Transaction, options: TransactionOptions = {}): Promise<TransactionResult> => {
+      console.log('[useWalletConnection] signAndExecute called with:', {
+        hasTransaction: !!transaction,
+        transactionType: transaction?.constructor?.name,
+        optionsKeys: Object.keys(options),
+      });
 
-    return new Promise((resolve, reject) => {
-      signAndExecuteTransaction(
-        {
-          transaction,
-          ...options
-        },
-        {
-          onSuccess: (result: TransactionResult) => {
-            console.log('[useWalletConnection] ✅ Transaction executed successfully:', {
-              digest: result.digest,
-              hasEffects: !!result.effects,
-              hasObjectChanges: !!result.objectChanges
-            });
-            resolve(result);
+      return new Promise((resolve, reject) => {
+        signAndExecuteTransaction(
+          {
+            transaction,
+            ...options,
           },
-          onError: (error: Error) => {
-            console.error('[useWalletConnection] ❌ Transaction execution failed:', {
-              error: error.message,
-              stack: error.stack
-            });
-            reject(error);
+          {
+            onSuccess: (result: TransactionResult) => {
+              console.log('[useWalletConnection] Transaction executed successfully:', {
+                digest: result.digest,
+                hasEffects: !!result.effects,
+                hasObjectChanges: !!result.objectChanges,
+              });
+              resolve(result);
+            },
+            onError: (error: Error) => {
+              console.error('[useWalletConnection] Transaction execution failed:', {
+                error: error.message,
+                stack: error.stack,
+              });
+              reject(error);
+            },
           }
-        }
-      );
-    });
-  }, [signAndExecuteTransaction]);
+        );
+      });
+    },
+    [signAndExecuteTransaction]
+  );
 
   // Create a spreadsheet transaction
-  const createSpreadsheetTransaction = useCallback(async (title: string): Promise<Transaction> => {
-    if (!currentAccount?.address) {
-      throw new Error('No wallet connected');
-    }
+  const createSpreadsheetTransaction = useCallback(
+    async (title: string): Promise<Transaction> => {
+      if (!currentAccount?.address) {
+        throw new Error('No wallet connected');
+      }
 
-    const config = await configLoader.getConfig();
-    const networkConfig = config.getCurrentNetwork();
-    const tx = new Transaction();
+      const config = await configLoader.getConfig();
+      const networkConfig = config.getCurrentNetwork();
+      const tx = new Transaction();
 
-    // Call the create_spreadsheet function from the smart contract
-    tx.moveCall({
-      target: `${networkConfig.packageId}::spreadsheet::create_spreadsheet`,
-      arguments: [
-        tx.object(networkConfig.registryObjectId),
-        tx.pure.string(title)
-      ],
-    });
+      // Call the create_spreadsheet function from the smart contract
+      tx.moveCall({
+        target: `${networkConfig.packageId}::spreadsheet::create_spreadsheet`,
+        arguments: [tx.object(networkConfig.registryObjectId), tx.pure.string(title)],
+      });
 
-    tx.setGasBudget(10000000); // 0.01 SUI
+      tx.setGasBudget(10000000); // 0.01 SUI
 
-    return tx;
-  }, [currentAccount]);
+      return tx;
+    },
+    [currentAccount]
+  );
 
   // Save version transaction
-  const saveVersionTransaction = useCallback(async (
-    spreadsheetId: string,
-    walrusBlobId: string,
-    contentHash: string,
-    cellCount: number,
-    description: string
-  ): Promise<Transaction> => {
-    if (!currentAccount?.address) {
-      throw new Error('No wallet connected');
-    }
+  const saveVersionTransaction = useCallback(
+    async (
+      spreadsheetId: string,
+      walrusBlobId: string,
+      contentHash: string,
+      cellCount: number,
+      description: string
+    ): Promise<Transaction> => {
+      if (!currentAccount?.address) {
+        throw new Error('No wallet connected');
+      }
 
-    const config = await configLoader.getConfig();
-    const networkConfig = config.getCurrentNetwork();
-    const tx = new Transaction();
+      const config = await configLoader.getConfig();
+      const networkConfig = config.getCurrentNetwork();
+      const tx = new Transaction();
 
-    // Use ABI-driven argument building to adapt to actual on-chain signature
-    const { args, signature } = await buildSaveVersionArgs(tx, {
-      spreadsheetId,
-      walrusBlobId,
-      contentHash,
-      cellCount,
-      description
-    });
+      // Use ABI-driven argument building to adapt to actual on-chain signature
+      const { args, signature } = await buildSaveVersionArgs(tx, {
+        spreadsheetId,
+        walrusBlobId,
+        contentHash,
+        cellCount,
+        description,
+      });
 
-    tx.moveCall({
-      target: `${networkConfig.packageId}::spreadsheet::save_version`,
-      arguments: args,
-    });
+      tx.moveCall({
+        target: `${networkConfig.packageId}::spreadsheet::save_version`,
+        arguments: args,
+      });
 
-    tx.setGasBudget(10000000); // 0.01 SUI
+      tx.setGasBudget(10000000); // 0.01 SUI
 
-    console.log('[ABI] save_version transaction built with signature:', signature.debug || signature);
+      console.log(
+        '[ABI] save_version transaction built with signature:',
+        signature.debug || signature
+      );
 
-    return tx;
-  }, [currentAccount]);
+      return tx;
+    },
+    [currentAccount]
+  );
 
   // Helper to check if a wallet is Slush
   const isSlushWallet = useCallback((wallet: Wallet): boolean => {
     const name = wallet.name.toLowerCase();
-    return name.includes('slush') ||
-           (name.includes('sui') && name.includes('wallet'));
+    return name.includes('slush') || (name.includes('sui') && name.includes('wallet'));
   }, []);
 
   // Get available wallets - only Slush wallet
@@ -277,11 +292,12 @@ export function useWalletConnection(): UseWalletConnection {
     // Filter for only Slush wallet with required features
     // Updated for dapp-kit v0.17: use TransactionBlock feature names as primary
     const installed = wallets.filter((w: Wallet) => {
-      const hasFeatures = w.features?.['sui:signAndExecuteTransactionBlock'] ||
-                         w.features?.['sui:signTransactionBlock'] ||
-                         // Fallback for older versions
-                         w.features?.['sui:signAndExecuteTransaction'] ||
-                         w.features?.['sui:signTransaction'];
+      const hasFeatures =
+        w.features?.['sui:signAndExecuteTransactionBlock'] ||
+        w.features?.['sui:signTransactionBlock'] ||
+        // Fallback for older versions
+        w.features?.['sui:signAndExecuteTransaction'] ||
+        w.features?.['sui:signTransaction'];
       return hasFeatures && isSlushWallet(w);
     });
 
@@ -290,7 +306,7 @@ export function useWalletConnection(): UseWalletConnection {
       name: 'Slush',
       icon: 'https://slush.app/favicon.ico',
       url: 'https://chromewebstore.google.com/detail/slush-a-sui-wallet/opcgpfmipidbgpenhmajoajpbobppdil',
-      installed: false
+      installed: false,
     };
 
     // Only show install option if Slush isn't already installed

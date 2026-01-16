@@ -4,13 +4,25 @@
  */
 
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { SpreadsheetImportExportService } from "@/sdk/import-export/services/SpreadsheetImportExportService.js";
-import { parseCSV } from "@/sdk/shared/utils/BlobParser.js";
+import { parseCSV } from '@lib/spreadsheet/utils/BlobParser';
+
+vi.mock('@dreamlit/walrus', () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn()
+  },
+  LogComponent: {
+    UI_COMPONENT: 'UI_COMPONENT'
+  }
+}));
 
 describe('CSV Import Integration', () => {
   let importService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    const { SpreadsheetImportExportService } = await import('@lib/spreadsheet/services/SpreadsheetImportExportService');
     importService = new SpreadsheetImportExportService();
   });
 

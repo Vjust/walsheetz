@@ -60,7 +60,7 @@ export const ExportButton = ({
               onClick={() => handleExport('xlsx')}
               disabled={isExporting || disabled || isLoading}
             >
-              <span className="menu-icon">📊</span>
+              <span className="menu-icon">XLSX</span>
               <span className="menu-text">Export as Excel (.xlsx)</span>
             </button>
             <button
@@ -68,7 +68,7 @@ export const ExportButton = ({
               onClick={() => handleExport('csv')}
               disabled={isExporting || disabled || isLoading}
             >
-              <span className="menu-icon">📋</span>
+              <span className="menu-icon">CSV</span>
               <span className="menu-text">Export as CSV</span>
             </button>
           </div>

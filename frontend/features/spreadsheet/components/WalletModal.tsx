@@ -78,7 +78,7 @@ export function WalletModal({ isOpen, onClose }) {
           {/* Slush Wallet Available */}
           {installed.length > 0 && (
             <div className="wallet-section">
-              <h3>🦭 Slush Wallet Ready</h3>
+              <h3>Slush Wallet Ready</h3>
               <p className="slush-description">
                 Slush is the official Sui wallet by Mysten Labs, designed for secure and seamless blockchain interactions.
               </p>
@@ -93,7 +93,7 @@ export function WalletModal({ isOpen, onClose }) {
                       disabled={!!connecting}
                     >
                       <div className="wallet-icon">
-                        <div className="slush-logo">🦭</div>
+                        <div className="slush-logo">S</div>
                       </div>
                       <span className="wallet-name">Connect {wallet.name}</span>
                       {isConnecting && <span className="connecting-indicator">Connecting...</span>}
@@ -132,7 +132,7 @@ export function WalletModal({ isOpen, onClose }) {
           {/* No Wallets Found */}
           {installed.length === 0 && notInstalled.length > 0 && (
             <div className="no-wallets-message">
-              <p>🦭 Slush wallet not detected. Please install it to continue:</p>
+              <p>Slush wallet not detected. Please install it to continue:</p>
             </div>
           )}
           

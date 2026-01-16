@@ -47,15 +47,15 @@ class SetupValidator {
         this.warnings.push(`Bun version ${version} is older than recommended (1.0+)`);
         logger.warn(`Bun version ${version} is older than recommended`, {
           current: version,
-          recommended: '1.0+'
+          recommended: '1.0+',
         });
         return true; // Still continue, but with warning
       }
-    } catch (error) {
+    } catch (_error) {
       this.errors.push('Bun is not installed or not in PATH');
       logger.error('Bun is not installed or not in PATH', {
-        error: error.message,
-        installInstructions: 'Visit https://bun.sh to install Bun'
+        error: _error.message,
+        installInstructions: 'Visit https://bun.sh to install Bun',
       });
       return false;
     }
@@ -72,9 +72,9 @@ class SetupValidator {
       let timeoutId;
       try {
         server = net.createServer();
-      } catch (error) {
-        this.errors.push(`Unable to create port probe: ${error.message}`);
-        logger.error('Failed to create port probe', { error: error.message });
+      } catch (_error) {
+        this.errors.push(`Unable to create port probe: ${_error.message}`);
+        logger.error('Failed to create port probe', { error: _error.message });
         resolve(false);
         return;
       }
@@ -89,23 +89,25 @@ class SetupValidator {
           server.removeAllListeners('listening');
           try {
             server.close();
-          } catch (_) {}
+          } catch (_) {
+            // Ignore close errors - server may already be closed
+          }
         }
       };
 
-      server.once('error', (error) => {
+      server.once('error', (_error) => {
         cleanup();
 
-        if (error.code === 'EADDRINUSE') {
+        if (_error.code === 'EADDRINUSE') {
           this.warnings.push(`Port ${port} is already in use`);
           logger.warn(`Port ${port} is already in use`, {
             port,
-            suggestion: 'Stop any running services or set BRIDGE_PORT to a different port'
+            suggestion: 'Stop any running service or choose a different port',
           });
           resolve(true);
         } else {
-          this.errors.push(`Unable to probe port ${port}: ${error.message}`);
-          logger.error('Port probe failed', { port, error: error.message });
+          this.errors.push(`Unable to probe port ${port}: ${_error.message}`);
+          logger.error('Port probe failed', { port, error: _error.message });
           resolve(false);
         }
       });
@@ -138,21 +140,9 @@ class SetupValidator {
   async validateWorkspace() {
     logger.info('Validating workspace structure...');
 
-    const requiredDirs = [
-      'packages',
-      'apps',
-      'frontend',
-      'blockchain',
-      'scripts',
-      'docs'
-    ];
+    const requiredDirs = ['packages', 'apps', 'frontend', 'scripts'];
 
-    const requiredFiles = [
-      'package.json',
-      'bun.lock',
-      'tsconfig.json',
-      'vitest.config.js'
-    ];
+    const requiredFiles = ['package.json', 'bun.lock', 'tsconfig.json', 'vitest.config.js'];
 
     let allValid = true;
 
@@ -182,17 +172,17 @@ class SetupValidator {
     // Check workspace packages
     const packagesDir = path.join(ROOT_DIR, 'packages');
     if (fs.existsSync(packagesDir)) {
-      const packages = fs.readdirSync(packagesDir)
-        .filter(name => {
-          const pkgPath = path.join(packagesDir, name);
-          return fs.statSync(pkgPath).isDirectory() &&
-                 fs.existsSync(path.join(pkgPath, 'package.json'));
-        });
+      const packages = fs.readdirSync(packagesDir).filter((name) => {
+        const pkgPath = path.join(packagesDir, name);
+        return (
+          fs.statSync(pkgPath).isDirectory() && fs.existsSync(path.join(pkgPath, 'package.json'))
+        );
+      });
 
       if (packages.length > 0) {
         this.passed.push(`Found ${packages.length} workspace packages`);
         logger.info(`Found ${packages.length} workspace packages`, {
-          packages: packages.join(', ')
+          packages: packages.join(', '),
         });
       } else {
         this.warnings.push('No packages found in workspace');
@@ -220,20 +210,20 @@ class SetupValidator {
       // Run bun install with output
       execSync('bun install', {
         cwd: ROOT_DIR,
-        stdio: 'inherit'
+        stdio: 'inherit',
       });
 
       const duration = Date.now() - startTime;
       this.passed.push(`Dependencies installed in ${(duration / 1000).toFixed(1)}s`);
       logger.info('Dependencies installed successfully', {
         duration: `${(duration / 1000).toFixed(1)}s`,
-        status: 'success'
+        status: 'success',
       });
       return true;
-    } catch (error) {
+    } catch (_error) {
       this.errors.push('Failed to install dependencies');
       logger.error('Failed to install dependencies', {
-        error: error.message
+        error: _error.message,
       });
       return false;
     }
@@ -249,13 +239,13 @@ class SetupValidator {
       {
         path: '.env.example',
         optional: true,
-        message: 'Example environment file'
+        message: 'Example environment file',
       },
       {
-        path: 'blockchain/config.js',
+        path: 'public/app-config.json',
         optional: false,
-        message: 'Blockchain configuration'
-      }
+        message: 'App configuration',
+      },
     ];
 
     for (const check of configChecks) {
@@ -281,51 +271,31 @@ class SetupValidator {
     console.log('='.repeat(60) + '\n');
 
     if (this.passed.length > 0) {
-      console.log('✅ Passed Checks:');
-      this.passed.forEach(msg => console.log(`   - ${msg}`));
+      console.log('Passed Checks:');
+      this.passed.forEach((msg) => console.log(`   - ${msg}`));
       console.log('');
     }
 
     if (this.warnings.length > 0) {
-      console.log('⚠️  Warnings:');
-      this.warnings.forEach(msg => console.log(`   - ${msg}`));
+      console.log('Warnings:');
+      this.warnings.forEach((msg) => console.log(`   - ${msg}`));
       console.log('');
     }
 
     if (this.errors.length > 0) {
-      console.log('❌ Errors:');
-      this.errors.forEach(msg => console.log(`   - ${msg}`));
+      console.log('Errors:');
+      this.errors.forEach((msg) => console.log(`   - ${msg}`));
       console.log('');
     }
 
     // Next steps
     if (this.errors.length === 0) {
-      console.log('🎉 Setup complete! Next steps:\n');
-      console.log('  1. Review configuration:');
-      console.log('     → See docs/CONFIGURATION.md for environment setup');
-      console.log('');
-      console.log('  2. Start development:');
-      console.log('     → bun run dev           # Start frontend only');
-      console.log('     → bun run dev:bridge    # Start bridge server');
-      console.log('     → bun run dev:full      # Start both services');
-      console.log('');
-      console.log('  3. Run tests:');
-      console.log('     → bun test              # Run all tests');
-      console.log('     → bun run test:watch    # Watch mode');
-      console.log('');
-      console.log('  4. Build packages:');
-      console.log('     → bun run build         # Build all packages');
-      console.log('');
-      console.log('  5. Health check:');
-      console.log('     → bun run health        # Validate system health');
-      console.log('');
-      console.log('📚 Documentation:');
-      console.log('     → docs/QUICKSTART.md    # Quick start guide');
-      console.log('     → docs/README.md        # Developer guide');
-      console.log('     → docs/TESTING.md       # Testing guide');
-      console.log('');
+      console.log('Setup complete. Next steps:\n');
+      console.log('  bun run dev     # Start the app');
+      console.log('  bun run test    # Run tests');
+      console.log('  bun run health  # Run health checks\n');
     } else {
-      console.log('❌ Setup failed. Please fix the errors above and try again.\n');
+      console.log('Setup failed. Fix the errors above and try again.\n');
       process.exit(1);
     }
   }
@@ -333,18 +303,18 @@ class SetupValidator {
 
 // Main setup flow
 async function main() {
-  console.log('\n🚀 WalSheetz Development Environment Setup\n');
+  console.log('\nWalSheetz Development Environment Setup\n');
 
   const validator = new SetupValidator();
   let success = true;
 
   // Run validation steps
-  success = await validator.validateBun() && success;
-  success = await validator.validateWorkspace() && success;
+  success = (await validator.validateBun()) && success;
+  success = (await validator.validateWorkspace()) && success;
 
   // Continue with setup if critical checks passed
   if (success) {
-    await validator.validatePort(process.env.BRIDGE_PORT || 3005);
+    await validator.validatePort(process.env.PORT || 3005);
     await validator.installDependencies();
     await validator.validateConfiguration();
   }
@@ -357,17 +327,17 @@ async function main() {
 }
 
 // Handle errors
-process.on('uncaughtException', (error) => {
+process.on('uncaughtException', (_error) => {
   logger.critical('Uncaught exception during setup', {
-    error: error.message,
-    stack: error.stack
+    error: _error.message,
+    stack: _error.stack,
   });
   process.exit(1);
 });
 
-process.on('unhandledRejection', (reason) => {
+process.on('unhandledRejection', (_reason) => {
   logger.critical('Unhandled rejection during setup', {
-    reason: reason?.message || reason
+    reason: _reason?.message || _reason,
   });
   process.exit(1);
 });

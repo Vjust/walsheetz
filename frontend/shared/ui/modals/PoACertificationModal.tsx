@@ -4,8 +4,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { poaCertificationService } from '../../../../packages/walrus-sui-core/src/data-integrity/services/PoACertificationService.js';
-import { EventBus } from '../../../../packages/shared/src/utils/helpers/EventBus.js';
+import { poaCertificationService } from '@dreamlit/walrus-sui-core/data-integrity';
+import { eventBus } from '@dreamlit/walrus';
 import './PoACertificationModal.css';
 
 export function PoACertificationModal({ blobId, isOpen, onClose, onSuccess, onError }) {
@@ -63,14 +63,14 @@ export function PoACertificationModal({ blobId, isOpen, onClose, onSuccess, onEr
       }
     };
 
-    EventBus.on('poa:certification:completed', handleCompleted);
-    EventBus.on('poa:certification:failed', handleFailed);
-    EventBus.on('poa:certification:confirmed', handleConfirmed);
+    const unsubscribeCompleted = eventBus.on('poa:certification:completed', handleCompleted);
+    const unsubscribeFailed = eventBus.on('poa:certification:failed', handleFailed);
+    const unsubscribeConfirmed = eventBus.on('poa:certification:confirmed', handleConfirmed);
 
     return () => {
-      EventBus.off('poa:certification:completed', handleCompleted);
-      EventBus.off('poa:certification:failed', handleFailed);
-      EventBus.on('poa:certification:confirmed', handleConfirmed);
+      unsubscribeCompleted();
+      unsubscribeFailed();
+      unsubscribeConfirmed();
     };
   }, [isOpen, blobId, onSuccess, onError]);
 
@@ -221,7 +221,7 @@ export function PoACertificationModal({ blobId, isOpen, onClose, onSuccess, onEr
           {/* Error */}
           {error && (
             <div className="error-section">
-              <div className="error-icon">⚠️</div>
+              <div className="error-icon">Error</div>
               <div className="error-message">{error}</div>
             </div>
           )}
@@ -229,7 +229,7 @@ export function PoACertificationModal({ blobId, isOpen, onClose, onSuccess, onEr
           {/* Success */}
           {status === 'completed' && transactionDigest && (
             <div className="success-section">
-              <div className="success-icon">✅</div>
+              <div className="success-icon">Success</div>
               <div className="success-message">Saved to blockchain successfully!</div>
               <div className="transaction-info">
                 <span className="label">Transaction:</span>

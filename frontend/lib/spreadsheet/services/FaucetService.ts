@@ -70,7 +70,7 @@ class FaucetService {
         transferredObjects.reduce((sum, obj) => sum + (obj.amount || 0), 0) / 1_000_000_000 :
         1; // Default assumption
 
-      console.log('[FaucetService] ✅ Test SUI requested successfully:', {
+      console.log('[FaucetService] Test SUI requested successfully:', {
         recipient: address.slice(0, 8) + '...',
         estimatedAmount: `${amount} SUI`,
         objects: transferredObjects.length

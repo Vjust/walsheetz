@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { NetworkBadge } from '@features/network/components/NetworkBadge.jsx';
-import { useNetwork } from '@shared/providers/NetworkProvider.jsx';
+import { useNetwork } from '@shared/providers/NetworkProvider';
 import '../styles/document-card.css';
 
 export function DocumentCard({
@@ -14,7 +13,7 @@ export function DocumentCard({
   onTransfer,
   onPrune,
   onDelete,
-  onMigrate
+  onMigrate,
 }) {
   const [showManageMenu, setShowManageMenu] = useState(false);
   const [showRenameDialog, setShowRenameDialog] = useState(false);
@@ -25,7 +24,7 @@ export function DocumentCard({
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const { network, isTestnet, isMainnet } = useNetwork();
+  const { isTestnet } = useNetwork();
 
   const formatDate = (timestamp) => {
     const date = new Date(timestamp);
@@ -40,7 +39,7 @@ export function DocumentCard({
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
   };
 
@@ -145,7 +144,7 @@ export function DocumentCard({
     >
       <div className="card-header">
         <div className="document-icon">
-          <span>📊</span>
+          <span>Doc</span>
         </div>
         <div className="document-info">
           <h3 className="document-title" title={spreadsheet.title}>
@@ -154,74 +153,62 @@ export function DocumentCard({
           {!compact && (
             <div className="document-meta">
               <span className="version-count">
-                📄 {spreadsheet.version_count} version{spreadsheet.version_count !== 1 ? 's' : ''}
+                {spreadsheet.version_count} version{spreadsheet.version_count !== 1 ? 's' : ''}
               </span>
-              {spreadsheet.is_public && (
-                <span className="public-badge">🌐 Public</span>
-              )}
+              {spreadsheet.is_public && <span className="public-badge">Public</span>}
             </div>
           )}
         </div>
-        <button
-          className="manage-button"
-          onClick={handleManageClick}
-          title="Manage document"
-        >
-          ⚙️
+        <button className="manage-button" onClick={handleManageClick} title="Manage document">
+          Manage
         </button>
       </div>
 
       <div className="card-footer">
-        <span className="last-modified">
-          🕒 {formatDate(spreadsheet.last_modified)}
-        </span>
-        {compact && spreadsheet.is_public && (
-          <span className="public-badge-compact">🌐</span>
-        )}
+        <span className="last-modified">{formatDate(spreadsheet.last_modified)}</span>
+        {compact && spreadsheet.is_public && <span className="public-badge-compact">Public</span>}
       </div>
 
       {/* Manage Menu */}
       {showManageMenu && (
         <div className="manage-menu" onClick={(e) => e.stopPropagation()}>
-          <button onClick={() => {
-            setNewTitle(spreadsheet.title);
-            setShowRenameDialog(true);
-            setShowManageMenu(false);
-          }}>
-            ✏️ Rename
+          <button
+            onClick={() => {
+              setNewTitle(spreadsheet.title);
+              setShowRenameDialog(true);
+              setShowManageMenu(false);
+            }}
+          >
+            Rename
           </button>
 
           {spreadsheet.is_public ? (
-            <button onClick={handleMakePrivate}>
-              🔒 Make Private
-            </button>
+            <button onClick={handleMakePrivate}>Make Private</button>
           ) : (
-            <button onClick={handleMakePublic}>
-              🌐 Make Public
-            </button>
+            <button onClick={handleMakePublic}>Make Public</button>
           )}
 
-          <button onClick={() => {
-            setShowTransferDialog(true);
-            setShowManageMenu(false);
-          }}>
-            👤 Transfer
+          <button
+            onClick={() => {
+              setShowTransferDialog(true);
+              setShowManageMenu(false);
+            }}
+          >
+            Transfer
           </button>
 
-          <button onClick={handlePrune}>
-            🗑️ Clean Old Versions
-          </button>
+          <button onClick={handlePrune}>Clean Old Versions</button>
 
           {/* Show migrate button when on testnet (includes legacy spreadsheets without network metadata) */}
           {isTestnet && onMigrate && (
-            <button 
+            <button
               className="migrate-button"
               onClick={() => {
                 onMigrate(spreadsheet);
                 setShowManageMenu(false);
               }}
             >
-              🚀 Migrate to Mainnet
+              Migrate to Mainnet
             </button>
           )}
 
@@ -232,7 +219,7 @@ export function DocumentCard({
               setShowManageMenu(false);
             }}
           >
-            🗑️ Delete Permanently
+            Delete Permanently
           </button>
         </div>
       )}
@@ -250,115 +237,122 @@ export function DocumentCard({
       {cardContent}
 
       {/* Rename Dialog */}
-      {showRenameDialog && createPortal(
-        <div className="dialog-overlay" onClick={() => setShowRenameDialog(false)}>
-          <div className="dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>Rename Spreadsheet</h3>
-            <input
-              type="text"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="Enter new title"
-              className="dialog-input"
-              autoFocus
-            />
-            <div className="dialog-actions">
-              <button
-                onClick={() => setShowRenameDialog(false)}
-                className="cancel-button"
-                disabled={isLoading}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleRename}
-                className="confirm-button"
-                disabled={!newTitle.trim() || isLoading}
-              >
-                {isLoading ? 'Renaming...' : 'Rename'}
-              </button>
+      {showRenameDialog &&
+        createPortal(
+          <div className="dialog-overlay" onClick={() => setShowRenameDialog(false)}>
+            <div className="dialog" onClick={(e) => e.stopPropagation()}>
+              <h3>Rename Spreadsheet</h3>
+              <input
+                type="text"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="Enter new title"
+                className="dialog-input"
+                autoFocus
+              />
+              <div className="dialog-actions">
+                <button
+                  onClick={() => setShowRenameDialog(false)}
+                  className="cancel-button"
+                  disabled={isLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRename}
+                  className="confirm-button"
+                  disabled={!newTitle.trim() || isLoading}
+                >
+                  {isLoading ? 'Renaming...' : 'Rename'}
+                </button>
+              </div>
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* Transfer Dialog */}
-      {showTransferDialog && createPortal(
-        <div className="dialog-overlay" onClick={() => setShowTransferDialog(false)}>
-          <div className="dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>Transfer Ownership</h3>
-            <input
-              type="text"
-              value={transferAddress}
-              onChange={(e) => setTransferAddress(e.target.value)}
-              placeholder="Enter new owner's address (0x...)"
-              className="dialog-input"
-              autoFocus
-            />
-            <div className="dialog-actions">
-              <button
-                onClick={() => setShowTransferDialog(false)}
-                className="cancel-button"
-                disabled={isLoading}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleTransfer}
-                className="confirm-button"
-                disabled={!transferAddress.trim() || !transferAddress.startsWith('0x') || isLoading}
-              >
-                {isLoading ? 'Transferring...' : 'Transfer'}
-              </button>
+      {showTransferDialog &&
+        createPortal(
+          <div className="dialog-overlay" onClick={() => setShowTransferDialog(false)}>
+            <div className="dialog" onClick={(e) => e.stopPropagation()}>
+              <h3>Transfer Ownership</h3>
+              <input
+                type="text"
+                value={transferAddress}
+                onChange={(e) => setTransferAddress(e.target.value)}
+                placeholder="Enter new owner's address (0x...)"
+                className="dialog-input"
+                autoFocus
+              />
+              <div className="dialog-actions">
+                <button
+                  onClick={() => setShowTransferDialog(false)}
+                  className="cancel-button"
+                  disabled={isLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleTransfer}
+                  className="confirm-button"
+                  disabled={
+                    !transferAddress.trim() || !transferAddress.startsWith('0x') || isLoading
+                  }
+                >
+                  {isLoading ? 'Transferring...' : 'Transfer'}
+                </button>
+              </div>
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* Delete Dialog */}
-      {showDeleteDialog && createPortal(
-        <div className="dialog-overlay" onClick={() => setShowDeleteDialog(false)}>
-          <div className="dialog delete-dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>⚠️ Delete Spreadsheet</h3>
-            <div className="delete-warning">
-              <p><strong>This action cannot be undone!</strong></p>
-              <p>
-                You are about to permanently delete this spreadsheet and all its versions.
-                This will remove all data from the blockchain and cannot be recovered.
-              </p>
-              <p>To confirm deletion, please type the exact spreadsheet title below:</p>
-              <div className="title-to-confirm">"{spreadsheet.title}"</div>
+      {showDeleteDialog &&
+        createPortal(
+          <div className="dialog-overlay" onClick={() => setShowDeleteDialog(false)}>
+            <div className="dialog delete-dialog" onClick={(e) => e.stopPropagation()}>
+              <h3>Delete Spreadsheet</h3>
+              <div className="delete-warning">
+                <p>
+                  <strong>This action cannot be undone!</strong>
+                </p>
+                <p>
+                  You are about to permanently delete this spreadsheet and all its versions. This
+                  will remove all data from the blockchain and cannot be recovered.
+                </p>
+                <p>To confirm deletion, please type the exact spreadsheet title below:</p>
+                <div className="title-to-confirm">"{spreadsheet.title}"</div>
+              </div>
+              <input
+                type="text"
+                value={deleteConfirmation}
+                onChange={(e) => setDeleteConfirmation(e.target.value)}
+                placeholder="Type the spreadsheet title exactly"
+                className="dialog-input delete-confirmation-input"
+                autoFocus
+              />
+              <div className="dialog-actions">
+                <button
+                  onClick={() => setShowDeleteDialog(false)}
+                  className="cancel-button"
+                  disabled={isLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="danger-button"
+                  disabled={deleteConfirmation !== spreadsheet.title || isLoading}
+                >
+                  {isLoading ? 'Deleting...' : 'Delete Forever'}
+                </button>
+              </div>
             </div>
-            <input
-              type="text"
-              value={deleteConfirmation}
-              onChange={(e) => setDeleteConfirmation(e.target.value)}
-              placeholder="Type the spreadsheet title exactly"
-              className="dialog-input delete-confirmation-input"
-              autoFocus
-            />
-            <div className="dialog-actions">
-              <button
-                onClick={() => setShowDeleteDialog(false)}
-                className="cancel-button"
-                disabled={isLoading}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                className="danger-button"
-                disabled={deleteConfirmation !== spreadsheet.title || isLoading}
-              >
-                {isLoading ? 'Deleting...' : '🗑️ Delete Forever'}
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body
+        )}
     </>
   );
 }

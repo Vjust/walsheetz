@@ -1,7 +1,7 @@
 // Custom Sui blockchain functions for spreadsheet formulas
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
-import { getCurrentConfig } from '../../../../walrus-sui-core/src/blockchain/index.js';
-import { configLoader } from '../../../../walrus/src/index.js';
+import { getCurrentConfig } from '@dreamlit/walrus-sui-core/blockchain';
+import { configLoader } from '@dreamlit/walrus';
 
 // In-memory cache with TTL
 const cache = new Map();

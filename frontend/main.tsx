@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import App from '@app/App.jsx'
+import App from '@app/App'
 import { BlockchainAdapterProvider } from '@lib/spreadsheet/contexts/BlockchainAdapterContext'
 import '@app/styles/index.css'
 
@@ -8,7 +8,7 @@ import '@app/styles/index.css'
 import { luckysheetAdapter } from './lib/spreadsheet/services/luckysheet/LuckysheetAdapter.ts'
 import { startRenderTimeInjection } from './lib/spreadsheet/services/luckysheet/injectAtRenderTime.ts'
 
-console.log('🔧 [main.jsx] Initializing Luckysheet adapter...')
+console.log('[main] Initializing Luckysheet adapter...')
 
 /**
  * Initialize Luckysheet adapter
@@ -19,16 +19,16 @@ async function initializeLuckysheet() {
     const success = await luckysheetAdapter.initialize()
 
     if (success) {
-      console.log('🔧 [main.jsx] ✅ Luckysheet adapter initialized')
+      console.log('[main] Luckysheet adapter initialized')
 
       // Start render-time injection for autocomplete (Layer 5 - still needed for DOM watching)
       startRenderTimeInjection()
-      console.log('🔧 [main.jsx] ✅ Autocomplete DOM injection active')
+      console.log('[main] Autocomplete DOM injection active')
     } else {
-      console.error('🔧 [main.jsx] ❌ Luckysheet adapter failed to initialize')
+      console.error('[main] Luckysheet adapter failed to initialize')
     }
   } catch (error) {
-    console.error('🔧 [main.jsx] ❌ Error initializing Luckysheet:', error)
+    console.error('[main] Error initializing Luckysheet:', error)
   }
 }
 

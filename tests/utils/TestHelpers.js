@@ -320,8 +320,14 @@ export function mockConsole() {
  * Setup global mocks
  */
 export function setupGlobalMocks() {
-  // Mock localStorage if not available
-  if (typeof global.localStorage === 'undefined') {
+  const hasWorkingLocalStorage =
+    typeof global.localStorage !== 'undefined' &&
+    typeof global.localStorage.getItem === 'function' &&
+    typeof global.localStorage.setItem === 'function' &&
+    typeof global.localStorage.removeItem === 'function';
+
+  // Mock localStorage if not available (or incomplete, e.g. in Bun)
+  if (!hasWorkingLocalStorage) {
     global.localStorage = createMockLocalStorage();
   }
 
@@ -331,6 +337,11 @@ export function setupGlobalMocks() {
       addEventListener: vi.fn(),
       removeEventListener: vi.fn()
     };
+  }
+
+  // Keep window.localStorage aligned with global localStorage
+  if (global.window && !global.window.localStorage) {
+    global.window.localStorage = global.localStorage;
   }
 
   // Mock Date.now for consistent timestamps in tests

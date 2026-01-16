@@ -7,9 +7,9 @@
  */
 
 import { useWalletConnection } from './useWalletConnection';
-import { mockWalletConnection } from '../../lib/spreadsheet/services/testing/mockWalletConnection.ts';
-import { isAuthBypassed } from '../../../packages/shared/src/utils/config/testMode.js';
-import type { UseWalletConnection } from '../../../packages/shared/src/types/wallet';
+import { mockWalletConnection } from '@lib/spreadsheet/services/testing/mockWalletConnection';
+import { isAuthBypassed } from '@lib/spreadsheet/utils/testMode';
+import type { UseWalletConnection } from '@dreamlit/shared';
 
 /**
  * Factory hook that provides either real or mock wallet connection
@@ -21,7 +21,7 @@ export function useWalletConnectionFactory(): UseWalletConnection {
 
   // In test mode, return the mock connection instead
   if (isAuthBypassed()) {
-    console.log('🧪 Test Mode: Using mock wallet connection');
+    console.log('Test mode: using mock wallet connection');
     return mockWalletConnection as UseWalletConnection;
   }
 

@@ -13,38 +13,38 @@ export function CreateDocumentModal({ isOpen, onClose, onCreate }) {
       id: 'blank',
       name: 'Blank Spreadsheet',
       description: 'Start with an empty spreadsheet',
-      icon: '📄'
+      icon: '',
     },
     {
       id: 'budget',
       name: 'Personal Budget',
       description: 'Track your income and expenses',
-      icon: '💰'
+      icon: '$',
     },
     {
       id: 'project',
       name: 'Project Tracker',
       description: 'Manage tasks and deadlines',
-      icon: '📋'
+      icon: 'P',
     },
     {
       id: 'inventory',
       name: 'Inventory List',
       description: 'Track items and quantities',
-      icon: '📦'
+      icon: 'I',
     },
     {
       id: 'schedule',
       name: 'Schedule Planner',
       description: 'Organize your time and events',
-      icon: '📅'
+      icon: 'S',
     },
     {
       id: 'contacts',
       name: 'Contact List',
       description: 'Manage your contacts and information',
-      icon: '👥'
-    }
+      icon: 'C',
+    },
   ];
 
   // Reset form when modal opens/closes
@@ -89,10 +89,6 @@ export function CreateDocumentModal({ isOpen, onClose, onCreate }) {
     onClose();
   };
 
-  const handleCancel = () => {
-    handleClose();
-  };
-
   const handleKeyDown = (e) => {
     if (e.key === 'Escape') {
       handleClose();
@@ -112,7 +108,7 @@ export function CreateDocumentModal({ isOpen, onClose, onCreate }) {
             disabled={isSubmitting}
             title="Close"
           >
-            ✕
+            x
           </button>
         </div>
 
@@ -149,9 +145,7 @@ export function CreateDocumentModal({ isOpen, onClose, onCreate }) {
                     <h4 className="template-name">{template.name}</h4>
                     <p className="template-description">{template.description}</p>
                   </div>
-                  {selectedTemplate === template.id && (
-                    <div className="selected-indicator">✓</div>
-                  )}
+                  {selectedTemplate === template.id && <div className="selected-indicator">✓</div>}
                 </div>
               ))}
             </div>
@@ -159,11 +153,7 @@ export function CreateDocumentModal({ isOpen, onClose, onCreate }) {
 
           {/* Action Buttons */}
           <div className="modal-actions">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="cancel-button"
-            >
+            <button type="button" onClick={handleClose} className="cancel-button">
               Cancel
             </button>
             <button
@@ -171,7 +161,7 @@ export function CreateDocumentModal({ isOpen, onClose, onCreate }) {
               className="create-button"
               disabled={!title.trim() || isSubmitting}
             >
-              <span>➕</span>
+              <span>+</span>
               Create Spreadsheet
             </button>
           </div>

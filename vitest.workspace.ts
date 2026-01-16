@@ -8,6 +8,9 @@ import { defineWorkspace } from 'vitest/config'
  * package-specific settings.
  */
 export default defineWorkspace([
+  // Root project (tests/ + frontend)
+  'vitest.config.js',
+
   // Auto-discover all packages
   'packages/*',
 

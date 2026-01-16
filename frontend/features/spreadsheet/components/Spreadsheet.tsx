@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react'
-import { useSpreadsheetContext } from './SpreadsheetProvider.jsx'
+import { useSpreadsheetContext } from './SpreadsheetProvider'
 import { useSpreadsheetLifecycle } from '@shared/hooks/useSpreadsheetLifecycle.js'
 import { useLuckysheetShortcuts } from '@shared/hooks/useLuckysheetShortcuts.js'
 

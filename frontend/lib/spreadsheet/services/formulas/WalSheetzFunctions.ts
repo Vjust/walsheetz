@@ -24,10 +24,10 @@
  * - Each layer reinforces the others to maximize reliability
  */
 import { defiStateManager } from '../DeFiStateManager.js';
-import { eventBus as EventBus, browserWalrusService } from '../../../../walrus/src/index.js';
-import { browserWalletManager, browserSuiService } from '../../../../walrus-sui-core/src/blockchain-integration/index.js';
-import { suiGraphQLService } from '../../../../walrus-sui-core/src/blockchain/index.js';
-import { blobLineageTracker } from '../../../../walrus-sui-core/src/data-integrity/index.js';
+import { eventBus as EventBus, browserWalrusService } from '@dreamlit/walrus';
+import { browserWalletManager, browserSuiService } from '@dreamlit/walrus-sui-core/blockchain-integration';
+import { suiGraphQLService } from '@dreamlit/walrus-sui-core/blockchain';
+import { blobLineageTracker } from '@dreamlit/walrus-sui-core/data-integrity';
 import { StorageAdapter } from '../../adapters/StorageAdapter.js';
 import { serializeRange } from '../../utils/BlobParser.js';
 
@@ -36,6 +36,12 @@ class WalSheetzFormulaEngine {
     this.initialized = true; // No async initialization needed
     this.rateLimiter = new Map();
     this.maxCallsPerMinute = 60;
+  }
+
+  async ensureInitialized(): Promise<void> {
+    if (!this.initialized) {
+      throw new Error('WalSheetzFormulaEngine failed to initialize');
+    }
   }
 
   checkRateLimit(cellRef) {
@@ -542,7 +548,7 @@ export const WALSHEETZ_FUNCTION_METADATA = {
     signature: 'SUI.GQL(queryOrPreset, ...args)',
     description: 'Execute Sui GraphQL query or preset',
     category: 'graphql',
-    icon: '🔍',
+    icon: 'G',
     example: '=SUI.GQL("getBlobsByOwner", "0x123...")',
     returns: 'GraphQL query result',
     parameters: [
@@ -554,7 +560,7 @@ export const WALSHEETZ_FUNCTION_METADATA = {
     signature: 'WALRUS.CERT(blobId)',
     description: 'Get PoA certificate status for a blob',
     category: 'walrus',
-    icon: '🎫',
+    icon: 'C',
     example: '=WALRUS.CERT("blobId")',
     returns: 'PoA certificate status and metadata',
     parameters: [
@@ -565,7 +571,7 @@ export const WALSHEETZ_FUNCTION_METADATA = {
     signature: 'WALRUS.READ(blobId, offset?, length?)',
     description: 'Read blob content from Walrus',
     category: 'walrus',
-    icon: '📖',
+    icon: 'R',
     example: '=WALRUS.READ("blobId")',
     returns: 'Blob content data',
     parameters: [
@@ -578,7 +584,7 @@ export const WALSHEETZ_FUNCTION_METADATA = {
     signature: 'WALRUS.MAP_BLOB_TO_OBJECT(blobId, targetRange)',
     description: 'Parse blob JSON/CSV and inject into grid range',
     category: 'walrus',
-    icon: '📥',
+    icon: 'I',
     example: '=WALRUS.MAP_BLOB_TO_OBJECT("blobId", "A1:Z100")',
     returns: 'Success status with parsed row/col counts',
     parameters: [
@@ -590,7 +596,7 @@ export const WALSHEETZ_FUNCTION_METADATA = {
     signature: 'WALRUS.MAP_OBJECT_TO_BLOB(sourceRange, format?)',
     description: 'Serialize grid range to blob format',
     category: 'walrus',
-    icon: '📤',
+    icon: 'O',
     example: '=WALRUS.MAP_OBJECT_TO_BLOB("A1:Z100", "json")',
     returns: 'Serialized data ready for WALRUS.PUT',
     parameters: [
@@ -602,7 +608,7 @@ export const WALSHEETZ_FUNCTION_METADATA = {
     signature: 'WALRUS.PUT(sourceRange, metadata?)',
     description: 'Upload grid data to Walrus storage',
     category: 'walrus',
-    icon: '☁️',
+    icon: 'U',
     example: '=WALRUS.PUT("A1:Z100")',
     returns: 'Blob ID and upload metadata',
     parameters: [
@@ -614,7 +620,7 @@ export const WALSHEETZ_FUNCTION_METADATA = {
     signature: 'SUI.TX(txType, ...args)',
     description: 'Execute Sui transaction with wallet signing',
     category: 'sui',
-    icon: '✍️',
+    icon: 'T',
     example: '=SUI.TX("certifyBlob", "blobId")',
     returns: 'Transaction digest and execution result',
     parameters: [
@@ -724,9 +730,9 @@ export function registerWalSheetzFunctions(formulaEngine = null) {
       const injected = window.__wzInject.inject('registerWalSheetzFunctions');
 
       if (injected > 0) {
-        console.log(`[WalSheetzFormulas] ✅ Successfully injected ${injected} WZ function entries`);
+        console.log(`[WalSheetzFormulas] Successfully injected ${injected} WZ function entries`);
       } else {
-        console.warn('[WalSheetzFormulas] ⚠️  Injection returned 0 - may need retry');
+        console.warn('[WalSheetzFormulas] Injection returned 0 - may need retry');
 
         // Schedule retry
         setTimeout(() => {
@@ -735,7 +741,7 @@ export function registerWalSheetzFunctions(formulaEngine = null) {
         }, 500);
       }
     } else {
-      console.error('[WalSheetzFormulas] ❌ Injection API not available!');
+      console.error('[WalSheetzFormulas] Injection API not available!');
       console.error('[WalSheetzFormulas] window.__wzInject:', window.__wzInject);
 
       // Schedule retry

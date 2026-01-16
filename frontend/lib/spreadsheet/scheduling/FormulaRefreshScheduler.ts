@@ -11,7 +11,7 @@
  * - Enable/disable refresh globally
  */
 
-import { logger, LogComponent } from '@utils/logging/Logger.js';
+import { logger, LogComponent } from '@dreamlit/shared';
 
 /**
  * Scheduler for periodic formula cell refreshes
@@ -29,8 +29,11 @@ export class FormulaRefreshScheduler {
     this.maxRefreshInterval = 3600000; // Maximum 1 hour between refreshes
     this.refreshEnabled = true; // Global enable/disable flag
 
-    logger.debug(LogComponent.SPREADSHEET_ENGINE, 'formula_scheduler_init',
-      'FormulaRefreshScheduler initialized');
+    logger.debug(
+      LogComponent.SPREADSHEET_ENGINE,
+      'formula_scheduler_init',
+      'FormulaRefreshScheduler initialized'
+    );
   }
 
   /**
@@ -47,11 +50,15 @@ export class FormulaRefreshScheduler {
     );
 
     if (clampedInterval !== interval) {
-      logger.warn(LogComponent.SPREADSHEET_ENGINE, 'register_refresh',
-        `Refresh interval clamped for cell ${cellRef}`, {
+      logger.warn(
+        LogComponent.SPREADSHEET_ENGINE,
+        'register_refresh',
+        `Refresh interval clamped for cell ${cellRef}`,
+        {
           requested: interval,
-          actual: clampedInterval
-        });
+          actual: clampedInterval,
+        }
+      );
     }
 
     // Store schedule
@@ -59,15 +66,19 @@ export class FormulaRefreshScheduler {
       interval: clampedInterval,
       lastRun: Date.now(),
       formula,
-      enabled: true
+      enabled: true,
     });
 
-    logger.debug(LogComponent.SPREADSHEET_ENGINE, 'register_refresh',
-      `Registered cell for refresh`, {
+    logger.debug(
+      LogComponent.SPREADSHEET_ENGINE,
+      'register_refresh',
+      `Registered cell for refresh`,
+      {
         cellRef,
         interval: clampedInterval,
-        formula: formula.substring(0, 50)
-      });
+        formula: formula.substring(0, 50),
+      }
+    );
 
     // Start scheduler if not already running
     if (!this.refreshSchedulerTimer && this.refreshEnabled) {
@@ -83,8 +94,12 @@ export class FormulaRefreshScheduler {
     const removed = this.refreshSchedules.delete(cellRef);
 
     if (removed) {
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'unregister_refresh',
-        `Unregistered cell from refresh`, { cellRef });
+      logger.debug(
+        LogComponent.SPREADSHEET_ENGINE,
+        'unregister_refresh',
+        `Unregistered cell from refresh`,
+        { cellRef }
+      );
     }
 
     // Stop scheduler if no more cells to refresh
@@ -98,16 +113,23 @@ export class FormulaRefreshScheduler {
    */
   startRefreshScheduler() {
     if (this.refreshSchedulerTimer) {
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'start_refresh_scheduler',
-        'Refresh scheduler already running');
+      logger.debug(
+        LogComponent.SPREADSHEET_ENGINE,
+        'start_refresh_scheduler',
+        'Refresh scheduler already running'
+      );
       return;
     }
 
-    logger.info(LogComponent.SPREADSHEET_ENGINE, 'start_refresh_scheduler',
-      'Starting refresh scheduler', {
+    logger.info(
+      LogComponent.SPREADSHEET_ENGINE,
+      'start_refresh_scheduler',
+      'Starting refresh scheduler',
+      {
         cellCount: this.refreshSchedules.size,
-        interval: this.refreshSchedulerInterval
-      });
+        interval: this.refreshSchedulerInterval,
+      }
+    );
 
     this.refreshSchedulerTimer = setInterval(
       () => this._runRefreshScheduler(),
@@ -123,8 +145,11 @@ export class FormulaRefreshScheduler {
       clearInterval(this.refreshSchedulerTimer);
       this.refreshSchedulerTimer = null;
 
-      logger.info(LogComponent.SPREADSHEET_ENGINE, 'stop_refresh_scheduler',
-        'Refresh scheduler stopped');
+      logger.info(
+        LogComponent.SPREADSHEET_ENGINE,
+        'stop_refresh_scheduler',
+        'Refresh scheduler stopped'
+      );
     }
   }
 
@@ -141,8 +166,11 @@ export class FormulaRefreshScheduler {
       this.stopRefreshScheduler();
     }
 
-    logger.info(LogComponent.SPREADSHEET_ENGINE, 'set_refresh_enabled',
-      `Refresh scheduler ${enabled ? 'enabled' : 'disabled'}`);
+    logger.info(
+      LogComponent.SPREADSHEET_ENGINE,
+      'set_refresh_enabled',
+      `Refresh scheduler ${enabled ? 'enabled' : 'disabled'}`
+    );
   }
 
   /**
@@ -165,10 +193,14 @@ export class FormulaRefreshScheduler {
 
     // Refresh cells
     if (toRefresh.length > 0) {
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'refresh_scheduler',
-        `Refreshing ${toRefresh.length} cells`, {
-          cells: toRefresh.map(r => r.cellRef)
-        });
+      logger.debug(
+        LogComponent.SPREADSHEET_ENGINE,
+        'refresh_scheduler',
+        `Refreshing ${toRefresh.length} cells`,
+        {
+          cells: toRefresh.map((r) => r.cellRef),
+        }
+      );
 
       toRefresh.forEach(({ cellRef, schedule }) => {
         this._refreshCell(cellRef, schedule);
@@ -185,8 +217,9 @@ export class FormulaRefreshScheduler {
    */
   async _refreshCell(cellRef, schedule) {
     try {
-      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'refresh_cell',
-        `Refreshing cell ${cellRef}`, { formula: schedule.formula });
+      logger.debug(LogComponent.SPREADSHEET_ENGINE, 'refresh_cell', `Refreshing cell ${cellRef}`, {
+        formula: schedule.formula,
+      });
 
       // Re-execute formula via Luckysheet if available
       if (window.luckysheet) {
@@ -204,22 +237,34 @@ export class FormulaRefreshScheduler {
             // Force recalculation by setting the same formula
             window.luckysheet.setCellValue(row, col, currentValue);
 
-            logger.debug(LogComponent.SPREADSHEET_ENGINE, 'refresh_cell',
-              `Cell ${cellRef} refreshed`, { row, col });
+            logger.debug(
+              LogComponent.SPREADSHEET_ENGINE,
+              'refresh_cell',
+              `Cell ${cellRef} refreshed`,
+              { row, col }
+            );
           } else {
             // Cell no longer contains a formula, unregister it
-            logger.warn(LogComponent.SPREADSHEET_ENGINE, 'refresh_cell',
-              `Cell ${cellRef} no longer has formula, unregistering`, { currentValue });
+            logger.warn(
+              LogComponent.SPREADSHEET_ENGINE,
+              'refresh_cell',
+              `Cell ${cellRef} no longer has formula, unregistering`,
+              { currentValue }
+            );
             this.unregisterCellForRefresh(cellRef);
           }
         }
       }
     } catch (error) {
-      logger.error(LogComponent.SPREADSHEET_ENGINE, 'refresh_cell_error',
-        `Error refreshing cell ${cellRef}`, {
+      logger.error(
+        LogComponent.SPREADSHEET_ENGINE,
+        'refresh_cell_error',
+        `Error refreshing cell ${cellRef}`,
+        {
           error: error.message,
-          cellRef
-        });
+          cellRef,
+        }
+      );
     }
   }
 
@@ -230,7 +275,10 @@ export class FormulaRefreshScheduler {
     this.stopRefreshScheduler();
     this.refreshSchedules.clear();
 
-    logger.debug(LogComponent.SPREADSHEET_ENGINE, 'formula_scheduler_cleanup',
-      'FormulaRefreshScheduler cleaned up');
+    logger.debug(
+      LogComponent.SPREADSHEET_ENGINE,
+      'formula_scheduler_cleanup',
+      'FormulaRefreshScheduler cleaned up'
+    );
   }
 }

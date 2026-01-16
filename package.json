@@ -11,14 +11,11 @@
   "scripts": {
     "setup": "bun run scripts/setup.js",
     "dev": "vite",
-    "dev:bridge": "bun run scripts/start-bridge.js",
-    "dev:full": "concurrently \"bun run dev:bridge\" \"bun run dev\" --names \"bridge,frontend\" --prefix-colors \"cyan,green\"",
-    "debug:bridge": "NODE_ENV=development DEBUG=* BRIDGE_LOG_LEVEL=DEBUG bun run scripts/start-bridge.js",
-    "debug:frontend": "VITE_DEBUG=true DEBUG=* bun run dev",
-    "debug:full": "concurrently \"bun run debug:bridge\" \"bun run debug:frontend\" --names \"bridge,frontend\" --prefix-colors \"cyan,green\"",
+    "build:web": "vite build",
+    "debug": "VITE_DEBUG=true DEBUG=* bun run dev",
     "build": "bun run --filter '*' build",
-    "test": "bun test --preload=./tests/bun-setup.js",
-    "test:watch": "bun test --watch --preload=./tests/bun-setup.js",
+    "test": "vitest run --workspace=vitest.workspace.ts",
+    "test:watch": "vitest --workspace=vitest.workspace.ts",
     "test:all": "bun run test && bun run typecheck && bun run lint",
     "test:smoke": "bun run scripts/smoke-test.js",
     "health": "bun run scripts/health-check.js",
@@ -61,5 +58,11 @@
   "repository": {
     "type": "git",
     "url": "git@github.com:Vjust/dreamlit-walrus-sdk.git"
+  },
+  "dependencies": {
+    "@mysten/enoki": "^0.12.15",
+    "lru-cache": "^10.4.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   }
 }

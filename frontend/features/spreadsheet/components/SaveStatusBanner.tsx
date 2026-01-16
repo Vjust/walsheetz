@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { logger, LogComponent } from '../../../../packages/shared/src/utils/Logger.js';
+import { logger, LogComponent } from '@dreamlit/walrus';
 import './SaveStatusBanner.css';
 
 /**
@@ -18,28 +18,35 @@ export function SaveStatusBanner() {
   const [fallbackSaves, setFallbackSaves] = useState([]);
   const [isRetrying, setIsRetrying] = useState(false);
   const [retryMessage, setRetryMessage] = useState('');
-  const [retryResults, setRetryResults] = useState({});
 
   useEffect(() => {
     const handleFallbackSave = (event) => {
       const detail = event.detail || {};
-      logger.info(LogComponent.UI_COMPONENT, 'fallback_notification', 'Displaying fallback save notification', {
-        message: detail.message,
-        localKey: detail.localKey
-      });
+      logger.info(
+        LogComponent.UI_COMPONENT,
+        'fallback_notification',
+        'Displaying fallback save notification',
+        {
+          message: detail.message,
+          localKey: detail.localKey,
+        }
+      );
 
-      setFallbackSaves(prev => {
+      setFallbackSaves((prev) => {
         // Avoid duplicates
-        const isDuplicate = prev.some(save => save.localKey === detail.localKey);
+        const isDuplicate = prev.some((save) => save.localKey === detail.localKey);
         if (isDuplicate) return prev;
 
-        return [...prev, {
-          id: detail.localKey || `fallback-${Date.now()}`,
-          localKey: detail.localKey,
-          message: detail.message || 'Network disconnected - saved locally',
-          warning: detail.warning || 'Data will sync to blockchain when connection is restored',
-          timestamp: detail.timestamp || Date.now()
-        }];
+        return [
+          ...prev,
+          {
+            id: detail.localKey || `fallback-${Date.now()}`,
+            localKey: detail.localKey,
+            message: detail.message || 'Network disconnected - saved locally',
+            warning: detail.warning || 'Data will sync to blockchain when connection is restored',
+            timestamp: detail.timestamp || Date.now(),
+          },
+        ];
       });
     };
 
@@ -47,19 +54,18 @@ export function SaveStatusBanner() {
       const { localKey } = event.detail || {};
       if (!localKey) return;
 
-      logger.info(LogComponent.UI_COMPONENT, 'retry_success_event', 'Retry success event received', { localKey });
-
-      // Mark this save as successfully synced
-      setRetryResults(prev => ({
-        ...prev,
-        [localKey]: 'success'
-      }));
+      logger.info(
+        LogComponent.UI_COMPONENT,
+        'retry_success_event',
+        'Retry success event received',
+        { localKey }
+      );
 
       // Remove from fallback saves list
-      setFallbackSaves(prev => prev.filter(save => save.localKey !== localKey));
+      setFallbackSaves((prev) => prev.filter((save) => save.localKey !== localKey));
 
       // Show brief success message
-      setRetryMessage(`✅ Save synced to blockchain`);
+      setRetryMessage('Save synced to blockchain');
 
       // Clear message after 2 seconds
       setTimeout(() => {
@@ -73,17 +79,11 @@ export function SaveStatusBanner() {
 
       logger.warn(LogComponent.UI_COMPONENT, 'retry_failed_event', 'Retry failed event received', {
         localKey,
-        error
+        error,
       });
 
-      // Mark this save as failed retry
-      setRetryResults(prev => ({
-        ...prev,
-        [localKey]: 'failed'
-      }));
-
       // Show error message
-      setRetryMessage(`⏳ Retry attempt failed: ${error || 'Unknown error'}. Will retry next time.`);
+      setRetryMessage(`Retry attempt failed: ${error || 'Unknown error'}. Will retry next time.`);
 
       // Keep the message visible longer for errors
       setTimeout(() => {
@@ -94,19 +94,24 @@ export function SaveStatusBanner() {
     const handleStartupRetryComplete = (event) => {
       const { successCount, failureCount, total } = event.detail || {};
 
-      logger.info(LogComponent.UI_COMPONENT, 'startup_retry_complete', 'Startup auto-retry complete', {
-        successCount,
-        failureCount,
-        total
-      });
+      logger.info(
+        LogComponent.UI_COMPONENT,
+        'startup_retry_complete',
+        'Startup auto-retry complete',
+        {
+          successCount,
+          failureCount,
+          total,
+        }
+      );
 
       if (successCount > 0) {
-        setRetryMessage(`✅ ${successCount} of ${total} saves synced during startup`);
+        setRetryMessage(`${successCount} of ${total} saves synced during startup`);
       }
 
       if (failureCount > 0) {
-        setRetryMessage(prev =>
-          prev ? `${prev}; ${failureCount} still pending` : `⏳ ${failureCount} saves still pending`
+        setRetryMessage((prev) =>
+          prev ? `${prev}; ${failureCount} still pending` : `${failureCount} saves still pending`
         );
       }
 
@@ -136,15 +141,23 @@ export function SaveStatusBanner() {
       setIsRetrying(true);
       setRetryMessage('Attempting to sync saves to blockchain...');
 
-      logger.info(LogComponent.UI_COMPONENT, 'retry_fallback_saves', `Retrying ${fallbackSaves.length} fallback save(s)...`);
+      logger.info(
+        LogComponent.UI_COMPONENT,
+        'retry_fallback_saves',
+        `Retrying ${fallbackSaves.length} fallback save(s)...`
+      );
 
       // Find all fallback keys in localStorage
-      const fallbackKeys = Object.keys(localStorage).filter(key =>
+      const fallbackKeys = Object.keys(localStorage).filter((key) =>
         key.startsWith('walsheetz_fallback_')
       );
 
       if (fallbackKeys.length === 0) {
-        logger.info(LogComponent.UI_COMPONENT, 'no_fallback_saves', 'No fallback saves found to retry');
+        logger.info(
+          LogComponent.UI_COMPONENT,
+          'no_fallback_saves',
+          'No fallback saves found to retry'
+        );
         setFallbackSaves([]);
         setRetryMessage('');
         return;
@@ -152,25 +165,31 @@ export function SaveStatusBanner() {
 
       // Trigger retry event
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('save:retry-fallbacks', {
-          detail: {
-            fallbackKeys: fallbackKeys,
-            count: fallbackKeys.length
-          }
-        }));
+        window.dispatchEvent(
+          new CustomEvent('save:retry-fallbacks', {
+            detail: {
+              fallbackKeys: fallbackKeys,
+              count: fallbackKeys.length,
+            },
+          })
+        );
       }
 
       // Wait a moment for saves to process
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Check if saves were cleared (retry succeeded)
-      const remainingKeys = Object.keys(localStorage).filter(key =>
+      const remainingKeys = Object.keys(localStorage).filter((key) =>
         key.startsWith('walsheetz_fallback_')
       );
 
       if (remainingKeys.length === 0) {
-        setRetryMessage('✅ All saves synced to blockchain successfully!');
-        logger.info(LogComponent.UI_COMPONENT, 'retry_success', 'All fallback saves synced successfully');
+        setRetryMessage('All saves synced to blockchain successfully');
+        logger.info(
+          LogComponent.UI_COMPONENT,
+          'retry_success',
+          'All fallback saves synced successfully'
+        );
 
         // Auto-clear banner after 3 seconds
         setTimeout(() => {
@@ -178,25 +197,21 @@ export function SaveStatusBanner() {
           setRetryMessage('');
         }, 3000);
       } else {
-        setRetryMessage(`⏳ Still syncing... (${remainingKeys.length} pending)`);
+        setRetryMessage(`Still syncing... (${remainingKeys.length} pending)`);
         logger.info(LogComponent.UI_COMPONENT, 'retry_partial', 'Some saves still pending', {
-          remaining: remainingKeys.length
+          remaining: remainingKeys.length,
         });
       }
     } catch (error) {
       logger.error(LogComponent.UI_COMPONENT, 'retry_error', 'Error retrying fallback saves', {
-        error: error.message
+        error: error.message,
       });
-      setRetryMessage('❌ Retry failed - please try again');
+      setRetryMessage('Retry failed - please try again');
     } finally {
       setIsRetrying(false);
       // Clear message after 5 seconds if there's an error
       setTimeout(() => setRetryMessage(''), 5000);
     }
-  };
-
-  const handleDismiss = (id) => {
-    setFallbackSaves(prev => prev.filter(save => save.id !== id));
   };
 
   const handleDismissAll = () => {
@@ -215,19 +230,16 @@ export function SaveStatusBanner() {
       <div className="save-status-banner warning">
         <div className="banner-content">
           <div className="banner-message">
-            <span className="banner-icon">⚠️</span>
+            <span className="banner-icon">!</span>
             <div className="message-text">
-              <div className="main-message">
-                {firstSave.message}
-              </div>
+              <div className="main-message">{firstSave.message}</div>
               {fallbackSaves.length > 1 && (
                 <div className="count-info">
-                  +{fallbackSaves.length - 1} more unsaved change{fallbackSaves.length > 2 ? 's' : ''}
+                  +{fallbackSaves.length - 1} more unsaved change
+                  {fallbackSaves.length > 2 ? 's' : ''}
                 </div>
               )}
-              <div className="warning-text">
-                {firstSave.warning}
-              </div>
+              <div className="warning-text">{firstSave.warning}</div>
             </div>
           </div>
 
@@ -238,7 +250,7 @@ export function SaveStatusBanner() {
               disabled={isRetrying}
               title="Attempt to sync locally-saved data to blockchain"
             >
-              {isRetrying ? '🔄 Retrying...' : '🚀 Retry Save'}
+              {isRetrying ? 'Retrying...' : 'Retry Save'}
             </button>
             <button
               className="dismiss-button"
@@ -247,16 +259,12 @@ export function SaveStatusBanner() {
               title="Dismiss this notification"
               aria-label="Dismiss"
             >
-              ✕
+              x
             </button>
           </div>
         </div>
 
-        {retryMessage && (
-          <div className="retry-status-message">
-            {retryMessage}
-          </div>
-        )}
+        {retryMessage && <div className="retry-status-message">{retryMessage}</div>}
       </div>
     </div>
   );

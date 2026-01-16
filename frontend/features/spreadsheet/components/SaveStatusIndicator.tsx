@@ -32,49 +32,49 @@ export function SaveStatusIndicator({
     switch (saveStatus) {
       case 'saving_walrus':
         return {
-          icon: '💾',
+          icon: '',
           text: 'Saving to storage...',
           className: 'saving',
           showSync: false
         };
       case 'saving_blockchain':
         return {
-          icon: '⛓️',
+          icon: '',
           text: 'Syncing to blockchain...',
           className: 'syncing',
           showSync: false
         };
       case 'saved_walrus':
         return {
-          icon: '☁️',
+          icon: '',
           text: 'Saved to storage',
           className: 'saved-walrus',
           showSync: walletConnected && pendingWalrusSaves > 0
         };
       case 'synced':
         return {
-          icon: '✅',
+          icon: '',
           text: 'Fully synced',
           className: 'synced',
           showSync: false
         };
       case 'awaiting_commit':
         return {
-          icon: '⏳',
+          icon: '',
           text: 'Commit ready for blockchain',
           className: 'awaiting-commit',
           showSync: true
         };
       case 'committing':
         return {
-          icon: '⛓️',
+          icon: '',
           text: 'Confirm in wallet to publish',
           className: 'syncing',
           showSync: false
         };
       case 'error':
         return {
-          icon: '❌',
+          icon: '',
           text: 'Save error',
           className: 'error',
           showSync: false
@@ -82,14 +82,14 @@ export function SaveStatusIndicator({
       default: // 'ready'
         if (pendingWalrusSaves > 0 && walletConnected) {
           return {
-            icon: '⏳',
+            icon: '',
             text: 'Pending blockchain sync',
             className: 'pending-sync',
             showSync: true
           };
         }
         return {
-          icon: '💾',
+          icon: '',
           text: 'Ready to save',
           className: 'ready',
           showSync: false
@@ -109,7 +109,7 @@ export function SaveStatusIndicator({
   return (
     <div className={`save-status-indicator ${statusInfo.className}`}>
       <div className="status-main">
-        <span className="status-icon">{statusInfo.icon}</span>
+        {statusInfo.icon && <span className="status-icon">{statusInfo.icon}</span>}
         <span className="status-text">{statusInfo.text}</span>
         {blobId && onViewDetails && (
           <button
@@ -148,7 +148,7 @@ export function SaveStatusIndicator({
       {/* Save to Blockchain prompt */}
       {blobId && onSaveToBlockchain && poaStatus === 'uncertified' && walletConnected && (
         <div className="poa-prompt">
-          <span className="poa-prompt-icon">⚠️</span>
+          <span className="poa-prompt-icon">!</span>
           <span className="poa-prompt-text">
             Your data may be deleted without blockchain protection
           </span>
@@ -182,8 +182,8 @@ export function SaveStatusIndicator({
               <span className="tooltip-label">Walrus expiry:</span>
               <span className="tooltip-value">
                 {new Date(expiryTimestamp).toLocaleString()}
-                {isExpiryCritical && ' ⚠️ Expired — renew immediately'}
-                {(!isExpiryCritical && isExpirySoon) && ' ⚠️ Renewal required soon'}
+                {isExpiryCritical && ' Expired — renew immediately'}
+                {(!isExpiryCritical && isExpirySoon) && ' Renewal required soon'}
               </span>
             </div>
           )}
@@ -191,11 +191,11 @@ export function SaveStatusIndicator({
             <div className={`tooltip-item poa-status-${poaStatus}`}>
               <span className="tooltip-label">Blockchain Storage:</span>
               <span className="tooltip-value poa-badge">
-                {poaStatus === 'certified' && '✅ Protected'}
-                {poaStatus === 'uncertified' && '❌ Not Protected'}
-                {poaStatus === 'pending' && '⏳ Saving...'}
-                {poaStatus === 'expired' && '⚠️ Expired'}
-                {poaStatus === 'unknown' && '❓ Unknown'}
+                {poaStatus === 'certified' && 'Protected'}
+                {poaStatus === 'uncertified' && 'Not Protected'}
+                {poaStatus === 'pending' && 'Saving...'}
+                {poaStatus === 'expired' && 'Expired'}
+                {poaStatus === 'unknown' && 'Unknown'}
               </span>
             </div>
           )}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { browserSuiService } from '../../../packages/walrus-sui-core/src/blockchain-integration/services/BrowserSuiService.ts';
-import { browserWalrusService } from '../../../packages/walrus/src/browser/BrowserWalrusService.ts';
+import { browserSuiService } from '@dreamlit/walrus-sui-core/blockchain-integration';
+import { browserWalrusService } from '@dreamlit/walrus';
 
 const RateLimiterStatus = ({ show = false, position = 'bottom-right' }) => {
   const [metrics, setMetrics] = useState({
@@ -77,12 +77,12 @@ const RateLimiterStatus = ({ show = false, position = 'bottom-right' }) => {
         <span className="font-semibold">Rate Limiter</span>
         <div className="flex items-center gap-2">
           {hasActiveBackoff && (
-            <span className="text-yellow-300 animate-pulse">⚠️ Backoff</span>
+            <span className="text-yellow-300 animate-pulse">Backoff</span>
           )}
           {totalQueued > 0 && (
             <span className="bg-blue-600 px-1 rounded">{totalQueued} queued</span>
           )}
-          <span>{expanded ? '▼' : '▶'}</span>
+          <span>{expanded ? 'v' : '>'}</span>
         </div>
       </div>
       

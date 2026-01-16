@@ -171,7 +171,7 @@ export const ImportPreviewModal = ({
         <div className="modal-header">
           <div className="header-info">
             <h2>Import Preview</h2>
-            <p className="file-info">📄 {fileName}</p>
+            <p className="file-info">File: {fileName}</p>
           </div>
           <button
             className="modal-close-btn"

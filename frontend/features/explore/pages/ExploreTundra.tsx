@@ -1,7 +1,7 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSpreadsheetContext } from '@features/spreadsheet/components'
-import ArcticSprite from '@shared/components/ArcticSprite.jsx'
+import ArcticSprite from '@shared/components/ArcticSprite'
 import '../styles/ExploreTundra.css'
 
 export function ExploreTundra() {
@@ -92,7 +92,7 @@ export function ExploreTundra() {
         {/* Features Grid */}
         <section className="explore-tundra__features">
           <div className="explore-tundra__feature glass-container ice-glow">
-            <div className="explore-tundra__feature-icon">⛓️</div>
+            <div className="explore-tundra__feature-icon">S</div>
             <h3 className="explore-tundra__feature-title">Sui Blockchain Integration</h3>
             <p className="explore-tundra__feature-description">
               Built on Sui's high-performance blockchain with native Move smart contracts. All spreadsheet
@@ -109,7 +109,7 @@ export function ExploreTundra() {
           </div>
 
           <div className="explore-tundra__feature glass-container ice-glow">
-            <div className="explore-tundra__feature-icon">💾</div>
+            <div className="explore-tundra__feature-icon">W</div>
             <h3 className="explore-tundra__feature-title">Walrus Decentralized Storage</h3>
             <p className="explore-tundra__feature-description">
               Decentralized blob storage powered by Walrus. Your spreadsheet data is stored
@@ -127,7 +127,7 @@ export function ExploreTundra() {
           </div>
 
           <div className="explore-tundra__feature glass-container ice-glow">
-            <div className="explore-tundra__feature-icon">⚙️</div>
+            <div className="explore-tundra__feature-icon">C</div>
             <h3 className="explore-tundra__feature-title">User-Controlled Saving</h3>
             <p className="explore-tundra__feature-description">
               You control when your data is saved to the blockchain—no forced auto-save. Configure your
@@ -143,7 +143,7 @@ export function ExploreTundra() {
           </div>
 
           <div className="explore-tundra__feature glass-container ice-glow">
-            <div className="explore-tundra__feature-icon">🗂️</div>
+            <div className="explore-tundra__feature-icon">M</div>
             <h3 className="explore-tundra__feature-title">Complete Spreadsheet Management</h3>
             <p className="explore-tundra__feature-description">
               Full control over your spreadsheet portfolio. Create unlimited spreadsheets, load them from
@@ -159,7 +159,7 @@ export function ExploreTundra() {
           </div>
 
           <div className="explore-tundra__feature glass-container ice-glow">
-            <div className="explore-tundra__feature-icon">📊</div>
+            <div className="explore-tundra__feature-icon">F</div>
             <h3 className="explore-tundra__feature-title">Full Excel-Like Functionality</h3>
             <p className="explore-tundra__feature-description">
               Powered by Luckysheet's battle-tested spreadsheet engine. Work with familiar Excel-like
@@ -176,7 +176,7 @@ export function ExploreTundra() {
           </div>
 
           <div className="explore-tundra__feature glass-container ice-glow">
-            <div className="explore-tundra__feature-icon">🔐</div>
+            <div className="explore-tundra__feature-icon">D</div>
             <h3 className="explore-tundra__feature-title">True Data Sovereignty</h3>
             <p className="explore-tundra__feature-description">
               Your identity = your data ownership. Sign in with Google, Apple, or any Sui-compatible wallet through Sui's zkLogin.
@@ -193,7 +193,7 @@ export function ExploreTundra() {
           </div>
 
           <div className="explore-tundra__feature glass-container ice-glow">
-            <div className="explore-tundra__feature-icon">🌐</div>
+            <div className="explore-tundra__feature-icon">N</div>
             <h3 className="explore-tundra__feature-title">Fully Decentralized</h3>
             <p className="explore-tundra__feature-description">
               Zero central servers. Zero corporate intermediaries. WalSheetz runs entirely on Sui blockchain
@@ -221,32 +221,32 @@ export function ExploreTundra() {
           </p>
           <div className="explore-tundra__use-cases-grid">
             <div className="explore-tundra__use-case">
-              <h4 className="explore-tundra__use-case-title">📊 Personal Finance Tracking</h4>
+              <h4 className="explore-tundra__use-case-title">Personal Finance Tracking</h4>
               <p>Create budgets, track expenses, and manage your portfolio with tamper-proof records on the blockchain.
               Store your financial data on-chain with full control and ownership.</p>
             </div>
             <div className="explore-tundra__use-case">
-              <h4 className="explore-tundra__use-case-title">📈 Data Analysis & Reporting</h4>
+              <h4 className="explore-tundra__use-case-title">Data Analysis & Reporting</h4>
               <p>Build complex spreadsheets with formulas, charts, and pivot tables. Share public reports with
               verifiable data integrity—perfect for transparent research or community analytics.</p>
             </div>
             <div className="explore-tundra__use-case">
-              <h4 className="explore-tundra__use-case-title">🗃️ Long-Term Record Keeping</h4>
+              <h4 className="explore-tundra__use-case-title">Long-Term Record Keeping</h4>
               <p>Store important records, inventory lists, or project data on decentralized storage.
               No corporate shutdowns can erase your data—your records persist on the blockchain as long as storage is maintained.</p>
             </div>
             <div className="explore-tundra__use-case">
-              <h4 className="explore-tundra__use-case-title">🤝 Shared Documents</h4>
+              <h4 className="explore-tundra__use-case-title">Shared Documents</h4>
               <p>Create public spreadsheets for community use or make private sheets for your personal work.
               Transfer ownership to collaborators or keep full control—you decide.</p>
             </div>
             <div className="explore-tundra__use-case">
-              <h4 className="explore-tundra__use-case-title">💾 Backup & Export</h4>
+              <h4 className="explore-tundra__use-case-title">Backup & Export</h4>
               <p>Export your spreadsheets anytime to standard formats. Use WalSheetz as a decentralized backup
               for critical data—redundant storage across multiple nodes ensures availability.</p>
             </div>
             <div className="explore-tundra__use-case">
-              <h4 className="explore-tundra__use-case-title">🧮 Complex Calculations</h4>
+              <h4 className="explore-tundra__use-case-title">Complex Calculations</h4>
               <p>Leverage 400+ Excel-compatible formulas for statistical analysis, financial modeling,
               data validation, and more—all with blockchain storage and decentralized infrastructure.</p>
             </div>
@@ -350,7 +350,7 @@ export function ExploreTundra() {
         <section className="explore-tundra__cta">
           {error && (
             <div className="explore-tundra__error">
-              ❌ {error}
+              Error: {error}
             </div>
           )}
           <div className="explore-tundra__cta-buttons">
@@ -361,7 +361,7 @@ export function ExploreTundra() {
               >
                 <span className="explore-tundra__button-corner explore-tundra__button-corner--tl"></span>
                 <span className="explore-tundra__button-corner explore-tundra__button-corner--br"></span>
-                📊 VIEW DASHBOARD
+                VIEW DASHBOARD
               </button>
             ) : (
               <button
@@ -371,7 +371,7 @@ export function ExploreTundra() {
               >
                 <span className="explore-tundra__button-corner explore-tundra__button-corner--tl"></span>
                 <span className="explore-tundra__button-corner explore-tundra__button-corner--br"></span>
-                {connectingWallet ? '⏳ CONNECTING...' : '🦭 GET STARTED'}
+                {connectingWallet ? 'CONNECTING...' : 'GET STARTED'}
               </button>
             )}
             <button

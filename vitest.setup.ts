@@ -6,17 +6,15 @@
  */
 
 // Configure test environment globals
-import { expect } from 'vitest'
-
-// Extend expect matchers if needed
-// (currently empty, but available for shared test utilities)
+// Note: Import expect here when adding custom matchers
+// import { expect } from 'vitest'
 
 // Set longer timeout for integration tests
 if (process.env.TEST_TIMEOUT) {
-  const timeout = parseInt(process.env.TEST_TIMEOUT, 10)
+  const timeout = parseInt(process.env.TEST_TIMEOUT, 10);
   if (!isNaN(timeout)) {
     // Note: Individual test files can override this
-    globalThis.__TEST_TIMEOUT__ = timeout
+    globalThis.__TEST_TIMEOUT__ = timeout;
   }
 }
 
@@ -28,7 +26,7 @@ if (process.env.TEST_SILENT === 'true') {
     debug: () => {},
     info: () => {},
     // Keep warn and error
-  }
+  };
 }
 
-export {}
+export {};

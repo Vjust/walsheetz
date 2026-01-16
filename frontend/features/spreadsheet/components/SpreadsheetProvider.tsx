@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef } from 'react'
-import { useSpreadsheet } from '@features/spreadsheet/hooks/useSpreadsheet.js'
-import { setupGlobalDevTools } from '../../../../packages/shared/src/utils/helpers/devTools.js'
+import { useSpreadsheet } from '@lib/spreadsheet/business/useSpreadsheet.js'
+import { setupGlobalDevTools } from '@lib/spreadsheet/utils/devTools.js'
 
 const SpreadsheetContext = createContext(null)
 

@@ -1,19 +1,20 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 import * as XLSX from 'xlsx';
 
-// Mock the logger module before importing the service
-vi.mock('@utils/logging/Logger.js', () => ({
+vi.mock('@dreamlit/walrus', () => ({
   logger: {
     debug: vi.fn(),
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn()
   },
-  LogComponent: 'SPREADSHEET_IMPORT_EXPORT'
+  LogComponent: {
+    UI_COMPONENT: 'UI_COMPONENT'
+  }
 }));
 
 // Import service after mocking
-import { SpreadsheetImportExportService } from "../../../frontend/lib/spreadsheet/services/SpreadsheetImportExportService.js";
+import { SpreadsheetImportExportService } from '@lib/spreadsheet/services/SpreadsheetImportExportService';
 
 describe('SpreadsheetImportExportService export conversions', () => {
   let service;

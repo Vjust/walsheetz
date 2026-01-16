@@ -49,7 +49,7 @@ export class ErrorBoundary extends React.Component {
           fontFamily: 'system-ui, sans-serif'
         }}>
           <h2 style={{ color: '#c33', marginBottom: '1rem' }}>
-            🚨 Something went wrong
+            Something went wrong
           </h2>
           
           <p style={{ marginBottom: '1rem', color: '#666' }}>
@@ -69,7 +69,7 @@ export class ErrorBoundary extends React.Component {
                 marginRight: '0.5rem'
               }}
             >
-              🔄 Try Again
+              Try Again
             </button>
             
             <button
@@ -83,7 +83,7 @@ export class ErrorBoundary extends React.Component {
                 cursor: 'pointer'
               }}
             >
-              ♻️ Reload Page
+              Reload Page
             </button>
           </div>
           
@@ -96,7 +96,7 @@ export class ErrorBoundary extends React.Component {
               border: '1px solid #dee2e6'
             }}>
               <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>
-                🐛 Debug Information
+                Debug Information
               </summary>
               
               <div style={{ marginTop: '1rem' }}>

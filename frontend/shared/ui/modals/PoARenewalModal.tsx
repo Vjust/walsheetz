@@ -4,9 +4,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { poaRenewalManager } from '../../../../packages/walrus-sui-core/src/data-integrity/services/PoARenewalManager.js';
-import { EventBus } from '../../../../packages/shared/src/utils/helpers/EventBus.js';
-import '../styles/PoACertificationModal.css'; // Reuse certification modal styles
+import { poaRenewalManager } from '@dreamlit/walrus-sui-core/data-integrity';
+import { eventBus } from '@dreamlit/walrus';
+import './PoACertificationModal.css';
 
 export function PoARenewalModal({ blobId, certificate, isOpen, onClose, onSuccess, onError }) {
   const [status, setStatus] = useState('idle'); // idle, processing, completed, failed
@@ -59,12 +59,12 @@ export function PoARenewalModal({ blobId, certificate, isOpen, onClose, onSucces
       }
     };
 
-    EventBus.on('poa:renewal:completed', handleCompleted);
-    EventBus.on('poa:renewal:failed', handleFailed);
+    const unsubscribeCompleted = eventBus.on('poa:renewal:completed', handleCompleted);
+    const unsubscribeFailed = eventBus.on('poa:renewal:failed', handleFailed);
 
     return () => {
-      EventBus.off('poa:renewal:completed', handleCompleted);
-      EventBus.off('poa:renewal:failed', handleFailed);
+      unsubscribeCompleted();
+      unsubscribeFailed();
     };
   }, [isOpen, blobId, onSuccess, onError]);
 
@@ -183,7 +183,7 @@ export function PoARenewalModal({ blobId, certificate, isOpen, onClose, onSucces
           {expiryInfo && (
             <div className={`cost-section ${expiryInfo.isExpired ? 'error-bg' : ''}`}>
               <div className="cost-label">
-                {expiryInfo.isExpired ? '⚠️ Protection Expired' : 'Current Protection Status'}
+                {expiryInfo.isExpired ? 'Protection Expired' : 'Current Protection Status'}
               </div>
               <div className="cost-value">
                 <span className="cost-sui">
@@ -248,7 +248,7 @@ export function PoARenewalModal({ blobId, certificate, isOpen, onClose, onSucces
           {/* Error */}
           {error && (
             <div className="error-section">
-              <div className="error-icon">⚠️</div>
+              <div className="error-icon">Error</div>
               <div className="error-message">{error}</div>
             </div>
           )}
@@ -256,7 +256,7 @@ export function PoARenewalModal({ blobId, certificate, isOpen, onClose, onSucces
           {/* Success */}
           {status === 'completed' && transactionDigest && (
             <div className="success-section">
-              <div className="success-icon">✅</div>
+              <div className="success-icon">Success</div>
               <div className="success-message">Protection renewed successfully!</div>
               <div className="transaction-info">
                 <span className="label">Transaction:</span>

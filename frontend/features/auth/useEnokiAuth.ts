@@ -16,7 +16,7 @@ interface ZkLoginState {
 }
 
 export function useEnokiAuth() {
-  const suiClient = useSuiClient();
+  const _suiClient = useSuiClient();
   const [state, setState] = useState<ZkLoginState>({
     address: null,
     isAuthenticated: false,
@@ -103,7 +103,7 @@ export function useEnokiAuth() {
   }, []);
 
   const getPostAuthDestination = useCallback(
-    async (getUserSpreadsheets: () => Promise<{ success: boolean; spreadsheets?: any[] }>) => {
+    async (getUserSpreadsheets: () => Promise<{ success: boolean; spreadsheets?: unknown[] }>) => {
       const lastId = localStorage.getItem('walsheetz_last_spreadsheet');
       if (lastId) return { type: 'spreadsheet' as const, id: lastId };
 

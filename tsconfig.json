@@ -21,8 +21,8 @@
     "paths": {
       "@/walrus/*": ["./src/walrus/*"],
       "@/sdk/*": ["./src/sdk/*"],
-      "@/blockchain/*": ["./blockchain/*"],
       "@/*": ["./frontend/*"],
+      "@lib/*": ["./frontend/lib/*"],
       "@app/*": ["./frontend/app/*"],
       "@features/*": ["./frontend/features/*"],
       "@services/*": ["./frontend/services/*"],
@@ -31,7 +31,6 @@
       "@adapters/*": ["./frontend/adapters/*"],
       "@interfaces/*": ["./frontend/interfaces/*"],
       "@types/*": ["./frontend/types/*"],
-      "@blockchain/*": ["./blockchain/*"],
       "@scripts/*": ["./scripts/*"],
       "@sentry/nextjs": ["./frontend/services/infrastructure/SentryStub.js"]
     }

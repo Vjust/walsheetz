@@ -1,9 +1,13 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { fileURLToPath, URL } from 'url'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { fileURLToPath, URL } from 'url';
 
 // Conditional proxy logging - set VITE_VERBOSE_PROXY=true for detailed logs
-const VERBOSE_PROXY = process.env.VITE_VERBOSE_PROXY === 'true'
+const VERBOSE_PROXY = process.env.VITE_VERBOSE_PROXY === 'true';
+
+// Production log stripping - VITE_LOG_LEVEL=warn strips console.log/debug/info
+const LOG_LEVEL = process.env.VITE_LOG_LEVEL || 'debug';
+const STRIP_CONSOLE = LOG_LEVEL === 'warn';
 
 export default defineConfig({
   root: '.',
@@ -22,7 +26,7 @@ export default defineConfig({
           return this.resolve(scriptPath, undefined, { skipSelf: true });
         }
         return null;
-      }
+      },
     },
     // Production build guard - prevent test mode in production
     {
@@ -30,12 +34,12 @@ export default defineConfig({
       buildStart() {
         if (process.env.NODE_ENV === 'production' && process.env.VITE_TEST_AUTH_BYPASS === 'true') {
           throw new Error(
-            '❌ VITE_TEST_AUTH_BYPASS cannot be enabled in production builds!\n' +
-            'Test mode is for development and testing only.\n' +
-            'Remove VITE_TEST_AUTH_BYPASS=true from your environment variables.'
+            'VITE_TEST_AUTH_BYPASS cannot be enabled in production builds!\n' +
+              'Test mode is for development and testing only.\n' +
+              'Remove VITE_TEST_AUTH_BYPASS=true from your environment variables.'
           );
         }
-      }
+      },
     },
     // Dev environment status summary
     {
@@ -45,24 +49,22 @@ export default defineConfig({
           setTimeout(() => {
             const port = server.config.server.port || 3005;
             console.log('\n' + '='.repeat(60));
-            console.log('✅ WalSheetz Dev Environment Ready');
+            console.log('WalSheetz Dev Environment Ready');
             console.log('='.repeat(60));
-            console.log(`• Vite UI:        http://localhost:${port}`);
-            console.log(`• Bridge Server:  http://localhost:8081`);
-            console.log(`• Bridge Health:  http://localhost:8081/health`);
-            console.log(`• Network:        testnet (Sui + Walrus)`);
+            console.log(`• Vite UI:  http://localhost:${port}`);
+            console.log(`• Network:  testnet (Sui + Walrus)`);
             console.log('='.repeat(60) + '\n');
-          }, 100); // Slight delay to ensure bridge has started
+          }, 100);
         });
-      }
-    }
+      },
+    },
   ],
   server: {
     port: 3005,
     strictPort: true,
     host: '0.0.0.0',
     watch: {
-      ignored: ['**/Sui Ref/*', '**/protos/*', '**/tmp-vite/*']
+      ignored: ['**/Sui Ref/*', '**/protos/*', '**/tmp-vite/*'],
     },
     fs: {
       strict: true,
@@ -70,10 +72,9 @@ export default defineConfig({
         fileURLToPath(new URL('./src', import.meta.url)),
         fileURLToPath(new URL('./web', import.meta.url)),
         fileURLToPath(new URL('./frontend', import.meta.url)),
-        fileURLToPath(new URL('./blockchain', import.meta.url)),
         fileURLToPath(new URL('./scripts', import.meta.url)),
-        fileURLToPath(new URL('.', import.meta.url))
-      ]
+        fileURLToPath(new URL('.', import.meta.url)),
+      ],
     },
     proxy: {
       // Sui RPC proxy with improved error handling
@@ -85,16 +86,19 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/sui-rpc/, ''),
         configure: (proxy) => {
           proxy.on('error', (err, req, res) => {
-            console.error('[Vite Proxy] Sui RPC error:', typeof err === 'string' ? err : (err && err.message) || 'Unknown error');
+            console.error(
+              '[Vite Proxy] Sui RPC error:',
+              typeof err === 'string' ? err : (err && err.message) || 'Unknown error'
+            );
           });
           if (VERBOSE_PROXY) {
             proxy.on('proxyReq', (proxyReq, req) => {
               console.log(`[Vite Proxy] Sui RPC: ${req.method} ${req.url}`);
             });
           }
-        }
+        },
       },
-      
+
       // Walrus Publisher proxy with proper API path handling
       // IMPORTANT: Target must match app-config.json walrus.publisherUrl to ensure
       // the proxy can strip/normalize any CORS headers from the remote endpoint
@@ -113,7 +117,10 @@ export default defineConfig({
         },
         configure: (proxy) => {
           proxy.on('error', (err, req, res) => {
-            console.error('[Vite Proxy] Walrus Publisher error:', typeof err === 'string' ? err : (err && err.message) || 'Unknown error');
+            console.error(
+              '[Vite Proxy] Walrus Publisher error:',
+              typeof err === 'string' ? err : (err && err.message) || 'Unknown error'
+            );
             if (VERBOSE_PROXY) {
               console.log('[Vite Proxy] Attempting fallback for Walrus Publisher...');
             }
@@ -126,9 +133,9 @@ export default defineConfig({
             proxyReq.setHeader('Accept', 'application/json');
             proxyReq.setHeader('User-Agent', 'WalSheetz/1.0.0');
           });
-        }
+        },
       },
-      
+
       // Walrus Aggregator proxy with proper API path handling
       // IMPORTANT: Target must match app-config.json walrus.aggregatorUrl to ensure
       // the proxy can strip/normalize any CORS headers from the remote endpoint
@@ -151,7 +158,10 @@ export default defineConfig({
         },
         configure: (proxy) => {
           proxy.on('error', (err, req, res) => {
-            console.error('[Vite Proxy] Walrus Aggregator error:', typeof err === 'string' ? err : (err && err.message) || 'Unknown error');
+            console.error(
+              '[Vite Proxy] Walrus Aggregator error:',
+              typeof err === 'string' ? err : (err && err.message) || 'Unknown error'
+            );
           });
           proxy.on('proxyReq', (proxyReq, req) => {
             if (VERBOSE_PROXY) {
@@ -162,10 +172,12 @@ export default defineConfig({
           });
           if (VERBOSE_PROXY) {
             proxy.on('proxyRes', (proxyRes, req) => {
-              console.log(`[Vite Proxy] Walrus Aggregator response: ${proxyRes.statusCode} for ${req.url}`);
+              console.log(
+                `[Vite Proxy] Walrus Aggregator response: ${proxyRes.statusCode} for ${req.url}`
+              );
             });
           }
-        }
+        },
       },
 
       // Walrus Publisher - Mainnet
@@ -182,10 +194,12 @@ export default defineConfig({
           });
           if (VERBOSE_PROXY) {
             proxy.on('proxyRes', (proxyRes, req) => {
-              console.log(`[Vite Proxy] Walrus Publisher Mainnet response: ${proxyRes.statusCode} for ${req.url}`);
+              console.log(
+                `[Vite Proxy] Walrus Publisher Mainnet response: ${proxyRes.statusCode} for ${req.url}`
+              );
             });
           }
-        }
+        },
       },
 
       // Walrus Aggregator - Mainnet
@@ -202,10 +216,12 @@ export default defineConfig({
           });
           if (VERBOSE_PROXY) {
             proxy.on('proxyRes', (proxyRes, req) => {
-              console.log(`[Vite Proxy] Walrus Aggregator Mainnet response: ${proxyRes.statusCode} for ${req.url}`);
+              console.log(
+                `[Vite Proxy] Walrus Aggregator Mainnet response: ${proxyRes.statusCode} for ${req.url}`
+              );
             });
           }
-        }
+        },
       },
 
       // WebSocket proxy - DISABLED for single-user MVP
@@ -215,24 +231,40 @@ export default defineConfig({
       //   ws: true,
       //   changeOrigin: true
       // }
-    }
+    },
   },
   resolve: {
     alias: {
       // @dreamlit/* package aliases - resolve to source for dev
-      '@dreamlit/walrus-sui-core/blockchain-integration': fileURLToPath(new URL('./packages/walrus-sui-core/src/blockchain-integration/index.ts', import.meta.url)),
-      '@dreamlit/walrus-sui-core/blockchain': fileURLToPath(new URL('./packages/walrus-sui-core/src/blockchain/index.ts', import.meta.url)),
-      '@dreamlit/walrus-sui-core/transaction': fileURLToPath(new URL('./packages/walrus-sui-core/src/transaction-management/index.ts', import.meta.url)),
-      '@dreamlit/walrus-sui-core/data-integrity': fileURLToPath(new URL('./packages/walrus-sui-core/src/data-integrity/index.ts', import.meta.url)),
-      '@dreamlit/walrus-sui-core': fileURLToPath(new URL('./packages/walrus-sui-core/src/index.ts', import.meta.url)),
+      '@dreamlit/walrus-sui-core/blockchain-integration': fileURLToPath(
+        new URL('./packages/walrus-sui-core/src/blockchain-integration/index.ts', import.meta.url)
+      ),
+      '@dreamlit/walrus-sui-core/blockchain': fileURLToPath(
+        new URL('./packages/walrus-sui-core/src/blockchain/browser-index.ts', import.meta.url)
+      ),
+      '@dreamlit/walrus-sui-core/transaction-management': fileURLToPath(
+        new URL('./packages/walrus-sui-core/src/transaction-management/index.ts', import.meta.url)
+      ),
+      '@dreamlit/walrus-sui-core/transaction': fileURLToPath(
+        new URL('./packages/walrus-sui-core/src/transaction-management/index.ts', import.meta.url)
+      ),
+      '@dreamlit/walrus-sui-core/data-integrity': fileURLToPath(
+        new URL('./packages/walrus-sui-core/src/data-integrity/index.ts', import.meta.url)
+      ),
+      '@dreamlit/walrus-sui-core': fileURLToPath(
+        new URL('./packages/walrus-sui-core/src/browser/index.ts', import.meta.url)
+      ),
+      '@dreamlit/walrus/node': fileURLToPath(
+        new URL('./packages/walrus/src/node.ts', import.meta.url)
+      ),
       '@dreamlit/walrus': fileURLToPath(new URL('./packages/walrus/src/index.ts', import.meta.url)),
       '@dreamlit/shared': fileURLToPath(new URL('./packages/shared/src/index.ts', import.meta.url)),
       // App aliases
       '@/walrus': fileURLToPath(new URL('./src/walrus', import.meta.url)),
       '@/sdk': fileURLToPath(new URL('./src/sdk', import.meta.url)),
       '@/web': fileURLToPath(new URL('./web', import.meta.url)),
-      '@/blockchain': fileURLToPath(new URL('./blockchain', import.meta.url)),
       '@': fileURLToPath(new URL('./frontend', import.meta.url)),
+      '@lib': fileURLToPath(new URL('./frontend/lib', import.meta.url)),
       '@app': fileURLToPath(new URL('./frontend/app', import.meta.url)),
       '@features': fileURLToPath(new URL('./frontend/features', import.meta.url)),
       '@services': fileURLToPath(new URL('./frontend/services', import.meta.url)),
@@ -241,39 +273,60 @@ export default defineConfig({
       '@adapters': fileURLToPath(new URL('./frontend/adapters', import.meta.url)),
       '@interfaces': fileURLToPath(new URL('./frontend/interfaces', import.meta.url)),
       '@types': fileURLToPath(new URL('./frontend/types', import.meta.url)),
-      '@blockchain': fileURLToPath(new URL('./blockchain/src', import.meta.url)),
       '@scripts': fileURLToPath(new URL('./scripts', import.meta.url)),
-      '@sentry/nextjs': fileURLToPath(new URL('./frontend/services/infrastructure/SentryStub.js', import.meta.url))
+      '@sentry/nextjs': fileURLToPath(
+        new URL('./frontend/services/infrastructure/SentryStub.js', import.meta.url)
+      ),
     },
     // Ensure .js extensions are resolved properly
-    extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json']
+    extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'],
   },
   define: {
     global: 'globalThis',
     'process.env': {},
-    'process.browser': true
+    'process.browser': true,
   },
   optimizeDeps: {
-    entries: ['./frontend/main.jsx'],
-    exclude: ['@sentry/nextjs']
+    entries: ['./frontend/main.tsx'],
+    include: ['react', 'react-dom', 'react-dom/client', 'lru-cache'],
+    exclude: ['@sentry/nextjs'],
+  },
+  esbuild: {
+    drop: ['debugger'],
+    // Strip console.log/debug/info in production (when VITE_LOG_LEVEL=warn)
+    pure: STRIP_CONSOLE ? ['console.log', 'console.debug', 'console.info'] : [],
   },
   build: {
     commonjsOptions: {
-      include: [/node_modules/]
+      include: [/node_modules/],
     },
     rollupOptions: {
       external: [],
       output: {
-        manualChunks: undefined
-      }
+        // Vendor chunking for better caching
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('react-dom') || id.includes('react/')) {
+              return 'react';
+            }
+            if (id.includes('@mysten/')) {
+              return 'mysten';
+            }
+            if (id.includes('@tanstack/')) {
+              return 'tanstack';
+            }
+            return 'vendor';
+          }
+        },
+      },
     },
-    // Enable source maps for debugging module issues
-    sourcemap: 'hidden',
-    // Ensure blockchain directory is accessible during build
+    // No source maps in production
+    sourcemap: false,
+    minify: 'esbuild',
     outDir: 'dist',
-    emptyOutDir: true
+    emptyOutDir: true,
   },
   ssr: {
-    noExternal: ['@sentry/nextjs']
-  }
-})
+    noExternal: ['@sentry/nextjs'],
+  },
+});

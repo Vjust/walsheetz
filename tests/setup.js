@@ -41,7 +41,7 @@ SnapshotState.prototype.save = async function() {
 let timeMock;
 
 beforeAll(() => {
-  testLogger.docker('🐳 Initializing test environment...');
+  testLogger.docker('Initializing test environment...');
   testLogger.separator();
 
   // Setup global mocks
@@ -82,22 +82,20 @@ beforeAll(() => {
     });
   }
 
-  testLogger.success('✅ Test environment ready');
+  testLogger.success('Test environment ready');
   testLogger.separator();
-  testLogger.log('', '', 'white');
 });
 
 afterAll(() => {
-  testLogger.log('', '', 'white');
   testLogger.separator();
-  testLogger.docker('🐳 Cleaning up test environment...');
+  testLogger.docker('Cleaning up test environment...');
 
   // Restore mocks
   if (timeMock) {
     timeMock.restore();
   }
 
-  testLogger.success('✅ Test environment cleaned up');
+  testLogger.success('Test environment cleaned up');
   testLogger.separator();
 });
 
@@ -124,7 +122,7 @@ if (process.env.VITEST_LOG_LEVEL !== 'debug') {
   console.log = (...args) => {
     const message = args.join(' ');
     // Allow test logger messages through
-    if (message.includes('✅') || message.includes('❌') || message.includes('🧪')) {
+    if (message.includes('[TEST]')) {
       originalConsole.log(...args);
     } else if (process.env.VITEST_LOG_LEVEL === 'verbose') {
       originalConsole.log(...args);

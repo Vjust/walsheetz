@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { logger, LogComponent } from '../../../packages/shared/src/utils/Logger.js';
+import { logger, LogComponent } from '@dreamlit/walrus';
 
 /**
  * useUnloadWarning Hook

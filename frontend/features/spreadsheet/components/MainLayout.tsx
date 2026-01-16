@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react'
-import { Header } from './Header.jsx'
-import { Spreadsheet } from './Spreadsheet.jsx'
-import { StatusBar } from './StatusBar.jsx'
-import { NotificationContainer } from './NotificationContainer.jsx'
-import { Collaboration } from '@shared/components/Collaboration.jsx'
-import { LoadingOverlay } from './LoadingOverlay.jsx'
-import { useSpreadsheetContext } from './SpreadsheetProvider.jsx'
-import { configLoader } from '../../../../packages/shared/src/utils/ConfigLoader.js'
+import React, { useState, useEffect } from 'react';
+import { Header } from './Header';
+import { Spreadsheet } from './Spreadsheet';
+import { StatusBar } from './StatusBar';
+import { NotificationContainer } from './NotificationContainer';
+import { LoadingOverlay } from './LoadingOverlay';
+import { useSpreadsheetContext } from './SpreadsheetProvider';
+import { configLoader } from '@dreamlit/walrus';
 
 export function MainLayout() {
   const {
@@ -17,24 +16,7 @@ export function MainLayout() {
     walletAddress,
     walletBalance,
     walletNetwork,
-    blockchainService,
-    connectWallet,
-    getCurrentSpreadsheetId
-  } = useSpreadsheetContext()
-
-  const [config, setConfig] = useState(null)
-
-  useEffect(() => {
-    const loadConfig = async () => {
-      try {
-        const cfg = await configLoader.getConfig()
-        setConfig(cfg)
-      } catch (error) {
-        console.error('[MainLayout] Failed to load config:', error)
-      }
-    }
-    loadConfig()
-  }, [])
+  } = useSpreadsheetContext();
 
   return (
     <div className="main-layout">
@@ -45,7 +27,7 @@ export function MainLayout() {
       <div className="spreadsheet-container crystal-shine">
         <Spreadsheet />
       </div>
-      
+
       <StatusBar
         saveStatus={saveStatus}
         editCount={editCount}
@@ -54,16 +36,9 @@ export function MainLayout() {
         walletBalance={walletBalance}
         walletNetwork={walletNetwork}
       />
-      
-      <Collaboration
-        blockchainAdapter={blockchainService}
-        isWalletConnected={walletConnected}
-        onConnectWallet={connectWallet}
-        spreadsheetId={getCurrentSpreadsheetId?.() || null}
-      />
-      
+
       <NotificationContainer />
-      
+
       <LoadingOverlay
         isVisible={loadingState?.isLoading || false}
         message={loadingState?.message || 'Loading...'}
@@ -75,7 +50,6 @@ export function MainLayout() {
         currentStep={loadingState?.currentStep}
         showProgress={loadingState?.showProgress}
       />
-
     </div>
-  )
+  );
 }

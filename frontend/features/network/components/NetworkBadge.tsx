@@ -11,12 +11,11 @@ export function NetworkBadge({ network, small = false }) {
     <span className={`network-badge ${network} ${small ? 'small' : ''}`}>
       <span className="badge-dot" />
       <span className="badge-text">
-        {isTestnet && '🧪 Testnet'}
-        {isMainnet && '💎 Mainnet'}
+        {isTestnet && 'Testnet'}
+        {isMainnet && 'Mainnet'}
         {!isTestnet && !isMainnet && network}
       </span>
     </span>
   )
 }
-
 

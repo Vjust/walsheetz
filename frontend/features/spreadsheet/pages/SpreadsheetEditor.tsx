@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { useSpreadsheetContext, MainLayout, LoadingOverlay } from '@features/spreadsheet/components';
-import { BreadcrumbNavigation } from '@features/dashboard/components/BreadcrumbNavigation.jsx';
+import {
+  useSpreadsheetContext,
+  MainLayout,
+  LoadingOverlay,
+} from '@features/spreadsheet/components';
+import { BreadcrumbNavigation } from '@features/dashboard/components/BreadcrumbNavigation';
 import { useUnloadWarning } from '@shared/hooks/useUnloadWarning.js';
-import { logger, LogComponent } from '../../../../packages/shared/src/utils/Logger.js';
+import { logger, LogComponent } from '@dreamlit/walrus';
 import '../styles/spreadsheet-editor.css';
 
 export function SpreadsheetEditor() {
@@ -22,7 +26,7 @@ export function SpreadsheetEditor() {
     loadSpreadsheet,
     spreadsheetData,
     getCurrentSpreadsheetId,
-    initializeLocalSpreadsheet
+    initializeLocalSpreadsheet,
   } = useSpreadsheetContext();
 
   const [lastWalletState, setLastWalletState] = useState(walletConnected);
@@ -52,9 +56,8 @@ export function SpreadsheetEditor() {
   // Update title when spreadsheet data changes
   useEffect(() => {
     if (spreadsheetData) {
-      const title = spreadsheetData?.data?.metadata?.title ||
-                   spreadsheetData?.title ||
-                   'Untitled Spreadsheet';
+      const title =
+        spreadsheetData?.data?.metadata?.title || spreadsheetData?.title || 'Untitled Spreadsheet';
       setSpreadsheetTitle(title);
     }
   }, [spreadsheetData]);
@@ -105,20 +108,29 @@ export function SpreadsheetEditor() {
       setLoading(true);
       setError(null);
 
-      logger.info(LogComponent.UI_COMPONENT, 'editor_local_init', 'Initializing local spreadsheet', {
-        title,
-        template
-      });
+      logger.info(
+        LogComponent.UI_COMPONENT,
+        'editor_local_init',
+        'Initializing local spreadsheet',
+        {
+          title,
+          template,
+        }
+      );
 
       const result = await initializeLocalSpreadsheet({ title, template });
 
       if (result.success) {
         setSpreadsheetTitle(title);
-        logger.info(LogComponent.UI_COMPONENT, 'editor_local_success', 'Local spreadsheet initialized');
+        logger.info(
+          LogComponent.UI_COMPONENT,
+          'editor_local_success',
+          'Local spreadsheet initialized'
+        );
       } else {
         setError(result.error);
         logger.error(LogComponent.UI_COMPONENT, 'editor_local_error', 'Local init failed', {
-          error: result.error
+          error: result.error,
         });
       }
 
@@ -138,30 +150,47 @@ export function SpreadsheetEditor() {
 
     try {
       logger.info(LogComponent.UI_COMPONENT, 'editor_load_start', 'Loading spreadsheet in editor', {
-        spreadsheetId
+        spreadsheetId,
       });
 
       const result = await loadSpreadsheet(spreadsheetId);
 
       if (result.success) {
         setSpreadsheetTitle(result.title || 'Untitled Spreadsheet');
-        logger.info(LogComponent.UI_COMPONENT, 'editor_load_success', 'Spreadsheet loaded successfully in editor', {
-          spreadsheetId,
-          title: result.title
-        });
+        // Track last opened for post-auth navigation
+        localStorage.setItem('walsheetz_last_spreadsheet', spreadsheetId);
+        logger.info(
+          LogComponent.UI_COMPONENT,
+          'editor_load_success',
+          'Spreadsheet loaded successfully in editor',
+          {
+            spreadsheetId,
+            title: result.title,
+          }
+        );
       } else {
         setError(result.error || 'Failed to load spreadsheet');
-        logger.error(LogComponent.UI_COMPONENT, 'editor_load_error', 'Failed to load spreadsheet in editor', {
-          spreadsheetId,
-          error: result.error
-        });
+        logger.error(
+          LogComponent.UI_COMPONENT,
+          'editor_load_error',
+          'Failed to load spreadsheet in editor',
+          {
+            spreadsheetId,
+            error: result.error,
+          }
+        );
       }
     } catch (err) {
       setError(err.message || 'Failed to load spreadsheet');
-      logger.error(LogComponent.UI_COMPONENT, 'editor_load_exception', 'Exception loading spreadsheet in editor', {
-        spreadsheetId,
-        error: err.message
-      });
+      logger.error(
+        LogComponent.UI_COMPONENT,
+        'editor_load_exception',
+        'Exception loading spreadsheet in editor',
+        {
+          spreadsheetId,
+          error: err.message,
+        }
+      );
     } finally {
       setLoading(false);
     }
@@ -176,7 +205,7 @@ export function SpreadsheetEditor() {
   const handleBackToDashboard = () => {
     logger.logUserAction('editor_back_to_dashboard', {
       spreadsheetId: id,
-      title: spreadsheetTitle
+      title: spreadsheetTitle,
     });
     navigate('/');
   };
@@ -186,33 +215,48 @@ export function SpreadsheetEditor() {
       setConnectingWallet(true);
       setError(null);
       logger.logUserAction('spreadsheet_editor_wallet_connect_attempt', {
-        spreadsheetId: id
+        spreadsheetId: id,
       });
 
       const result = await connectWallet();
 
       if (result.success) {
-        logger.info(LogComponent.UI_COMPONENT, 'spreadsheet_editor_wallet_connect_success', 'Wallet connected from spreadsheet editor', {
-          walletAddress: result.wallet?.address,
-          spreadsheetId: id
-        });
+        logger.info(
+          LogComponent.UI_COMPONENT,
+          'spreadsheet_editor_wallet_connect_success',
+          'Wallet connected from spreadsheet editor',
+          {
+            walletAddress: result.wallet?.address,
+            spreadsheetId: id,
+          }
+        );
         // Once connected, attempt to load the spreadsheet
         if (id) {
           loadSpreadsheetById(id);
         }
       } else {
         setError(`Failed to connect wallet: ${result.error}`);
-        logger.error(LogComponent.UI_COMPONENT, 'spreadsheet_editor_wallet_connect_error', 'Failed to connect wallet from spreadsheet editor', {
-          error: result.error,
-          spreadsheetId: id
-        });
+        logger.error(
+          LogComponent.UI_COMPONENT,
+          'spreadsheet_editor_wallet_connect_error',
+          'Failed to connect wallet from spreadsheet editor',
+          {
+            error: result.error,
+            spreadsheetId: id,
+          }
+        );
       }
     } catch (error) {
       setError(`Error connecting wallet: ${error.message}`);
-      logger.error(LogComponent.UI_COMPONENT, 'spreadsheet_editor_wallet_connect_exception', 'Exception connecting wallet from spreadsheet editor', {
-        error: error.message,
-        spreadsheetId: id
-      });
+      logger.error(
+        LogComponent.UI_COMPONENT,
+        'spreadsheet_editor_wallet_connect_exception',
+        'Exception connecting wallet from spreadsheet editor',
+        {
+          error: error.message,
+          spreadsheetId: id,
+        }
+      );
     } finally {
       setConnectingWallet(false);
     }
@@ -238,11 +282,7 @@ export function SpreadsheetEditor() {
     return (
       <div className="spreadsheet-editor">
         <div className="editor-header">
-          <BreadcrumbNavigation
-            items={[
-              { label: 'Dashboard', onClick: handleBackToDashboard }
-            ]}
-          />
+          <BreadcrumbNavigation items={[{ label: 'Dashboard', onClick: handleBackToDashboard }]} />
         </div>
         <div className="editor-content">
           <div className="wallet-required-message">
@@ -256,22 +296,14 @@ export function SpreadsheetEditor() {
                   disabled={connectingWallet}
                   className={`connect-wallet-button primary ${connectingWallet ? 'loading' : ''}`}
                 >
-                  {connectingWallet ? (
-                    <>⏳ Connecting...</>
-                  ) : (
-                    <>🦭 Connect Slush Wallet</>
-                  )}
+                  {connectingWallet ? <>Connecting...</> : <>Connect Slush Wallet</>}
                 </button>
                 <button onClick={handleBackToDashboard} className="back-button secondary">
                   ← Back to Dashboard
                 </button>
               </div>
 
-              {error && (
-                <div className="error-message">
-                  ❌ {error}
-                </div>
-              )}
+              {error && <div className="error-message">{error}</div>}
             </div>
           </div>
         </div>
@@ -297,20 +329,16 @@ export function SpreadsheetEditor() {
     return (
       <div className="spreadsheet-editor">
         <div className="editor-header">
-          <BreadcrumbNavigation
-            items={[
-              { label: 'Dashboard', onClick: handleBackToDashboard }
-            ]}
-          />
+          <BreadcrumbNavigation items={[{ label: 'Dashboard', onClick: handleBackToDashboard }]} />
         </div>
         <div className="editor-content">
           <div className="error-message">
             <div className="error-content">
               <h2>Failed to Load Spreadsheet</h2>
-              <p className="error-details">❌ {error}</p>
+              <p className="error-details">{error}</p>
               <div className="error-actions">
                 <button onClick={handleRetry} className="retry-button">
-                  🔄 Try Again
+                  Try Again
                 </button>
                 <button onClick={handleBackToDashboard} className="back-button">
                   ← Back to Dashboard
@@ -329,7 +357,7 @@ export function SpreadsheetEditor() {
         <BreadcrumbNavigation
           items={[
             { label: 'Dashboard', onClick: handleBackToDashboard },
-            { label: spreadsheetTitle, current: true }
+            { label: spreadsheetTitle, current: true },
           ]}
         />
       </div>

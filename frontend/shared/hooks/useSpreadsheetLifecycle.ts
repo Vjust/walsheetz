@@ -21,11 +21,14 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import luckysheetApi from '../../lib/spreadsheet/services/luckysheetApi.ts';
-import { luckysheetAdapter } from '../../lib/spreadsheet/services/luckysheet/LuckysheetAdapter.ts';
-import { registerWalSheetzFunctions } from '../../lib/spreadsheet/services/formulas/WalSheetzFunctions.ts';
-import { convertToLuckysheetData, calculateSheetDimensions } from '../../lib/spreadsheet/services/luckysheet/dataTransforms.ts';
-import { columnLettersToNumber, columnNumberToLetters } from '../../../packages/shared/src/utils/helpers/cellUtils.js';
+import luckysheetApi from '@lib/spreadsheet/services/luckysheetApi';
+import { luckysheetAdapter } from '@lib/spreadsheet/services/luckysheet/LuckysheetAdapter';
+import { registerWalSheetzFunctions } from '@lib/spreadsheet/services/formulas/WalSheetzFunctions';
+import {
+  convertToLuckysheetData,
+  calculateSheetDimensions,
+} from '@lib/spreadsheet/services/luckysheet/dataTransforms';
+import { columnLettersToNumber, columnNumberToLetters } from '@dreamlit/shared';
 
 const INIT_RETRY_INTERVAL = 100;
 const INIT_TIMEOUT = 10000;
@@ -37,7 +40,7 @@ export function useSpreadsheetLifecycle({
   handleFormulaChange,
   clearFormulaPreview,
   saveToBlockchain,
-  setLuckysheetReady
+  setLuckysheetReady,
 }) {
   const [lifecycleState, setLifecycleState] = useState('IDLE');
   const luckysheetRef = useRef(null);
@@ -78,7 +81,7 @@ export function useSpreadsheetLifecycle({
       try {
         if (window.luckysheet && typeof window.luckysheet.destroy === 'function') {
           window.luckysheet.destroy();
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, 100));
         }
       } catch (e) {
         console.warn('[Lifecycle] Cleanup error:', e);
@@ -98,7 +101,7 @@ export function useSpreadsheetLifecycle({
     container.innerHTML = '';
 
     // Wait for DOM to be ready
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     try {
       console.log('[Lifecycle] Initializing Luckysheet...');
@@ -110,19 +113,20 @@ export function useSpreadsheetLifecycle({
 
       // Calculate actual dimensions from celldata (don't hardcode grid size)
       const { rows: actualRows, cols: actualCols } = calculateSheetDimensions(celldata);
-      console.log('[Lifecycle] Calculated sheet dimensions:', { rows: actualRows, cols: actualCols });
+      console.log('[Lifecycle] Calculated sheet dimensions:', {
+        rows: actualRows,
+        cols: actualCols,
+      });
 
       // Build WZ function definitions using public API
-      const {
-        tree: wzFunctionTree,
-        functionList: wzFunctionList
-      } = luckysheetAdapter.buildWZFunctionDefinitions();
+      const { tree: wzFunctionTree, functionList: wzFunctionList } =
+        luckysheetAdapter.buildWZFunctionDefinitions();
 
       await luckysheetApi.init({
         containerId: 'luckysheet-container',
         sheet: {
-          name: spreadsheetData?.data?.metadata?.title || spreadsheetData?.title || "Sheet1",
-          color: "",
+          name: spreadsheetData?.data?.metadata?.title || spreadsheetData?.title || 'Sheet1',
+          color: '',
           index: 0,
           status: 1,
           order: 0,
@@ -152,14 +156,14 @@ export function useSpreadsheetLifecycle({
           dataVerification: {},
           luckysheet_function: wzFunctionTree,
           functionList: wzFunctionList,
-          functionlist: wzFunctionList
+          functionlist: wzFunctionList,
         },
         title: 'WalSheetz',
         lang: 'en',
         showinfobar: false,
         showstatisticBar: false,
         hook: {
-          workbookCreateAfter: function() {
+          workbookCreateAfter: function () {
             console.log('[Lifecycle] Workbook created');
             luckysheetRef.current = true;
             setLifecycleState('READY');
@@ -176,7 +180,7 @@ export function useSpreadsheetLifecycle({
             }
           },
           // Other hooks...
-          cellEditBefore: function(range) {
+          cellEditBefore: function (range) {
             // Handle cellEditBefore
             if (range && range.length > 0) {
               const cell = range[0];
@@ -196,16 +200,24 @@ export function useSpreadsheetLifecycle({
               }
             }
           },
-          cellEditEnd: function(range, value) {
+          cellEditEnd: function (range, value) {
             if (!range || range.length === 0) return;
 
             const cell = range[0];
             const row = cell.row?.[0] ?? cell.r?.[0] ?? cell.row ?? cell.r;
             const column = cell.column?.[0] ?? cell.c?.[0] ?? cell.column ?? cell.c;
 
-            if (row != null && column != null && typeof row === 'number' && typeof column === 'number') {
+            if (
+              row != null &&
+              column != null &&
+              typeof row === 'number' &&
+              typeof column === 'number'
+            ) {
               let oldValue = '';
-              if (previousCellValueRef.current?.row === row && previousCellValueRef.current?.column === column) {
+              if (
+                previousCellValueRef.current?.row === row &&
+                previousCellValueRef.current?.column === column
+              ) {
                 oldValue = previousCellValueRef.current.oldValue;
               }
 
@@ -222,13 +234,18 @@ export function useSpreadsheetLifecycle({
               }
             }
           },
-          cellMousedown: function(cell) {
+          cellMousedown: function (cell) {
             if (!luckysheetRef.current || !cell) return;
 
             const row = cell.row?.[0] ?? cell.r?.[0] ?? cell.row ?? cell.r;
             const column = cell.column?.[0] ?? cell.c?.[0] ?? cell.column ?? cell.c;
 
-            if (row != null && column != null && typeof row === 'number' && typeof column === 'number') {
+            if (
+              row != null &&
+              column != null &&
+              typeof row === 'number' &&
+              typeof column === 'number'
+            ) {
               const cellRef = columnNumberToLetters(column) + (row + 1);
               setCurrentCell(cellRef);
 
@@ -245,19 +262,26 @@ export function useSpreadsheetLifecycle({
                 }
               }
             }
-          }
-        }
+          },
+        },
       });
 
       lastInitializedDataRef.current = JSON.stringify(spreadsheetData);
       return true;
-
     } catch (error) {
       console.error('[Lifecycle] Initialization failed:', error);
       setLifecycleState('ERROR');
       return false;
     }
-  }, [spreadsheetData, handleCellEdit, setCurrentCell, handleFormulaChange, clearFormulaPreview, setLuckysheetReady, convertToLuckysheetData]);
+  }, [
+    spreadsheetData,
+    handleCellEdit,
+    setCurrentCell,
+    handleFormulaChange,
+    clearFormulaPreview,
+    setLuckysheetReady,
+    convertToLuckysheetData,
+  ]);
 
   /**
    * Cleanup function
@@ -301,6 +325,6 @@ export function useSpreadsheetLifecycle({
     previousCellValueRef,
     domEventListenersRef,
     initLuckysheet,
-    cleanup
+    cleanup,
   };
 }

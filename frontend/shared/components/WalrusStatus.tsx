@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { browserWalrusService } from '../../../packages/walrus/src/browser/BrowserWalrusService.ts';
+import { browserWalrusService } from '@dreamlit/walrus';
 
 /**
  * WalrusStatus - Display current Walrus service status and operations
@@ -69,10 +69,10 @@ export const WalrusStatus = ({ position = 'bottom-right', minimized = false }) =
   }, []);
 
   const getStatusIcon = () => {
-    if (!healthStatus) return '❓';
-    if (healthStatus.isHealthy) return '✅';
-    if (healthStatus.consecutiveFailures >= 3) return '🔴';
-    return '⚠️';
+    if (!healthStatus) return '?';
+    if (healthStatus.isHealthy) return 'OK';
+    if (healthStatus.consecutiveFailures >= 3) return 'ERR';
+    return 'WARN';
   };
 
   const getStatusColor = () => {
@@ -167,7 +167,7 @@ export const WalrusStatus = ({ position = 'bottom-right', minimized = false }) =
             }}
             title="Run health check"
           >
-            🔄
+            Refresh
           </button>
           <button
             onClick={() => setShowDetails(!showDetails)}
@@ -182,7 +182,7 @@ export const WalrusStatus = ({ position = 'bottom-right', minimized = false }) =
             }}
             title="Toggle details"
           >
-            {showDetails ? '📄' : '📋'}
+            {showDetails ? 'Less' : 'More'}
           </button>
           <button
             onClick={() => setIsMinimized(true)}
@@ -197,7 +197,7 @@ export const WalrusStatus = ({ position = 'bottom-right', minimized = false }) =
             }}
             title="Minimize"
           >
-            ➖
+            Min
           </button>
         </div>
       </div>
@@ -219,13 +219,13 @@ export const WalrusStatus = ({ position = 'bottom-right', minimized = false }) =
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
           <span>Publisher:</span>
           <span style={{ color: healthStatus?.publisherAvailable ? '#4CAF50' : '#F44336' }}>
-            {healthStatus?.publisherAvailable ? '✅ Available' : '❌ Down'}
+            {healthStatus?.publisherAvailable ? 'Available' : 'Down'}
           </span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
           <span>Aggregator:</span>
           <span style={{ color: healthStatus?.aggregatorAvailable ? '#4CAF50' : '#F44336' }}>
-            {healthStatus?.aggregatorAvailable ? '✅ Available' : '❌ Down'}
+            {healthStatus?.aggregatorAvailable ? 'Available' : 'Down'}
           </span>
         </div>
         {healthStatus?.consecutiveFailures > 0 && (

@@ -9,9 +9,9 @@ import {
   getSuivisionUrl,
   getWalrusExplorerUrl,
   getExplorerDisplayName,
-  getExplorerIcon
-} from '../../../../packages/shared/src/utils/blockchain/ExplorerLinks.js';
-import { browserWalrusService } from '../../../../packages/walrus/src/browser/BrowserWalrusService.ts';
+  getExplorerIcon,
+} from '@dreamlit/shared';
+import { browserWalrusService } from '@dreamlit/walrus';
 import './SaveDetailsModal.css';
 
 export function SaveDetailsModal({
@@ -20,7 +20,7 @@ export function SaveDetailsModal({
   saveInfo,
   network = 'testnet',
   storageAdapter = null,
-  onExpiryUpdate = null
+  onExpiryUpdate = null,
 }) {
   const [activeTab, setActiveTab] = useState('walrus'); // 'walrus' or 'blockchain'
   const [copiedField, setCopiedField] = useState(null);
@@ -35,8 +35,8 @@ export function SaveDetailsModal({
 
     if (timeLeft < 0) return 'Expired';
 
-    const daysLeft = Math.floor(timeLeft / (86400000));
-    const hoursLeft = Math.floor((timeLeft % (86400000)) / (3600000));
+    const daysLeft = Math.floor(timeLeft / 86400000);
+    const hoursLeft = Math.floor((timeLeft % 86400000) / 3600000);
 
     if (daysLeft > 0) {
       return `${daysLeft}d ${hoursLeft}h`;
@@ -49,19 +49,6 @@ export function SaveDetailsModal({
   const formatTimestamp = (timestamp) => {
     if (!timestamp) return 'Unknown';
     return new Date(timestamp).toLocaleString();
-  };
-
-  // Format file size
-  const formatSize = (bytes) => {
-    if (!bytes) return 'Unknown';
-    const units = ['B', 'KB', 'MB', 'GB'];
-    let size = bytes;
-    let unitIndex = 0;
-    while (size >= 1024 && unitIndex < units.length - 1) {
-      size /= 1024;
-      unitIndex++;
-    }
-    return `${size.toFixed(2)} ${units[unitIndex]}`;
   };
 
   // Copy to clipboard helper
@@ -105,32 +92,34 @@ export function SaveDetailsModal({
           storageAdapter.setWalrusBlobExpiry(saveInfo.blobId, {
             timestamp: result.expiryTimestamp,
             epochs: result.remainingEpochs || result.additionalEpochs || 10,
-            endEpoch: result.endEpoch
+            endEpoch: result.endEpoch,
           });
-          console.log('✅ Blob expiry persisted to StorageAdapter');
+          console.log('Blob expiry persisted to StorageAdapter');
         }
 
         // 2. Update parent state (via Header -> useSpreadsheet)
         if (onExpiryUpdate && result.expiryTimestamp) {
           onExpiryUpdate({
             expiryTimestamp: result.expiryTimestamp,
-            endEpoch: result.endEpoch
+            endEpoch: result.endEpoch,
           });
-          console.log('✅ Parent lastSaveInfo updated');
+          console.log('Parent lastSaveInfo updated');
         }
 
         // 3. Emit event for devtools/telemetry
         if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('blob:expiry-extended', {
-            detail: {
-              blobId: saveInfo.blobId,
-              oldExpiry: saveInfo.expiryTimestamp,
-              newExpiry: result.expiryTimestamp,
-              endEpoch: result.endEpoch,
-              additionalEpochs: result.additionalEpochs || 10
-            }
-          }));
-          console.log('✅ blob:expiry-extended event emitted');
+          window.dispatchEvent(
+            new CustomEvent('blob:expiry-extended', {
+              detail: {
+                blobId: saveInfo.blobId,
+                oldExpiry: saveInfo.expiryTimestamp,
+                newExpiry: result.expiryTimestamp,
+                endEpoch: result.endEpoch,
+                additionalEpochs: result.additionalEpochs || 10,
+              },
+            })
+          );
+          console.log('blob:expiry-extended event emitted');
         }
 
         setRenewalError(null);
@@ -140,14 +129,15 @@ export function SaveDetailsModal({
         const daysLeft = Math.floor(timeLeft / 86400000);
         const hoursLeft = Math.floor((timeLeft % 86400000) / 3600000);
 
-        alert(`✅ Storage extended successfully!\n\nNew expiry: ${daysLeft}d ${hoursLeft}h\nBlob will be available for ${daysLeft} more days.`);
-
+        alert(
+          `Storage extended successfully.\n\nNew expiry: ${daysLeft}d ${hoursLeft}h\nBlob will be available for ${daysLeft} more days.`
+        );
       } else {
         setRenewalError(result.error || 'Failed to extend storage');
-        console.error('❌ Renewal failed:', result.error);
+        console.error('Renewal failed:', result.error);
       }
     } catch (error) {
-      console.error('❌ Error renewing storage:', error);
+      console.error('Error renewing storage:', error);
       setRenewalError(error.message || 'An error occurred while renewing storage');
     } finally {
       setIsRenewing(false);
@@ -176,8 +166,8 @@ export function SaveDetailsModal({
   }
 
   const timeUntilExpiry = getTimeUntilExpiry();
-  const isExpiryApproaching = saveInfo.expiryTimestamp &&
-    (saveInfo.expiryTimestamp - Date.now()) < (7 * 86400000); // Less than 7 days
+  const isExpiryApproaching =
+    saveInfo.expiryTimestamp && saveInfo.expiryTimestamp - Date.now() < 7 * 86400000; // Less than 7 days
 
   return (
     <div className="save-details-modal-overlay" onClick={onClose}>
@@ -185,11 +175,7 @@ export function SaveDetailsModal({
         {/* Header */}
         <div className="modal-header">
           <h2>Save Details</h2>
-          <button
-            className="close-button"
-            onClick={onClose}
-            aria-label="Close modal"
-          >
+          <button className="close-button" onClick={onClose} aria-label="Close modal">
             ×
           </button>
         </div>
@@ -200,13 +186,13 @@ export function SaveDetailsModal({
             className={`tab-button ${activeTab === 'walrus' ? 'active' : ''}`}
             onClick={() => setActiveTab('walrus')}
           >
-            🦭 Walrus Storage
+            Walrus Storage
           </button>
           <button
             className={`tab-button ${activeTab === 'blockchain' ? 'active' : ''}`}
             onClick={() => setActiveTab('blockchain')}
           >
-            🔗 Blockchain
+            Blockchain
           </button>
         </div>
 
@@ -217,7 +203,7 @@ export function SaveDetailsModal({
               {/* Expiry Warning */}
               {isExpiryApproaching && (
                 <div className="expiry-warning">
-                  <div className="warning-icon">⚠️</div>
+                  <div className="warning-icon">!</div>
                   <div className="warning-content">
                     <div className="warning-title">Storage Expiring Soon</div>
                     <div className="warning-message">
@@ -237,7 +223,7 @@ export function SaveDetailsModal({
                     onClick={() => copyToClipboard(saveInfo.blobId, 'blobId')}
                     title="Copy Blob ID"
                   >
-                    {copiedField === 'blobId' ? '✓' : '📋'}
+                    {copiedField === 'blobId' ? 'Copied' : 'Copy'}
                   </button>
                 </div>
               </div>
@@ -253,7 +239,7 @@ export function SaveDetailsModal({
                       onClick={() => copyToClipboard(saveInfo.contentHash, 'contentHash')}
                       title="Copy Content Hash"
                     >
-                      {copiedField === 'contentHash' ? '✓' : '📋'}
+                      {copiedField === 'contentHash' ? 'Copied' : 'Copy'}
                     </button>
                   </div>
                 </div>
@@ -264,7 +250,9 @@ export function SaveDetailsModal({
                 <div className="section-title">Storage Status</div>
                 <div className="info-value">
                   <span className={`status-badge ${saveInfo.storageStatus}`}>
-                    {saveInfo.storageStatus === 'newly_created' ? '✨ Newly Created' : '📦 Already Certified'}
+                    {saveInfo.storageStatus === 'newly_created'
+                      ? 'Newly Created'
+                      : 'Already Certified'}
                   </span>
                 </div>
               </div>
@@ -288,7 +276,6 @@ export function SaveDetailsModal({
                   className="explorer-link walrus-link"
                 >
                   {getExplorerIcon('walrus')} {getExplorerDisplayName('walrus')}
-                  <span className="external-icon">↗</span>
                 </a>
               </div>
 
@@ -302,9 +289,7 @@ export function SaveDetailsModal({
                   >
                     {isRenewing ? 'Extending...' : 'Extend Storage'}
                   </button>
-                  {renewalError && (
-                    <div className="renewal-error">{renewalError}</div>
-                  )}
+                  {renewalError && <div className="renewal-error">{renewalError}</div>}
                 </div>
               )}
             </div>
@@ -316,13 +301,15 @@ export function SaveDetailsModal({
               <div className="info-section">
                 <div className="section-title">Transaction Digest</div>
                 <div className="info-row with-copy">
-                  <code className="info-value tx-digest">{saveInfo.transactionDigest || 'N/A'}</code>
+                  <code className="info-value tx-digest">
+                    {saveInfo.transactionDigest || 'N/A'}
+                  </code>
                   <button
                     className="copy-button"
                     onClick={() => copyToClipboard(saveInfo.transactionDigest, 'txDigest')}
                     title="Copy Transaction Digest"
                   >
-                    {copiedField === 'txDigest' ? '✓' : '📋'}
+                    {copiedField === 'txDigest' ? 'Copied' : 'Copy'}
                   </button>
                 </div>
               </div>
@@ -362,7 +349,6 @@ export function SaveDetailsModal({
                     className="explorer-link sui-explorer-link"
                   >
                     {getExplorerIcon('suiExplorer')} {getExplorerDisplayName('suiExplorer')}
-                    <span className="external-icon">↗</span>
                   </a>
                   <a
                     href={getSuivisionUrl(saveInfo.transactionDigest, network)}
@@ -371,7 +357,6 @@ export function SaveDetailsModal({
                     className="explorer-link suivision-link"
                   >
                     {getExplorerIcon('suivision')} {getExplorerDisplayName('suivision')}
-                    <span className="external-icon">↗</span>
                   </a>
                 </div>
               </div>

@@ -10,7 +10,7 @@ This monorepo contains four SDKs for different use cases:
 
 **Core Walrus storage adapter for browser and Node.js environments**
 
-**🎯 Key Features:**
+**Key Features:**
 - Store and retrieve data on Walrus decentralized storage
 - Browser and Node.js support with environment-specific optimizations
 - Health monitoring and endpoint failover
@@ -44,7 +44,7 @@ See the [walrus documentation](./walrus/README.md) for complete API reference.
 
 **Walrus + Sui blockchain integration core with CLI compatibility**
 
-**🎯 Key Features:**
+**Key Features:**
 - Dual environment support (Node.js/CLI and browser)
 - Complete Sui blockchain interaction layer
 - Transaction management with queueing, tracking, and retry logic
@@ -72,59 +72,11 @@ See the [walrus-sui-core documentation](./walrus-sui-core/README.md) for entry p
 
 ---
 
-### 3. [@dreamlit/spreadsheet-sdk](./spreadsheet-sdk)
-
-**React SDK for building Walrus-powered spreadsheet applications**
-
-**🎯 Key Features:**
-- Complete React hooks for spreadsheet state management
-- Pre-built UI components with Walrus/Sui integration
-- Luckysheet-powered rich spreadsheet functionality
-- Built-in blockchain adapters and services
-- Custom formula engine with Sui-specific formulas
-- CSV/Excel import/export with Walrus storage
-- Automatic saving with blockchain versioning
-- Multi-wallet and multi-network support
-
-**Installation:**
-```bash
-npm install @dreamlit/spreadsheet-sdk @dreamlit/walrus @dreamlit/walrus-sui-core react react-dom
-# or
-bun add @dreamlit/spreadsheet-sdk @dreamlit/walrus @dreamlit/walrus-sui-core react react-dom
-```
-
-**Quick Start:**
-```jsx
-import {
-  SpreadsheetProvider,
-  Spreadsheet,
-  Header,
-  StatusBar
-} from '@dreamlit/spreadsheet-sdk';
-import '@dreamlit/spreadsheet-sdk/dist/index.css';
-
-function App() {
-  return (
-    <SpreadsheetProvider>
-      <div className="app-container">
-        <Header />
-        <Spreadsheet />
-        <StatusBar />
-      </div>
-    </SpreadsheetProvider>
-  );
-}
-```
-
-See the [spreadsheet-sdk documentation](./spreadsheet-sdk/README.md) for components and API reference.
-
----
-
-### 4. [@walrus/subwallet-sdk](./sub-wallet-sdk)
+### 3. [@walrus/subwallet-sdk](./sub-wallet-sdk)
 
 **Comprehensive SDK for managing sub-wallet fleets on Sui/Walrus**
 
-**🎯 Key Features:**
+**Key Features:**
 - **Automatic Sponsor Wallet Bootstrapping** - Wallet 0 auto-synced with Sui CLI
 - **Protected Sponsor Wallet** - Wallet 0 cannot be deleted, always funded
 - **Sponsored Transactions** - Gasless operations for all worker wallets
@@ -133,21 +85,21 @@ See the [spreadsheet-sdk documentation](./spreadsheet-sdk/README.md) for compone
 - **Intelligent Configuration** - Auto-loads from Sui CLI with override support
 - **Browser & Node.js** - Works everywhere with pluggable storage adapters
 
-**🛡️ Safety Architecture:**
+**Safety Architecture:**
 ```
 ┌─────────────────────────────────────────┐
 │         Wallet Protection Layer         │
 ├─────────────────────────────────────────┤
 │  Wallet 0 (Sponsor)                     │
-│  ✓ Synced with Sui CLI active address  │
-│  ✓ Protected from deletion             │
-│  ✓ Can hold funds                       │
-│  ✓ Pays gas for all operations         │
+│  * Synced with Sui CLI active address  │
+│  * Protected from deletion             │
+│  * Can hold funds                       │
+│  * Pays gas for all operations         │
 ├─────────────────────────────────────────┤
 │  Wallets 1-N (Workers)                  │
-│  ✓ Deletable only when balance = 0     │
-│  ✓ Use sponsored transactions           │
-│  ✓ Auto-sweep before bulk clear         │
+│  * Deletable only when balance = 0     │
+│  * Use sponsored transactions           │
+│  * Auto-sweep before bulk clear         │
 └─────────────────────────────────────────┘
 ```
 
@@ -219,13 +171,13 @@ bun run clean
 
 ```mermaid
 graph TD
-    A[spreadsheet-sdk] --> B[walrus-sui-core]
+    A[frontend] --> B[walrus-sui-core]
     A --> C[walrus]
     B --> C
     D[sub-wallet-sdk] -.-> C
 ```
 
-- `spreadsheet-sdk` depends on both `walrus-sui-core` and `walrus`
+- `frontend` depends on both `walrus-sui-core` and `walrus`
 - `walrus-sui-core` depends on `walrus` as a peer dependency
 - `sub-wallet-sdk` can optionally use `walrus` for storage
 
@@ -233,8 +185,8 @@ graph TD
 
 - **@dreamlit/walrus**: Core storage layer with health monitoring and failover
 - **@dreamlit/walrus-sui-core**: Blockchain integration with transaction management
-- **@dreamlit/spreadsheet-sdk**: High-level React components and hooks
 - **@walrus/subwallet-sdk**: Wallet fleet management with sponsor protection
+- **frontend/lib/spreadsheet**: Spreadsheet engine and Luckysheet integration
 
 ## License
 

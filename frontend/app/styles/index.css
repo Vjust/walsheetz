@@ -1,5 +1,5 @@
 /* WalSheetz - React CSS with Ice Glassmorphism Theme */
-@import url('./glassmorphism.css');
+@import url('../../lib/spreadsheet/styles/glassmorphism.css');
 @import url('./blizzard-effects.css');
 
 * {

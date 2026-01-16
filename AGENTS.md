@@ -1,127 +1,156 @@
 # WalSheetz Repository Guidelines
 
-> **📚 Common Guidelines**: For shared conventions (coding style, testing, git workflow), see [docs/AGENTS-SHARED.md](./docs/AGENTS-SHARED.md)
-
 ## Quick Start
 
 ```bash
 bun run setup      # Automated environment setup
-bun run dev:full   # Start both bridge and frontend
+bun run dev        # Start frontend dev server (port 3005)
+bun run build:web  # Production build (Vite)
 bun run test:all   # Run tests, typecheck, and lint
 ```
 
-See [docs/QUICKSTART.md](./docs/QUICKSTART.md) for detailed onboarding.
-
 ---
 
-## Project-Specific Structure
+## Project Structure
 
 ### High-Level Layout
-- **`frontend/`** — React SPA; see [frontend/AGENTS.md](./frontend/AGENTS.md)
-- **`blockchain/`** — Sui/Walrus integration; see [blockchain/AGENTS.md](./blockchain/AGENTS.md)
-- **`packages/`** — SDK packages (walrus, walrus-sui-core, spreadsheet-sdk, subwallet, shared)
-- **`apps/`** — Demo applications
-- **`tests/`** — Test organization (unit/, integration/, property/, e2e/)
-- **`scripts/`** — Automation (setup.js, health-check.js, diagnostics)
-- **`protos/`** — gRPC/Protobuf definitions for Sui RPC
-- **`docs/`** — Documentation hub
+- **`frontend/`** - React SPA; see [frontend/AGENTS.md](./frontend/AGENTS.md)
+- **`packages/`** - SDK packages:
+  - `walrus` - Walrus storage SDK
+  - `walrus-sui-core` - Sui blockchain integration
+  - `subwallet` - Sub-wallet management
+  - `shared` - Shared utilities and types
+- **`api/`** - Vercel Edge Functions (BFF layer)
+- **`move/`** - Move smart contracts; see [move/AGENTS.md](./move/AGENTS.md)
+- **`tests/`** - Test organization (unit/, e2e/)
+- **`scripts/`** - Automation (setup.js, health-check.js)
 
 ### Key Entry Points
 | Path | Purpose |
 |------|---------|
-| `frontend/main.jsx` | Frontend application entry |
-| `frontend/app/App.jsx` | Root React component |
-| `blockchain/websocket-grpc-bridge.js` | Bridge server |
-| `blockchain/config.js` | Network & RPC configuration |
+| `frontend/main.tsx` | Frontend application entry |
+| `frontend/app/App.tsx` | Root React component |
 | `packages/*/src/index.ts` | Package exports |
+| `api/*.js` | Vercel Edge Functions |
+| `vite.config.js` | Vite build configuration |
+| `vercel.json` | Vercel deployment config |
 
 ---
 
-## Repository-Specific Commands
+## Commands
 
-### Development Servers
+### Development
 ```bash
-bun run dev          # Frontend only (port 3000)
-bun run dev:bridge   # Bridge only (port 3005)
-bun run dev:full     # Both services
+bun run dev          # Frontend dev server (port 3005)
+bun run build:web    # Production Vite build
+bun run build        # Build all workspace packages
 ```
 
-### Testing Variants
+### Testing
 ```bash
-bun test                    # All unit tests
-bun run test:watch          # Watch mode
-bun run test:integration    # Integration tests
-bun run test:property       # Property-based tests
-bun run test:walrus         # Walrus-specific tests
-bun run test:e2e            # End-to-end (requires services running)
-bun run test:coverage       # With coverage report
+bun test             # All unit tests
+bun run test:watch   # Watch mode
+bun run test:all     # Tests + typecheck + lint
+bun run test:smoke   # Smoke tests
 ```
 
-### Diagnostics
+### Quality
 ```bash
+bun run typecheck    # TypeScript validation
+bun run lint         # ESLint
+bun run lint:fix     # Auto-fix lint issues
 bun run health       # System health check
-bun run setup        # Validate environment
 ```
 
 ---
 
 ## Import Aliases (Vite Frontend)
 
-```javascript
-// Use these - NEVER use relative paths like ../
-import Component from '@app/App.jsx'           // app/
-import Feature from '@features/dashboard/'     // features/
-import Hook from '@shared/hooks/useWallet'     // shared/
-import Service from '@services/blockchain/'    // services/
-import Util from '@utils/helpers/cellUtils'    // utils/
-import Adapter from '@adapters/BlockchainAdapter' // adapters/
+```typescript
+// Package imports (preferred)
+import { BrowserSuiService } from '@dreamlit/walrus-sui-core/blockchain-integration'
+import { Logger } from '@dreamlit/walrus'
+
+// App aliases
+import Component from '@app/App'
+import Feature from '@features/dashboard/'
+import Hook from '@shared/hooks/useWallet'
+import { SpreadsheetEngine } from '@lib/spreadsheet/core/SpreadsheetEngine'
 ```
 
 ---
 
-## Project-Specific Conventions
+## Architecture
 
-### Test File Organization
-- Unit tests: `**/__tests__/*.test.js` or `tests/unit/`
-- Integration: `tests/integration/`
-- Property tests: `tests/property/*.property.test.js`
+### Build and Deployment
+- **Vite** builds the SPA to `dist/`
+- **Vercel** deploys static assets + Edge Functions
+- **Environment-driven** log stripping (VITE_LOG_LEVEL=warn strips console.log/debug/info)
+- **Vendor chunking** for react, mysten, tanstack packages
+- **No source maps** in production
+
+### Security
+- **CSP** enforced via vercel.json headers
+- **SRI** on Luckysheet CDN resources
+- **Rate limiting** on all API endpoints
+- **CORS** restricted to allowed origins
+- **Cookie-based sessions** (HttpOnly, Secure, SameSite=Strict)
+
+### API Layer (Vercel Functions)
+```
+api/
+  auth/           # Authentication (nonce, login, logout, session)
+  spreadsheet/    # BFF endpoints (load, save)
+  sui/tx/         # Transaction building and submission
+  _utils/         # Shared utilities (cors, rate-limiter)
+  sui-rpc-proxy   # Sui RPC proxy
+  walrus-*        # Walrus aggregator/publisher proxies
+```
+
+---
+
+## Conventions
+
+### Code Style
+- TypeScript for all new code
+- No emojis in code or comments
+- No .jsx extension in imports (use extensionless)
+- Import from package exports, not package source files
+
+### Package Development
+- Each package uses `tsup` for builds
+- Export types via package.json `exports` field
+- Shared utilities go in `packages/shared`
+
+### Testing
+- Unit tests: `**/__tests__/*.test.ts` or `tests/unit/`
 - E2E tests: `tests/e2e/` (Playwright)
-- Coverage reports: `tests/reports/`
-- **Coverage target**: 80% global threshold
+- Coverage target: 80%
 
-### Configuration Hierarchy
-1. **Environment**: `blockchain/config.js` (`environment: 'testnet'|'mainnet'`)
-2. **Bridge**: Environment variables (`BRIDGE_PORT`, `BRIDGE_HOST`)
-3. **Walrus**: `WALRUS_PUBLISHER_URL`
-4. **Secrets**: Never committed; use `.env` (gitignored)
+---
 
-### Special Directories
-- **`Sui Ref/`** — Vendored Sui/Walrus documentation (avoid editing)
-- **`dist/`** — Build output (gitignored)
-- **`node_modules/`** — Dependencies (gitignored)
+## Environment Variables
+
+### Required (set in Vercel dashboard)
+```
+VITE_SUI_NETWORK=testnet|mainnet
+VITE_LOG_LEVEL=warn|debug
+SESSION_SECRET=<secret-for-session-signing>
+```
+
+### Optional
+```
+VITE_ENOKI_API_KEY=<enoki-api-key>
+VITE_DEBUG_COMPONENTS=<comma-separated-components>
+```
 
 ---
 
 ## Domain-Specific Guidelines
 
-For detailed guidance on specific areas:
 - **Frontend Development**: [frontend/AGENTS.md](./frontend/AGENTS.md)
-- **Blockchain Integration**: [blockchain/AGENTS.md](./blockchain/AGENTS.md)
-- **Package Development**: See individual package README files
+- **Move Contracts**: [move/AGENTS.md](./move/AGENTS.md)
 
 ---
 
-## Common References
-
-| Guide | Purpose |
-|-------|---------|
-| [AGENTS-SHARED.md](./docs/AGENTS-SHARED.md) | Common conventions |
-| [QUICKSTART.md](./docs/QUICKSTART.md) | Quick start guide |
-| [README.md](./docs/README.md) | Developer guide |
-| [TESTING.md](./docs/TESTING.md) | Testing guide |
-| [DEBUG-LOGGING.md](./docs/DEBUG-LOGGING.md) | Debugging guide |
-| [CONFIGURATION.md](./docs/CONFIGURATION.md) | Configuration reference |
-
----
-
-**Remember**: Keep changes minimal, match existing style, and consult domain-specific AGENTS.md files before introducing new patterns.
+Keep changes minimal, match existing style, and consult domain-specific AGENTS.md files before introducing new patterns.

@@ -152,14 +152,14 @@ test.describe('WZ Function Injection Diagnostics', () => {
     expect(adapterDiag.wzFunctionsInjected).toBe(true);
     expect(adapterDiag.sheetsFound).toBeGreaterThan(0);
 
-    console.log('📊 LuckysheetAdapter Diagnostics:', JSON.stringify(adapterDiag, null, 2));
+    console.log('LuckysheetAdapter diagnostics:', JSON.stringify(adapterDiag, null, 2));
 
     // SECONDARY: Check legacy API (compatibility check)
     const hasLegacyWzInject = await page.evaluate(() => typeof window.__wzInject !== 'undefined');
     const hasWzNesting = await page.evaluate(() => typeof window.__wzNesting !== 'undefined');
 
     if (hasLegacyWzInject) {
-      console.log('ℹ️  Legacy __wzInject API still present (will be deprecated in future)');
+      console.log('Info: legacy __wzInject API still present (will be deprecated in future)');
     }
 
     // Utility APIs should still be available

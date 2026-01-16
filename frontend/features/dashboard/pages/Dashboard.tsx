@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSpreadsheetContext, LoadingOverlay } from '@features/spreadsheet/components';
-import { DocumentCard } from '@features/dashboard/components/DocumentCard.jsx';
-import { SearchBar } from '@features/dashboard/components/SearchBar.jsx';
-import { CreateDocumentModal } from '@features/dashboard/components/CreateDocumentModal.jsx';
-import { NetworkBadge } from '@features/network/components/NetworkBadge.jsx';
-import { NetworkSelector } from '@features/network/components/NetworkSelector.jsx';
-import { MigrationDialog } from '@features/network/components/MigrationDialog.jsx';
-import { useNetwork } from '@shared/providers/NetworkProvider.jsx';
-import { logger, LogComponent } from '../../../../packages/shared/src/utils/Logger.js';
-import UnicornStudioHero from '@shared/components/UnicornStudioHero.jsx';
-import BlizzardParticles from '@shared/ui/effects/BlizzardParticles.jsx';
+import { DocumentCard } from '@features/dashboard/components/DocumentCard';
+import { SearchBar } from '@features/dashboard/components/SearchBar';
+import { CreateDocumentModal } from '@features/dashboard/components/CreateDocumentModal';
+import { NetworkSelector } from '@features/network/components/NetworkSelector';
+import { MigrationDialog } from '@features/network/components/MigrationDialog';
+import { useNetwork } from '@shared/providers/NetworkProvider';
+import { logger, LogComponent } from '@dreamlit/walrus';
+import UnicornStudioHero from '@shared/components/UnicornStudioHero';
+import BlizzardParticles from '@shared/ui/effects/BlizzardParticles';
 import '../styles/dashboard.css';
 
 export function Dashboard() {
@@ -25,22 +24,20 @@ export function Dashboard() {
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' or 'desc'
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [recentSpreadsheets, setRecentSpreadsheets] = useState([]);
-  const [connectingWallet, setConnectingWallet] = useState(false);
+
   const [disconnectingWallet, setDisconnectingWallet] = useState(false);
   const [showMigrationDialog, setShowMigrationDialog] = useState(false);
   const [spreadsheetToMigrate, setSpreadsheetToMigrate] = useState(null);
 
-  const { network, isMainnet, isTestnet } = useNetwork();
+  const { isTestnet } = useNetwork();
 
   const {
     walletConnected,
     walletSyncReady,
     walletAutoConnecting,
     walletAddress,
-    connectWallet,
     disconnectWallet,
     getUserSpreadsheets,
-    createNewSpreadsheet,
     renameSpreadsheet,
     makeSpreadsheetPublic,
     makeSpreadsheetPrivate,
@@ -49,14 +46,18 @@ export function Dashboard() {
     deleteSpreadsheet,
     blockchainAdapter,
     storageAdapter,
-    spreadsheetEngine
+    spreadsheetEngine,
   } = useSpreadsheetContext();
 
   // Load spreadsheets when component mounts or wallet connects
   useEffect(() => {
     // Only load spreadsheets when wallet is fully connected, blockchain adapter is synced, and auto-connect is complete
     if (walletConnected && walletSyncReady && !walletAutoConnecting) {
-      logger.info(LogComponent.UI_COMPONENT, 'dashboard_load_trigger', 'Loading spreadsheets after wallet connection');
+      logger.info(
+        LogComponent.UI_COMPONENT,
+        'dashboard_load_trigger',
+        'Loading spreadsheets after wallet connection'
+      );
       loadSpreadsheets();
     } else if (!walletConnected && !walletAutoConnecting) {
       // Clear spreadsheets only when definitively not connected (not during auto-connect)
@@ -68,7 +69,7 @@ export function Dashboard() {
   // Update recent spreadsheets when spreadsheets change
   useEffect(() => {
     const recent = [...spreadsheets]
-      .filter(sheet => sheet.last_modified)
+      .filter((sheet) => sheet.last_modified)
       .sort((a, b) => new Date(b.last_modified) - new Date(a.last_modified))
       .slice(0, 5);
     setRecentSpreadsheets(recent);
@@ -80,8 +81,8 @@ export function Dashboard() {
 
     // Apply search filter
     if (searchQuery.trim()) {
-      filtered = filtered.filter(sheet =>
-        sheet.title && sheet.title.toLowerCase().includes(searchQuery.toLowerCase())
+      filtered = filtered.filter(
+        (sheet) => sheet.title && sheet.title.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
@@ -113,7 +114,6 @@ export function Dashboard() {
     });
 
     setFilteredSpreadsheets(filtered);
-
   }, [spreadsheets, searchQuery, sortBy, sortOrder]);
 
   const loadSpreadsheets = async () => {
@@ -123,26 +123,45 @@ export function Dashboard() {
     setError(null);
 
     try {
-      logger.info(LogComponent.UI_COMPONENT, 'dashboard_load_start', 'Loading spreadsheets for dashboard');
+      logger.info(
+        LogComponent.UI_COMPONENT,
+        'dashboard_load_start',
+        'Loading spreadsheets for dashboard'
+      );
 
       const result = await getUserSpreadsheets();
 
       if (result.success) {
         setSpreadsheets(result.spreadsheets);
-        logger.info(LogComponent.UI_COMPONENT, 'dashboard_load_success', 'Spreadsheets loaded successfully', {
-          count: result.spreadsheets.length
-        });
+        logger.info(
+          LogComponent.UI_COMPONENT,
+          'dashboard_load_success',
+          'Spreadsheets loaded successfully',
+          {
+            count: result.spreadsheets.length,
+          }
+        );
       } else {
         setError(result.error || 'Failed to load spreadsheets');
-        logger.error(LogComponent.UI_COMPONENT, 'dashboard_load_error', 'Failed to load spreadsheets', {
-          error: result.error
-        });
+        logger.error(
+          LogComponent.UI_COMPONENT,
+          'dashboard_load_error',
+          'Failed to load spreadsheets',
+          {
+            error: result.error,
+          }
+        );
       }
     } catch (err) {
       setError(err.message || 'Failed to load spreadsheets');
-      logger.error(LogComponent.UI_COMPONENT, 'dashboard_load_exception', 'Exception loading spreadsheets', {
-        error: err.message
-      });
+      logger.error(
+        LogComponent.UI_COMPONENT,
+        'dashboard_load_exception',
+        'Exception loading spreadsheets',
+        {
+          error: err.message,
+        }
+      );
     } finally {
       setLoading(false);
     }
@@ -170,26 +189,38 @@ export function Dashboard() {
         created_at: new Date().toISOString(),
         last_modified: new Date().toISOString(),
         isOptimistic: true,
-        isLocal: true
+        isLocal: true,
       };
 
-      setSpreadsheets(prev => [optimisticSheet, ...prev]);
+      setSpreadsheets((prev) => [optimisticSheet, ...prev]);
 
-      logger.info(LogComponent.UI_COMPONENT, 'dashboard_create_local_navigate', 'Navigating to new local spreadsheet', {
-        tempId, title, template
-      });
+      logger.info(
+        LogComponent.UI_COMPONENT,
+        'dashboard_create_local_navigate',
+        'Navigating to new local spreadsheet',
+        {
+          tempId,
+          title,
+          template,
+        }
+      );
 
       // Navigate immediately with state
       navigate(`/spreadsheet/${tempId}`, {
-        state: { title, template, isLocal: true }
+        state: { title, template, isLocal: true },
       });
 
       // NO call to createNewSpreadsheet - workflow deferred to first save
     } catch (error) {
       setError(`Error creating spreadsheet: ${error.message}`);
-      logger.error(LogComponent.UI_COMPONENT, 'dashboard_create_exception', 'Exception creating spreadsheet', {
-        error: error.message
-      });
+      logger.error(
+        LogComponent.UI_COMPONENT,
+        'dashboard_create_exception',
+        'Exception creating spreadsheet',
+        {
+          error: error.message,
+        }
+      );
     }
   };
 
@@ -260,56 +291,78 @@ export function Dashboard() {
     const previousSpreadsheets = [...spreadsheets];
 
     // Optimistic removal from UI
-    setSpreadsheets(prev => prev.filter(s => s.objectId !== spreadsheetId));
+    setSpreadsheets((prev) => prev.filter((s) => s.objectId !== spreadsheetId));
     logger.logUserAction('dashboard_delete_optimistic', { spreadsheetId, title });
 
     try {
       const result = await deleteSpreadsheet(spreadsheetId, title);
       if (result.success) {
-        logger.info(LogComponent.UI_COMPONENT, 'dashboard_delete_success', 'Spreadsheet deleted successfully', {
-          spreadsheetId,
-          title
-        });
+        logger.info(
+          LogComponent.UI_COMPONENT,
+          'dashboard_delete_success',
+          'Spreadsheet deleted successfully',
+          {
+            spreadsheetId,
+            title,
+          }
+        );
       } else {
         // Rollback optimistic deletion on failure
         setSpreadsheets(previousSpreadsheets);
         setError(`Failed to delete: ${result.error}`);
-        logger.error(LogComponent.UI_COMPONENT, 'dashboard_delete_error', 'Failed to delete spreadsheet', {
-          error: result.error,
-          spreadsheetId
-        });
+        logger.error(
+          LogComponent.UI_COMPONENT,
+          'dashboard_delete_error',
+          'Failed to delete spreadsheet',
+          {
+            error: result.error,
+            spreadsheetId,
+          }
+        );
       }
       return result;
     } catch (error) {
       // Rollback on exception
       setSpreadsheets(previousSpreadsheets);
       setError(`Error deleting spreadsheet: ${error.message}`);
-      logger.error(LogComponent.UI_COMPONENT, 'dashboard_delete_exception', 'Exception deleting spreadsheet', {
-        error: error.message,
-        spreadsheetId
-      });
+      logger.error(
+        LogComponent.UI_COMPONENT,
+        'dashboard_delete_exception',
+        'Exception deleting spreadsheet',
+        {
+          error: error.message,
+          spreadsheetId,
+        }
+      );
       return { success: false, error: error.message };
     }
   };
 
   const handleMigrate = (spreadsheet) => {
-    logger.logUserAction('dashboard_open_migration_dialog', { spreadsheetId: spreadsheet.objectId });
+    logger.logUserAction('dashboard_open_migration_dialog', {
+      spreadsheetId: spreadsheet.objectId,
+    });
     setSpreadsheetToMigrate(spreadsheet);
     setShowMigrationDialog(true);
   };
 
   const handleMigrationComplete = async (result) => {
-    logger.info(LogComponent.UI_COMPONENT, 'migration_complete', 'Spreadsheet migration completed', {
-      originalId: result.originalSpreadsheetId,
-      newId: result.mainnetSpreadsheetId
-    });
-    
+    logger.info(
+      LogComponent.UI_COMPONENT,
+      'migration_complete',
+      'Spreadsheet migration completed',
+      {
+        originalId: result.originalSpreadsheetId,
+        newId: result.mainnetSpreadsheetId,
+      }
+    );
+
     setShowMigrationDialog(false);
     setSpreadsheetToMigrate(null);
-    
+
     // Refresh spreadsheets list
     await loadSpreadsheets();
-    
+
     // Navigate to the new mainnet spreadsheet if it exists
     if (result.mainnetSpreadsheetId) {
       navigate(`/spreadsheet/${result.mainnetSpreadsheetId}`);
@@ -317,8 +370,7 @@ export function Dashboard() {
   };
 
   // Check for pending migration on mount (after network reload)
-  // EXCEPTION: Accessing localStorage for migration resume state (documented exception)
-  // See docs/STORAGE_ARCHITECTURE.md for justification
+  // EXCEPTION: localStorage used for migration resume state
   useEffect(() => {
     const checkPendingMigration = () => {
       const pendingMigration = localStorage.getItem('walsheetz_pending_migration');
@@ -326,15 +378,15 @@ export function Dashboard() {
         try {
           const migrationData = JSON.parse(pendingMigration);
           console.log('[Dashboard] Found pending migration, opening dialog:', migrationData);
-          
+
           // Find the spreadsheet (it should be in the testnet list if we just switched from testnet)
           // Or we can create a minimal spreadsheet object for the dialog
-          const sheet = spreadsheets.find(s => s.objectId === migrationData.spreadsheetId) || {
+          const sheet = spreadsheets.find((s) => s.objectId === migrationData.spreadsheetId) || {
             objectId: migrationData.spreadsheetId,
             title: migrationData.spreadsheetTitle,
-            network: 'testnet'
+            network: 'testnet',
           };
-          
+
           setSpreadsheetToMigrate(sheet);
           setShowMigrationDialog(true);
         } catch (err) {
@@ -349,35 +401,6 @@ export function Dashboard() {
     return () => clearTimeout(timer);
   }, [walletConnected, spreadsheets]);
 
-  const handleConnectWallet = async () => {
-    try {
-      setConnectingWallet(true);
-      setError(null);
-      logger.logUserAction('dashboard_wallet_connect_attempt');
-
-      const result = await connectWallet();
-
-      if (result.success) {
-        logger.info(LogComponent.UI_COMPONENT, 'dashboard_wallet_connect_success', 'Wallet connected from dashboard', {
-          walletAddress: result.wallet?.address
-        });
-        // Error will be cleared automatically since walletConnected will become true
-      } else {
-        setError(`Failed to connect wallet: ${result.error}`);
-        logger.error(LogComponent.UI_COMPONENT, 'dashboard_wallet_connect_error', 'Failed to connect wallet from dashboard', {
-          error: result.error
-        });
-      }
-    } catch (error) {
-      setError(`Error connecting wallet: ${error.message}`);
-      logger.error(LogComponent.UI_COMPONENT, 'dashboard_wallet_connect_exception', 'Exception connecting wallet from dashboard', {
-        error: error.message
-      });
-    } finally {
-      setConnectingWallet(false);
-    }
-  };
-
   const handleDisconnectWallet = async () => {
     if (!disconnectWallet) return;
 
@@ -386,12 +409,21 @@ export function Dashboard() {
       setError(null);
       logger.logUserAction('dashboard_wallet_disconnect_attempt');
       await disconnectWallet();
-      logger.info(LogComponent.UI_COMPONENT, 'dashboard_wallet_disconnect_success', 'Wallet disconnected from dashboard');
+      logger.info(
+        LogComponent.UI_COMPONENT,
+        'dashboard_wallet_disconnect_success',
+        'Wallet disconnected from dashboard'
+      );
     } catch (error) {
       setError(`Failed to disconnect wallet: ${error.message || error}`);
-      logger.error(LogComponent.UI_COMPONENT, 'dashboard_wallet_disconnect_error', 'Failed to disconnect wallet from dashboard', {
-        error: error?.message || error
-      });
+      logger.error(
+        LogComponent.UI_COMPONENT,
+        'dashboard_wallet_disconnect_error',
+        'Failed to disconnect wallet from dashboard',
+        {
+          error: error?.message || error,
+        }
+      );
     } finally {
       setDisconnectingWallet(false);
     }
@@ -409,8 +441,11 @@ export function Dashboard() {
     return (
       <div className="dashboard-loading-screen">
         <div className="dashboard-loading-content">
-          <div className="logo-icon ice-glow-animate" style={{ fontSize: '64px', marginBottom: '24px' }}>
-            <span>🦭</span>
+          <div
+            className="logo-icon ice-glow-animate"
+            style={{ fontSize: '64px', marginBottom: '24px' }}
+          >
+            <span>W</span>
           </div>
           <h2 style={{ color: '#B3E5FC', marginBottom: '16px' }}>Connecting wallet...</h2>
           <div className="spinner" style={{ margin: '0 auto' }}></div>
@@ -424,13 +459,7 @@ export function Dashboard() {
 
   // Show welcome screen if wallet is not connected (and auto-connect has completed)
   if (!walletConnected) {
-    return (
-      <UnicornStudioHero
-        onConnectWallet={handleConnectWallet}
-        connectingWallet={connectingWallet}
-        error={error}
-      />
-    );
+    return <UnicornStudioHero />;
   }
 
   return (
@@ -441,7 +470,7 @@ export function Dashboard() {
       <div className="dashboard-header">
         <div className="brand-section">
           <div className="logo-icon ice-glow-animate">
-            <span>🦭</span>
+            <span>W</span>
           </div>
           <h1>WalSheetz</h1>
           <NetworkSelector inline={true} />
@@ -450,20 +479,19 @@ export function Dashboard() {
         <div className="header-actions">
           <button
             className={`wallet-button ${walletConnected ? 'connected' : 'primary'} ${disconnectingWallet ? 'loading' : ''}`}
-            onClick={walletConnected ? handleDisconnectWallet : handleConnectWallet}
-            disabled={connectingWallet || disconnectingWallet}
+            onClick={walletConnected ? handleDisconnectWallet : undefined}
+            disabled={disconnectingWallet}
           >
-            {walletConnected ? (
-              disconnectingWallet ? 'Disconnecting...' : `👛 ${formatWalletAddress(walletAddress)}`
-            ) : (
-              connectingWallet ? '⏳ Connecting...' : '🦭 Connect Wallet'
-            )}
+            {walletConnected
+              ? disconnectingWallet
+                ? 'Disconnecting...'
+                : formatWalletAddress(walletAddress)
+              : connectingWallet
+                ? 'Connecting...'
+                : 'Connect Wallet'}
           </button>
-          <button
-            className="create-button primary"
-            onClick={() => setShowCreateModal(true)}
-          >
-            <span>➕</span>
+          <button className="create-button primary" onClick={() => setShowCreateModal(true)}>
+            <span>+</span>
             Create New
           </button>
         </div>
@@ -531,23 +559,19 @@ export function Dashboard() {
                   onClick={() => setViewMode('grid')}
                   title="Grid View"
                 >
-                  ⊞
+                  Grid
                 </button>
                 <button
                   className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
                   onClick={() => setViewMode('list')}
                   title="List View"
                 >
-                  ☰
+                  List
                 </button>
               </div>
 
-              <button
-                className="refresh-btn"
-                onClick={loadSpreadsheets}
-                title="Refresh"
-              >
-                🔄
+              <button className="refresh-btn" onClick={loadSpreadsheets} title="Refresh">
+                Refresh
               </button>
             </div>
           </div>
@@ -561,9 +585,9 @@ export function Dashboard() {
 
           {error && (
             <div className="error-state">
-              <p>❌ {error}</p>
+              <p>Error: {error}</p>
               <button onClick={loadSpreadsheets} className="retry-button">
-                🔄 Retry
+                Retry
               </button>
             </div>
           )}
@@ -572,18 +596,15 @@ export function Dashboard() {
             <div className="empty-state">
               {searchQuery ? (
                 <>
-                  <p>📄 No spreadsheets match your search</p>
+                  <p>No spreadsheets match your search</p>
                   <p className="empty-subtitle">Try adjusting your search terms</p>
                 </>
               ) : (
                 <>
-                  <p>📄 No spreadsheets found</p>
+                  <p>No spreadsheets found</p>
                   <p className="empty-subtitle">Create your first spreadsheet to get started!</p>
-                  <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="create-new-button"
-                  >
-                    ➕ Create New Spreadsheet
+                  <button onClick={() => setShowCreateModal(true)} className="create-new-button">
+                    Create New Spreadsheet
                   </button>
                 </>
               )}
@@ -634,11 +655,7 @@ export function Dashboard() {
       />
 
       {/* Loading Overlay for operations */}
-      <LoadingOverlay
-        isVisible={loading}
-        message="Loading spreadsheets..."
-        type="storage"
-      />
+      <LoadingOverlay isVisible={loading} message="Loading spreadsheets..." type="storage" />
     </div>
   );
 }

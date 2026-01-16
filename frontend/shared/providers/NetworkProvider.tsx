@@ -1,15 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import { networkLock } from '../../../packages/shared/src/utils/helpers/NetworkLock.js'
+import { networkLock } from '@dreamlit/walrus'
 
 const NetworkContext = createContext(null)
 
 export function NetworkProvider({ children }) {
-  // EXCEPTION: localStorage used for network preference
-  // WHY: User shouldn't need to re-select testnet/mainnet on every page load.
-  //      Network selection is a user preference, not session-critical data.
-  // SCOPE: Single key only: 'walsheetz_network'
-  // DOCUMENTED: See docs/STORAGE_ARCHITECTURE.md
-  // SYNC: Uses NetworkLock to prevent race conditions with ConfigLoader
   const [network, setNetwork] = useState(() => {
     try {
       // Check URL parameter first (for network switches from window.location.replace)
@@ -17,7 +11,7 @@ export function NetworkProvider({ children }) {
         const urlParams = new URLSearchParams(window.location.search)
         const urlNetwork = urlParams.get('network')
         if (urlNetwork && ['testnet', 'mainnet', 'devnet'].includes(urlNetwork)) {
-          console.log(`[NetworkProvider] 🌐 Network from URL param: ${urlNetwork}`)
+          console.log(`[NetworkProvider] Network from URL param: ${urlNetwork}`)
           return urlNetwork
         }
       }
@@ -68,13 +62,13 @@ export function NetworkProvider({ children }) {
     // Only add redirect if not already on root with no params/hash
     if (pathname === '/' && !cleanSearch && !hash) {
       // Already on root, simple switch
-      console.log(`[NetworkProvider] 🌐 Switching network to ${newNetwork} from root`)
+      console.log(`[NetworkProvider] Switching network to ${newNetwork} from root`)
       window.location.replace(`/?network=${newNetwork}`)
     } else {
       // Build redirect payload to preserve current route
       const currentPath = pathname + cleanSearch + hash
       const encodedRedirect = encodeURIComponent(currentPath)
-      console.log(`[NetworkProvider] 🌐 Switching network to ${newNetwork}, redirect to ${currentPath}`)
+      console.log(`[NetworkProvider] Switching network to ${newNetwork}, redirect to ${currentPath}`)
       window.location.replace(`/?network=${newNetwork}&redirect=${encodedRedirect}`)
     }
   }
@@ -134,4 +128,3 @@ export function useNetwork() {
   }
   return context
 }
-

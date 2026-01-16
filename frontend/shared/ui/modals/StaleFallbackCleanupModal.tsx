@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { logger, LogComponent } from '../../../../packages/shared/src/utils/Logger.js';
+import { logger, LogComponent } from '@dreamlit/walrus';
 import './StaleFallbackCleanupModal.css';
 
 /**
@@ -12,9 +12,9 @@ export function StaleFallbackCleanupModal({
   staleFallbacks = [],
   onConfirmDelete = () => {},
   onExport = () => {},
-  onKeep = () => {}
+  onKeep = () => {},
 }) {
-  const [selectedKeys, setSelectedKeys] = useState(new Set(staleFallbacks.map(f => f.key)));
+  const [selectedKeys, setSelectedKeys] = useState(new Set(staleFallbacks.map((f) => f.key)));
   const [isExporting, setIsExporting] = useState(false);
 
   if (!staleFallbacks || staleFallbacks.length === 0) {
@@ -24,7 +24,7 @@ export function StaleFallbackCleanupModal({
   const handleExportAll = async () => {
     setIsExporting(true);
     try {
-      for (const fallback of staleFallbacks.filter(f => selectedKeys.has(f.key))) {
+      for (const fallback of staleFallbacks.filter((f) => selectedKeys.has(f.key))) {
         await onExport(fallback.key);
       }
     } finally {
@@ -35,7 +35,7 @@ export function StaleFallbackCleanupModal({
   const handleDelete = () => {
     const keysToDelete = Array.from(selectedKeys);
     logger.info(LogComponent.UI_COMPONENT, 'cleanup_delete', 'Deleting stale fallbacks', {
-      count: keysToDelete.length
+      count: keysToDelete.length,
     });
     onConfirmDelete(keysToDelete);
   };
@@ -47,14 +47,14 @@ export function StaleFallbackCleanupModal({
 
   const totalSize = staleFallbacks.reduce((sum, f) => sum + f.size, 0);
   const selectedSize = staleFallbacks
-    .filter(f => selectedKeys.has(f.key))
+    .filter((f) => selectedKeys.has(f.key))
     .reduce((sum, f) => sum + f.size, 0);
 
   return (
     <div className="modal-overlay">
       <div className="stale-cleanup-modal">
         <div className="modal-header">
-          <h2>⏳ Old Unsaved Changes Found</h2>
+          <h2>Old Unsaved Changes Found</h2>
           <p className="modal-subtitle">
             {staleFallbacks.length} save{staleFallbacks.length > 1 ? 's' : ''} older than 7 days
           </p>
@@ -62,8 +62,8 @@ export function StaleFallbackCleanupModal({
 
         <div className="modal-content">
           <p className="modal-description">
-            These are spreadsheets that couldn't sync to blockchain and have been waiting for {staleFallbacks[0]?.ageDays || '?'} days.
-            What would you like to do?
+            These are spreadsheets that couldn't sync to blockchain and have been waiting for{' '}
+            {staleFallbacks[0]?.ageDays || '?'} days. What would you like to do?
           </p>
 
           <div className="fallback-list">
@@ -103,14 +103,14 @@ export function StaleFallbackCleanupModal({
             disabled={isExporting || selectedKeys.size === 0}
             title="Download selected saves as JSON files for backup"
           >
-            {isExporting ? '📥 Exporting...' : '📥 Export as JSON'}
+            {isExporting ? 'Exporting...' : 'Export as JSON'}
           </button>
           <button
             className="btn btn-keep"
             onClick={handleKeep}
             title="Keep these saves and continue retry attempts"
           >
-            ⏳ Keep Trying
+            Keep Trying
           </button>
           <button
             className="btn btn-delete"
@@ -118,14 +118,12 @@ export function StaleFallbackCleanupModal({
             disabled={selectedKeys.size === 0}
             title="Permanently delete selected saves from browser storage"
           >
-            🗑️ Delete Selected
+            Delete Selected
           </button>
         </div>
 
         <div className="modal-footer">
-          <p className="modal-note">
-            💡 Tip: Export first if you want to keep a backup of your data
-          </p>
+          <p className="modal-note">Tip: Export first if you want to keep a backup of your data</p>
         </div>
       </div>
     </div>

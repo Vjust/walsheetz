@@ -3,7 +3,7 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
-import { SaveStatusBanner } from '@features/spreadsheet/components/SaveStatusBanner.jsx';
+import { SaveStatusBanner } from '@features/spreadsheet/components/SaveStatusBanner';
 
 /**
  * SaveStatusBanner Event Handling Tests
@@ -172,7 +172,7 @@ describe('SaveStatusBanner Event Handling', () => {
 
       await waitFor(
         () => {
-          expect(screen.getByText(/✅ Save synced to blockchain/)).toBeInTheDocument();
+          expect(screen.getByText(/Save synced to blockchain/)).toBeInTheDocument();
         },
         { timeout: 3000 }
       );
@@ -277,7 +277,7 @@ describe('SaveStatusBanner Event Handling', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/✅ 3 of 4 saves synced/)).toBeInTheDocument();
+        expect(screen.getByText(/3 of 4 saves synced during startup/)).toBeInTheDocument();
       });
     });
 
@@ -312,7 +312,7 @@ describe('SaveStatusBanner Event Handling', () => {
       });
 
       await waitFor(() => {
-        // Component renders concatenated message: "✅ 2 of 4 saves synced during startup; 2 still pending"
+        // Component renders concatenated message: "2 of 4 saves synced during startup; 2 still pending"
         expect(screen.getByText(/2 still pending/)).toBeInTheDocument();
       });
     });
@@ -402,7 +402,7 @@ describe('SaveStatusBanner Event Handling', () => {
 
       await waitFor(
         () => {
-          expect(screen.getByText(/✅ Save synced to blockchain/)).toBeInTheDocument();
+          expect(screen.getByText(/Save synced to blockchain/)).toBeInTheDocument();
         },
         { timeout: 3000 }
       );
@@ -410,7 +410,7 @@ describe('SaveStatusBanner Event Handling', () => {
       // Wait for auto-dismiss with a reasonable timeout
       await waitFor(
         () => {
-          expect(screen.queryByText(/✅ Save synced to blockchain/)).toBeNull();
+          expect(screen.queryByText(/Save synced to blockchain/)).toBeNull();
         },
         { timeout: 3000 }
       );

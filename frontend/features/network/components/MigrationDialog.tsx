@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react'
-import { createPortal } from 'react-dom'
-import { SpreadsheetMigrator } from '../../../lib/spreadsheet/services/SpreadsheetMigrator.js'
-import { useNetwork } from '@shared/providers/NetworkProvider.jsx'
-import '../styles/MigrationDialog.css'
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { SpreadsheetMigrator } from '@lib/spreadsheet/services/SpreadsheetMigrator';
+import { useNetwork } from '@shared/providers/NetworkProvider';
+import '../styles/MigrationDialog.css';
 
 // EXCEPTION: localStorage used for migration resume state
 // WHY: Migrations can be long-running operations (minutes/hours). If user's page refreshes
@@ -10,116 +10,131 @@ import '../styles/MigrationDialog.css'
 //      This provides better UX for large spreadsheet migrations.
 // SCOPE: Single key only: 'walsheetz_pending_migration'
 // CLEARED: Automatically after migration completes
-// DOCUMENTED: See docs/STORAGE_ARCHITECTURE.md
-const MIGRATION_STORAGE_KEY = 'walsheetz_pending_migration'
+const MIGRATION_STORAGE_KEY = 'walsheetz_pending_migration';
 
-export function MigrationDialog({ 
-  isOpen, 
-  onClose, 
-  spreadsheet, 
-  blockchainAdapter, 
+export function MigrationDialog({
+  isOpen,
+  onClose,
+  spreadsheet,
+  blockchainAdapter,
   storageAdapter,
   spreadsheetEngine,
-  onMigrationComplete
+  onMigrationComplete,
 }) {
-  const { isMainnet, switchNetwork } = useNetwork()
-  const [step, setStep] = useState('confirm') // confirm, estimating, migrating, success, error
-  const [costEstimate, setCostEstimate] = useState(null)
-  const [progress, setProgress] = useState(null)
-  const [result, setResult] = useState(null)
-  const [error, setError] = useState(null)
-  const [newTitle, setNewTitle] = useState('')
+  const { isMainnet, switchNetwork } = useNetwork();
+  const [step, setStep] = useState('confirm'); // confirm, estimating, migrating, success, error
+  const [costEstimate, setCostEstimate] = useState(null);
+  const [progress, setProgress] = useState(null);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+  const [newTitle, setNewTitle] = useState('');
 
   // Check for pending migration when dialog opens on mainnet
   useEffect(() => {
     const checkPendingMigration = async () => {
       // Only check if we're open, on mainnet, and have the spreadsheet
       if (!isOpen || !isMainnet || !spreadsheet) return;
-      
-      const pendingMigration = localStorage.getItem(MIGRATION_STORAGE_KEY)
+
+      const pendingMigration = localStorage.getItem(MIGRATION_STORAGE_KEY);
       if (pendingMigration) {
         try {
-          const migrationData = JSON.parse(pendingMigration)
-          
+          const migrationData = JSON.parse(pendingMigration);
+
           // Verify this is the same spreadsheet
           if (migrationData.spreadsheetId === spreadsheet.objectId) {
-            console.log('[MigrationDialog] Resuming pending migration:', migrationData)
-            
+            console.log('[MigrationDialog] Resuming pending migration:', migrationData);
+
             // Clear the pending migration
-            localStorage.removeItem(MIGRATION_STORAGE_KEY)
-            
+            localStorage.removeItem(MIGRATION_STORAGE_KEY);
+
             // Trigger the actual migration
-            setNewTitle(migrationData.newTitle)
-            setStep('migrating')
-            
-            const migrator = new SpreadsheetMigrator(blockchainAdapter, storageAdapter, spreadsheetEngine)
-            
+            setNewTitle(migrationData.newTitle);
+            setStep('migrating');
+
+            const migrator = new SpreadsheetMigrator(
+              blockchainAdapter,
+              storageAdapter,
+              spreadsheetEngine
+            );
+
             const result = await migrator.migrateToMainnet(migrationData.spreadsheetId, {
               newTitle: migrationData.newTitle,
               onProgress: (progressData) => {
-                setProgress(progressData)
-              }
-            })
+                setProgress(progressData);
+              },
+            });
 
             if (result.success) {
-              setResult(result)
-              setStep('success')
+              setResult(result);
+              setStep('success');
               if (onMigrationComplete) {
-                onMigrationComplete(result)
+                onMigrationComplete(result);
               }
             } else {
-              throw new Error(result.error)
+              throw new Error(result.error);
             }
           }
         } catch (err) {
-          console.error('[MigrationDialog] Failed to resume migration:', err)
-          setError(err.message || 'Migration failed after network switch')
-          setStep('error')
-          localStorage.removeItem(MIGRATION_STORAGE_KEY)
+          console.error('[MigrationDialog] Failed to resume migration:', err);
+          setError(err.message || 'Migration failed after network switch');
+          setStep('error');
+          localStorage.removeItem(MIGRATION_STORAGE_KEY);
         }
       }
-    }
+    };
 
-    checkPendingMigration()
-  }, [isOpen, isMainnet, spreadsheet, blockchainAdapter, storageAdapter, spreadsheetEngine, onMigrationComplete])
+    checkPendingMigration();
+  }, [
+    isOpen,
+    isMainnet,
+    spreadsheet,
+    blockchainAdapter,
+    storageAdapter,
+    spreadsheetEngine,
+    onMigrationComplete,
+  ]);
 
   useEffect(() => {
     if (isOpen && spreadsheet) {
-      setNewTitle(`${spreadsheet.title} (Mainnet)`)
-      setStep('confirm')
-      setProgress(null)
-      setResult(null)
-      setError(null)
+      setNewTitle(`${spreadsheet.title} (Mainnet)`);
+      setStep('confirm');
+      setProgress(null);
+      setResult(null);
+      setError(null);
     }
-  }, [isOpen, spreadsheet])
+  }, [isOpen, spreadsheet]);
 
   const handleEstimateCost = async () => {
-    setStep('estimating')
+    setStep('estimating');
     try {
-      const migrator = new SpreadsheetMigrator(blockchainAdapter, storageAdapter, spreadsheetEngine)
-      
+      const migrator = new SpreadsheetMigrator(
+        blockchainAdapter,
+        storageAdapter,
+        spreadsheetEngine
+      );
+
       // Load the spreadsheet data for estimation
-      const loadResult = await blockchainAdapter.loadSpreadsheet(spreadsheet.objectId)
+      const loadResult = await blockchainAdapter.loadSpreadsheet(spreadsheet.objectId);
       if (!loadResult.success) {
-        throw new Error('Failed to load spreadsheet for estimation')
+        throw new Error('Failed to load spreadsheet for estimation');
       }
 
-      const estimate = await migrator.estimateMigrationCost(loadResult.data)
+      const estimate = await migrator.estimateMigrationCost(loadResult.data);
       if (estimate.success) {
-        setCostEstimate(estimate)
-        setStep('ready')
+        setCostEstimate(estimate);
+        setStep('ready');
       } else {
-        throw new Error(estimate.error)
+        throw new Error(estimate.error);
       }
     } catch (err) {
-      setError(err.message || 'Failed to estimate cost')
-      setStep('error')
+      setError(err.message || 'Failed to estimate cost');
+      setStep('error');
     }
-  }
+  };
 
   const handleStartMigration = async () => {
-    setStep('migrating')
-    setError(null)
+    setStep('migrating');
+    setError(null);
 
     try {
       // If not on mainnet, save migration intent and switch
@@ -128,64 +143,73 @@ export function MigrationDialog({
           step: 0,
           totalSteps: 5,
           message: 'Switching to mainnet...',
-          status: 'loading'
-        })
-        
+          status: 'loading',
+        });
+
         // Save migration state to localStorage
         const migrationData = {
           spreadsheetId: spreadsheet.objectId,
           spreadsheetTitle: spreadsheet.title,
           newTitle: newTitle,
-          timestamp: Date.now()
-        }
-        localStorage.setItem(MIGRATION_STORAGE_KEY, JSON.stringify(migrationData))
-        console.log('[MigrationDialog] Saved migration state before network switch:', migrationData)
-        
+          timestamp: Date.now(),
+        };
+        localStorage.setItem(MIGRATION_STORAGE_KEY, JSON.stringify(migrationData));
+        console.log(
+          '[MigrationDialog] Saved migration state before network switch:',
+          migrationData
+        );
+
         // Switch network without confirmation dialog (skip=true for programmatic switch)
         // This will trigger a page reload
-        switchNetwork('mainnet', true)
-        
+        switchNetwork('mainnet', true);
+
         // After reload, the useEffect above will check for pending migration
-        return
+        return;
       }
 
-      const migrator = new SpreadsheetMigrator(blockchainAdapter, storageAdapter, spreadsheetEngine)
-      
+      const migrator = new SpreadsheetMigrator(
+        blockchainAdapter,
+        storageAdapter,
+        spreadsheetEngine
+      );
+
       const result = await migrator.migrateToMainnet(spreadsheet.objectId, {
         newTitle,
         onProgress: (progressData) => {
-          setProgress(progressData)
-        }
-      })
+          setProgress(progressData);
+        },
+      });
 
       if (result.success) {
-        setResult(result)
-        setStep('success')
-        
+        setResult(result);
+        setStep('success');
+
         // Clear any pending migration state
-        localStorage.removeItem(MIGRATION_STORAGE_KEY)
-        
+        localStorage.removeItem(MIGRATION_STORAGE_KEY);
+
         if (onMigrationComplete) {
-          onMigrationComplete(result)
+          onMigrationComplete(result);
         }
       } else {
-        throw new Error(result.error)
+        throw new Error(result.error);
       }
     } catch (err) {
-      setError(err.message || 'Migration failed')
-      setStep('error')
-      localStorage.removeItem(MIGRATION_STORAGE_KEY)
+      setError(err.message || 'Migration failed');
+      setStep('error');
+      localStorage.removeItem(MIGRATION_STORAGE_KEY);
     }
-  }
+  };
 
-  if (!isOpen || !spreadsheet) return null
+  if (!isOpen || !spreadsheet) return null;
 
   return createPortal(
     <div className="migration-overlay" onClick={onClose}>
       <div className="migration-dialog" onClick={(e) => e.stopPropagation()}>
         <div className="migration-header">
-          <h3>🚀 Migrate to Mainnet</h3>
-          <button className="close-btn" onClick={onClose}>✕</button>
+          <h3>Migrate to Mainnet</h3>
+          <button className="close-btn" onClick={onClose}>
+            x
+          </button>
         </div>
 
         <div className="migration-body">
@@ -193,20 +217,22 @@ export function MigrationDialog({
             <>
               <div className="migration-info">
                 <p>
-                  <strong>{spreadsheet.title}</strong> is currently on <span className="testnet-label">🧪 Testnet</span>
+                  <strong>{spreadsheet.title}</strong> is currently on{' '}
+                  <span className="testnet-label">Testnet</span>
                 </p>
                 <p>
-                  Migrate it to <span className="mainnet-label">💎 Mainnet</span> to use with real funds.
+                  Migrate it to <span className="mainnet-label">Mainnet</span> to use with real
+                  funds.
                 </p>
               </div>
 
               <div className="migration-details">
                 <h4>What happens:</h4>
                 <ul>
-                  <li>✅ A new spreadsheet will be created on mainnet</li>
-                  <li>✅ All data and cells will be copied</li>
-                  <li>✅ Original testnet spreadsheet remains unchanged</li>
-                  <li>⚠️ Real SUI and WAL tokens will be used</li>
+                  <li>A new spreadsheet will be created on mainnet</li>
+                  <li>All data and cells will be copied</li>
+                  <li>Original testnet spreadsheet remains unchanged</li>
+                  <li>Real SUI and WAL tokens will be used</li>
                 </ul>
               </div>
 
@@ -241,7 +267,7 @@ export function MigrationDialog({
           {step === 'ready' && costEstimate && (
             <>
               <div className="cost-estimate">
-                <h4>📊 Cost Estimate:</h4>
+                <h4>Cost Estimate:</h4>
                 <div className="cost-item">
                   <span>Data Size:</span>
                   <strong>{costEstimate.walrus.sizeFormatted}</strong>
@@ -262,16 +288,14 @@ export function MigrationDialog({
                   <span>Total Estimate:</span>
                   <strong>{costEstimate.totalEstimate}</strong>
                 </div>
-                <div className="estimate-note">
-                  * Costs queried from blockchain in real-time
-                </div>
+                <div className="estimate-note">* Costs queried from blockchain in real-time</div>
               </div>
 
               {costEstimate.warnings && (
                 <div className="migration-warnings">
                   {costEstimate.warnings.map((warning, i) => (
                     <div key={i} className="warning-item">
-                      ⚠️ {warning}
+                      {warning}
                     </div>
                   ))}
                 </div>
@@ -279,14 +303,11 @@ export function MigrationDialog({
 
               {!isMainnet && (
                 <div className="network-notice">
-                  <p>📡 You're currently on testnet. The app will switch to mainnet automatically.</p>
+                  <p>You're currently on testnet. The app will switch to mainnet automatically.</p>
                 </div>
               )}
 
-              <button
-                className="migrate-button"
-                onClick={handleStartMigration}
-              >
+              <button className="migrate-button" onClick={handleStartMigration}>
                 Start Migration
               </button>
             </>
@@ -315,7 +336,7 @@ export function MigrationDialog({
 
           {step === 'success' && result && (
             <div className="migration-success">
-              <div className="success-icon">✅</div>
+              <div className="success-icon">Success</div>
               <h4>Migration Complete!</h4>
               <p>Your spreadsheet is now on mainnet.</p>
               <div className="result-details">
@@ -336,7 +357,7 @@ export function MigrationDialog({
 
           {step === 'error' && (
             <div className="migration-error">
-              <div className="error-icon">❌</div>
+              <div className="error-icon">Error</div>
               <h4>Migration Failed</h4>
               <p className="error-message">{error}</p>
               <button className="retry-button" onClick={() => setStep('confirm')}>
@@ -348,6 +369,5 @@ export function MigrationDialog({
       </div>
     </div>,
     document.body
-  )
+  );
 }
-

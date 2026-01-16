@@ -14,12 +14,12 @@ export class StorageAdapter extends IStorageService {
     super();
 
     // In-memory storage maps (session-scoped)
-    this._data = null;           // Current spreadsheet data
-    this._history = {};          // Cell change history by address
+    this._data = null; // Current spreadsheet data
+    this._history = {}; // Cell change history by address
     this._session = this.createEmptySession();
     this.maxHistoryEntries = 100;
 
-    console.log('💾 RAM-Only Storage Adapter initialized - Walrus is the single source of truth');
+    console.log('RAM-only Storage Adapter initialized - Walrus is the single source of truth');
   }
 
   async saveData(data) {
@@ -27,17 +27,17 @@ export class StorageAdapter extends IStorageService {
     const startTime = Date.now();
 
     try {
-      console.log(`[StorageAdapter:${saveId}] 💾 Starting RAM save`, {
+      console.log(`[StorageAdapter:${saveId}] Starting RAM save`, {
         dataSize: JSON.stringify(data).length,
         hasCelldata: !!data?.celldata,
         cellCount: data?.celldata?.length || 0,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
 
       const saveData = {
         ...data,
         savedAt: Date.now(),
-        version: data.version || this.generateVersion()
+        version: data.version || this.generateVersion(),
       };
 
       // Store in memory only
@@ -45,9 +45,9 @@ export class StorageAdapter extends IStorageService {
       this._data = saveData;
       const memDuration = Date.now() - memStart;
 
-      console.log(`[StorageAdapter:${saveId}] 📝 RAM save complete`, {
+      console.log(`[StorageAdapter:${saveId}] RAM save complete`, {
         duration: `${memDuration}ms`,
-        dataSize: JSON.stringify(saveData).length
+        dataSize: JSON.stringify(saveData).length,
       });
 
       // SAFETY NET: Also persist to sessionStorage so data survives page reload
@@ -58,13 +58,16 @@ export class StorageAdapter extends IStorageService {
           const backupStart = Date.now();
           sessionStorage.setItem(sessionBackupKey, JSON.stringify(saveData));
           const backupDuration = Date.now() - backupStart;
-          console.log(`[StorageAdapter:${saveId}] 💾 Session backup saved`, {
+          console.log(`[StorageAdapter:${saveId}] Session backup saved`, {
             duration: `${backupDuration}ms`,
-            backupSize: sessionStorage.getItem(sessionBackupKey).length
+            backupSize: sessionStorage.getItem(sessionBackupKey).length,
           });
         }
-      } catch (backupError) {
-        console.warn(`[StorageAdapter:${saveId}] ⚠️  Session storage backup failed (continuing anyway):`, backupError.message);
+      } catch (_backupError) {
+        console.warn(
+          `[StorageAdapter:${saveId}] Session storage backup failed (continuing anyway):`,
+          _backupError.message
+        );
         // Don't throw - backup is optional, don't fail the main save if session storage is full
       }
 
@@ -74,12 +77,12 @@ export class StorageAdapter extends IStorageService {
       const historyDuration = Date.now() - historyStart;
 
       const totalDuration = Date.now() - startTime;
-      console.log(`[StorageAdapter:${saveId}] ✅ Data saved to RAM`, {
+      console.log(`[StorageAdapter:${saveId}] Data saved to RAM`, {
         totalDuration: `${totalDuration}ms`,
         memoryTime: `${memDuration}ms`,
         historyUpdateTime: `${historyDuration}ms`,
         version: saveData.version,
-        warning: '⚠️  Data exists in memory only. Must save to blockchain to persist.'
+        warning: 'Data exists in memory only. Must save to blockchain to persist.',
       });
 
       return { success: true, duration: totalDuration };
@@ -87,7 +90,7 @@ export class StorageAdapter extends IStorageService {
       console.error('Failed to save data:', error);
       return {
         success: false,
-        error: typeof error === 'string' ? error : error.message || 'Unknown error'
+        error: typeof error === 'string' ? error : error.message || 'Unknown error',
       };
     }
   }
@@ -97,8 +100,8 @@ export class StorageAdapter extends IStorageService {
     const startTime = Date.now();
 
     try {
-      console.log(`[StorageAdapter:${loadId}] 📂 Starting RAM load`, {
-        timestamp: new Date().toISOString()
+      console.log(`[StorageAdapter:${loadId}] Starting RAM load`, {
+        timestamp: new Date().toISOString(),
       });
 
       const fetchStart = Date.now();
@@ -113,7 +116,7 @@ export class StorageAdapter extends IStorageService {
             const sessionBackupKey = 'walsheetz_session_backup';
             const backupData = sessionStorage.getItem(sessionBackupKey);
             if (backupData) {
-              console.log(`[StorageAdapter:${loadId}] 🔄 RAM empty, restoring from session backup...`);
+              console.log(`[StorageAdapter:${loadId}] RAM empty, restoring from session backup...`);
               const restoreStart = Date.now();
               const restoredData = JSON.parse(backupData);
               const restoreDuration = Date.now() - restoreStart;
@@ -121,36 +124,41 @@ export class StorageAdapter extends IStorageService {
               // Restore to RAM for subsequent loads
               this._data = restoredData;
 
-              console.log(`[StorageAdapter:${loadId}] ✅ Data restored from session backup`, {
+              console.log(`[StorageAdapter:${loadId}] Data restored from session backup`, {
                 restoreDuration: `${restoreDuration}ms`,
                 dataSize: JSON.stringify(restoredData).length,
                 version: restoredData?.version,
-                savedAt: restoredData?.savedAt ? new Date(restoredData.savedAt).toISOString() : 'unknown'
+                savedAt: restoredData?.savedAt
+                  ? new Date(restoredData.savedAt).toISOString()
+                  : 'unknown',
               });
 
               return restoredData;
             }
           }
         } catch (restoreError) {
-          console.warn(`[StorageAdapter:${loadId}] ⚠️  Session backup restore failed:`, restoreError.message);
+          console.warn(
+            `[StorageAdapter:${loadId}] Session backup restore failed:`,
+            restoreError.message
+          );
           // Fall through to default - backup restoration is best-effort
         }
 
-        console.log(`[StorageAdapter:${loadId}] 📭 No data in memory or session, returning default`, {
+        console.log(`[StorageAdapter:${loadId}] No data in memory or session, returning default`, {
           fetchDuration: `${fetchDuration}ms`,
-          note: 'This is expected on first load or after refresh. Load from blockchain if available.'
+          note: 'This is expected on first load or after refresh. Load from blockchain if available.',
         });
         return this.getDefaultData();
       }
 
       const totalDuration = Date.now() - startTime;
-      console.log(`[StorageAdapter:${loadId}] ✅ Data loaded from RAM`, {
+      console.log(`[StorageAdapter:${loadId}] Data loaded from RAM`, {
         totalDuration: `${totalDuration}ms`,
         fetchTime: `${fetchDuration}ms`,
         dataSize: JSON.stringify(data).length,
         cellCount: data?.celldata?.length || 0,
         version: data?.version,
-        savedAt: data?.savedAt ? new Date(data.savedAt).toISOString() : 'unknown'
+        savedAt: data?.savedAt ? new Date(data.savedAt).toISOString() : 'unknown',
       });
 
       return data;
@@ -183,14 +191,14 @@ export class StorageAdapter extends IStorageService {
 
   // Alias for backward compatibility
   clearAllData() {
-    return this.clearData()
+    return this.clearData();
   }
 
   async updateHistory(data) {
     try {
       // Add current save to history if it contains edits
       if (data.edits && Array.isArray(data.edits)) {
-        data.edits.forEach(edit => {
+        data.edits.forEach((edit) => {
           const cellKey = `${edit.row}-${edit.col}`;
 
           if (!this._history[cellKey]) {
@@ -201,7 +209,7 @@ export class StorageAdapter extends IStorageService {
             oldValue: edit.oldValue,
             newValue: edit.newValue,
             timestamp: edit.timestamp,
-            version: data.version
+            version: data.version,
           });
 
           // Limit history entries per cell
@@ -222,14 +230,14 @@ export class StorageAdapter extends IStorageService {
         metadata: {
           title: 'New Spreadsheet',
           rows: 20,
-          cols: 10
-        }
+          cols: 10,
+        },
       },
       version: this.generateVersion(),
       createdAt: Date.now(),
       savedAt: Date.now(),
-      edits: []
-    }
+      edits: [],
+    };
   }
 
   generateVersion() {
@@ -249,7 +257,7 @@ export class StorageAdapter extends IStorageService {
         historyEntries: historySize,
         totalSize: dataSize,
         storageType: 'RAM-only',
-        note: 'All data is in memory. No browser persistence.'
+        note: 'All data is in memory. No browser persistence.',
       };
     } catch (error) {
       return {
@@ -258,7 +266,7 @@ export class StorageAdapter extends IStorageService {
         hasHistory: false,
         historyEntries: 0,
         totalSize: 0,
-        error: typeof error === 'string' ? error : error.message || 'Unknown error'
+        error: typeof error === 'string' ? error : error.message || 'Unknown error',
       };
     }
   }
@@ -345,7 +353,10 @@ export class StorageAdapter extends IStorageService {
     try {
       this._session.versionMetadata = metadata;
       this._session.lastUpdated = Date.now();
-      console.log('Version metadata saved to session:', metadata?.latestVersion?.versionNumber || metadata?.versionNumber || 'unknown');
+      console.log(
+        'Version metadata saved to session:',
+        metadata?.latestVersion?.versionNumber || metadata?.versionNumber || 'unknown'
+      );
     } catch (error) {
       console.error('Failed to save version metadata:', error);
     }
@@ -388,16 +399,16 @@ export class StorageAdapter extends IStorageService {
    */
   clearInvalidSpreadsheetSession() {
     try {
-      console.log('[StorageAdapter] 🧹 Clearing invalid spreadsheet session data');
+      console.log('[StorageAdapter] Clearing invalid spreadsheet session data');
       this._session.currentSpreadsheetId = null;
       this._session.spreadsheetTitle = null;
       this._session.lastSaveTimestamp = null;
       this._session.lastWalrusBlobId = null;
       this._session.lastUpdated = Date.now();
-      console.log('[StorageAdapter] ✅ Invalid spreadsheet session cleared');
+      console.log('[StorageAdapter] Invalid spreadsheet session cleared');
       return true;
     } catch (error) {
-      console.error('[StorageAdapter] ❌ Failed to clear invalid session:', error);
+      console.error('[StorageAdapter] Failed to clear invalid session:', error);
       return false;
     }
   }
@@ -411,7 +422,7 @@ export class StorageAdapter extends IStorageService {
       spreadsheetTitle: null,
       autoSaveEnabled: false, // Auto-save is disabled by default
       lastUpdated: Date.now(),
-      version: '1.0'
+      version: '1.0',
     };
   }
 
@@ -441,7 +452,7 @@ export class StorageAdapter extends IStorageService {
 
       // Check for error in session data
       if (sessionInfo.error) {
-        console.warn('🧹 Session data corrupted, clearing:', sessionInfo.error);
+        console.warn('Session data corrupted, clearing:', sessionInfo.error);
         this.clearSession();
         return false;
       }
@@ -451,14 +462,17 @@ export class StorageAdapter extends IStorageService {
 
       // Validate required fields
       if (sessionInfo.hasSpreadsheet && !sessionInfo.hasWalletAddress) {
-        console.warn('🧹 Session data incomplete (has spreadsheet but no wallet), clearing');
+        console.warn('Session data incomplete (has spreadsheet but no wallet), clearing');
         this.clearSession();
         return false;
       }
 
       return true;
     } catch (error) {
-      console.warn('🧹 Error validating session, clearing:', typeof error === 'string' ? error : error.message || 'Unknown error');
+      console.warn(
+        'Error validating session, clearing:',
+        typeof error === 'string' ? error : error.message || 'Unknown error'
+      );
       this.clearSession();
       return false;
     }
@@ -473,14 +487,14 @@ export class StorageAdapter extends IStorageService {
         spreadsheetTitle: this._session.spreadsheetTitle,
         lastSaveTimestamp: this._session.lastSaveTimestamp,
         sessionAge: Date.now() - (this._session.lastUpdated || 0),
-        note: 'RAM-only session, no persistence across page reloads'
+        note: 'RAM-only session, no persistence across page reloads',
       };
     } catch (error) {
       return {
         hasSpreadsheet: false,
         hasWalrusBlobId: false,
         hasWalletAddress: false,
-        error: typeof error === 'string' ? error : error.message || 'Unknown error'
+        error: typeof error === 'string' ? error : error.message || 'Unknown error',
       };
     }
   }
@@ -495,10 +509,12 @@ export class StorageAdapter extends IStorageService {
         history: { ...this._history },
         session: session,
         exportedAt: Date.now(),
-        note: 'This is RAM-only data. Export for backup/testing purposes only.'
+        note: 'This is RAM-only data. Export for backup/testing purposes only.',
       };
     } catch (error) {
-      throw new Error(`Failed to export data: ${typeof error === 'string' ? error : error.message || 'Unknown error'}`);
+      throw new Error(
+        `Failed to export data: ${typeof error === 'string' ? error : error.message || 'Unknown error'}`
+      );
     }
   }
 
@@ -516,7 +532,7 @@ export class StorageAdapter extends IStorageService {
     } catch (error) {
       return {
         success: false,
-        error: typeof error === 'string' ? error : error.message || 'Unknown error'
+        error: typeof error === 'string' ? error : error.message || 'Unknown error',
       };
     }
   }
@@ -578,10 +594,13 @@ export class StorageAdapter extends IStorageService {
 
       this._session.blobExpiry[blobId] = {
         ...expiryInfo,
-        lastUpdated: Date.now()
+        lastUpdated: Date.now(),
       };
 
-      console.log(`Blob expiry information stored for ${blobId}:`, this._session.blobExpiry[blobId]);
+      console.log(
+        `Blob expiry information stored for ${blobId}:`,
+        this._session.blobExpiry[blobId]
+      );
       return true;
     } catch (error) {
       console.error('Failed to store blob expiry information:', error);
@@ -656,11 +675,11 @@ export class StorageAdapter extends IStorageService {
     try {
       this._session.partialSave = {
         ...info,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
-      console.log('[StorageAdapter] 📦 Partial save info stored to session', {
+      console.log('[StorageAdapter] Partial save info stored to session', {
         blobId: info.blobId,
-        status: info.status
+        status: info.status,
       });
     } catch (error) {
       console.error('[StorageAdapter] Failed to save partial save info:', error);
@@ -686,7 +705,7 @@ export class StorageAdapter extends IStorageService {
   clearPartialSaveInfo() {
     try {
       delete this._session.partialSave;
-      console.log('[StorageAdapter] 🧹 Partial save info cleared from session');
+      console.log('[StorageAdapter] Partial save info cleared from session');
     } catch (error) {
       console.error('[StorageAdapter] Failed to clear partial save info:', error);
     }

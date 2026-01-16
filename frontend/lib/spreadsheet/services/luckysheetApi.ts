@@ -706,7 +706,7 @@ class LuckysheetApi {
     if (missing.length > 0) {
       console.warn('[LuckysheetApi] Missing methods:', missing);
     } else {
-      console.log('[LuckysheetApi] ✅ All required methods are available');
+      console.log('[LuckysheetApi] All required methods are available');
     }
 
     return result;
@@ -751,8 +751,7 @@ class LuckysheetApi {
 // Create singleton instance
 const luckysheetApi = new LuckysheetApi();
 
-// Phase 0: Temporarily expose for console testing
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && import.meta.env?.DEV) {
   window.luckysheetApi = luckysheetApi;
 }
 

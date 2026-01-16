@@ -6,6 +6,7 @@ export default defineConfig({
     environment: 'happy-dom',
     globals: true,
     setupFiles: ['./tests/setup.js'],
+    include: ['tests/**/*.{test,spec}.{js,ts,jsx,tsx}'],
 
     // Exclude E2E tests (they use Playwright instead of vitest)
     exclude: ['**/node_modules/**', '**/dist/**', '**/tests/e2e/**'],
@@ -28,16 +29,15 @@ export default defineConfig({
       exclude: [
         'node_modules/**',
         'tests/**',
-        '**/*.test.js',
-        '**/*.config.js',
+        '**/*.test.*',
+        '**/*.config.*',
+        '**/*.d.ts',
         '**/dist/**',
         '**/build/**'
       ],
       include: [
-        'src/walrus/**/*.js',
-        'src/sdk/**/*.js',
-        'frontend/services/**/*.js',
-        'blockchain/**/*.js'
+        'packages/**/src/**',
+        'frontend/**'
       ],
       all: true,
       lines: 80,
@@ -60,12 +60,26 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@/walrus': fileURLToPath(new URL('./src/walrus', import.meta.url)),
-      '@/sdk': fileURLToPath(new URL('./src/sdk', import.meta.url)),
-      '@/web': fileURLToPath(new URL('./web', import.meta.url)),
-      '@/blockchain': fileURLToPath(new URL('./blockchain', import.meta.url)),
+      '@dreamlit/walrus-sui-core/blockchain-integration': fileURLToPath(
+        new URL('./packages/walrus-sui-core/src/blockchain-integration/index.ts', import.meta.url)
+      ),
+      '@dreamlit/walrus-sui-core/blockchain': fileURLToPath(
+        new URL('./packages/walrus-sui-core/src/blockchain/index.ts', import.meta.url)
+      ),
+      '@dreamlit/walrus-sui-core/transaction': fileURLToPath(
+        new URL('./packages/walrus-sui-core/src/transaction-management/index.ts', import.meta.url)
+      ),
+      '@dreamlit/walrus-sui-core/data-integrity': fileURLToPath(
+        new URL('./packages/walrus-sui-core/src/data-integrity/index.ts', import.meta.url)
+      ),
+      '@dreamlit/walrus-sui-core': fileURLToPath(new URL('./packages/walrus-sui-core/src/index.ts', import.meta.url)),
+      '@dreamlit/walrus': fileURLToPath(new URL('./packages/walrus/src/index.ts', import.meta.url)),
+      '@dreamlit/shared': fileURLToPath(new URL('./packages/shared/src/index.ts', import.meta.url)),
       '@': fileURLToPath(new URL('./frontend', import.meta.url)),
-      '@blockchain': fileURLToPath(new URL('./blockchain', import.meta.url)),
+      '@lib': fileURLToPath(new URL('./frontend/lib', import.meta.url)),
+      '@app': fileURLToPath(new URL('./frontend/app', import.meta.url)),
+      '@features': fileURLToPath(new URL('./frontend/features', import.meta.url)),
+      '@shared': fileURLToPath(new URL('./frontend/shared', import.meta.url)),
       '@scripts': fileURLToPath(new URL('./scripts', import.meta.url))
     }
   },

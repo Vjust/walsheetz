@@ -273,7 +273,7 @@ export class SpreadsheetImportExportService {
       const filename = options.filename || this._generateFilename(options.title || 'spreadsheet');
 
       // Write file
-      XLSX.writeFile(workbook, filename);
+      this._writeWorkbookToFile(workbook, filename);
 
       logger.info(LogComponent.UI_COMPONENT, 'export_success', 'Spreadsheet export completed', {
         filename,
@@ -386,7 +386,7 @@ export class SpreadsheetImportExportService {
       const workbook = this._convertSheetToWorkbook(sheet, options);
       const filename = options.filename || this._generateFilename(sheet.name || 'export', 'csv');
 
-      XLSX.writeFile(workbook, filename, { bookType: 'csv' });
+      this._writeWorkbookToFile(workbook, filename, { bookType: 'csv' });
 
       logger.info(LogComponent.UI_COMPONENT, 'csv_export_success', 'CSV export completed', {
         filename,
@@ -885,6 +885,10 @@ export class SpreadsheetImportExportService {
     const timestamp = new Date().toISOString().slice(0, 10);
     const sanitized = baseName.replace(/[^a-zA-Z0-9_-]/g, '_');
     return `${sanitized}_${timestamp}.${extension}`;
+  }
+
+  _writeWorkbookToFile(workbook, filename, options = {}) {
+    XLSX.writeFile(workbook, filename, options);
   }
 
   /**

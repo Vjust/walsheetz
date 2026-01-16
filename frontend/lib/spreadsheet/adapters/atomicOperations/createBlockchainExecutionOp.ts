@@ -5,7 +5,7 @@
  * This operation depends on both Walrus storage and transaction preparation.
  */
 
-import { logger, LogComponent } from '@utils/logging/Logger.js';
+import { logger, LogComponent } from '@dreamlit/shared';
 
 /**
  * Creates a blockchain execution operation
@@ -19,22 +19,33 @@ export function createBlockchainExecutionOp(adapter) {
     name: 'blockchain_execution',
     dependencies: ['walrus_storage', 'transaction_preparation'],
     execute: async (context, operationId) => {
-      helpers.logOperationStep('blockchain', 'start', `Executing blockchain transaction [${operationId}]`);
+      helpers.logOperationStep(
+        'blockchain',
+        'start',
+        `Executing blockchain transaction [${operationId}]`
+      );
 
       const walrusResult = helpers.getOperationResult(context, 'walrus_storage');
       const txPrepResult = helpers.getOperationResult(context, 'transaction_preparation');
 
       if (!walrusResult || !txPrepResult) {
-        const availableResults = context.results.map(r => r.name).join(', ');
-        throw new Error(`Missing required results from parallel operations. Available: ${availableResults}`);
+        const availableResults = context.results.map((r) => r.name).join(', ');
+        throw new Error(
+          `Missing required results from parallel operations. Available: ${availableResults}`
+        );
       }
 
       // Debug log the results structure
-      logger.debug(LogComponent.BLOCKCHAIN_ADAPTER, 'atomic_blockchain_debug', 'Results structure', {
-        walrusResult: walrusResult ? Object.keys(walrusResult) : 'missing',
-        txPrepResult: txPrepResult ? Object.keys(txPrepResult) : 'missing',
-        operationId
-      });
+      logger.debug(
+        LogComponent.BLOCKCHAIN_ADAPTER,
+        'atomic_blockchain_debug',
+        'Results structure',
+        {
+          walrusResult: walrusResult ? Object.keys(walrusResult) : 'missing',
+          txPrepResult: txPrepResult ? Object.keys(txPrepResult) : 'missing',
+          operationId,
+        }
+      );
 
       // Safely access versionData with fallback
       helpers.validateOperationResult(txPrepResult, 'versionData', 'Transaction preparation');
@@ -44,7 +55,7 @@ export function createBlockchainExecutionOp(adapter) {
       const finalVersionData = {
         ...txPrepResult.versionData,
         walrusBlobId: walrusResult.blobId,
-        contentHash: walrusResult.contentHash?.hash || 'unknown'
+        contentHash: walrusResult.contentHash?.hash || 'unknown',
       };
 
       // Create and execute the storage transaction with actual blob ID
@@ -52,7 +63,8 @@ export function createBlockchainExecutionOp(adapter) {
 
       // Estimate gas for the actual transaction
       const storageGasEstimate = await adapter.suiService.estimateGas(storageTx);
-      const storageBalanceCheck = await adapter.suiService.checkSufficientBalance(storageGasEstimate);
+      const storageBalanceCheck =
+        await adapter.suiService.checkSufficientBalance(storageGasEstimate);
 
       if (!storageBalanceCheck.sufficient) {
         throw new Error(`Insufficient balance: ${storageBalanceCheck.message}`);
@@ -65,15 +77,20 @@ export function createBlockchainExecutionOp(adapter) {
         throw new Error(`Blockchain transaction failed: ${blockchainResult.error}`);
       }
 
-      helpers.logOperationStep('blockchain', 'success', `Blockchain transaction completed [${operationId}]`, {
-        transactionDigest: blockchainResult.digest
-      });
+      helpers.logOperationStep(
+        'blockchain',
+        'success',
+        `Blockchain transaction completed [${operationId}]`,
+        {
+          transactionDigest: blockchainResult.digest,
+        }
+      );
 
       return {
         success: true,
         walrusResult,
         blockchainResult,
-        operationId
+        operationId,
       };
     },
     getCleanupHandler: (result) => {
@@ -82,8 +99,13 @@ export function createBlockchainExecutionOp(adapter) {
         if (result.blockchainResult?.digest) {
           metadata.transactionDigest = result.blockchainResult.digest;
         }
-        helpers.logOperationStep('blockchain', 'cleanup', 'Cleaning up blockchain operations', metadata);
+        helpers.logOperationStep(
+          'blockchain',
+          'cleanup',
+          'Cleaning up blockchain operations',
+          metadata
+        );
       };
-    }
+    },
   };
 }

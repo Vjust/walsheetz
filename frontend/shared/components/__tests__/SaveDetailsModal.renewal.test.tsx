@@ -16,9 +16,9 @@ import userEvent from '@testing-library/user-event';
  */
 
 // Import component first
-import { SaveDetailsModal } from '@features/spreadsheet/components/SaveDetailsModal.jsx';
+import { SaveDetailsModal } from '@features/spreadsheet/components/SaveDetailsModal';
 // Then import the service to mock it
-import { browserWalrusService } from '../../../../packages/walrus/src/browser/BrowserWalrusService.ts';
+import { browserWalrusService } from '@dreamlit/walrus';
 
 // Mock BrowserWalrusService methods
 const mockExtendBlobStorage = vi.spyOn(browserWalrusService, 'extendBlobStorage');
@@ -41,14 +41,14 @@ describe('SaveDetailsModal Renewal', () => {
       endEpoch: 110,
       remainingEpochs: 60,
       additionalEpochs: 10,
-      expiryTimestamp: Date.now() + (17 * 24 * 60 * 60 * 1000)
+      expiryTimestamp: Date.now() + 17 * 24 * 60 * 60 * 1000,
     });
 
     mockStorageAdapter = {
       setWalrusBlobExpiry: vi.fn(),
       getWalrusBlobExpiry: vi.fn(() => null),
       getAllBlobExpiry: vi.fn(() => ({})),
-      isBlobExpiryApproaching: vi.fn(() => false)
+      isBlobExpiryApproaching: vi.fn(() => false),
     };
 
     mockOnExpiryUpdate = vi.fn();
@@ -66,12 +66,12 @@ describe('SaveDetailsModal Renewal', () => {
       transactionDigest: '0xabc123',
       contentHash: 'hash-content-123',
       storageStatus: 'newly_created',
-      expiryTimestamp: now + (daysUntilExpiry * 24 * 60 * 60 * 1000),
+      expiryTimestamp: now + daysUntilExpiry * 24 * 60 * 60 * 1000,
       endEpoch: 100,
       method: 'put',
       storageStrategy: 'standard',
       timestamp: now,
-      isFirstSave: false
+      isFirstSave: false,
     };
   };
 
@@ -90,9 +90,12 @@ describe('SaveDetailsModal Renewal', () => {
         />
       );
 
-      await waitFor(() => {
-        expect(screen.getByText(/Extend Storage/)).toBeInTheDocument();
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/Extend Storage/)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
     });
 
     it('should not display renewal button when expiry is after 7 days', async () => {
@@ -110,9 +113,12 @@ describe('SaveDetailsModal Renewal', () => {
       );
 
       // Button should not be visible
-      await waitFor(() => {
-        expect(screen.queryByText(/Extend Storage/)).not.toBeInTheDocument();
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          expect(screen.queryByText(/Extend Storage/)).not.toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
     });
 
     it('should display expiry warning when storage expires soon', async () => {
@@ -129,9 +135,12 @@ describe('SaveDetailsModal Renewal', () => {
         />
       );
 
-      await waitFor(() => {
-        expect(screen.getByText(/Storage Expiring Soon/)).toBeInTheDocument();
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/Storage Expiring Soon/)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
     });
   });
 
@@ -144,7 +153,7 @@ describe('SaveDetailsModal Renewal', () => {
         endEpoch: 110,
         remainingEpochs: 60,
         additionalEpochs: 10,
-        expiryTimestamp: now + (17 * 24 * 60 * 60 * 1000)
+        expiryTimestamp: now + 17 * 24 * 60 * 60 * 1000,
       });
 
       const saveInfo = createSaveInfo(5);
@@ -166,14 +175,17 @@ describe('SaveDetailsModal Renewal', () => {
         await userEvent.click(renewalButton);
       });
 
-      await waitFor(() => {
-        expect(mockExtendBlobStorage).toHaveBeenCalledWith('test-blob-123', 10);
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          expect(mockExtendBlobStorage).toHaveBeenCalledWith('test-blob-123', 10);
+        },
+        { timeout: 5000 }
+      );
     });
 
     it('should update StorageAdapter with new expiry after renewal', async () => {
       const now = Date.now();
-      const newExpiryTimestamp = now + (17 * 24 * 60 * 60 * 1000);
+      const newExpiryTimestamp = now + 17 * 24 * 60 * 60 * 1000;
       const newEndEpoch = 110;
 
       mockExtendBlobStorage.mockResolvedValue({
@@ -182,7 +194,7 @@ describe('SaveDetailsModal Renewal', () => {
         endEpoch: newEndEpoch,
         remainingEpochs: 60,
         additionalEpochs: 10,
-        expiryTimestamp: newExpiryTimestamp
+        expiryTimestamp: newExpiryTimestamp,
       });
 
       const saveInfo = createSaveInfo(5);
@@ -204,20 +216,23 @@ describe('SaveDetailsModal Renewal', () => {
         await userEvent.click(renewalButton);
       });
 
-      await waitFor(() => {
-        expect(mockStorageAdapter.setWalrusBlobExpiry).toHaveBeenCalledWith(
-          'test-blob-123',
-          expect.objectContaining({
-            timestamp: newExpiryTimestamp,
-            endEpoch: newEndEpoch
-          })
-        );
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          expect(mockStorageAdapter.setWalrusBlobExpiry).toHaveBeenCalledWith(
+            'test-blob-123',
+            expect.objectContaining({
+              timestamp: newExpiryTimestamp,
+              endEpoch: newEndEpoch,
+            })
+          );
+        },
+        { timeout: 5000 }
+      );
     });
 
     it('should call onExpiryUpdate callback after successful renewal', async () => {
       const now = Date.now();
-      const newExpiryTimestamp = now + (17 * 24 * 60 * 60 * 1000);
+      const newExpiryTimestamp = now + 17 * 24 * 60 * 60 * 1000;
       const newEndEpoch = 110;
 
       mockExtendBlobStorage.mockResolvedValue({
@@ -226,7 +241,7 @@ describe('SaveDetailsModal Renewal', () => {
         endEpoch: newEndEpoch,
         remainingEpochs: 60,
         additionalEpochs: 10,
-        expiryTimestamp: newExpiryTimestamp
+        expiryTimestamp: newExpiryTimestamp,
       });
 
       const saveInfo = createSaveInfo(5);
@@ -248,17 +263,20 @@ describe('SaveDetailsModal Renewal', () => {
         await userEvent.click(renewalButton);
       });
 
-      await waitFor(() => {
-        expect(mockOnExpiryUpdate).toHaveBeenCalledWith({
-          expiryTimestamp: newExpiryTimestamp,
-          endEpoch: newEndEpoch
-        });
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          expect(mockOnExpiryUpdate).toHaveBeenCalledWith({
+            expiryTimestamp: newExpiryTimestamp,
+            endEpoch: newEndEpoch,
+          });
+        },
+        { timeout: 5000 }
+      );
     });
 
     it('should emit blob:expiry-extended event after renewal', async () => {
       const now = Date.now();
-      const newExpiryTimestamp = now + (17 * 24 * 60 * 60 * 1000);
+      const newExpiryTimestamp = now + 17 * 24 * 60 * 60 * 1000;
       const newEndEpoch = 110;
 
       mockExtendBlobStorage.mockResolvedValue({
@@ -267,7 +285,7 @@ describe('SaveDetailsModal Renewal', () => {
         endEpoch: newEndEpoch,
         remainingEpochs: 60,
         additionalEpochs: 10,
-        expiryTimestamp: newExpiryTimestamp
+        expiryTimestamp: newExpiryTimestamp,
       });
 
       const saveInfo = createSaveInfo(5);
@@ -292,15 +310,18 @@ describe('SaveDetailsModal Renewal', () => {
         await userEvent.click(renewalButton);
       });
 
-      await waitFor(() => {
-        expect(eventListener).toHaveBeenCalled();
-        const event = eventListener.mock.calls[0][0];
-        expect(event.detail).toMatchObject({
-          blobId: 'test-blob-123',
-          endEpoch: newEndEpoch,
-          newExpiry: newExpiryTimestamp
-        });
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          expect(eventListener).toHaveBeenCalled();
+          const event = eventListener.mock.calls[0][0];
+          expect(event.detail).toMatchObject({
+            blobId: 'test-blob-123',
+            endEpoch: newEndEpoch,
+            newExpiry: newExpiryTimestamp,
+          });
+        },
+        { timeout: 5000 }
+      );
 
       window.removeEventListener('blob:expiry-extended', eventListener);
     });
@@ -310,7 +331,7 @@ describe('SaveDetailsModal Renewal', () => {
     it('should display error message when renewal fails', async () => {
       mockExtendBlobStorage.mockResolvedValue({
         success: false,
-        error: 'Blob not found on aggregator'
+        error: 'Blob not found on aggregator',
       });
 
       const saveInfo = createSaveInfo(5);
@@ -332,15 +353,18 @@ describe('SaveDetailsModal Renewal', () => {
         await userEvent.click(renewalButton);
       });
 
-      await waitFor(() => {
-        expect(screen.getByText(/Blob not found on aggregator/)).toBeInTheDocument();
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/Blob not found on aggregator/)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
     });
 
     it('should not update StorageAdapter if renewal fails', async () => {
       mockExtendBlobStorage.mockResolvedValue({
         success: false,
-        error: 'Network error'
+        error: 'Network error',
       });
 
       const saveInfo = createSaveInfo(5);
@@ -362,9 +386,12 @@ describe('SaveDetailsModal Renewal', () => {
         await userEvent.click(renewalButton);
       });
 
-      await waitFor(() => {
-        expect(mockStorageAdapter.setWalrusBlobExpiry).not.toHaveBeenCalled();
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          expect(mockStorageAdapter.setWalrusBlobExpiry).not.toHaveBeenCalled();
+        },
+        { timeout: 5000 }
+      );
     });
 
     it('should handle exception thrown by extendBlobStorage', async () => {
@@ -389,16 +416,19 @@ describe('SaveDetailsModal Renewal', () => {
         await userEvent.click(renewalButton);
       });
 
-      await waitFor(() => {
-        expect(screen.getByText(/Connection timeout/)).toBeInTheDocument();
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/Connection timeout/)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
     });
   });
 
   describe('Button State During Renewal', () => {
     it('should disable renewal button while renewal is in progress', async () => {
       let resolveRenewal;
-      const renewalPromise = new Promise(resolve => {
+      const renewalPromise = new Promise((resolve) => {
         resolveRenewal = resolve;
       });
 
@@ -424,9 +454,12 @@ describe('SaveDetailsModal Renewal', () => {
       });
 
       // Should show "Extending..." while in progress
-      await waitFor(() => {
-        expect(screen.getByText(/Extending\.\.\./)).toBeInTheDocument();
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/Extending\.\.\./)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
       // Resolve the renewal
       await act(async () => {
@@ -436,14 +469,17 @@ describe('SaveDetailsModal Renewal', () => {
           endEpoch: 110,
           remainingEpochs: 60,
           additionalEpochs: 10,
-          expiryTimestamp: Date.now() + (17 * 24 * 60 * 60 * 1000)
+          expiryTimestamp: Date.now() + 17 * 24 * 60 * 60 * 1000,
         });
       });
 
       // Button text should revert to "Extend Storage"
-      await waitFor(() => {
-        expect(screen.getByText(/Extend Storage/)).toBeInTheDocument();
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/Extend Storage/)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
     });
   });
 });

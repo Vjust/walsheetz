@@ -38,7 +38,6 @@
     "contentHashInSave": true,
     "clockInSave": true,
     "autoSave": { "enabled": true, "intervalMs": 5000 },
-    "collaboration": { "enabled": true },
     "gasManagement": { "bufferPercent": 25 },
     "storage": { "preferWalrus": true, "fallbackToLocal": true },
     "walrus": {

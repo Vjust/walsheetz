@@ -77,23 +77,23 @@ function convertToLuckysheetFormula(name, metadata) {
  * @returns {number} - Number of WZ functions injected
  */
 export function injectWzIntoSheets(reason = 'manual call') {
-  console.log(`[WZ Inject] 🎯 Injecting WZ functions into sheet files (reason: ${reason})...`);
+  console.log(`[WZ Inject] Injecting WZ functions into sheet files (reason: ${reason})...`);
 
   if (!window.luckysheet) {
-    console.error('[WZ Inject] ❌ window.luckysheet not available');
+    console.error('[WZ Inject] window.luckysheet not available');
     return 0;
   }
 
   if (typeof window.luckysheet.getluckysheetfile !== 'function') {
-    console.error('[WZ Inject] ❌ window.luckysheet.getluckysheetfile not available');
+    console.error('[WZ Inject] window.luckysheet.getluckysheetfile not available');
     return 0;
   }
 
   const files = window.luckysheet.getluckysheetfile() || [];
-  console.log(`[WZ Inject] 📄 Found ${files.length} sheet file(s)`);
+  console.log(`[WZ Inject] Found ${files.length} sheet file(s)`);
 
   if (files.length === 0) {
-    console.warn('[WZ Inject] ⚠️  No sheet files found - may be too early');
+    console.warn('[WZ Inject] No sheet files found - may be too early');
     return 0;
   }
 
@@ -101,7 +101,7 @@ export function injectWzIntoSheets(reason = 'manual call') {
 
   // Patch each sheet file
   files.forEach((sheet, idx) => {
-    console.log(`[WZ Inject] 🔧 Processing sheet ${idx}: "${sheet.name || 'Unnamed'}"`);
+    console.log(`[WZ Inject] Processing sheet ${idx}: "${sheet.name || 'Unnamed'}"`);
 
     // Ensure sheet.luckysheet_function exists (object format)
     if (!sheet.luckysheet_function || typeof sheet.luckysheet_function !== 'object') {
@@ -128,7 +128,9 @@ export function injectWzIntoSheets(reason = 'manual call') {
     });
 
     if (objAdded > 0) {
-      console.log(`[WZ Inject]    ✅ Added ${objAdded} WZ functions to sheet[${idx}].luckysheet_function (nested with execution wrappers)`);
+      console.log(
+        `[WZ Inject]    Added ${objAdded} WZ functions to sheet[${idx}].luckysheet_function (nested with execution wrappers)`
+      );
       totalInjected += objAdded;
     }
 
@@ -144,7 +146,7 @@ export function injectWzIntoSheets(reason = 'manual call') {
       });
 
       if (arrAdded > 0) {
-        console.log(`[WZ Inject]    ✅ Added ${arrAdded} WZ functions to sheet[${idx}].functionList array`);
+        console.log(`[WZ Inject]    Added ${arrAdded} WZ functions to sheet[${idx}].functionList array`);
         totalInjected += arrAdded;
       }
     }
@@ -155,7 +157,7 @@ export function injectWzIntoSheets(reason = 'manual call') {
   totalInjected += globalAdded;
 
   injectionCount++;
-  console.log(`[WZ Inject] ✅ Injection #${injectionCount} complete: ${totalInjected} total entries added`);
+  console.log(`[WZ Inject] Injection #${injectionCount} complete: ${totalInjected} total entries added`);
 
   return totalInjected;
 }
@@ -183,7 +185,9 @@ function patchGlobalMirrors() {
       }
     });
     if (added > 0) {
-      console.log(`[WZ Inject]    ✅ Added ${added} WZ functions to window.luckysheet_function (nested with execution wrappers)`);
+      console.log(
+        `[WZ Inject]    Added ${added} WZ functions to window.luckysheet_function (nested with execution wrappers)`
+      );
     }
   }
 
@@ -198,7 +202,7 @@ function patchGlobalMirrors() {
       }
     });
     if (arrAdded > 0) {
-      console.log(`[WZ Inject]    ✅ Added ${arrAdded} WZ functions to window.luckysheet_configsetting.functionlist`);
+      console.log(`[WZ Inject]    Added ${arrAdded} WZ functions to window.luckysheet_configsetting.functionlist`);
       added += arrAdded;
     }
   }
@@ -214,7 +218,7 @@ function patchGlobalMirrors() {
  * NOT from the public structures we've been patching.
  */
 function patchInternalStoreFunctionlist() {
-  console.log('[WZ Inject] 🎯 Attempting to patch INTERNAL Store.functionlist for autocomplete...');
+  console.log('[WZ Inject] Attempting to patch INTERNAL Store.functionlist for autocomplete...');
 
   let patched = 0;
 
@@ -226,7 +230,7 @@ function patchInternalStoreFunctionlist() {
 
         // Check if this property has a functionlist array
         if (prop && typeof prop === 'object' && Array.isArray(prop.functionlist)) {
-          console.log(`[WZ Inject] 🔍 Found functionlist in window.luckysheet.${key}`);
+          console.log(`[WZ Inject] Found functionlist in window.luckysheet.${key}`);
           const beforeCount = prop.functionlist.length;
 
           Object.entries(WALSHEETZ_FUNCTION_METADATA).forEach(([name, metadata]) => {
@@ -241,7 +245,9 @@ function patchInternalStoreFunctionlist() {
             }
           });
 
-          console.log(`[WZ Inject] ✅ Patched ${key}.functionlist: ${beforeCount} -> ${prop.functionlist.length} (+${patched} WZ functions)`);
+          console.log(
+            `[WZ Inject] Patched ${key}.functionlist: ${beforeCount} -> ${prop.functionlist.length} (+${patched} WZ functions)`
+          );
         }
 
         // Check nested structures like fn[lang].functionlist
@@ -250,7 +256,7 @@ function patchInternalStoreFunctionlist() {
             try {
               const nested = prop[nestedKey];
               if (nested && Array.isArray(nested.functionlist)) {
-                console.log(`[WZ Inject] 🔍 Found functionlist in window.luckysheet.${key}.${nestedKey}`);
+                console.log(`[WZ Inject] Found functionlist in window.luckysheet.${key}.${nestedKey}`);
                 const beforeCount = nested.functionlist.length;
 
                 Object.entries(WALSHEETZ_FUNCTION_METADATA).forEach(([name, metadata]) => {
@@ -264,7 +270,9 @@ function patchInternalStoreFunctionlist() {
                   }
                 });
 
-                console.log(`[WZ Inject] ✅ Patched ${key}.${nestedKey}.functionlist: ${beforeCount} -> ${nested.functionlist.length}`);
+                console.log(
+                  `[WZ Inject] Patched ${key}.${nestedKey}.functionlist: ${beforeCount} -> ${nested.functionlist.length}`
+                );
               }
             } catch (e) {
               // Skip properties that throw errors on access
@@ -279,7 +287,7 @@ function patchInternalStoreFunctionlist() {
 
   // Strategy 2: Check window.formula (may exist in some builds)
   if (window.formula && Array.isArray(window.formula.functionlist)) {
-    console.log('[WZ Inject] 🔍 Found window.formula.functionlist');
+    console.log('[WZ Inject] Found window.formula.functionlist');
     const beforeCount = window.formula.functionlist.length;
 
     Object.entries(WALSHEETZ_FUNCTION_METADATA).forEach(([name, metadata]) => {
@@ -292,12 +300,14 @@ function patchInternalStoreFunctionlist() {
       }
     });
 
-    console.log(`[WZ Inject] ✅ Patched window.formula.functionlist: ${beforeCount} -> ${window.formula.functionlist.length}`);
+    console.log(
+      `[WZ Inject] Patched window.formula.functionlist: ${beforeCount} -> ${window.formula.functionlist.length}`
+    );
   }
 
   // Strategy 3: Check for Store object directly
   if (window.Store && Array.isArray(window.Store.functionlist)) {
-    console.log('[WZ Inject] 🔍 Found window.Store.functionlist');
+    console.log('[WZ Inject] Found window.Store.functionlist');
     const beforeCount = window.Store.functionlist.length;
 
     Object.entries(WALSHEETZ_FUNCTION_METADATA).forEach(([name, metadata]) => {
@@ -310,14 +320,16 @@ function patchInternalStoreFunctionlist() {
       }
     });
 
-    console.log(`[WZ Inject] ✅ Patched window.Store.functionlist: ${beforeCount} -> ${window.Store.functionlist.length}`);
+    console.log(
+      `[WZ Inject] Patched window.Store.functionlist: ${beforeCount} -> ${window.Store.functionlist.length}`
+    );
   }
 
   if (patched === 0) {
-    console.warn('[WZ Inject] ⚠️  Could not find internal Store.functionlist - autocomplete may not work');
-    console.warn('[WZ Inject] 💡 Autocomplete likely uses a closure-scoped Store that we cannot access');
+    console.warn('[WZ Inject] Could not find internal Store.functionlist - autocomplete may not work');
+    console.warn('[WZ Inject] Note: autocomplete likely uses a closure-scoped Store that we cannot access');
   } else {
-    console.log(`[WZ Inject] ✅ Successfully patched internal Store with ${patched} WZ functions!`);
+    console.log(`[WZ Inject] Successfully patched internal Store with ${patched} WZ functions`);
   }
 
   return patched;
@@ -331,7 +343,7 @@ function patchInternalStoreFunctionlist() {
  * @returns {boolean} - True if hook was installed
  */
 export function setupLuckysheetHook() {
-  console.log('[WZ Inject] 🔧 Setting up luckysheet.create hook...');
+  console.log('[WZ Inject] Setting up luckysheet.create hook...');
 
   if (hookInstalled) {
     console.log('[WZ Inject] Hook already installed');
@@ -339,26 +351,26 @@ export function setupLuckysheetHook() {
   }
 
   if (!window.luckysheet) {
-    console.error('[WZ Inject] ❌ window.luckysheet not available');
+    console.error('[WZ Inject] window.luckysheet not available');
     return false;
   }
 
   if (typeof window.luckysheet.create !== 'function') {
-    console.error('[WZ Inject] ❌ window.luckysheet.create is not a function');
+    console.error('[WZ Inject] window.luckysheet.create is not a function');
     return false;
   }
 
   const originalCreate = window.luckysheet.create;
 
   window.luckysheet.create = function(config) {
-    console.log('[WZ Inject] 🎯 luckysheet.create() called - will inject WZ functions into INTERNAL Store');
+    console.log('[WZ Inject] luckysheet.create() called - will inject WZ functions into INTERNAL Store');
 
     // Call original create
     const result = originalCreate.call(this, config);
 
     // CRITICAL: Patch the internal Store.functionlist that autocomplete actually uses
     setTimeout(() => {
-      console.log('[WZ Inject] 🚀 Patching internal structures after create()...');
+      console.log('[WZ Inject] Patching internal structures after create()...');
 
       // First try to patch internal Store
       const storePatched = patchInternalStoreFunctionlist();
@@ -366,7 +378,9 @@ export function setupLuckysheetHook() {
       // Then patch public structures as fallback
       injectWzIntoSheets('after luckysheet.create');
 
-      console.log(`[WZ Inject] 📊 Injection complete: ${storePatched > 0 ? 'Internal Store patched ✅' : 'Public structures only ⚠️'}`);
+      console.log(
+        `[WZ Inject] Injection complete: ${storePatched > 0 ? 'Internal Store patched' : 'Public structures only'}`
+      );
     }, 100);
 
     // Also hook workbookCreateAfter if available
@@ -374,7 +388,7 @@ export function setupLuckysheetHook() {
     if (config?.hook) {
       const originalWorkbookAfter = config.hook.workbookCreateAfter;
       config.hook.workbookCreateAfter = function(...args) {
-        console.log('[WZ Inject] 📋 workbookCreateAfter fired - ensuring internal Store is patched');
+        console.log('[WZ Inject] workbookCreateAfter fired - ensuring internal Store is patched');
 
         // Re-patch internal Store in case it was rebuilt
         patchInternalStoreFunctionlist();
@@ -392,7 +406,7 @@ export function setupLuckysheetHook() {
   };
 
   hookInstalled = true;
-  console.log('[WZ Inject] ✅ Hook installed on window.luckysheet.create');
+  console.log('[WZ Inject] Hook installed on window.luckysheet.create');
 
   return true;
 }

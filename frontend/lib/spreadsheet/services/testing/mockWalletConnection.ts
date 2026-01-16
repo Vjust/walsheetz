@@ -29,7 +29,7 @@ const mockSuiClient = {
  */
 const mockWallet = {
   name: 'Test Wallet',
-  icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><text y="24" font-size="24">🧪</text></svg>',
+  icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><text y="24" font-size="24">T</text></svg>',
   features: {
     'sui:signAndExecuteTransactionBlock': {},
     'sui:signTransactionBlock': {}
@@ -91,7 +91,7 @@ export const mockWalletConnection = {
 
   // Actions - now update state
   connectWallet: async (wallet) => {
-    console.log('🧪 Test Mode: Mock wallet connect', wallet?.name);
+    console.log('Test mode: mock wallet connect', wallet?.name);
     mockState.isConnecting = true;
 
     // Simulate async connection
@@ -109,7 +109,7 @@ export const mockWalletConnection = {
   },
 
   disconnectWallet: () => {
-    console.log('🧪 Test Mode: Mock wallet disconnect');
+    console.log('Test mode: mock wallet disconnect');
     mockState.isConnected = false;
     mockState.currentAccount = null;
     mockState.address = undefined;
@@ -119,7 +119,7 @@ export const mockWalletConnection = {
   },
 
   sign: async (transaction) => {
-    console.log('🧪 Test Mode: Mock transaction sign');
+    console.log('Test mode: mock transaction sign');
     return Promise.resolve({
       signature: new Uint8Array(64),
       transactionBlockBytes: new Uint8Array(100)
@@ -127,7 +127,7 @@ export const mockWalletConnection = {
   },
 
   signAndExecute: async (transaction, options = {}) => {
-    console.log('🧪 Test Mode: Mock transaction signAndExecute', options);
+    console.log('Test mode: mock transaction signAndExecute', options);
     // Return a fake transaction result
     return Promise.resolve({
       digest: `test-tx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -141,20 +141,20 @@ export const mockWalletConnection = {
   },
 
   fetchBalance: async () => {
-    console.log('🧪 Test Mode: Mock fetch balance');
+    console.log('Test mode: mock fetch balance');
     return Promise.resolve();
   },
 
   // Transaction builders - return mock transactions
   createSpreadsheetTransaction: async (title) => {
-    console.log('🧪 Test Mode: Mock create spreadsheet transaction', title);
+    console.log('Test mode: mock create spreadsheet transaction', title);
     const tx = new Transaction();
     tx.setGasBudget(10000000);
     return tx;
   },
 
   saveVersionTransaction: async (spreadsheetId, walrusBlobId, contentHash, cellCount, description) => {
-    console.log('🧪 Test Mode: Mock save version transaction', { spreadsheetId, walrusBlobId });
+    console.log('Test mode: mock save version transaction', { spreadsheetId, walrusBlobId });
     const tx = new Transaction();
     tx.setGasBudget(10000000);
     return tx;

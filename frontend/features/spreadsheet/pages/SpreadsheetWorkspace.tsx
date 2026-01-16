@@ -4,8 +4,8 @@
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { Spreadsheet } from '@features/spreadsheet/components';
-import { WALSHEETZ_FUNCTION_METADATA } from '../../../lib/spreadsheet/services/formulas/WalSheetzFunctions.ts';
-import { logger, LogComponent } from '../../../../packages/shared/src/utils/Logger.js';
+import { WALSHEETZ_FUNCTION_METADATA } from '@lib/spreadsheet/services/formulas/WalSheetzFunctions';
+import { logger, LogComponent } from '@dreamlit/walrus';
 import '../styles/SpreadsheetWorkspace.css';
 
 export function SpreadsheetWorkspace() {
@@ -22,7 +22,7 @@ export function SpreadsheetWorkspace() {
   useEffect(() => {
     if (blobId) {
       logger.info(LogComponent.UI, 'workspace_blob_load', 'Loading blob into workspace', {
-        blobId
+        blobId,
       });
       // Auto-load blob if specified in URL
       // This would be handled by the Spreadsheet component
@@ -34,7 +34,7 @@ export function SpreadsheetWorkspace() {
    */
   const getCategories = () => {
     const categories = new Set();
-    Object.values(WALSHEETZ_FUNCTION_METADATA).forEach(meta => {
+    Object.values(WALSHEETZ_FUNCTION_METADATA).forEach((meta) => {
       if (meta.category) categories.add(meta.category);
     });
     return ['all', ...Array.from(categories).sort()];
@@ -48,9 +48,10 @@ export function SpreadsheetWorkspace() {
 
     // Filter by search term
     if (searchTerm) {
-      formulas = formulas.filter(([name, meta]) =>
-        name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        meta.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      formulas = formulas.filter(
+        ([name, meta]) =>
+          name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          meta.description?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -76,7 +77,7 @@ export function SpreadsheetWorkspace() {
         logger.debug(LogComponent.UI, 'formula_inserted', 'Formula inserted', {
           formula,
           row: row[0],
-          col: column[0]
+          col: column[0],
         });
       }
     }
@@ -88,7 +89,7 @@ export function SpreadsheetWorkspace() {
   const copyFormula = (signature) => {
     navigator.clipboard.writeText(`=${signature}`);
     logger.debug(LogComponent.UI, 'formula_copied', 'Formula copied to clipboard', {
-      formula: signature
+      formula: signature,
     });
   };
 
@@ -106,7 +107,7 @@ export function SpreadsheetWorkspace() {
             onClick={() => setSidebarVisible(!sidebarVisible)}
             title={sidebarVisible ? 'Hide Formula Sidebar' : 'Show Formula Sidebar'}
           >
-            {sidebarVisible ? '▶' : '◀'} Formulas
+            {sidebarVisible ? 'Hide formulas' : 'Show formulas'}
           </button>
         </div>
 
@@ -135,7 +136,7 @@ export function SpreadsheetWorkspace() {
 
           {/* Category Filter */}
           <div className="sidebar-categories">
-            {categories.map(cat => (
+            {categories.map((cat) => (
               <button
                 key={cat}
                 className={`category-btn ${categoryFilter === cat ? 'active' : ''}`}
@@ -160,7 +161,7 @@ export function SpreadsheetWorkspace() {
                   onClick={() => setSelectedFormula(selectedFormula === name ? null : name)}
                 >
                   <div className="formula-header">
-                    <span className="formula-icon">{meta.icon || '📊'}</span>
+                    <span className="formula-icon">{meta.icon || 'F'}</span>
                     <span className="formula-name">{name}</span>
                   </div>
 

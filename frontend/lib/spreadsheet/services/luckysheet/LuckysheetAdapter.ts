@@ -99,7 +99,7 @@ export class LuckysheetAdapter {
       this._preInjectWZFunctions();
 
       this.state = 'READY';
-      console.log('[LuckysheetAdapter] ✅ Ready');
+      console.log('[LuckysheetAdapter] Ready');
       return true;
 
     } catch (error) {
@@ -109,7 +109,7 @@ export class LuckysheetAdapter {
         message: error.message,
         stack: error.stack
       });
-      console.error('[LuckysheetAdapter] ❌ Initialization failed:', error);
+      console.error('[LuckysheetAdapter] Initialization failed:', error);
       return false;
     }
   }
@@ -166,7 +166,7 @@ export class LuckysheetAdapter {
     const adapter = this;
 
     window.luckysheet.create = function(config) {
-      console.log('[LuckysheetAdapter] 🎯 luckysheet.create() intercepted');
+      console.log('[LuckysheetAdapter] luckysheet.create() intercepted');
 
       // Inject WZ functions into config if not already present
       if (config) {
@@ -199,7 +199,7 @@ export class LuckysheetAdapter {
     };
 
     this.diagnostics.hookInstalled = true;
-    console.log('[LuckysheetAdapter] ✅ Hook installed on luckysheet.create');
+    console.log('[LuckysheetAdapter] Hook installed on luckysheet.create');
   }
 
   /**
@@ -248,7 +248,7 @@ export class LuckysheetAdapter {
     this.diagnostics.injectionCount++;
     this.diagnostics.lastInjectionTime = Date.now();
 
-    console.log(`[LuckysheetAdapter] ✅ Pre-injected ${injected} WZ functions`);
+    console.log(`[LuckysheetAdapter] Pre-injected ${injected} WZ functions`);
   }
 
   /**
@@ -295,7 +295,7 @@ export class LuckysheetAdapter {
     });
 
     this.diagnostics.injectionCount++;
-    console.log(`[LuckysheetAdapter] ✅ Injected ${injected} entries into ${files.length} sheet(s)`);
+    console.log(`[LuckysheetAdapter] Injected ${injected} entries into ${files.length} sheet(s)`);
     return injected;
   }
 

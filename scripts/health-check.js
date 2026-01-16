@@ -27,58 +27,17 @@ class HealthChecker {
   }
 
   /**
-   * Check if bridge server is running
-   */
-  async checkBridgeServer() {
-    logger.info('Checking bridge server...');
-
-    const port = process.env.BRIDGE_PORT || 3005;
-
-    try {
-      // Try to connect to the bridge health endpoint
-      const response = await fetch(`http://localhost:${port}/health`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(3000)
-      }).catch(() => null);
-
-      if (response && response.ok) {
-        const data = await response.json().catch(() => ({}));
-        this.passed.push(`Bridge server healthy on port ${port}`);
-        logger.info('Bridge server is healthy', {
-          port,
-          status: data.status || 'ok'
-        });
-        return true;
-      } else {
-        this.warnings.push(`Bridge server not responding on port ${port}`);
-        logger.warn('Bridge server not responding', {
-          port,
-          suggestion: 'Start with: bun run dev:bridge'
-        });
-        return false;
-      }
-    } catch (error) {
-      this.warnings.push(`Bridge server not running on port ${port}`);
-      logger.warn('Bridge server not running', {
-        port,
-        suggestion: 'Start with: bun run dev:bridge'
-      });
-      return false;
-    }
-  }
-
-  /**
    * Check if frontend dev server is running
    */
   async checkFrontendServer() {
     logger.info('Checking frontend server...');
 
-    const port = 3000;
+    const port = 3005;
 
     try {
       const response = await fetch(`http://localhost:${port}`, {
         method: 'GET',
-        signal: AbortSignal.timeout(3000)
+        signal: AbortSignal.timeout(3000),
       }).catch(() => null);
 
       if (response && response.ok) {
@@ -89,15 +48,15 @@ class HealthChecker {
         this.warnings.push(`Frontend server not responding on port ${port}`);
         logger.warn('Frontend server not responding', {
           port,
-          suggestion: 'Start with: bun run dev'
+          suggestion: 'Start with: bun run dev',
         });
         return false;
       }
-    } catch (error) {
+    } catch (_error) {
       this.warnings.push(`Frontend server not running on port ${port}`);
       logger.warn('Frontend server not running', {
         port,
-        suggestion: 'Start with: bun run dev'
+        suggestion: 'Start with: bun run dev',
       });
       return false;
     }
@@ -109,13 +68,13 @@ class HealthChecker {
   async checkWalrusPublisher() {
     logger.info('Checking Walrus publisher...');
 
-    const publisherUrl = process.env.WALRUS_PUBLISHER_URL ||
-                         'https://publisher.walrus-testnet.walrus.space';
+    const publisherUrl =
+      process.env.WALRUS_PUBLISHER_URL || 'https://publisher.walrus-testnet.walrus.space';
 
     try {
       const response = await fetch(`${publisherUrl}/v1/api`, {
         method: 'GET',
-        signal: AbortSignal.timeout(5000)
+        signal: AbortSignal.timeout(5000),
       }).catch(() => null);
 
       if (response && response.ok) {
@@ -126,15 +85,15 @@ class HealthChecker {
         this.warnings.push('Walrus publisher not responding');
         logger.warn('Walrus publisher not responding', {
           url: publisherUrl,
-          suggestion: 'Check network connection or try alternative endpoints'
+          suggestion: 'Check network connection or try alternative endpoints',
         });
         return false;
       }
-    } catch (error) {
+    } catch (_error) {
       this.warnings.push('Cannot reach Walrus publisher');
       logger.warn('Cannot reach Walrus publisher', {
         url: publisherUrl,
-        error: error.message
+        error: _error.message,
       });
       return false;
     }
@@ -146,19 +105,9 @@ class HealthChecker {
   checkWorkspaceStructure() {
     logger.info('Validating workspace structure...');
 
-    const requiredDirs = [
-      'packages',
-      'frontend',
-      'blockchain',
-      'scripts',
-      'docs'
-    ];
+    const requiredDirs = ['packages', 'frontend', 'scripts'];
 
-    const requiredFiles = [
-      'package.json',
-      'bun.lock',
-      'vite.config.js'
-    ];
+    const requiredFiles = ['package.json', 'bun.lock', 'vite.config.js'];
 
     let allValid = true;
 
@@ -198,30 +147,30 @@ class HealthChecker {
     if (!fs.existsSync(packagesDir)) {
       this.warnings.push('packages directory is missing');
       logger.warn('Packages directory missing', {
-        suggestion: 'Verify workspace configuration includes packages/*'
+        suggestion: 'Verify workspace configuration includes packages/*',
       });
       return false;
     }
 
     let packages;
     try {
-      packages = fs.readdirSync(packagesDir)
-        .filter(name => {
-          const pkgPath = path.join(packagesDir, name);
-          try {
-            return fs.statSync(pkgPath).isDirectory() &&
-                   fs.existsSync(path.join(pkgPath, 'package.json'));
-          } catch (error) {
-            logger.warn('Skipping package during build check', {
-              package: name,
-              error: error.message
-            });
-            return false;
-          }
-        });
-    } catch (error) {
-      this.errors.push(`Unable to read packages directory: ${error.message}`);
-      logger.error('Failed to read packages directory', { error: error.message });
+      packages = fs.readdirSync(packagesDir).filter((name) => {
+        const pkgPath = path.join(packagesDir, name);
+        try {
+          return (
+            fs.statSync(pkgPath).isDirectory() && fs.existsSync(path.join(pkgPath, 'package.json'))
+          );
+        } catch (_error) {
+          logger.warn('Skipping package during build check', {
+            package: name,
+            error: _error.message,
+          });
+          return false;
+        }
+      });
+    } catch (_error) {
+      this.errors.push(`Unable to read packages directory: ${_error.message}`);
+      logger.error('Failed to read packages directory', { error: _error.message });
       return false;
     }
 
@@ -241,7 +190,7 @@ class HealthChecker {
       } else {
         this.warnings.push(`Package ${pkg} not built (missing dist/)`);
         logger.warn(`Package ${pkg} not built`, {
-          suggestion: 'Run: bun run build'
+          suggestion: 'Run: bun run build',
         });
         allBuilt = false;
       }
@@ -266,19 +215,13 @@ class HealthChecker {
     if (!fs.existsSync(nodeModulesPath)) {
       this.errors.push('Dependencies not installed (node_modules missing)');
       logger.error('Dependencies not installed', {
-        suggestion: 'Run: bun install'
+        suggestion: 'Run: bun install',
       });
       return false;
     }
 
     // Check critical dependencies
-    const criticalDeps = [
-      'react',
-      'vite',
-      'vitest',
-      '@mysten/sui',
-      '@mysten/walrus'
-    ];
+    const criticalDeps = ['react', 'vite', 'vitest', '@mysten/sui', '@mysten/walrus'];
 
     let allInstalled = true;
 
@@ -307,8 +250,12 @@ class HealthChecker {
 
     const envVars = [
       { name: 'SUI_NETWORK', default: 'testnet', required: false },
-      { name: 'BRIDGE_PORT', default: '3005', required: false },
-      { name: 'WALRUS_PUBLISHER_URL', default: 'https://publisher.walrus-testnet.walrus.space', required: false }
+      { name: 'PORT', default: '3005', required: false },
+      {
+        name: 'WALRUS_PUBLISHER_URL',
+        default: 'https://publisher.walrus-testnet.walrus.space',
+        required: false,
+      },
     ];
 
     for (const envVar of envVars) {
@@ -316,7 +263,7 @@ class HealthChecker {
       if (!value && envVar.required) {
         this.warnings.push(`Environment variable not set: ${envVar.name}`);
         logger.warn(`Environment variable not set: ${envVar.name}`, {
-          suggestion: `Set ${envVar.name}=${envVar.default || '<value>'}`
+          suggestion: `Set ${envVar.name}=${envVar.default || '<value>'}`,
         });
       } else if (!value) {
         logger.debug(`Using default for ${envVar.name}: ${envVar.default}`);
@@ -338,7 +285,7 @@ class HealthChecker {
     try {
       const status = execSync('git status --porcelain', {
         cwd: ROOT_DIR,
-        encoding: 'utf8'
+        encoding: 'utf8',
       });
 
       if (status.trim()) {
@@ -346,7 +293,7 @@ class HealthChecker {
         this.warnings.push(`${lines.length} uncommitted changes in Git`);
         logger.warn('Uncommitted changes detected', {
           count: lines.length,
-          suggestion: 'Review with: git status'
+          suggestion: 'Review with: git status',
         });
       } else {
         this.passed.push('Git working tree is clean');
@@ -354,9 +301,9 @@ class HealthChecker {
       }
 
       return true;
-    } catch (error) {
+    } catch (_error) {
       this.warnings.push('Not a Git repository or Git not available');
-      logger.warn('Git check failed', { error: error.message });
+      logger.warn('Git check failed', { error: _error.message });
       return false;
     }
   }
@@ -370,20 +317,20 @@ class HealthChecker {
     console.log('='.repeat(60) + '\n');
 
     if (this.passed.length > 0) {
-      console.log('✅ Passed Checks:');
-      this.passed.forEach(msg => console.log(`   - ${msg}`));
+      console.log('Passed Checks:');
+      this.passed.forEach((msg) => console.log(`   - ${msg}`));
       console.log('');
     }
 
     if (this.warnings.length > 0) {
-      console.log('⚠️  Warnings:');
-      this.warnings.forEach(msg => console.log(`   - ${msg}`));
+      console.log('Warnings:');
+      this.warnings.forEach((msg) => console.log(`   - ${msg}`));
       console.log('');
     }
 
     if (this.errors.length > 0) {
-      console.log('❌ Errors:');
-      this.errors.forEach(msg => console.log(`   - ${msg}`));
+      console.log('Errors:');
+      this.errors.forEach((msg) => console.log(`   - ${msg}`));
       console.log('');
     }
 
@@ -394,26 +341,23 @@ class HealthChecker {
     console.log(`Overall Health: ${healthScore}%\n`);
 
     if (this.errors.length === 0 && this.warnings.length === 0) {
-      console.log('🎉 All systems operational!\n');
+      console.log('All systems operational.\n');
     } else if (this.errors.length === 0) {
-      console.log('✅ System is functional with minor warnings.\n');
+      console.log('System is functional with minor warnings.\n');
     } else {
-      console.log('❌ System has critical errors that need attention.\n');
+      console.log('System has critical errors that need attention.\n');
     }
 
     // Quick actions
     if (this.warnings.length > 0 || this.errors.length > 0) {
       console.log('Quick Actions:');
-      if (this.warnings.some(w => w.includes('not built'))) {
+      if (this.warnings.some((w) => w.includes('not built'))) {
         console.log('  → bun run build          # Build all packages');
       }
-      if (this.warnings.some(w => w.includes('Bridge server'))) {
-        console.log('  → bun run dev:bridge     # Start bridge server');
-      }
-      if (this.warnings.some(w => w.includes('Frontend server'))) {
+      if (this.warnings.some((w) => w.includes('Frontend server'))) {
         console.log('  → bun run dev            # Start frontend server');
       }
-      if (this.errors.some(e => e.includes('Dependencies'))) {
+      if (this.errors.some((e) => e.includes('Dependencies'))) {
         console.log('  → bun install            # Install dependencies');
       }
       console.log('');
@@ -423,7 +367,7 @@ class HealthChecker {
 
 // Main health check flow
 async function main() {
-  console.log('\n🏥 WalSheetz System Health Check\n');
+  console.log('\nWalSheetz System Health Check\n');
 
   const checker = new HealthChecker();
 
@@ -435,7 +379,6 @@ async function main() {
   checker.checkGitStatus();
 
   // Async checks
-  await checker.checkBridgeServer();
   await checker.checkFrontendServer();
   await checker.checkWalrusPublisher();
 
@@ -447,17 +390,17 @@ async function main() {
 }
 
 // Handle errors
-process.on('uncaughtException', (error) => {
+process.on('uncaughtException', (_error) => {
   logger.critical('Uncaught exception during health check', {
-    error: error.message,
-    stack: error.stack
+    error: _error.message,
+    stack: _error.stack,
   });
   process.exit(1);
 });
 
-process.on('unhandledRejection', (reason) => {
+process.on('unhandledRejection', (_reason) => {
   logger.critical('Unhandled rejection during health check', {
-    reason: reason?.message || reason
+    reason: _reason?.message || _reason,
   });
   process.exit(1);
 });

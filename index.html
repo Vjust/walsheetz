@@ -1,26 +1,54 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WalSheetz - Arctic Spreadsheets</title>
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    
-    <!-- Luckysheet CSS from CDN -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/css/pluginsCss.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/plugins.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/css/luckysheet.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/assets/iconfont/iconfont.css" />
-</head>
-<body>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+
+    <!-- Luckysheet CSS from CDN (pinned v2.1.13 with SRI) -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/css/pluginsCss.css"
+      integrity="sha384-eMwCi+OlPxMQXKj01kz7DYeJB7EF/OLduAJ44k3bxW8f4AUpu5VwH3AJLV0qzCh3"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/plugins.css"
+      integrity="sha384-TWyeTR0YJTfpe+kKQcknsiYabxa14qQeVQ8JTOpkMRyiuSeeUcN/JezwKvjUtB3E"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/css/luckysheet.css"
+      integrity="sha384-CkP5uvzaNo1z4Fcl1K2fWwV+pX0yZyUrznxZ4FUdaWAaYCOmDy9yIAsiDYg7zZML"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/assets/iconfont/iconfont.css"
+      integrity="sha384-7nRTBDZdGCH/cgMjINY6ESaTDqz4ABqctLcJpq/pd3nGxbtu+cGcoP77gIiLwo5b"
+      crossorigin="anonymous"
+    />
+  </head>
+  <body>
     <!-- React root -->
     <div id="root"></div>
-    
-    <!-- Luckysheet JavaScript from CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/js/plugin.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.umd.js"></script>
-    
+
+    <!-- Luckysheet JavaScript from CDN (pinned v2.1.13 with SRI) -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/js/plugin.js"
+      integrity="sha384-wi7gwaesOYaQ70oYzcNqVuls5Q33xZGAMwmbdDChrI3DWPz/glj9vt5Apgd5sulm"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.umd.js"
+      integrity="sha384-8Jd5RPV9w361I+GGdQuKeN+iuPHZXC0kTpapAqhNIptgCpmazgablm8mIj770ZkQ"
+      crossorigin="anonymous"
+    ></script>
+
     <!-- React Application -->
-    <script type="module" src="/frontend/main.jsx"></script>
-</body>
+    <script type="module" src="/frontend/main.tsx"></script>
+  </body>
 </html>

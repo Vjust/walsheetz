@@ -5,7 +5,7 @@
  * Uses localStorage/StorageAdapter for persistence without actual blockchain interaction.
  */
 
-import { IBlockchainService } from '../../interfaces/IBlockchainService.js';
+import { IBlockchainService } from '@dreamlit/walrus-sui-core/blockchain-integration';
 
 export class TestModeAdapter extends IBlockchainService {
   constructor(storageAdapter) {
@@ -16,8 +16,6 @@ export class TestModeAdapter extends IBlockchainService {
       lastSync: null,
       pendingChanges: 0,
       isConnected: true, // Always "connected" in test mode
-      grpcConnected: false,
-      collaborationEnabled: false
     };
 
     // Initialize test storage if needed
@@ -69,7 +67,7 @@ export class TestModeAdapter extends IBlockchainService {
    * Connect to wallet (no-op in test mode)
    */
   async connectWallet() {
-    console.log('🧪 TestModeAdapter: connectWallet (no-op)');
+    console.log('TestModeAdapter: connectWallet (no-op)');
     return { success: true, wallet: 'Test Wallet', address: '0x1234...cdef' };
   }
 
@@ -77,7 +75,7 @@ export class TestModeAdapter extends IBlockchainService {
    * Disconnect from wallet (no-op in test mode)
    */
   async disconnectWallet() {
-    console.log('🧪 TestModeAdapter: disconnectWallet (no-op)');
+    console.log('TestModeAdapter: disconnectWallet (no-op)');
   }
 
   /**
@@ -113,7 +111,7 @@ export class TestModeAdapter extends IBlockchainService {
    * Get user's spreadsheets from test storage
    */
   async getUserSpreadsheets() {
-    console.log('🧪 TestModeAdapter: getUserSpreadsheets');
+    console.log('TestModeAdapter: getUserSpreadsheets');
     const spreadsheets = this._getTestSpreadsheets();
 
     return {
@@ -134,7 +132,7 @@ export class TestModeAdapter extends IBlockchainService {
    * Load a spreadsheet from test storage
    */
   async loadSpreadsheet(spreadsheetId, onProgress = null) {
-    console.log('🧪 TestModeAdapter: loadSpreadsheet', spreadsheetId);
+    console.log('TestModeAdapter: loadSpreadsheet', spreadsheetId);
 
     if (onProgress) onProgress('Loading from test storage...', 'Fetching spreadsheet data');
 
@@ -192,7 +190,7 @@ export class TestModeAdapter extends IBlockchainService {
    * Create a new spreadsheet in test storage
    */
   async createNewSpreadsheetOptimized(title = 'Untitled Spreadsheet', initialData = null) {
-    console.log('🧪 TestModeAdapter: createNewSpreadsheetOptimized', title);
+    console.log('TestModeAdapter: createNewSpreadsheetOptimized', title);
 
     const spreadsheetId = this._generateObjectId();
     const blobId = this._generateBlobId();
@@ -248,7 +246,7 @@ export class TestModeAdapter extends IBlockchainService {
    * Save spreadsheet to test storage
    */
   async saveToBlockchain(data, options = {}) {
-    console.log('🧪 TestModeAdapter: saveToBlockchain');
+    console.log('TestModeAdapter: saveToBlockchain');
 
     const spreadsheetId = this.storage?.getCurrentSpreadsheetId();
     const title = options.title || this.storage?.getSpreadsheetTitle() || 'Untitled';
@@ -313,7 +311,7 @@ export class TestModeAdapter extends IBlockchainService {
    * Delete spreadsheet from test storage
    */
   async deleteSpreadsheet(spreadsheetId) {
-    console.log('🧪 TestModeAdapter: deleteSpreadsheet', spreadsheetId);
+    console.log('TestModeAdapter: deleteSpreadsheet', spreadsheetId);
 
     const spreadsheets = this._getTestSpreadsheets();
     const index = spreadsheets.findIndex(s => s.objectId === spreadsheetId);
@@ -343,7 +341,7 @@ export class TestModeAdapter extends IBlockchainService {
    * Rename spreadsheet in test storage
    */
   async renameSpreadsheet(spreadsheetId, newTitle) {
-    console.log('🧪 TestModeAdapter: renameSpreadsheet', spreadsheetId, newTitle);
+    console.log('TestModeAdapter: renameSpreadsheet', spreadsheetId, newTitle);
 
     const spreadsheets = this._getTestSpreadsheets();
     const spreadsheet = spreadsheets.find(s => s.objectId === spreadsheetId);
@@ -369,7 +367,7 @@ export class TestModeAdapter extends IBlockchainService {
    * Make spreadsheet public (no-op in test mode)
    */
   async makeSpreadsheetPublic(spreadsheetId) {
-    console.log('🧪 TestModeAdapter: makeSpreadsheetPublic', spreadsheetId);
+    console.log('TestModeAdapter: makeSpreadsheetPublic', spreadsheetId);
 
     const spreadsheets = this._getTestSpreadsheets();
     const spreadsheet = spreadsheets.find(s => s.objectId === spreadsheetId);
@@ -386,7 +384,7 @@ export class TestModeAdapter extends IBlockchainService {
    * Make spreadsheet private (no-op in test mode)
    */
   async makeSpreadsheetPrivate(spreadsheetId) {
-    console.log('🧪 TestModeAdapter: makeSpreadsheetPrivate', spreadsheetId);
+    console.log('TestModeAdapter: makeSpreadsheetPrivate', spreadsheetId);
 
     const spreadsheets = this._getTestSpreadsheets();
     const spreadsheet = spreadsheets.find(s => s.objectId === spreadsheetId);
@@ -403,7 +401,7 @@ export class TestModeAdapter extends IBlockchainService {
    * Transfer ownership (no-op in test mode)
    */
   async transferSpreadsheetOwnership(spreadsheetId, newOwnerAddress) {
-    console.log('🧪 TestModeAdapter: transferSpreadsheetOwnership', spreadsheetId, newOwnerAddress);
+    console.log('TestModeAdapter: transferSpreadsheetOwnership', spreadsheetId, newOwnerAddress);
     return { success: true, message: 'Transfer not supported in test mode' };
   }
 
@@ -411,7 +409,7 @@ export class TestModeAdapter extends IBlockchainService {
    * Prune old versions (no-op in test mode)
    */
   async pruneSpreadsheetVersions(spreadsheetId, keepCount = 10) {
-    console.log('🧪 TestModeAdapter: pruneSpreadsheetVersions', spreadsheetId, keepCount);
+    console.log('TestModeAdapter: pruneSpreadsheetVersions', spreadsheetId, keepCount);
 
     const spreadsheets = this._getTestSpreadsheets();
     const spreadsheet = spreadsheets.find(s => s.objectId === spreadsheetId);
@@ -446,7 +444,7 @@ export class TestModeAdapter extends IBlockchainService {
    * Clear all test data (useful for test cleanup)
    */
   clearAllTestData() {
-    console.log('🧪 TestModeAdapter: Clearing all test data');
+    console.log('TestModeAdapter: clearing all test data');
     const testKey = 'walsheetz_test_spreadsheets';
     localStorage.removeItem(testKey);
     this._initTestStorage();
