@@ -3,25 +3,23 @@
  * Provides structured logging with contextual metadata and performance tracking
  */
 
-import { LogLevel, logConfig } from "./LogConfig.js";
-
-// Re-export for convenience
-export { LogLevel };
+import { LogLevel, logConfig } from './LogConfig.js';
 
 export const LogComponent = {
   SPREADSHEET_ENGINE: 'SpreadsheetEngine',
   BLOCKCHAIN_ADAPTER: 'BlockchainAdapter',
-  WEBSOCKET_SERVICE: 'WebSocketService',
+  BLOCKCHAIN: 'Blockchain',
   UI_COMPONENT: 'UIComponent',
   UI: 'UI',
   WALLET_MANAGER: 'WalletManager',
   STORAGE_SERVICE: 'StorageService',
-  COLLABORATION: 'Collaboration',
+  STORAGE: 'Storage',
   PERFORMANCE: 'Performance',
-  BUSINESS_LOGIC: 'BusinessLogic'
+  BUSINESS_LOGIC: 'BusinessLogic',
+  WALRUS: 'WalrusService',
 } as const;
 
-export type LogComponentType = typeof LogComponent[keyof typeof LogComponent];
+export type LogComponentType = (typeof LogComponent)[keyof typeof LogComponent];
 
 export const ErrorCategory = {
   NETWORK: 'network',
@@ -31,10 +29,10 @@ export const ErrorCategory = {
   VALIDATION: 'validation',
   PERMISSION: 'permission',
   RATE_LIMIT: 'rate_limit',
-  UNKNOWN: 'unknown'
+  UNKNOWN: 'unknown',
 } as const;
 
-export type ErrorCategoryType = typeof ErrorCategory[keyof typeof ErrorCategory];
+export type ErrorCategoryType = (typeof ErrorCategory)[keyof typeof ErrorCategory];
 
 interface LogEntry {
   timestamp: string;
@@ -181,11 +179,11 @@ class Logger {
       operationCounts: new Map(),
       operationTimes: new Map(),
       errorCounts: new Map(),
-      userActions: new Map()
+      userActions: new Map(),
     };
 
     if (this.shouldLog(LogLevel.INFO)) {
-      console.log(`🔧 Logger initialized - Session: ${this.sessionId}, Debug Mode: ${this.debugMode}`);
+      console.log(`Logger initialized - Session: ${this.sessionId}, Debug Mode: ${this.debugMode}`);
     }
   }
 
@@ -195,7 +193,10 @@ class Logger {
 
   private getDebugModeFromStorage(): boolean {
     try {
-      return typeof localStorage !== 'undefined' && localStorage.getItem('walsheetz_debug_mode') === 'true';
+      return (
+        typeof localStorage !== 'undefined' &&
+        localStorage.getItem('walsheetz_debug_mode') === 'true'
+      );
     } catch {
       return false;
     }
@@ -210,16 +211,27 @@ class Logger {
     } catch {
       // Ignore storage errors
     }
-    this.info(LogComponent.PERFORMANCE, 'debug_mode_changed', 'Debug mode changed', { debugMode: enabled });
+    this.info(LogComponent.PERFORMANCE, 'debug_mode_changed', 'Debug mode changed', {
+      debugMode: enabled,
+    });
   }
 
   setContext(userId: string | null, spreadsheetId: string | null): void {
     this.userId = userId;
     this.spreadsheetId = spreadsheetId;
-    this.info(LogComponent.PERFORMANCE, 'context_updated', 'Context updated', { userId, spreadsheetId });
+    this.info(LogComponent.PERFORMANCE, 'context_updated', 'Context updated', {
+      userId,
+      spreadsheetId,
+    });
   }
 
-  log(level: number, component: string, action: string, message: string, metadata: Record<string, unknown> = {}): void {
+  log(
+    level: number,
+    component: string,
+    action: string,
+    message: string,
+    metadata: Record<string, unknown> = {}
+  ): void {
     // Use logConfig to determine if this level should be logged
     if (!logConfig.shouldLog(level)) {
       return;
@@ -243,8 +255,8 @@ class Logger {
       metadata: {
         ...metadata,
         userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
-        url: typeof window !== 'undefined' ? window.location.href : 'unknown'
-      }
+        url: typeof window !== 'undefined' ? window.location.href : 'unknown',
+      },
     };
 
     // Add to internal log history
@@ -271,17 +283,11 @@ class Logger {
     );
 
     if (level >= LogLevel.ERROR) {
-      this.metrics.errorCounts.set(
-        component,
-        (this.metrics.errorCounts.get(component) || 0) + 1
-      );
+      this.metrics.errorCounts.set(component, (this.metrics.errorCounts.get(component) || 0) + 1);
     }
 
     if (component === LogComponent.UI_COMPONENT) {
-      this.metrics.userActions.set(
-        action,
-        (this.metrics.userActions.get(action) || 0) + 1
-      );
+      this.metrics.userActions.set(action, (this.metrics.userActions.get(action) || 0) + 1);
     }
   }
 
@@ -294,20 +300,20 @@ class Logger {
     switch (level) {
       case 'DEBUG':
         if (this.debugMode) {
-          console.debug(`🔍 ${prefix} ${action}: ${message}`, hasImportantMetadata ? metadata : '');
+          console.debug(`${prefix} ${action}: ${message}`, hasImportantMetadata ? metadata : '');
         }
         break;
       case 'INFO':
-        console.info(`ℹ️ ${prefix} ${action}: ${message}`, hasImportantMetadata ? metadata : '');
+        console.info(`${prefix} ${action}: ${message}`, hasImportantMetadata ? metadata : '');
         break;
       case 'WARN':
-        console.warn(`⚠️ ${prefix} ${action}: ${message}`, metadata);
+        console.warn(`${prefix} ${action}: ${message}`, metadata);
         break;
       case 'ERROR':
-        console.error(`❌ ${prefix} ${action}: ${message}`, metadata);
+        console.error(`${prefix} ${action}: ${message}`, metadata);
         break;
       case 'CRITICAL':
-        console.error(`🚨 ${prefix} ${action}: ${message}`, metadata);
+        console.error(`[CRITICAL] ${prefix} ${action}: ${message}`, metadata);
         break;
     }
   }
@@ -327,47 +333,94 @@ class Logger {
     }
   }
 
-  debug(component: string, action: string, message: string, metadata: Record<string, unknown> = {}): void {
+  debug(
+    component: string,
+    action: string,
+    message: string,
+    metadata: Record<string, unknown> = {}
+  ): void {
     this.log(LogLevel.DEBUG, component, action, message, metadata);
   }
 
-  info(component: string, action: string, message: string, metadata: Record<string, unknown> = {}): void {
+  info(
+    component: string,
+    action: string,
+    message: string,
+    metadata: Record<string, unknown> = {}
+  ): void {
     this.log(LogLevel.INFO, component, action, message, metadata);
   }
 
-  warn(component: string, action: string, message: string, metadata: Record<string, unknown> = {}): void {
+  warn(
+    component: string,
+    action: string,
+    message: string,
+    metadata: Record<string, unknown> = {}
+  ): void {
     this.log(LogLevel.WARN, component, action, message, metadata);
   }
 
-  error(component: string, action: string, message: string, metadata: Record<string, unknown> = {}): void {
+  error(
+    component: string,
+    action: string,
+    message: string,
+    metadata: Record<string, unknown> = {}
+  ): void {
     this.log(LogLevel.ERROR, component, action, message, metadata);
   }
 
-  critical(component: string, action: string, message: string, metadata: Record<string, unknown> = {}): void {
+  critical(
+    component: string,
+    action: string,
+    message: string,
+    metadata: Record<string, unknown> = {}
+  ): void {
     this.log(LogLevel.CRITICAL, component, action, message, metadata);
   }
 
-  throttle(throttleKey: string, level: number, component: string, action: string, message: string, metadata: Record<string, unknown> = {}, intervalMs = 30000): void {
+  throttle(
+    throttleKey: string,
+    level: number,
+    component: string,
+    action: string,
+    message: string,
+    metadata: Record<string, unknown> = {},
+    intervalMs = 30000
+  ): void {
     const { shouldLog, count } = this.logThrottle.shouldLog(throttleKey, intervalMs);
 
     if (shouldLog) {
-      const enrichedMetadata = count > 1 ?
-        { ...metadata, throttledCount: count, throttleKey } :
-        metadata;
+      const enrichedMetadata =
+        count > 1 ? { ...metadata, throttledCount: count, throttleKey } : metadata;
 
-      const enrichedMessage = count > 1 ?
-        `${message} (${count - 1} similar events throttled in last ${intervalMs / 1000}s)` :
-        message;
+      const enrichedMessage =
+        count > 1
+          ? `${message} (${count - 1} similar events throttled in last ${intervalMs / 1000}s)`
+          : message;
 
       this.log(level, component, action, enrichedMessage, enrichedMetadata);
     }
   }
 
-  throttleDebug(throttleKey: string, component: string, action: string, message: string, metadata: Record<string, unknown> = {}, intervalMs = 30000): void {
+  throttleDebug(
+    throttleKey: string,
+    component: string,
+    action: string,
+    message: string,
+    metadata: Record<string, unknown> = {},
+    intervalMs = 30000
+  ): void {
     this.throttle(throttleKey, LogLevel.DEBUG, component, action, message, metadata, intervalMs);
   }
 
-  throttleInfo(throttleKey: string, component: string, action: string, message: string, metadata: Record<string, unknown> = {}, intervalMs = 30000): void {
+  throttleInfo(
+    throttleKey: string,
+    component: string,
+    action: string,
+    message: string,
+    metadata: Record<string, unknown> = {},
+    intervalMs = 30000
+  ): void {
     this.throttle(throttleKey, LogLevel.INFO, component, action, message, metadata, intervalMs);
   }
 
@@ -387,17 +440,24 @@ class Logger {
       performance.mark(markName);
     }
 
-    this.debug(LogComponent.PERFORMANCE, 'timer_start', `Started timing ${operation}`, { operation });
+    this.debug(LogComponent.PERFORMANCE, 'timer_start', `Started timing ${operation}`, {
+      operation,
+    });
   }
 
   endTimer(operation: string, metadata: Record<string, unknown> = {}): number | null {
     const startTime = this.performanceMarks.get(operation);
     if (!startTime) {
-      this.debug(LogComponent.PERFORMANCE, 'timer_end_no_start', `No start time found for operation: ${operation}`, {
-        operation,
-        availableTimers: Array.from(this.performanceMarks.keys()),
-        metadata
-      });
+      this.debug(
+        LogComponent.PERFORMANCE,
+        'timer_end_no_start',
+        `No start time found for operation: ${operation}`,
+        {
+          operation,
+          availableTimers: Array.from(this.performanceMarks.keys()),
+          metadata,
+        }
+      );
       return null;
     }
 
@@ -416,7 +476,7 @@ class Logger {
       duration: `${duration}ms`,
       averageTime: `${avgTime.toFixed(2)}ms`,
       operationCount: times.length,
-      ...metadata
+      ...metadata,
     });
 
     if (typeof performance !== 'undefined') {
@@ -435,38 +495,51 @@ class Logger {
   logUserAction(action: string, metadata: Record<string, unknown> = {}): void {
     this.info(LogComponent.UI_COMPONENT, action, 'User action performed', {
       timestamp: Date.now(),
-      ...metadata
+      ...metadata,
     });
   }
 
-  logCellOperation(operation: string, cellRef: string, oldValue: unknown, newValue: unknown, metadata: Record<string, unknown> = {}): void {
+  logCellOperation(
+    operation: string,
+    cellRef: string,
+    oldValue: unknown,
+    newValue: unknown,
+    metadata: Record<string, unknown> = {}
+  ): void {
     this.info(LogComponent.SPREADSHEET_ENGINE, operation, `Cell ${cellRef} ${operation}`, {
       cellRef,
       oldValue,
       newValue,
       valueChanged: oldValue !== newValue,
-      ...metadata
+      ...metadata,
     });
   }
 
-  logBlockchainOperation(operation: string, success: boolean, metadata: Record<string, unknown> = {}): void {
+  logBlockchainOperation(
+    operation: string,
+    success: boolean,
+    metadata: Record<string, unknown> = {}
+  ): void {
     const level = success ? LogLevel.INFO : LogLevel.ERROR;
     const message = `Blockchain ${operation} ${success ? 'succeeded' : 'failed'}`;
 
     this.log(level, LogComponent.BLOCKCHAIN_ADAPTER, operation, message, {
       success,
-      ...metadata
+      ...metadata,
     });
   }
 
   getMetrics(): Record<string, unknown> {
-    const operationTimes: Record<string, { count: number; average: number; min: number; max: number }> = {};
+    const operationTimes: Record<
+      string,
+      { count: number; average: number; min: number; max: number }
+    > = {};
     for (const [operation, times] of this.metrics.operationTimes.entries()) {
       operationTimes[operation] = {
         count: times.length,
         average: times.reduce((a, b) => a + b, 0) / times.length,
         min: Math.min(...times),
-        max: Math.max(...times)
+        max: Math.max(...times),
       };
     }
 
@@ -477,7 +550,7 @@ class Logger {
       errorCounts: Object.fromEntries(this.metrics.errorCounts),
       userActions: Object.fromEntries(this.metrics.userActions),
       totalLogs: this.logs.length,
-      debugMode: this.debugMode
+      debugMode: this.debugMode,
     };
   }
 
@@ -487,7 +560,8 @@ class Logger {
     if (filter) {
       logsToExport = this.logs.filter((log) => {
         if (filter.component && log.component !== filter.component) return false;
-        if (filter.level && LogLevel[log.level as keyof typeof LogLevel] < filter.level) return false;
+        if (filter.level && LogLevel[log.level as keyof typeof LogLevel] < filter.level)
+          return false;
         if (filter.action && !log.action.includes(filter.action)) return false;
         if (filter.since && new Date(log.timestamp) < filter.since) return false;
         return true;
@@ -499,7 +573,7 @@ class Logger {
       sessionId: this.sessionId,
       filter,
       logs: logsToExport,
-      metrics: this.getMetrics()
+      metrics: this.getMetrics(),
     };
   }
 
@@ -508,44 +582,77 @@ class Logger {
     const code = error.code || error.status;
 
     // Network errors
-    if (message.includes('network') || message.includes('fetch') || message.includes('connection') ||
-    message.includes('timeout') || (code !== undefined && code >= 500)) {
+    if (
+      message.includes('network') ||
+      message.includes('fetch') ||
+      message.includes('connection') ||
+      message.includes('timeout') ||
+      (code !== undefined && code >= 500)
+    ) {
       return ErrorCategory.NETWORK;
     }
 
     // Wallet errors
-    if (message.includes('wallet') || message.includes('signer') || message.includes('signature') ||
-    message.includes('user rejected') || message.includes('cancelled')) {
+    if (
+      message.includes('wallet') ||
+      message.includes('signer') ||
+      message.includes('signature') ||
+      message.includes('user rejected') ||
+      message.includes('cancelled')
+    ) {
       return ErrorCategory.WALLET;
     }
 
     // Blockchain errors
-    if (message.includes('transaction') || message.includes('blockchain') || message.includes('gas') ||
-    message.includes('insufficient') || message.includes('nonce')) {
+    if (
+      message.includes('transaction') ||
+      message.includes('blockchain') ||
+      message.includes('gas') ||
+      message.includes('insufficient') ||
+      message.includes('nonce')
+    ) {
       return ErrorCategory.BLOCKCHAIN;
     }
 
     // Storage errors
-    if (message.includes('storage') || message.includes('walrus') || message.includes('blob') ||
-    message.includes('upload') || message.includes('download')) {
+    if (
+      message.includes('storage') ||
+      message.includes('walrus') ||
+      message.includes('blob') ||
+      message.includes('upload') ||
+      message.includes('download')
+    ) {
       return ErrorCategory.STORAGE;
     }
 
     // Validation errors
-    if (message.includes('validation') || message.includes('invalid') || message.includes('required') ||
-    message.includes('format')) {
+    if (
+      message.includes('validation') ||
+      message.includes('invalid') ||
+      message.includes('required') ||
+      message.includes('format')
+    ) {
       return ErrorCategory.VALIDATION;
     }
 
     // Permission errors
-    if (message.includes('permission') || message.includes('unauthorized') || message.includes('forbidden') ||
-    message.includes('access denied')) {
+    if (
+      message.includes('permission') ||
+      message.includes('unauthorized') ||
+      message.includes('forbidden') ||
+      message.includes('access denied')
+    ) {
       return ErrorCategory.PERMISSION;
     }
 
     // Rate limit errors
-    if (message.includes('rate') || message.includes('limit') || message.includes('too many') ||
-    message.includes('429') || code === 429) {
+    if (
+      message.includes('rate') ||
+      message.includes('limit') ||
+      message.includes('too many') ||
+      message.includes('429') ||
+      code === 429
+    ) {
       return ErrorCategory.RATE_LIMIT;
     }
 
@@ -559,63 +666,68 @@ class Logger {
         message: 'Check your internet connection and try again',
         delay: 2000,
         maxRetries: 3,
-        userMessage: 'Connection issue detected. Retrying automatically...'
+        userMessage: 'Connection issue detected. Retrying automatically...',
       },
       [ErrorCategory.WALLET]: {
         action: 'reconnect',
         message: 'Please reconnect your wallet and try again',
         delay: 0,
         maxRetries: 1,
-        userMessage: 'Please check your wallet connection and try again'
+        userMessage: 'Please check your wallet connection and try again',
       },
       [ErrorCategory.BLOCKCHAIN]: {
         action: 'retry',
         message: 'Blockchain congestion detected, please wait and try again',
         delay: 5000,
         maxRetries: 2,
-        userMessage: 'Network is busy. Please wait a moment and try again'
+        userMessage: 'Network is busy. Please wait a moment and try again',
       },
       [ErrorCategory.STORAGE]: {
         action: 'retry',
         message: 'Storage service temporarily unavailable, will retry automatically',
         delay: 3000,
         maxRetries: 3,
-        userMessage: 'Storage service is temporarily unavailable. Retrying...'
+        userMessage: 'Storage service is temporarily unavailable. Retrying...',
       },
       [ErrorCategory.PERMISSION]: {
         action: 'none',
         message: 'You do not have permission to perform this action',
         delay: 0,
         maxRetries: 0,
-        userMessage: 'You do not have permission to perform this action'
+        userMessage: 'You do not have permission to perform this action',
       },
       [ErrorCategory.RATE_LIMIT]: {
         action: 'delay',
         message: 'Too many requests, please wait before trying again',
         delay: 10000,
         maxRetries: 1,
-        userMessage: 'Too many requests. Please wait a moment before trying again'
+        userMessage: 'Too many requests. Please wait a moment before trying again',
       },
       [ErrorCategory.VALIDATION]: {
         action: 'fix_input',
         message: 'Please check your input and try again',
         delay: 0,
         maxRetries: 0,
-        userMessage: 'Please check your input data and try again'
+        userMessage: 'Please check your input data and try again',
       },
       [ErrorCategory.UNKNOWN]: {
         action: 'retry',
         message: 'An unexpected error occurred, please try again',
         delay: 1000,
         maxRetries: 2,
-        userMessage: 'An unexpected error occurred. Please try again'
-      }
+        userMessage: 'An unexpected error occurred. Please try again',
+      },
     };
 
     return suggestions[category] || suggestions[ErrorCategory.UNKNOWN];
   }
 
-  logErrorWithRecovery(component: string, action: string, error: Error, context: Record<string, unknown> = {}): { category: ErrorCategoryType; recovery: RecoverySuggestion } {
+  logErrorWithRecovery(
+    component: string,
+    action: string,
+    error: Error,
+    context: Record<string, unknown> = {}
+  ): { category: ErrorCategoryType; recovery: RecoverySuggestion } {
     const category = this.categorizeError(error);
     const recovery = this.getRecoverySuggestion(category);
 
@@ -625,24 +737,35 @@ class Logger {
       category,
       recovery,
       userMessage: recovery.userMessage,
-      ...context
+      ...context,
     });
 
     return { category, recovery };
   }
 
-  logOperationWithRecovery(component: string, action: string, operation: string, error: Error | null, context: Record<string, unknown> = {}): { success: boolean; category?: ErrorCategoryType; recovery?: RecoverySuggestion; userMessage?: string } {
+  logOperationWithRecovery(
+    component: string,
+    action: string,
+    operation: string,
+    error: Error | null,
+    context: Record<string, unknown> = {}
+  ): {
+    success: boolean;
+    category?: ErrorCategoryType;
+    recovery?: RecoverySuggestion;
+    userMessage?: string;
+  } {
     if (error) {
       const { category, recovery } = this.logErrorWithRecovery(component, action, error, {
         operation,
-        ...context
+        ...context,
       });
 
       return {
         success: false,
         category,
         recovery,
-        userMessage: recovery.userMessage
+        userMessage: recovery.userMessage,
       };
     } else {
       this.info(component, action, `${operation} completed successfully`, context);
@@ -662,7 +785,7 @@ class Logger {
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
       url: typeof window !== 'undefined' ? window.location.href : 'unknown',
       category: this.categorizeError(error),
-      metrics: this.getMetrics()
+      metrics: this.getMetrics(),
     };
   }
 
@@ -672,7 +795,7 @@ class Logger {
       operationCounts: new Map(),
       operationTimes: new Map(),
       errorCounts: new Map(),
-      userActions: new Map()
+      userActions: new Map(),
     };
     this.info(LogComponent.PERFORMANCE, 'logs_cleared', 'All logs and metrics cleared');
   }
@@ -698,13 +821,13 @@ declare global {
   }
 }
 
-// Add global access for debugging
-if (typeof window !== 'undefined') {
+// Add global access for debugging (DEV only)
+if (typeof window !== 'undefined' && import.meta.env?.DEV) {
   window.walSheetzLogger = logger;
 
   window.addEventListener('load', () => {
     logger.info(LogComponent.PERFORMANCE, 'page_load', 'Page fully loaded', {
-      loadTime: performance.now()
+      loadTime: performance.now(),
     });
   });
 
@@ -714,7 +837,10 @@ if (typeof window !== 'undefined') {
         usedJSHeapSize: performance.memory!.usedJSHeapSize,
         totalJSHeapSize: performance.memory!.totalJSHeapSize,
         jsHeapSizeLimit: performance.memory!.jsHeapSizeLimit,
-        usedPercent: (performance.memory!.usedJSHeapSize / performance.memory!.jsHeapSizeLimit * 100).toFixed(2)
+        usedPercent: (
+          (performance.memory!.usedJSHeapSize / performance.memory!.jsHeapSizeLimit) *
+          100
+        ).toFixed(2),
       });
     }, 30000);
   }
@@ -727,7 +853,7 @@ if (typeof window !== 'undefined') {
             logger.warn(LogComponent.PERFORMANCE, 'long_task', 'Long task detected', {
               duration: entry.duration,
               startTime: entry.startTime,
-              name: entry.name
+              name: entry.name,
             });
           }
         }

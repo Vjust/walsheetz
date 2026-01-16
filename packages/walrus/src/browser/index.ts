@@ -21,5 +21,8 @@ export { ProxyTransport } from '../transports/ProxyTransport.js';
 // Browser services
 export { BrowserWalrusService, browserWalrusService } from './BrowserWalrusService.js';
 
+// Alias for Node imports (browser-compatible shim)
+export { browserWalrusService as nodeWalrusService } from './BrowserWalrusService.js';
+
 // Default export
 export { browserWalrusService as default } from './BrowserWalrusService.js';

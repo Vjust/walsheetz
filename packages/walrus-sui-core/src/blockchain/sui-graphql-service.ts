@@ -1,10 +1,10 @@
 // Sui GraphQL Service for Walrus blob and PoA metadata queries
 import { getCurrentConfig } from './config.js';
-import { createLogger } from './utils/logger.js';
+import { createLogger } from '@dreamlit/shared';
 // Note: IGraphQLResponse type is available from '../data-integrity/interfaces/graphql/IGraphQLResponse.js'
 // TypeScript consumers can import this type separately
 
-const logger = createLogger('SuiGraphQLService');
+const logger = createLogger({ prefix: 'SuiGraphQLService' });
 
 // Stub for IGraphQLResponse when not available
 const IGraphQLResponse = {
@@ -106,7 +106,7 @@ export class SuiGraphQLService {
     }
 
     const err = lastError as Error;
-    logger.error('Query failed after all retries', { error: err.message });
+    logger.error('Query failed after all retries', err);
     throw err;
   }
 

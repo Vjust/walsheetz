@@ -293,7 +293,7 @@ export class AtomicOperationManager {
    * @private
    */
   async _buildErrorResponse(error: unknown, operationId: string, operationsCount: number, lastOperationName: string, rollbackSummary: Record<string, unknown> | null = null, results: Array<Record<string, unknown>> = []) {
-    const errorResult = await standardizedErrorHandler.processError(error, {
+    const errorResult = await standardizedErrorHandler.processError(error as Error | string, {
       operationId,
       operations: operationsCount,
       lastOperation: lastOperationName

@@ -44,11 +44,11 @@ export function getExplorerDisplayName(explorerType: ExplorerType): string {
 
 export function getExplorerIcon(explorerType: ExplorerType): string {
   const icons: Record<ExplorerType, string> = {
-    walrus: '🦭',
-    suiExplorer: '🔗',
-    suivision: '🔍'
+    walrus: 'W',
+    suiExplorer: 'S',
+    suivision: 'V'
   };
-  return icons[explorerType] || '🌐';
+  return icons[explorerType] || '';
 }
 
 export default {

@@ -3,46 +3,46 @@
  * Provides browser-specific features like localStorage and Performance API
  */
 
-import type { Logger } from '../index.js'
+import type { Logger } from '../index.js';
 
 export interface BrowserLoggerConfig {
-  enableLocalStorage?: boolean
-  maxErrorLogs?: number
-  enablePerformanceMarks?: boolean
+  enableLocalStorage?: boolean;
+  maxErrorLogs?: number;
+  enablePerformanceMarks?: boolean;
 }
 
 /**
  * Browser-specific logging utilities
  */
 export class BrowserLoggerAdapter {
-  private enableLocalStorage: boolean
-  private maxErrorLogs: number
-  private enablePerformanceMarks: boolean
-  private performanceMarks: Map<string, number>
+  private enableLocalStorage: boolean;
+  private maxErrorLogs: number;
+  private enablePerformanceMarks: boolean;
+  private performanceMarks: Map<string, number>;
 
   constructor(config: BrowserLoggerConfig = {}) {
-    this.enableLocalStorage = config.enableLocalStorage !== false
-    this.maxErrorLogs = config.maxErrorLogs || 50
-    this.enablePerformanceMarks = config.enablePerformanceMarks !== false
-    this.performanceMarks = new Map()
+    this.enableLocalStorage = config.enableLocalStorage !== false;
+    this.maxErrorLogs = config.maxErrorLogs || 50;
+    this.enablePerformanceMarks = config.enablePerformanceMarks !== false;
+    this.performanceMarks = new Map();
   }
 
   /**
    * Save error logs to localStorage for later analysis
    */
   saveErrorLog(logEntry: Record<string, unknown>): void {
-    if (!this.enableLocalStorage) return
+    if (!this.enableLocalStorage) return;
 
     try {
-      if (typeof localStorage === 'undefined') return
+      if (typeof localStorage === 'undefined') return;
 
-      const errorLogs = JSON.parse(localStorage.getItem('walsheetz_error_logs') || '[]')
-      errorLogs.push(logEntry)
+      const errorLogs = JSON.parse(localStorage.getItem('walsheetz_error_logs') || '[]');
+      errorLogs.push(logEntry);
       if (errorLogs.length > this.maxErrorLogs) {
-        errorLogs.shift()
+        errorLogs.shift();
       }
-      localStorage.setItem('walsheetz_error_logs', JSON.stringify(errorLogs))
-    } catch {
+      localStorage.setItem('walsheetz_error_logs', JSON.stringify(errorLogs));
+    } catch (_error) {
       // Silently ignore localStorage errors
     }
   }
@@ -51,11 +51,12 @@ export class BrowserLoggerAdapter {
    * Get debug mode from localStorage
    */
   getDebugMode(): boolean {
+    if (!this.enableLocalStorage) return false;
     try {
-      if (typeof localStorage === 'undefined') return false
-      return localStorage.getItem('walsheetz_debug_mode') === 'true'
-    } catch {
-      return false
+      if (typeof localStorage === 'undefined') return false;
+      return localStorage.getItem('walsheetz_debug_mode') === 'true';
+    } catch (_error) {
+      return false;
     }
   }
 
@@ -63,10 +64,11 @@ export class BrowserLoggerAdapter {
    * Set debug mode in localStorage
    */
   setDebugMode(enabled: boolean): void {
+    if (!this.enableLocalStorage) return;
     try {
-      if (typeof localStorage === 'undefined') return
-      localStorage.setItem('walsheetz_debug_mode', enabled.toString())
-    } catch {
+      if (typeof localStorage === 'undefined') return;
+      localStorage.setItem('walsheetz_debug_mode', enabled.toString());
+    } catch (_error) {
       // Silently ignore localStorage errors
     }
   }
@@ -75,10 +77,10 @@ export class BrowserLoggerAdapter {
    * Start performance mark
    */
   startMark(label: string): void {
-    this.performanceMarks.set(label, Date.now())
+    this.performanceMarks.set(label, Date.now());
 
     if (this.enablePerformanceMarks && typeof performance !== 'undefined') {
-      performance.mark(`${label}-start`)
+      performance.mark(`${label}-start`);
     }
   }
 
@@ -86,36 +88,36 @@ export class BrowserLoggerAdapter {
    * End performance mark and return duration
    */
   endMark(label: string): number | null {
-    const startTime = this.performanceMarks.get(label)
-    if (!startTime) return null
+    const startTime = this.performanceMarks.get(label);
+    if (!startTime) return null;
 
-    const duration = Date.now() - startTime
-    this.performanceMarks.delete(label)
+    const duration = Date.now() - startTime;
+    this.performanceMarks.delete(label);
 
     if (this.enablePerformanceMarks && typeof performance !== 'undefined') {
       try {
-        performance.mark(`${label}-end`)
-        performance.measure(label, `${label}-start`, `${label}-end`)
-      } catch {
+        performance.mark(`${label}-end`);
+        performance.measure(label, `${label}-start`, `${label}-end`);
+      } catch (_error) {
         // Ignore performance measurement errors
       }
     }
 
-    return duration
+    return duration;
   }
 
   /**
    * Check if localStorage is available
    */
   isStorageAvailable(): boolean {
-    if (!this.enableLocalStorage) return false
+    if (!this.enableLocalStorage) return false;
     try {
-      if (typeof localStorage === 'undefined') return false
-      localStorage.setItem('__walsheetz_storage_test__', 'true')
-      localStorage.removeItem('__walsheetz_storage_test__')
-      return true
-    } catch {
-      return false
+      if (typeof localStorage === 'undefined') return false;
+      localStorage.setItem('__walsheetz_storage_test__', 'true');
+      localStorage.removeItem('__walsheetz_storage_test__');
+      return true;
+    } catch (_error) {
+      return false;
     }
   }
 
@@ -125,9 +127,9 @@ export class BrowserLoggerAdapter {
   clearErrorLogs(): void {
     try {
       if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem('walsheetz_error_logs')
+        localStorage.removeItem('walsheetz_error_logs');
       }
-    } catch {
+    } catch (_error) {
       // Silently ignore localStorage errors
     }
   }
@@ -137,10 +139,10 @@ export class BrowserLoggerAdapter {
    */
   getErrorLogs(): Record<string, unknown>[] {
     try {
-      if (typeof localStorage === 'undefined') return []
-      return JSON.parse(localStorage.getItem('walsheetz_error_logs') || '[]')
-    } catch {
-      return []
+      if (typeof localStorage === 'undefined') return [];
+      return JSON.parse(localStorage.getItem('walsheetz_error_logs') || '[]');
+    } catch (_error) {
+      return [];
     }
   }
 }

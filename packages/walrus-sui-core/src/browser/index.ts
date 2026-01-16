@@ -11,7 +11,6 @@
 export {
   browserSuiService,
   browserWalletManager,
-  browserGrpcService,
   AtomicOperationManager,
   AtomicExecutionContext
 } from '../blockchain-integration/index.js';

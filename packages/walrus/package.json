@@ -12,6 +12,11 @@
       "browser": "./dist/index.js",
       "node": "./dist/node.js",
       "default": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.js",
+      "default": "./dist/node.js"
     }
   },
   "files": [

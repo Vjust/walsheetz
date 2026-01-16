@@ -9,7 +9,7 @@
  * 2. Walrus SDK feature flag is enabled in config
  */
 
-import { configLoader } from "../shared/ConfigLoader.js";
+import { configLoader } from "../shared/index.js";
 
 let cachedClient: any = null;
 let loadingPromise: Promise<any> | null = null;
@@ -82,7 +82,7 @@ export async function loadWalrusSdkClient(options = {}) {
 
       // Initialize and cache the client with resolved RPC URL
       cachedClient = new WalrusSdkClient({ ...options, suiClientUrl: rpcUrl });
-      console.info('[WalrusSdkClientLoader] ✅ WalrusSdkClient initialized and cached');
+      console.info('[WalrusSdkClientLoader] WalrusSdkClient initialized and cached');
 
       return cachedClient;
     } catch (error) {

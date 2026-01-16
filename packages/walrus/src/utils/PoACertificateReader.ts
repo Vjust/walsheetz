@@ -7,7 +7,7 @@
  * @param {Object} transport - Transport instance with getBlob method
  * @returns {Promise<{success: boolean, blobId: string, poaStatus: string, certificate: Object|null}>}
  */
-export async function getPoaCertificate(aggregatorUrl, blobId, transport) {
+export async function getPoaCertificate(aggregatorUrl, blobId, _transport) {
   try {
     // Fetch certificate from /v1/blobs/{blobId}/cert endpoint
     const certUrl = `${aggregatorUrl}/v1/blobs/${blobId}/cert`;
@@ -18,7 +18,7 @@ export async function getPoaCertificate(aggregatorUrl, blobId, transport) {
         success: true,
         blobId,
         poaStatus: 'not_found',
-        certificate: null
+        certificate: null,
       };
     }
 
@@ -28,7 +28,7 @@ export async function getPoaCertificate(aggregatorUrl, blobId, transport) {
         blobId,
         poaStatus: 'error',
         certificate: null,
-        error: `HTTP ${response.status}: ${response.statusText}`
+        error: `HTTP ${response.status}: ${response.statusText}`,
       };
     }
 
@@ -41,7 +41,7 @@ export async function getPoaCertificate(aggregatorUrl, blobId, transport) {
       success: true,
       blobId,
       poaStatus,
-      certificate
+      certificate,
     };
   } catch (error) {
     return {
@@ -49,7 +49,7 @@ export async function getPoaCertificate(aggregatorUrl, blobId, transport) {
       blobId,
       poaStatus: 'error',
       certificate: null,
-      error: (error as Error).message
+      error: (error as Error).message,
     };
   }
 }

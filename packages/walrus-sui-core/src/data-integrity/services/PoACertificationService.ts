@@ -11,18 +11,34 @@ class PoACertificationService {
   private defaultPollInterval: number;
   private maxPollAttempts: number;
   private certificationHistory: Map<string, any[]>;
+  private browserSuiServiceOverride?: any;
+  private browserWalrusServiceOverride?: any;
 
-  constructor() {
+  constructor(dependencies: { browserSuiService?: any; browserWalrusService?: any } = {}) {
     this.certificationRequests = new Map(); // blobId -> request status
     this.pollingIntervals = new Map(); // blobId -> interval ID
     this.defaultPollInterval = 5000; // 5 seconds
     this.maxPollAttempts = 60; // 5 minutes max polling
     this.certificationHistory = new Map(); // blobId -> history array
+    this.browserSuiServiceOverride = dependencies.browserSuiService;
+    this.browserWalrusServiceOverride = dependencies.browserWalrusService;
 
     // Initialize empty history (RAM-only)
     this.certificationHistory.clear();
 
     logger.info(LogComponent.UI, 'poa_service_init', 'PoACertificationService initialized');
+  }
+
+  private async getBrowserSuiService() {
+    if (this.browserSuiServiceOverride) return this.browserSuiServiceOverride;
+    const { browserSuiService } = await import("../../blockchain-integration/services/BrowserSuiService.js");
+    return browserSuiService;
+  }
+
+  private async getBrowserWalrusService() {
+    if (this.browserWalrusServiceOverride) return this.browserWalrusServiceOverride;
+    const { browserWalrusService } = await import("@dreamlit/walrus");
+    return browserWalrusService;
   }
 
   /**
@@ -61,8 +77,7 @@ class PoACertificationService {
         options
       });
 
-      // Import browser sui service dynamically
-      const { browserSuiService } = await import("../../blockchain-integration/services/BrowserSuiService.js");
+      const browserSuiService = await this.getBrowserSuiService();
 
       // Emit event
       eventBus.emit('poa:certification:requested', {
@@ -190,8 +205,7 @@ class PoACertificationService {
         blobId
       });
 
-      // Import browser walrus service dynamically
-      const { browserWalrusService } = await import("@dreamlit/walrus");
+      const browserWalrusService = await this.getBrowserWalrusService();
 
       // Get PoA certificate status
       const result = await browserWalrusService.getPoACertificate(blobId);

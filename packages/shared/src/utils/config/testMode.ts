@@ -21,7 +21,6 @@ export function getTestModeConfig() {
     features: {
       blockchain: !isAuthBypassed(),
       walrus: !isAuthBypassed(),
-      collaboration: !isAuthBypassed(),
       localStorage: true
     }
   };
@@ -31,6 +30,6 @@ export function logTestModeStatus(): void {
   if (isAuthBypassed()) {
     console.log('Test Mode Active - Wallet/Blockchain Bypassed');
     console.log('Data will be stored in localStorage only');
-    console.log('Collaboration and Walrus features disabled');
+    console.log('Blockchain and Walrus features disabled');
   }
 }

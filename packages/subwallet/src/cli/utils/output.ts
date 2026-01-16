@@ -89,12 +89,12 @@ export function error(message: string): string {
  * Format warning message
  */
 export function warning(message: string): string {
-  return chalk.yellow('⚠ ') + message
+  return chalk.yellow('WARN: ') + message
 }
 
 /**
  * Format info message
  */
 export function info(message: string): string {
-  return chalk.blue('ℹ ') + message
+  return chalk.blue('INFO: ') + message
 }

@@ -5,8 +5,8 @@ import { Transaction } from '@mysten/sui/transactions';
 import { getCurrentConfig, isTestnet } from './config.js';
 import { walletManager } from './wallet-manager.js';
 import { configLoader } from '@dreamlit/walrus';
-import RateLimiter from './utils/rateLimiter.js';
-import { detectSaveVersionSignature } from '../blockchain-integration/utils/AbiHelpers.js';
+import { RateLimiter } from '@dreamlit/shared';
+import { detectSaveVersionSignature } from '@dreamlit/shared';
 
 // Note: ResilientExecutor/CircuitBreaker not needed in this service
 // If needed in future, import from @dreamlit/walrus
@@ -34,14 +34,14 @@ class SuiService {
   constructor() {
     const config = getCurrentConfig();
     this.client = new SuiClient({
-      url: config.sui.rpcUrl
+      url: config.sui.rpcUrl,
     });
     this.isTestnet = isTestnet();
-    
+
     // Initialize rate limiters if enabled
     this.rateLimiterEnabled = config.sui?.features?.rateLimiterEnabled !== false;
     this.limiters = {};
-    
+
     if (this.rateLimiterEnabled) {
       const rateLimits = config.sui?.rateLimits || {};
       this.limiters.sui = new RateLimiter({
@@ -49,19 +49,19 @@ class SuiService {
         ...(rateLimits.sui || {
           maxRPS: 3,
           burst: 6,
-          maxConcurrent: 4
-        })
+          maxConcurrent: 4,
+        }),
       });
       console.log('[SuiService] Rate limiter initialized with config:', rateLimits.sui);
     }
-    
+
     // Initialize resilient executors for blockchain operations
     this.transactionExecutor = new ResilientExecutor({
       name: 'SuiTransaction',
       circuit: {
         failureThreshold: 4,
         recoveryTimeout: 45000, // 45 seconds
-        expectedErrors: ['Insufficient gas', 'Network error', 'RPC error']
+        expectedErrors: ['Insufficient gas', 'Network error', 'RPC error'],
       },
       retry: {
         maxAttempts: 3,
@@ -69,12 +69,15 @@ class SuiService {
         maxDelay: 15000, // 15 seconds
         retryCondition: (error) => {
           // Don't retry on certain blockchain-specific errors
-          const errorMsg = typeof error === 'string' ? error : (error && error.message) || 'Unknown error';
-          return !errorMsg.includes('already exists') &&
-                 !errorMsg.includes('invalid signature') &&
-                 !errorMsg.includes('insufficient balance');
-        }
-      }
+          const errorMsg =
+            typeof error === 'string' ? error : (error && error.message) || 'Unknown error';
+          return (
+            !errorMsg.includes('already exists') &&
+            !errorMsg.includes('invalid signature') &&
+            !errorMsg.includes('insufficient balance')
+          );
+        },
+      },
     });
 
     this.queryExecutor = new ResilientExecutor({
@@ -82,23 +85,27 @@ class SuiService {
       circuit: {
         failureThreshold: 6,
         recoveryTimeout: 20000, // 20 seconds
-        expectedErrors: ['Network error', 'RPC error']
+        expectedErrors: ['Network error', 'RPC error'],
       },
       retry: {
         maxAttempts: 4,
         baseDelay: 1000, // 1 second
         maxDelay: 8000, // 8 seconds
-      }
+      },
     });
   }
-  
+
   // Helper to check if error is rate limit related
   isRateLimitError(err: unknown) {
-    const m = (typeof err === 'object' && err !== null && 'message' in err ? (err as Error).message : '').toLowerCase();
-    return m.includes('429') ||
-           m.includes('too many') ||
-           m.includes('rate limit') ||
-           m.includes('retry after');
+    const m = (
+      typeof err === 'object' && err !== null && 'message' in err ? (err as Error).message : ''
+    ).toLowerCase();
+    return (
+      m.includes('429') ||
+      m.includes('too many') ||
+      m.includes('rate limit') ||
+      m.includes('retry after')
+    );
   }
 
   // Get current network info
@@ -106,35 +113,41 @@ class SuiService {
     // If rate limiter is enabled, wrap the call
     if (this.rateLimiterEnabled && this.limiters.sui) {
       const key = 'sui:getNetworkInfo';
-      return this.limiters.sui.schedule(key, async () => {
-        try {
-          return await this._getNetworkInfoInternal();
-        } catch (e) {
-          if (this.isRateLimitError(e)) {
-            // Pause with jittered backoff
-            const ms = this.limiters.sui.calculateBackoff();
-            this.limiters.sui.pause(ms);
-            console.warn(`[SuiService] Rate limit error in getNetworkInfo, backing off for ${ms}ms`);
+      return this.limiters.sui.schedule(
+        key,
+        async () => {
+          try {
+            return await this._getNetworkInfoInternal();
+          } catch (e) {
+            if (this.isRateLimitError(e)) {
+              // Pause with jittered backoff
+              const ms = this.limiters.sui.calculateBackoff();
+              this.limiters.sui.pause(ms);
+              console.warn(
+                `[SuiService] Rate limit error in getNetworkInfo, backing off for ${ms}ms`
+              );
+            }
+            throw e;
           }
-          throw e;
-        }
-      }, { ttlMs: 2000 }); // Cache for 2 seconds
+        },
+        { ttlMs: 2000 }
+      ); // Cache for 2 seconds
     }
-    
+
     return this._getNetworkInfoInternal();
   }
-  
+
   async _getNetworkInfoInternal() {
     try {
       const chainId = await this.client.getChainIdentifier();
       const latestCheckpoint = await this.client.getLatestCheckpointSequenceNumber();
       const gasPrice = await this.client.getReferenceGasPrice();
-      
+
       return {
         chainId,
         latestCheckpoint,
         gasPrice,
-        isTestnet: this.isTestnet
+        isTestnet: this.isTestnet,
       };
     } catch (error) {
       const err = error as Error;
@@ -148,34 +161,38 @@ class SuiService {
     // If rate limiter is enabled, wrap the call
     if (this.rateLimiterEnabled && this.limiters.sui) {
       const key = `sui:getBalance:${address}`;
-      return this.limiters.sui.schedule(key, async () => {
-        try {
-          return await this._getBalanceInternal(address);
-        } catch (e) {
-          if (this.isRateLimitError(e)) {
-            // Pause with jittered backoff
-            const ms = this.limiters.sui.calculateBackoff();
-            this.limiters.sui.pause(ms);
-            console.warn(`[SuiService] Rate limit error in getBalance, backing off for ${ms}ms`);
+      return this.limiters.sui.schedule(
+        key,
+        async () => {
+          try {
+            return await this._getBalanceInternal(address);
+          } catch (e) {
+            if (this.isRateLimitError(e)) {
+              // Pause with jittered backoff
+              const ms = this.limiters.sui.calculateBackoff();
+              this.limiters.sui.pause(ms);
+              console.warn(`[SuiService] Rate limit error in getBalance, backing off for ${ms}ms`);
+            }
+            throw e;
           }
-          throw e;
-        }
-      }, { ttlMs: 3000 }); // Cache for 3 seconds
+        },
+        { ttlMs: 3000 }
+      ); // Cache for 3 seconds
     }
-    
+
     return this._getBalanceInternal(address);
   }
-  
+
   async _getBalanceInternal(address: string) {
     try {
       const balance = await this.client.getBalance({
-        owner: address
+        owner: address,
       });
-      
+
       return {
         totalBalance: balance.totalBalance,
         coinObjectCount: balance.coinObjectCount,
-        lockedBalance: balance.lockedBalance || '0'
+        lockedBalance: balance.lockedBalance || '0',
       };
     } catch (error) {
       const err = error as Error;
@@ -190,29 +207,35 @@ class SuiService {
     if (this.rateLimiterEnabled && this.limiters.sui) {
       const { filter, ...otherOptions } = options;
       const key = `sui:getOwnedObjects:${address}:${JSON.stringify(filter || {})}`;
-      return this.limiters.sui.schedule(key, async () => {
-        try {
-          return await this._getOwnedObjectsInternal(address, options);
-        } catch (e) {
-          if (this.isRateLimitError(e)) {
-            // Pause with jittered backoff
-            const ms = this.limiters.sui.calculateBackoff();
-            this.limiters.sui.pause(ms);
-            console.warn(`[SuiService] Rate limit error in getOwnedObjects, backing off for ${ms}ms`);
+      return this.limiters.sui.schedule(
+        key,
+        async () => {
+          try {
+            return await this._getOwnedObjectsInternal(address, options);
+          } catch (e) {
+            if (this.isRateLimitError(e)) {
+              // Pause with jittered backoff
+              const ms = this.limiters.sui.calculateBackoff();
+              this.limiters.sui.pause(ms);
+              console.warn(
+                `[SuiService] Rate limit error in getOwnedObjects, backing off for ${ms}ms`
+              );
+            }
+            throw e;
           }
-          throw e;
-        }
-      }, { ttlMs: 5000 }); // Cache for 5 seconds
+        },
+        { ttlMs: 5000 }
+      ); // Cache for 5 seconds
     }
-    
+
     return this._getOwnedObjectsInternal(address, options);
   }
-  
+
   async _getOwnedObjectsInternal(address: string, options: Record<string, unknown> = {}) {
     try {
       // Extract filter separately to avoid duplication
       const { filter, ...otherOptions } = options;
-      
+
       const result = await this.client.getOwnedObjects({
         owner: address,
         filter: filter as any,
@@ -220,10 +243,10 @@ class SuiService {
           showContent: true,
           showOwner: true,
           showType: true,
-          ...(otherOptions as Record<string, unknown>)
-        }
+          ...(otherOptions as Record<string, unknown>),
+        },
       });
-      
+
       return result;
     } catch (error) {
       const err = error as Error;
@@ -258,20 +281,20 @@ class SuiService {
           tx.pure.string((data.contentHash || '') as string),
           tx.pure.u64((data.cellCount || 0) as number),
           tx.pure.string((data.description || `Version ${data.version}`) as string),
-          tx.object('0x6')
+          tx.object('0x6'),
         ]
       : [
           tx.object(data.spreadsheetObjectId as string),
           tx.pure.string(data.walrusBlobId as string),
           tx.pure.u64((data.cellCount || 0) as number),
           tx.pure.string((data.description || `Version ${data.version}`) as string),
-          tx.object('0x6')
+          tx.object('0x6'),
         ];
 
     tx.moveCall({
       target: `${config.sui.packageId}::spreadsheet::save_version`,
       arguments: args,
-      typeArguments: []
+      typeArguments: [],
     });
 
     console.log('[ABI] createStorageTransaction built with signature:', sig.debug || sig);
@@ -285,7 +308,7 @@ class SuiService {
   createEnhancedStorageTransaction(data: Record<string, unknown>) {
     const tx = new Transaction();
     const config = getCurrentConfig();
-    
+
     if (!config.sui.packageId) {
       throw new Error('Package ID not configured for current network');
     }
@@ -300,10 +323,12 @@ class SuiService {
     const metadata = {
       primaryBlobId: data.walrusBlobId as string,
       redundantBlobIds: (data.redundantBlobIds || []) as string[],
-      hasRedundancy: !!((data.redundantBlobIds as string[]) && (data.redundantBlobIds as string[]).length > 0),
+      hasRedundancy: !!(
+        (data.redundantBlobIds as string[]) && (data.redundantBlobIds as string[]).length > 0
+      ),
       isDelta: (data.isDelta || false) as boolean,
       compressionRatio: (data.compressionRatio || 1.0) as number,
-      integrityVerified: (data.integrityVerified || false) as boolean
+      integrityVerified: (data.integrityVerified || false) as boolean,
     };
 
     console.log('Creating storage transaction with enhanced metadata (tracked off-chain):', {
@@ -311,7 +336,7 @@ class SuiService {
       redundantCount: metadata.redundantBlobIds.length,
       hasRedundancy: metadata.hasRedundancy,
       isDelta: metadata.isDelta,
-      compressionRatio: metadata.compressionRatio
+      compressionRatio: metadata.compressionRatio,
     });
 
     // Create enriched description with metadata
@@ -319,7 +344,7 @@ class SuiService {
       desc: data.description || `Version ${data.version}`,
       redundant: metadata.redundantBlobIds,
       delta: metadata.isDelta,
-      compression: metadata.compressionRatio
+      compression: metadata.compressionRatio,
     });
 
     // Use the regular save_version function with ABI-compatible arguments
@@ -330,20 +355,20 @@ class SuiService {
           tx.pure.string((data.contentHash || '') as string),
           tx.pure.u64((data.cellCount || 0) as number),
           tx.pure.string(enhancedDescription.substring(0, 500)),
-          tx.object('0x6')
+          tx.object('0x6'),
         ]
       : [
           tx.object(data.spreadsheetObjectId as string),
           tx.pure.string(metadata.primaryBlobId),
           tx.pure.u64((data.cellCount || 0) as number),
           tx.pure.string(enhancedDescription.substring(0, 500)),
-          tx.object('0x6')
+          tx.object('0x6'),
         ];
 
     tx.moveCall({
       target: `${config.sui.packageId}::spreadsheet::save_version`,
       arguments: args,
-      typeArguments: []
+      typeArguments: [],
     });
 
     return tx;
@@ -358,32 +383,38 @@ class SuiService {
   createSpreadsheet(title: string = 'Untitled Spreadsheet') {
     const tx = new Transaction();
     const config = getCurrentConfig();
-    
+
     if (!config.sui.packageId) {
       throw new Error('Package ID not configured for current network');
     }
 
     // Get the registry object ID from config
     const registryObjectId = config.sui.registryObjectId;
-    
+
     if (!registryObjectId) {
       throw new Error('Registry object ID not configured for current network');
     }
-    
+
     tx.moveCall({
       target: `${config.sui.packageId}::spreadsheet::create_spreadsheet`,
       arguments: [
         tx.object(registryObjectId), // Registry object
-        tx.pure.string(title) // Spreadsheet title
+        tx.pure.string(title), // Spreadsheet title
       ],
-      typeArguments: []
+      typeArguments: [],
     });
 
     return tx;
   }
 
   // Create a combined transaction for spreadsheet creation and initial version save
-  async createSpreadsheetWithInitialVersion(title: string, walrusBlobId: string, contentHash: string, cellCount: number = 0, description: string = 'Initial version') {
+  async createSpreadsheetWithInitialVersion(
+    title: string,
+    walrusBlobId: string,
+    contentHash: string,
+    cellCount: number = 0,
+    description: string = 'Initial version'
+  ) {
     const tx = new Transaction();
     const config = getCurrentConfig();
 
@@ -407,11 +438,8 @@ class SuiService {
     // Step 1: Create spreadsheet and capture the returned object
     const spreadsheetObj = tx.moveCall({
       target: `${config.sui.packageId}::spreadsheet::create_spreadsheet`,
-      arguments: [
-        tx.object(registryObjectId),
-        tx.pure.string(title)
-      ],
-      typeArguments: []
+      arguments: [tx.object(registryObjectId), tx.pure.string(title)],
+      typeArguments: [],
     });
 
     // Step 2: Immediately save the initial version using the created spreadsheet
@@ -422,23 +450,26 @@ class SuiService {
           tx.pure.string(contentHash || ''),
           tx.pure.u64(cellCount),
           tx.pure.string(description),
-          tx.object('0x6')
+          tx.object('0x6'),
         ]
       : [
           spreadsheetObj,
           tx.pure.string(walrusBlobId),
           tx.pure.u64(cellCount),
           tx.pure.string(description),
-          tx.object('0x6')
+          tx.object('0x6'),
         ];
 
     tx.moveCall({
       target: `${config.sui.packageId}::spreadsheet::save_version`,
       arguments: saveArgs,
-      typeArguments: []
+      typeArguments: [],
     });
 
-    console.log('[ABI] createSpreadsheetWithInitialVersion built with signature:', (sig as Record<string, unknown>).debug || sig);
+    console.log(
+      '[ABI] createSpreadsheetWithInitialVersion built with signature:',
+      (sig as unknown as Record<string, unknown>).debug || sig
+    );
 
     return tx;
   }
@@ -462,17 +493,17 @@ class SuiService {
           options: {
             showContent: true,
             showType: true,
-            showOwner: true
-          }
+            showOwner: true,
+          },
         });
       });
 
-      const resData = ((result as any)?.data) as any;
+      const resData = (result as any)?.data as any;
       if (!resData) {
         return {
           exists: false,
           error: 'Object not found on blockchain',
-          objectId: spreadsheetObjectId
+          objectId: spreadsheetObjectId,
         };
       }
 
@@ -482,22 +513,22 @@ class SuiService {
         return {
           exists: false,
           error: `Object exists but is not a spreadsheet (type: ${resData.type})`,
-          objectId: spreadsheetObjectId
+          objectId: spreadsheetObjectId,
         };
       }
 
       return {
         exists: true,
         objectId: spreadsheetObjectId,
-        data: resData
+        data: resData,
       };
     } catch (error) {
       const err = error as Error;
       console.error('Failed to validate spreadsheet object:', err);
       return {
         exists: false,
-        error: `Validation failed: ${typeof error === 'string' ? error : (err?.message) || 'Unknown error'}`,
-        objectId: spreadsheetObjectId
+        error: `Validation failed: ${typeof error === 'string' ? error : err?.message || 'Unknown error'}`,
+        objectId: spreadsheetObjectId,
       };
     }
   }
@@ -508,24 +539,30 @@ class SuiService {
     if (this.rateLimiterEnabled && this.limiters.sui) {
       const config = getCurrentConfig();
       const key = `sui:getUserSpreadsheets:${address}:${config.sui.packageId}`;
-      return this.limiters.sui.schedule(key, async () => {
-        try {
-          return await this._getUserSpreadsheetsInternal(address);
-        } catch (e) {
-          if (this.isRateLimitError(e)) {
-            // Pause with jittered backoff
-            const ms = this.limiters.sui.calculateBackoff();
-            this.limiters.sui.pause(ms);
-            console.warn(`[SuiService] Rate limit error in getUserSpreadsheets, backing off for ${ms}ms`);
+      return this.limiters.sui.schedule(
+        key,
+        async () => {
+          try {
+            return await this._getUserSpreadsheetsInternal(address);
+          } catch (e) {
+            if (this.isRateLimitError(e)) {
+              // Pause with jittered backoff
+              const ms = this.limiters.sui.calculateBackoff();
+              this.limiters.sui.pause(ms);
+              console.warn(
+                `[SuiService] Rate limit error in getUserSpreadsheets, backing off for ${ms}ms`
+              );
+            }
+            throw e;
           }
-          throw e;
-        }
-      }, { ttlMs: 5000 }); // Cache for 5 seconds
+        },
+        { ttlMs: 5000 }
+      ); // Cache for 5 seconds
     }
-    
+
     return this._getUserSpreadsheetsInternal(address);
   }
-  
+
   async _getUserSpreadsheetsInternal(address: string) {
     try {
       const config = getCurrentConfig();
@@ -536,19 +573,19 @@ class SuiService {
       const result = await this.client.getOwnedObjects({
         owner: address,
         filter: {
-          StructType: `${config.sui.packageId}::spreadsheet::Spreadsheet`
+          StructType: `${config.sui.packageId}::spreadsheet::Spreadsheet`,
         },
         options: {
           showContent: true,
           showOwner: true,
-          showType: true
-        }
+          showType: true,
+        },
       });
 
       // Parse spreadsheet metadata from the results
       const spreadsheets = (result.data || [])
-        .filter(item => (item.data as any)?.content)
-        .map(item => {
+        .filter((item) => (item.data as any)?.content)
+        .map((item) => {
           const itemData = item.data as any;
           const content = itemData.content as Record<string, unknown>;
           const fields = (content.fields || {}) as Record<string, unknown>;
@@ -560,7 +597,7 @@ class SuiService {
             last_modified: (fields.last_modified || Date.now()) as number,
             version_count: (fields.version_count || 0) as number,
             current_version: fields.current_version,
-            is_public: (fields.is_public || false) as boolean
+            is_public: (fields.is_public || false) as boolean,
           };
         })
         .sort((a, b) => b.last_modified - a.last_modified); // Sort by most recent
@@ -591,28 +628,28 @@ class SuiService {
             StructType: `${config.sui.packageId}::spreadsheet::Version`,
             filter: {
               fieldName: 'spreadsheet_id',
-              fieldValue: spreadsheetId
-            }
+              fieldValue: spreadsheetId,
+            },
           },
           options: {
             showContent: true,
             showOwner: true,
-            showType: true
-          }
+            showType: true,
+          },
         });
       } catch {
         // Fallback: use getOwnedObjects with appropriate filters
         result = await this.client.getOwnedObjects({
           owner: config.sui.registryObjectId || '0x0',
           filter: { StructType: `${config.sui.packageId}::spreadsheet::Version` },
-          options: { showContent: true }
+          options: { showContent: true },
         });
       }
 
       // Parse version metadata including content hash
-      const versions = ((result?.data) || [])
-        .filter(item => (item.data as any)?.content)
-        .map(item => {
+      const versions = (result?.data || [])
+        .filter((item) => (item.data as any)?.content)
+        .map((item) => {
           const itemData = item.data as any;
           const content = itemData.content as Record<string, unknown>;
           const fields = (content.fields || {}) as Record<string, unknown>;
@@ -626,12 +663,14 @@ class SuiService {
             cell_count: (fields.cell_count || 0) as number,
             created_at: (fields.created_at || Date.now()) as number,
             created_by: fields.created_by,
-            description: (fields.description || 'Version') as string
+            description: (fields.description || 'Version') as string,
           };
         })
         .sort((a, b) => b.version_number - a.version_number); // Sort by version number desc
 
-      console.log(`[SuiService] Found ${versions.length} versions for spreadsheet ${spreadsheetId}`);
+      console.log(
+        `[SuiService] Found ${versions.length} versions for spreadsheet ${spreadsheetId}`
+      );
       return versions;
     } catch (error) {
       const err = error as Error;
@@ -644,46 +683,54 @@ class SuiService {
   async getSpreadsheetData(spreadsheetId: string, walrusService: unknown) {
     try {
       const versions = await this.getSpreadsheetVersions(spreadsheetId);
-      
+
       if (versions.length === 0) {
         throw new Error(`No versions found for spreadsheet ${spreadsheetId}`);
       }
 
       const latestVersion = versions[0];
-      
+
       // Retrieve data from Walrus using the blob ID
       if (!latestVersion.walrus_blob_id) {
-        throw new Error(`No Walrus blob ID found for latest version of spreadsheet ${spreadsheetId}`);
+        throw new Error(
+          `No Walrus blob ID found for latest version of spreadsheet ${spreadsheetId}`
+        );
       }
 
-      console.log(`[SuiService] Loading data from Walrus blob with integrity verification: ${latestVersion.walrus_blob_id}`);
-      
+      console.log(
+        `[SuiService] Loading data from Walrus blob with integrity verification: ${latestVersion.walrus_blob_id}`
+      );
+
       // Retrieve blob with content hash verification if available
-      const blobData = await (walrusService as Record<string, unknown> & { retrieveBlob?: Function }).retrieveBlob?.(
+      const blobData = await (
+        walrusService as Record<string, unknown> & { retrieveBlob?: Function }
+      ).retrieveBlob?.(
         latestVersion.walrus_blob_id,
         latestVersion.content_hash // Pass expected hash for integrity verification
       );
-      
+
       // Log integrity verification results
       if (blobData.success && blobData.verificationPerformed) {
         if (blobData.integrityVerified) {
-          console.log('✅ Content integrity verified - data is authentic');
+          console.log('Content integrity verified - data is authentic');
         } else {
-          console.error('❌ CRITICAL SECURITY: Content integrity verification FAILED!', {
+          console.error('CRITICAL SECURITY: Content integrity verification FAILED!', {
             blobId: latestVersion.walrus_blob_id,
             expectedHash: latestVersion.content_hash?.substring(0, 16) + '...',
             spreadsheetId,
-            security: 'Data rejected to prevent tampering'
+            security: 'Data rejected to prevent tampering',
           });
           // SECURITY: Reject corrupted/tampered data immediately
-          throw new Error(`SECURITY: Data integrity verification failed for blob ${latestVersion.walrus_blob_id}. This indicates potential data corruption or tampering. Data rejected for security.`);
+          throw new Error(
+            `SECURITY: Data integrity verification failed for blob ${latestVersion.walrus_blob_id}. This indicates potential data corruption or tampering. Data rejected for security.`
+          );
         }
       }
 
       return {
         spreadsheetData: blobData,
         version: latestVersion,
-        allVersions: versions
+        allVersions: versions,
       };
     } catch (error) {
       const err = error as Error;
@@ -707,7 +754,10 @@ class SuiService {
 
       // Prepare blob IDs for redundant retrieval
       const blobIds = [latestVersion.walrus_blob_id as string];
-      if (latestVersion.redundant_blob_ids && (latestVersion.redundant_blob_ids as string[]).length > 0) {
+      if (
+        latestVersion.redundant_blob_ids &&
+        (latestVersion.redundant_blob_ids as string[]).length > 0
+      ) {
         blobIds.push(...(latestVersion.redundant_blob_ids as string[]));
       }
 
@@ -716,15 +766,13 @@ class SuiService {
       // Retrieve with redundancy fallback
       let blobData;
       if (blobIds.length > 1) {
-        blobData = await (walrusService as Record<string, unknown> & { retrieveWithRedundancy?: Function }).retrieveWithRedundancy?.(
-          blobIds,
-          latestVersion.content_hash
-        );
+        blobData = await (
+          walrusService as Record<string, unknown> & { retrieveWithRedundancy?: Function }
+        ).retrieveWithRedundancy?.(blobIds, latestVersion.content_hash);
       } else {
-        blobData = await (walrusService as Record<string, unknown> & { retrieveBlob?: Function }).retrieveBlob?.(
-          latestVersion.walrus_blob_id,
-          latestVersion.content_hash
-        );
+        blobData = await (
+          walrusService as Record<string, unknown> & { retrieveBlob?: Function }
+        ).retrieveBlob?.(latestVersion.walrus_blob_id, latestVersion.content_hash);
       }
 
       // Enhanced integrity verification logging
@@ -736,16 +784,22 @@ class SuiService {
           if (bdData.usedFallback) {
             console.warn('Primary blob failed, used redundant copy:', {
               primaryBlobId: latestVersion.walrus_blob_id,
-              successfulBlobId: (bdData.redundancyInfo as Record<string, unknown>)?.successfulBlobId
+              successfulBlobId: (bdData.redundancyInfo as Record<string, unknown>)
+                ?.successfulBlobId,
             });
           }
         } else {
-          console.error('CRITICAL SECURITY: Content integrity verification FAILED even with redundancy!', {
-            attemptedBlobIds: blobIds,
-            expectedHash: latestVersion.content_hash?.substring(0, 16) + '...',
-            spreadsheetId
-          });
-          throw new Error(`SECURITY: All redundant blob integrity verifications failed for spreadsheet ${spreadsheetId}. Data rejected for security.`);
+          console.error(
+            'CRITICAL SECURITY: Content integrity verification FAILED even with redundancy!',
+            {
+              attemptedBlobIds: blobIds,
+              expectedHash: latestVersion.content_hash?.substring(0, 16) + '...',
+              spreadsheetId,
+            }
+          );
+          throw new Error(
+            `SECURITY: All redundant blob integrity verifications failed for spreadsheet ${spreadsheetId}. Data rejected for security.`
+          );
         }
       }
 
@@ -754,7 +808,7 @@ class SuiService {
         version: latestVersion,
         allVersions: versions,
         redundancyUsed: blobIds.length > 1,
-        fallbackUsed: (bdData.usedFallback as boolean) || false
+        fallbackUsed: (bdData.usedFallback as boolean) || false,
       };
     } catch (error) {
       const err = error as Error;
@@ -782,36 +836,36 @@ class SuiService {
             StructType: `${config.sui.packageId}::spreadsheet::Version`,
             filter: {
               fieldName: 'spreadsheet_id',
-              fieldValue: spreadsheetId
-            }
+              fieldValue: spreadsheetId,
+            },
           },
           options: {
             showContent: true,
             showOwner: true,
-            showType: true
-          }
+            showType: true,
+          },
         });
       } catch {
         result = { data: [] };
       }
 
       // Parse version metadata and extract enhanced data from description if available
-      const versions = ((result?.data) || [])
-        .filter(item => (item.data as any)?.content)
-        .map(item => {
+      const versions = (result?.data || [])
+        .filter((item) => (item.data as any)?.content)
+        .map((item) => {
           const itemData = item.data as any;
           const content = itemData.content as any;
           const description = ((content.fields as any)?.description || 'Version') as string;
-          
+
           // Try to parse enhanced metadata from description
           let enhancedMetadata = {
             redundant_blob_ids: [],
             has_redundancy: false,
             is_delta: false,
             compression_ratio: 1.0,
-            integrity_verified: false
+            integrity_verified: false,
           };
-          
+
           try {
             // Check if description contains JSON metadata
             if (description.startsWith('{') && description.includes('"desc"')) {
@@ -821,7 +875,7 @@ class SuiService {
                 has_redundancy: (parsed.redundant || []).length > 0,
                 is_delta: parsed.delta || false,
                 compression_ratio: parsed.compression || 1.0,
-                integrity_verified: true // If we have content_hash, we can verify
+                integrity_verified: true, // If we have content_hash, we can verify
               };
             }
           } catch (e) {
@@ -845,12 +899,14 @@ class SuiService {
             has_redundancy: enhancedMetadata.has_redundancy,
             is_delta: enhancedMetadata.is_delta,
             compression_ratio: enhancedMetadata.compression_ratio,
-            integrity_verified: enhancedMetadata.integrity_verified
+            integrity_verified: enhancedMetadata.integrity_verified,
           };
         })
         .sort((a, b) => b.version_number - a.version_number);
 
-      console.log('[SuiService] Found ' + versions.length + ' versions for spreadsheet ' + spreadsheetId);
+      console.log(
+        '[SuiService] Found ' + versions.length + ' versions for spreadsheet ' + spreadsheetId
+      );
       return versions;
     } catch (error) {
       const err = error as Error;
@@ -863,15 +919,15 @@ class SuiService {
   async verifyVersionIntegrity(versionObjectId: string, walrusService: unknown) {
     try {
       console.log('Verifying integrity of version: ' + versionObjectId);
-      
+
       // Get version object from blockchain
       const versionObject = await this.client.getObject({
         id: versionObjectId,
         options: {
           showContent: true,
           showOwner: true,
-          showType: true
-        }
+          showType: true,
+        },
       });
 
       if (!versionObject.data?.content) {
@@ -883,7 +939,7 @@ class SuiService {
         walrus_blob_id: content?.fields?.walrus_blob_id,
         redundant_blob_ids: (content?.fields?.redundant_blob_ids || []) as string[],
         content_hash: content?.fields?.content_hash,
-        has_redundancy: (content?.fields?.has_redundancy || false) as boolean
+        has_redundancy: (content?.fields?.has_redundancy || false) as boolean,
       };
 
       // Verify integrity using Walrus service
@@ -892,23 +948,21 @@ class SuiService {
 
       if (versionData.has_redundancy && allBlobIds.length > 1) {
         console.log('Performing redundancy health check');
-        integrityResult = await (walrusService as Record<string, unknown> & { checkRedundancyHealth?: Function }).checkRedundancyHealth?.(
-          allBlobIds,
-          versionData.content_hash
-        );
+        integrityResult = await (
+          walrusService as Record<string, unknown> & { checkRedundancyHealth?: Function }
+        ).checkRedundancyHealth?.(allBlobIds, versionData.content_hash);
       } else {
         console.log('Performing single blob integrity check');
-        integrityResult = await (walrusService as Record<string, unknown> & { verifyBlobIntegrity?: Function }).verifyBlobIntegrity?.(
-          versionData.walrus_blob_id,
-          versionData.content_hash
-        );
+        integrityResult = await (
+          walrusService as Record<string, unknown> & { verifyBlobIntegrity?: Function }
+        ).verifyBlobIntegrity?.(versionData.walrus_blob_id, versionData.content_hash);
       }
 
       console.log('Version integrity verification completed:', {
         versionObjectId,
         blobId: versionData.walrus_blob_id,
         hasRedundancy: versionData.has_redundancy,
-        integrityPassed: integrityResult.success && integrityResult.integrityVerified !== false
+        integrityPassed: integrityResult.success && integrityResult.integrityVerified !== false,
       });
 
       const irData = integrityResult as Record<string, unknown>;
@@ -918,16 +972,18 @@ class SuiService {
         blobIds: allBlobIds,
         hasRedundancy: versionData.has_redundancy,
         integrityResult,
-        overallIntegrity: (irData.success as boolean) && (irData.integrityVerified as boolean) !== false
+        overallIntegrity:
+          (irData.success as boolean) && (irData.integrityVerified as boolean) !== false,
       };
-      
     } catch (error) {
       const err = error as Error;
-      console.error(`Failed to verify version integrity: ${typeof error === 'string' ? error : (err?.message) || 'Unknown error'}`);
+      console.error(
+        `Failed to verify version integrity: ${typeof error === 'string' ? error : err?.message || 'Unknown error'}`
+      );
       return {
         success: false,
-        error: typeof error === 'string' ? error : (err?.message) || 'Unknown error',
-        versionObjectId
+        error: typeof error === 'string' ? error : err?.message || 'Unknown error',
+        versionObjectId,
       };
     }
   }
@@ -936,7 +992,7 @@ class SuiService {
   createCellLockTransaction(spreadsheetId: string, cellRef: string) {
     const tx = new Transaction();
     const config = getCurrentConfig();
-    
+
     if (!config.sui.packageId) {
       throw new Error('Package ID not configured for current network');
     }
@@ -946,9 +1002,9 @@ class SuiService {
       arguments: [
         tx.object(spreadsheetId), // Spreadsheet object
         tx.pure.string(cellRef), // Cell reference (e.g., "A1")
-        tx.object('0x6') // Clock object
+        tx.object('0x6'), // Clock object
       ],
-      typeArguments: []
+      typeArguments: [],
     });
 
     return tx;
@@ -958,7 +1014,7 @@ class SuiService {
   createCellUnlockTransaction(spreadsheetId: string, cellRef: string) {
     const tx = new Transaction();
     const config = getCurrentConfig();
-    
+
     if (!config.sui.packageId) {
       throw new Error('Package ID not configured for current network');
     }
@@ -968,9 +1024,9 @@ class SuiService {
       arguments: [
         tx.object(spreadsheetId), // Spreadsheet object
         tx.pure.string(cellRef), // Cell reference
-        tx.object('0x6') // Clock object
+        tx.object('0x6'), // Clock object
       ],
-      typeArguments: []
+      typeArguments: [],
     });
 
     return tx;
@@ -978,34 +1034,39 @@ class SuiService {
 
   // Execute transaction through wallet with resilient execution
   async executeTransaction(transaction: unknown) {
-    return this.transactionExecutor.execute(async () => {
-      if (!walletManager.isConnected) {
-        throw new Error('Wallet not connected');
-      }
+    return this.transactionExecutor
+      .execute(async () => {
+        if (!walletManager.isConnected) {
+          throw new Error('Wallet not connected');
+        }
 
-      console.log('Executing transaction with wallet...');
-      const result = await walletManager.signAndExecuteTransaction(transaction as unknown);
+        console.log('Executing transaction with wallet...');
+        const result = await walletManager.signAndExecuteTransaction(transaction as unknown);
 
-      const resData = result as Record<string, unknown>;
-      console.log('Transaction executed successfully:', resData.digest);
-      return {
-        success: true,
-        digest: resData.digest,
-        effects: resData.effects,
-        events: resData.events,
-        objectChanges: resData.objectChanges,
-        balanceChanges: resData.balanceChanges
-      };
-    }).catch(async (error) => {
-      const err = error as Error;
-      // Fallback: provide meaningful error response
-      console.error('Transaction execution failed after retries:', typeof error === 'string' ? error : (err?.message) || 'Unknown error');
-      return {
-        success: false,
-        error: typeof error === 'string' ? error : (err?.message) || 'Unknown error',
-        fallback: 'transaction_failed_with_retries'
-      };
-    });
+        const resData = result as Record<string, unknown>;
+        console.log('Transaction executed successfully:', resData.digest);
+        return {
+          success: true,
+          digest: resData.digest,
+          effects: resData.effects,
+          events: resData.events,
+          objectChanges: resData.objectChanges,
+          balanceChanges: resData.balanceChanges,
+        };
+      })
+      .catch(async (error) => {
+        const err = error as Error;
+        // Fallback: provide meaningful error response
+        console.error(
+          'Transaction execution failed after retries:',
+          typeof error === 'string' ? error : err?.message || 'Unknown error'
+        );
+        return {
+          success: false,
+          error: typeof error === 'string' ? error : err?.message || 'Unknown error',
+          fallback: 'transaction_failed_with_retries',
+        };
+      });
   }
 
   // Get resilience statistics
@@ -1031,7 +1092,7 @@ class SuiService {
         success: true,
         transactionDigest: resData.digest,
         version: versionData.version,
-        walrusBlobId: versionData.walrusBlobId
+        walrusBlobId: versionData.walrusBlobId,
       };
     } catch (error) {
       const err = error as Error;
@@ -1082,17 +1143,24 @@ class SuiService {
           query,
           variables: {
             address,
-            limit
-          }
-        })
+            limit,
+          },
+        }),
       });
 
-      const result = await response.json() as Record<string, unknown>;
+      const result = (await response.json()) as Record<string, unknown>;
 
       if (result.errors) {
         const firstError = result.errors as unknown[];
         const firstErrorItem = firstError[0] as unknown;
-        const errorMsg = typeof firstErrorItem === 'string' ? firstErrorItem : (typeof firstErrorItem === 'object' && firstErrorItem !== null && 'message' in firstErrorItem ? (firstErrorItem as Record<string, unknown>).message : 'Unknown error');
+        const errorMsg =
+          typeof firstErrorItem === 'string'
+            ? firstErrorItem
+            : typeof firstErrorItem === 'object' &&
+                firstErrorItem !== null &&
+                'message' in firstErrorItem
+              ? (firstErrorItem as Record<string, unknown>).message
+              : 'Unknown error';
         throw new Error(`GraphQL query failed: ${errorMsg}`);
       }
 
@@ -1120,7 +1188,7 @@ class SuiService {
         `${config.sui.packageId}::spreadsheet::CellLocked`,
         `${config.sui.packageId}::spreadsheet::CellUnlocked`,
         `${config.sui.packageId}::spreadsheet::CollaboratorAdded`,
-        `${config.sui.packageId}::spreadsheet::SpreadsheetDeleted`
+        `${config.sui.packageId}::spreadsheet::SpreadsheetDeleted`,
       ];
 
       const allEvents = [];
@@ -1130,10 +1198,10 @@ class SuiService {
         try {
           const events = await this.client.queryEvents({
             query: {
-              MoveEventType: eventType
+              MoveEventType: eventType,
             },
             limit,
-            order: 'descending'
+            order: 'descending',
           });
 
           if (events.data && events.data.length > 0) {
@@ -1141,18 +1209,22 @@ class SuiService {
           }
         } catch (err) {
           const e = err as Error;
-          console.warn('Failed to query event type ' + eventType + ':', typeof err === 'string' ? err : e?.message || 'Unknown error');
+          console.warn(
+            'Failed to query event type ' + eventType + ':',
+            typeof err === 'string' ? err : e?.message || 'Unknown error'
+          );
         }
       }
 
       // Filter events for specific spreadsheet
-      const filteredEvents = allEvents.filter(event => {
+      const filteredEvents = allEvents.filter((event) => {
         try {
           const evt = event as Record<string, unknown>;
           const eventData = evt.parsedJson as Record<string, unknown>;
           // Check if this event is related to our spreadsheet
-          return (eventData.spreadsheet_id === spreadsheetId ||
-                 eventData.spreadsheetId === spreadsheetId);
+          return (
+            eventData.spreadsheet_id === spreadsheetId || eventData.spreadsheetId === spreadsheetId
+          );
         } catch {
           return false;
         }
@@ -1166,7 +1238,7 @@ class SuiService {
       });
       const limitedEvents = filteredEvents.slice(0, limit);
 
-      return limitedEvents.map(event => {
+      return limitedEvents.map((event) => {
         const evt = event as Record<string, unknown>;
         return {
           id: evt.id,
@@ -1174,7 +1246,7 @@ class SuiService {
           sender: evt.sender,
           data: evt.parsedJson,
           eventType: ((evt.type as string) || '').split('::').pop(),
-          transactionDigest: evt.transactionDigest
+          transactionDigest: evt.transactionDigest,
         };
       });
     } catch (error) {
@@ -1207,7 +1279,7 @@ class SuiService {
       }
 
       const result = await this.client.queryEvents(queryParams as any);
-      
+
       return result;
     } catch (error) {
       const err = error as Error;
@@ -1226,8 +1298,8 @@ class SuiService {
           showEvents: true,
           showObjectChanges: true,
           showBalanceChanges: true,
-          ...options
-        }
+          ...options,
+        },
       });
 
       return transaction;
@@ -1248,8 +1320,8 @@ class SuiService {
           showEvents: true,
           showObjectChanges: true,
           showBalanceChanges: true,
-          showInput: true
-        }
+          showInput: true,
+        },
       });
 
       return transaction;
@@ -1269,7 +1341,7 @@ class SuiService {
 
       const txData = transaction as Record<string, unknown>;
       const gasEstimate = await this.client.dryRunTransactionBlock({
-        transactionBlock: (txData.serialize as Function)?.()
+        transactionBlock: (txData.serialize as Function)?.(),
       });
 
       const gasUsed = (gasEstimate.effects?.gasUsed || {}) as unknown as Record<string, unknown>;
@@ -1277,17 +1349,17 @@ class SuiService {
       const storageCost = parseInt(gasUsed.storageCost as string);
       const storageRebate = parseInt(gasUsed.storageRebate as string);
       const totalCost = computationCost + storageCost - storageRebate;
-      
+
       const gasPrice = 1000; // Current reference gas price
       const estimatedUnits = Math.ceil(totalCost / gasPrice);
-      
+
       const result: Record<string, unknown> = {
         computationCost,
         storageCost,
         storageRebate,
         totalCost,
         gasPrice,
-        estimatedUnits
+        estimatedUnits,
       };
 
       // Add warning for high gas usage (>50M MIST)
@@ -1310,7 +1382,9 @@ class SuiService {
         return { sufficient: false, error: 'No wallet connected' };
       }
 
-      const balance = await this.getBalance((walletManager.currentAccount as Record<string, unknown>).address as string);
+      const balance = await this.getBalance(
+        (walletManager.currentAccount as Record<string, unknown>).address as string
+      );
       const balData = balance as Record<string, unknown>;
       const totalBalanceMIST = parseInt(balData.totalBalance as string);
       const requiredGasMIST = parseInt(estimatedGas.totalGasUsed as string);
@@ -1324,12 +1398,15 @@ class SuiService {
         currentBalanceSUI: (totalBalanceMIST / 1_000_000_000).toFixed(6),
         requiredGas: requiredGasMIST.toString(),
         requiredGasSUI: (requiredGasMIST / 1_000_000_000).toFixed(6),
-        requiredWithBufferSUI: (requiredWithBuffer / 1_000_000_000).toFixed(6)
+        requiredWithBufferSUI: (requiredWithBuffer / 1_000_000_000).toFixed(6),
       };
     } catch (error) {
       const err = error as Error;
       console.error('Failed to check balance:', err);
-      return { sufficient: false, error: typeof error === 'string' ? error : (err?.message) || 'Unknown error' };
+      return {
+        sufficient: false,
+        error: typeof error === 'string' ? error : err?.message || 'Unknown error',
+      };
     }
   }
 
@@ -1350,8 +1427,8 @@ class SuiService {
         id: spreadsheetId,
         options: {
           showContent: true,
-          showType: true
-        }
+          showType: true,
+        },
       });
 
       if (!result.data || !result.data.content) {
@@ -1363,11 +1440,11 @@ class SuiService {
 
       try {
         const dynamicFields = await this.client.getDynamicFields({
-          parentId: spreadsheetId
+          parentId: spreadsheetId,
         });
 
         // Find version field (key is b"module_version")
-        const versionField = (dynamicFields.data || [])?.find(f => {
+        const versionField = (dynamicFields.data || [])?.find((f) => {
           const fData = f as any;
           const nameValue = (fData.name as any)?.value;
           if (typeof nameValue === 'string') {
@@ -1384,7 +1461,7 @@ class SuiService {
         if (versionField) {
           const fieldObj = await this.client.getDynamicFieldObject({
             parentId: spreadsheetId,
-            name: (versionField as any).name
+            name: (versionField as any).name,
           });
           const foData = fieldObj.data as any;
           const content = foData?.content as Record<string, unknown>;
@@ -1393,11 +1470,21 @@ class SuiService {
         }
       } catch (dynErr) {
         // Dynamic field read failed, treat as legacy object (version 0)
-        console.warn('[SuiService] No dynamic version field found for ' + spreadsheetId + ', treating as legacy (v0)');
+        console.warn(
+          '[SuiService] No dynamic version field found for ' +
+            spreadsheetId +
+            ', treating as legacy (v0)'
+        );
       }
 
       const isLegacy = moduleVersion === 0;
-      console.log('[SuiService] Spreadsheet ' + spreadsheetId + ' version: ' + moduleVersion + (isLegacy ? ' (legacy)' : ''));
+      console.log(
+        '[SuiService] Spreadsheet ' +
+          spreadsheetId +
+          ' version: ' +
+          moduleVersion +
+          (isLegacy ? ' (legacy)' : '')
+      );
 
       const resData = result.data as any;
       return {
@@ -1405,15 +1492,15 @@ class SuiService {
         spreadsheetId,
         moduleVersion,
         isLegacy,
-        objectData: resData
+        objectData: resData,
       };
     } catch (error) {
       const err = error as Error;
       console.error('Failed to get spreadsheet version:', err);
       return {
         success: false,
-        error: typeof error === 'string' ? error : (err?.message) || 'Unknown error',
-        spreadsheetId
+        error: typeof error === 'string' ? error : err?.message || 'Unknown error',
+        spreadsheetId,
       };
     }
   }
@@ -1424,7 +1511,7 @@ class SuiService {
   async getSpreadsheetVersionsBatch(spreadsheetIds: string[]) {
     try {
       const results = await Promise.allSettled(
-        spreadsheetIds.map(id => this.getSpreadsheetVersion(id))
+        spreadsheetIds.map((id) => this.getSpreadsheetVersion(id))
       );
 
       return spreadsheetIds.map((id, index) => {
@@ -1437,7 +1524,7 @@ class SuiService {
             spreadsheetId: id,
             error: result.status === 'rejected' ? result.reason : result.value.error,
             moduleVersion: 0,
-            isLegacy: true
+            isLegacy: true,
           };
         }
       });
@@ -1467,18 +1554,21 @@ class SuiService {
         console.warn('[SuiService] Version mismatch for spreadsheet ' + spreadsheetId, {
           spreadsheetVersion: vcData.moduleVersion,
           expectedVersion,
-          needsMigration: (vcData.moduleVersion as number) < expectedVersion
+          needsMigration: (vcData.moduleVersion as number) < expectedVersion,
         });
 
         throw new Error(
-          'Spreadsheet version mismatch: object has version ' + vcData.moduleVersion + ', ' +
-          'expected ' + expectedVersion + '. Migration required.'
+          'Spreadsheet version mismatch: object has version ' +
+            vcData.moduleVersion +
+            ', ' +
+            'expected ' +
+            expectedVersion +
+            '. Migration required.'
         );
       }
 
       console.log('[SuiService] Spreadsheet version verified: ' + expectedVersion);
       return { success: true, version: expectedVersion };
-
     } catch (error) {
       const err = error as Error;
       console.error('Failed to ensure spreadsheet version:', err);
@@ -1503,11 +1593,8 @@ class SuiService {
 
     tx.moveCall({
       target: `${config.sui.packageId}::spreadsheet::migrate_spreadsheet`,
-      arguments: [
-        tx.object(spreadsheetId),
-        tx.object(adminCapId)
-      ],
-      typeArguments: []
+      arguments: [tx.object(spreadsheetId), tx.object(adminCapId)],
+      typeArguments: [],
     });
 
     return tx;
@@ -1534,7 +1621,7 @@ class SuiService {
         return {
           success: false,
           error: 'Spreadsheet is already at version ' + vcData.moduleVersion,
-          currentVersion: vcData.moduleVersion
+          currentVersion: vcData.moduleVersion,
         };
       }
 
@@ -1550,7 +1637,7 @@ class SuiService {
           transactionDigest: resData.digest,
           spreadsheetId,
           oldVersion: vcData.moduleVersion,
-          newVersion: targetVersion
+          newVersion: targetVersion,
         };
       } else {
         return result;
@@ -1560,8 +1647,8 @@ class SuiService {
       console.error('Failed to migrate spreadsheet:', err);
       return {
         success: false,
-        error: typeof error === 'string' ? error : (err?.message) || 'Unknown error',
-        spreadsheetId
+        error: typeof error === 'string' ? error : err?.message || 'Unknown error',
+        spreadsheetId,
       };
     }
   }
@@ -1583,7 +1670,7 @@ class SuiService {
         epoch: epochInfo.epoch,
         epochStartTimestampMs: epochInfo.epochStartTimestampMs,
         epochDurationMs: epochInfo.epochDurationMs,
-        referenceGasPrice: epochInfo.referenceGasPrice
+        referenceGasPrice: epochInfo.referenceGasPrice,
       };
     } catch (error) {
       const err = error as Error;
@@ -1596,18 +1683,15 @@ class SuiService {
   createUpdateTitleTransaction(spreadsheetId: string, newTitle: string) {
     const tx = new Transaction();
     const config = getCurrentConfig();
-    
+
     if (!config.sui.packageId) {
       throw new Error('Package ID not configured for current network');
     }
 
     tx.moveCall({
       target: `${config.sui.packageId}::spreadsheet::update_title`,
-      arguments: [
-        tx.object(spreadsheetId),
-        tx.pure.string(newTitle)
-      ],
-      typeArguments: []
+      arguments: [tx.object(spreadsheetId), tx.pure.string(newTitle)],
+      typeArguments: [],
     });
 
     return tx;
@@ -1615,7 +1699,9 @@ class SuiService {
 
   async updateSpreadsheetTitle(spreadsheetId: string, newTitle: string) {
     try {
-      console.log('[SuiService] Updating spreadsheet title: ' + spreadsheetId + ' -> "' + newTitle + '"');
+      console.log(
+        '[SuiService] Updating spreadsheet title: ' + spreadsheetId + ' -> "' + newTitle + '"'
+      );
 
       // Ensure spreadsheet is using the latest module version before mutating
       await this.ensureSpreadsheetVersion(spreadsheetId);
@@ -1629,7 +1715,7 @@ class SuiService {
         return {
           success: true,
           transactionDigest: resData.digest,
-          newTitle
+          newTitle,
         };
       } else {
         return result;
@@ -1637,7 +1723,10 @@ class SuiService {
     } catch (error) {
       const err = error as Error;
       console.error('Failed to update spreadsheet title:', err);
-      return { success: false, error: typeof error === 'string' ? error : (err?.message) || 'Unknown error' };
+      return {
+        success: false,
+        error: typeof error === 'string' ? error : err?.message || 'Unknown error',
+      };
     }
   }
 
@@ -1645,7 +1734,7 @@ class SuiService {
   createMakePublicTransaction(spreadsheetId: string) {
     const tx = new Transaction();
     const config = getCurrentConfig();
-    
+
     if (!config.sui.packageId) {
       throw new Error('Package ID not configured for current network');
     }
@@ -1653,7 +1742,7 @@ class SuiService {
     tx.moveCall({
       target: `${config.sui.packageId}::spreadsheet::make_public`,
       arguments: [tx.object(spreadsheetId)],
-      typeArguments: []
+      typeArguments: [],
     });
 
     return tx;
@@ -1662,7 +1751,7 @@ class SuiService {
   createMakePrivateTransaction(spreadsheetId: string) {
     const tx = new Transaction();
     const config = getCurrentConfig();
-    
+
     if (!config.sui.packageId) {
       throw new Error('Package ID not configured for current network');
     }
@@ -1670,7 +1759,7 @@ class SuiService {
     tx.moveCall({
       target: `${config.sui.packageId}::spreadsheet::make_private`,
       arguments: [tx.object(spreadsheetId)],
-      typeArguments: []
+      typeArguments: [],
     });
 
     return tx;
@@ -1692,7 +1781,7 @@ class SuiService {
         return {
           success: true,
           transactionDigest: resData.digest,
-          isPublic: true
+          isPublic: true,
         };
       } else {
         return result;
@@ -1700,7 +1789,10 @@ class SuiService {
     } catch (error) {
       const err = error as Error;
       console.error('Failed to make spreadsheet public:', err);
-      return { success: false, error: typeof error === 'string' ? error : (err?.message) || 'Unknown error' };
+      return {
+        success: false,
+        error: typeof error === 'string' ? error : err?.message || 'Unknown error',
+      };
     }
   }
 
@@ -1720,7 +1812,7 @@ class SuiService {
         return {
           success: true,
           transactionDigest: resData.digest,
-          isPublic: false
+          isPublic: false,
         };
       } else {
         return result;
@@ -1728,7 +1820,10 @@ class SuiService {
     } catch (error) {
       const err = error as Error;
       console.error('Failed to make spreadsheet private:', err);
-      return { success: false, error: typeof error === 'string' ? error : (err?.message) || 'Unknown error' };
+      return {
+        success: false,
+        error: typeof error === 'string' ? error : err?.message || 'Unknown error',
+      };
     }
   }
 
@@ -1736,18 +1831,15 @@ class SuiService {
   createTransferOwnershipTransaction(spreadsheetId: string, newOwnerAddress: string) {
     const tx = new Transaction();
     const config = getCurrentConfig();
-    
+
     if (!config.sui.packageId) {
       throw new Error('Package ID not configured for current network');
     }
 
     tx.moveCall({
       target: `${config.sui.packageId}::spreadsheet::transfer_ownership`,
-      arguments: [
-        tx.object(spreadsheetId),
-        tx.pure.address(newOwnerAddress)
-      ],
-      typeArguments: []
+      arguments: [tx.object(spreadsheetId), tx.pure.address(newOwnerAddress)],
+      typeArguments: [],
     });
 
     return tx;
@@ -1755,7 +1847,12 @@ class SuiService {
 
   async transferSpreadsheetOwnership(spreadsheetId: string, newOwnerAddress: string) {
     try {
-      console.log('[SuiService] Transferring spreadsheet ownership: ' + spreadsheetId + ' -> ' + newOwnerAddress);
+      console.log(
+        '[SuiService] Transferring spreadsheet ownership: ' +
+          spreadsheetId +
+          ' -> ' +
+          newOwnerAddress
+      );
 
       // Validate address format
       if (!this.isValidAddress(newOwnerAddress)) {
@@ -1774,7 +1871,7 @@ class SuiService {
         return {
           success: true,
           transactionDigest: resData.digest,
-          newOwner: newOwnerAddress
+          newOwner: newOwnerAddress,
         };
       } else {
         return result;
@@ -1782,7 +1879,10 @@ class SuiService {
     } catch (error) {
       const err = error as Error;
       console.error('Failed to transfer spreadsheet ownership:', err);
-      return { success: false, error: typeof error === 'string' ? error : (err?.message) || 'Unknown error' };
+      return {
+        success: false,
+        error: typeof error === 'string' ? error : err?.message || 'Unknown error',
+      };
     }
   }
 
@@ -1790,18 +1890,15 @@ class SuiService {
   createPruneVersionsTransaction(spreadsheetId: string, keepCount: number) {
     const tx = new Transaction();
     const config = getCurrentConfig();
-    
+
     if (!config.sui.packageId) {
       throw new Error('Package ID not configured for current network');
     }
 
     tx.moveCall({
       target: `${config.sui.packageId}::spreadsheet::prune_old_versions`,
-      arguments: [
-        tx.object(spreadsheetId),
-        tx.pure.u64(keepCount)
-      ],
-      typeArguments: []
+      arguments: [tx.object(spreadsheetId), tx.pure.u64(keepCount)],
+      typeArguments: [],
     });
 
     return tx;
@@ -1809,7 +1906,13 @@ class SuiService {
 
   async pruneOldVersions(spreadsheetId: string, keepCount: number = 10) {
     try {
-      console.log('[SuiService] Pruning old versions for spreadsheet: ' + spreadsheetId + ', keeping ' + keepCount + ' versions');
+      console.log(
+        '[SuiService] Pruning old versions for spreadsheet: ' +
+          spreadsheetId +
+          ', keeping ' +
+          keepCount +
+          ' versions'
+      );
 
       // Ensure spreadsheet is using the latest module version before mutating
       await this.ensureSpreadsheetVersion(spreadsheetId);
@@ -1823,7 +1926,7 @@ class SuiService {
         return {
           success: true,
           transactionDigest: resData.digest,
-          keptVersions: keepCount
+          keptVersions: keepCount,
         };
       } else {
         return result;
@@ -1831,7 +1934,10 @@ class SuiService {
     } catch (error) {
       const err = error as Error;
       console.error('Failed to prune old versions:', err);
-      return { success: false, error: typeof error === 'string' ? error : (err?.message) || 'Unknown error' };
+      return {
+        success: false,
+        error: typeof error === 'string' ? error : err?.message || 'Unknown error',
+      };
     }
   }
 }

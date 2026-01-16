@@ -1,5 +1,14 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { NodeWalrusService } from '../node/NodeWalrusService';
+
+// Mock the config loader to avoid actual network calls
+vi.mock('../shared/ConfigLoader.js', () => ({
+  configLoader: {
+    getConfig: vi.fn().mockResolvedValue({
+      getServiceUrl: vi.fn().mockReturnValue('http://localhost:9000')
+    })
+  }
+}));
 
 describe('NodeWalrusService', () => {
   let service: NodeWalrusService;
@@ -79,6 +88,115 @@ describe('NodeWalrusService', () => {
       await service.cleanup();
       // Should not throw
       expect(true).toBe(true);
+    });
+  });
+
+  describe('storeBatch', () => {
+    it('should return success without blobId when batch not uploaded', async () => {
+      // Mock _ensureInitialized to avoid actual initialization
+      (service as any)._ensureInitialized = async () => {
+        (service as any)._blobClient = {};
+      };
+
+      const result = await service.storeBatch('sheet-1', [{ change: 1 }]);
+
+      expect(result.success).toBe(true);
+      expect(result.blobId).toBeUndefined();
+      expect(result.batchSize).toBe(1);
+    });
+
+    it('should accumulate changes in batch', async () => {
+      // Mock _ensureInitialized to avoid actual initialization
+      (service as any)._ensureInitialized = async () => {
+        (service as any)._blobClient = {};
+      };
+
+      await service.storeBatch('sheet-1', [{ change: 1 }]);
+      const result = await service.storeBatch('sheet-1', [{ change: 2 }, { change: 3 }]);
+
+      expect(result.success).toBe(true);
+      expect(result.batchSize).toBe(3);
+    });
+
+    it('should handle force upload option', async () => {
+      // Mock the blob client with storeBlob method
+      const mockStoreBlob = vi.fn().mockResolvedValue({ blobId: 'test-blob-id', contentHash: 'hash-123' });
+      (service as any)._ensureInitialized = async () => {
+        (service as any)._blobClient = { storeBlob: mockStoreBlob };
+      };
+
+      const result = await service.storeBatch('sheet-1', [{ change: 1 }], { force: true });
+
+      expect(result.success).toBe(true);
+      expect(result.blobId).toBe('test-blob-id');
+      expect(mockStoreBlob).toHaveBeenCalled();
+    });
+
+    it('should return error on failure', async () => {
+      // Force an error by making _ensureInitialized throw
+      (service as any)._ensureInitialized = async () => {
+        throw new Error('Init failed');
+      };
+
+      const result = await service.storeBatch('sheet-1', [{ change: 1 }]);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Init failed');
+    });
+
+    it('should preserve batch changes in payload (Bug 5)', async () => {
+      const capturedPayload: any[] = [];
+      const mockStoreBlob = vi.fn().mockImplementation((payload) => {
+        capturedPayload.push(payload);
+        return Promise.resolve({ blobId: 'test-blob-id', contentHash: 'hash-123' });
+      });
+      (service as any)._ensureInitialized = async () => {
+        (service as any)._blobClient = { storeBlob: mockStoreBlob };
+      };
+
+      const changes = [
+        { cellKey: '0_1_1', oldValue: null, newValue: 'test', changeType: 'create' },
+        { cellKey: '0_1_2', oldValue: 'old', newValue: 'new', changeType: 'update' }
+      ];
+
+      await service.storeBatch('sheet-1', changes, { force: true });
+
+      expect(capturedPayload.length).toBe(1);
+      const payload = capturedPayload[0];
+      expect(payload.cells['__batch_changes']).toBeDefined();
+
+      const storedChanges = JSON.parse(payload.cells['__batch_changes'].v);
+      expect(storedChanges).toEqual(changes);
+    });
+
+    it('should return distinct blobIds for concurrent uploads (Bug 6)', async () => {
+      let callCount = 0;
+      const mockStoreBlob = vi.fn().mockImplementation(() => {
+        callCount++;
+        return Promise.resolve({ blobId: `blob-${callCount}`, contentHash: `hash-${callCount}` });
+      });
+
+      // Create separate service instances to simulate concurrent behavior
+      const service1 = new NodeWalrusService();
+      const service2 = new NodeWalrusService();
+
+      (service1 as any)._ensureInitialized = async () => {
+        (service1 as any)._blobClient = { storeBlob: mockStoreBlob };
+      };
+      (service2 as any)._ensureInitialized = async () => {
+        (service2 as any)._blobClient = { storeBlob: mockStoreBlob };
+      };
+
+      const [result1, result2] = await Promise.all([
+        service1.storeBatch('sheet-A', [{ change: 'A' }], { force: true }),
+        service2.storeBatch('sheet-B', [{ change: 'B' }], { force: true })
+      ]);
+
+      expect(result1.success).toBe(true);
+      expect(result2.success).toBe(true);
+      expect(result1.blobId).not.toBe(result2.blobId);
+      expect(result1.blobId).toBeDefined();
+      expect(result2.blobId).toBeDefined();
     });
   });
 });

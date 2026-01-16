@@ -17,9 +17,8 @@
     "./data-integrity": "./dist/data-integrity/index.js"
   },
   "scripts": {
-    "build": "tsup && bun run copy-protos",
+    "build": "tsup",
     "clean": "rm -rf dist",
-    "copy-protos": "mkdir -p dist/protos/sui/rpc/v2beta2 && cp src/protos/sui/rpc/v2beta2/*.proto dist/protos/sui/rpc/v2beta2/",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
@@ -43,6 +42,7 @@
     }
   },
   "devDependencies": {
+    "@dreamlit/walrus": "workspace:*",
     "@types/node": "^20.0.0",
     "happy-dom": "^15.0.0",
     "tsup": "^8.0.0",

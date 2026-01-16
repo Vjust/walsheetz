@@ -147,7 +147,7 @@ class ConfigLoader {
     let configUrl = '/app-config.json';
 
     try {
-      console.log('[ConfigLoader] 🔄 Loading runtime config...');
+      console.log('[ConfigLoader] Loading runtime config...');
 
       // Try to resolve config URL with BASE_URL support for dev builds
 
@@ -155,11 +155,11 @@ class ConfigLoader {
       if (import.meta?.env?.BASE_URL && import.meta.env.BASE_URL !== '/') {
         const baseUrl = import.meta.env.BASE_URL;
         configUrl = `${baseUrl.replace(/\/$/, '')}/app-config.json`;
-        console.log('[ConfigLoader] ℹ️ Using BASE_URL-resolved path:', configUrl);
+        console.log('[ConfigLoader] Using BASE_URL-resolved path:', configUrl);
       }
 
       // First attempt: without cache-busting (let server handle caching)
-      console.log('[ConfigLoader] 🌐 Fetching from:', configUrl);
+      console.log('[ConfigLoader] Fetching from:', configUrl);
 
       const response = await fetch(configUrl, {
         method: 'GET',
@@ -167,18 +167,18 @@ class ConfigLoader {
       });
 
       if (response.ok) {
-        console.log('[ConfigLoader] ✅ Config fetched successfully:', { url: response.url, status: response.status });
+        console.log('[ConfigLoader] Config fetched successfully:', { url: response.url, status: response.status });
 
         // Enhanced diagnostics for parse/validation failures
         const contentType = response.headers.get('content-type');
-        console.log('[ConfigLoader] 📄 Response Content-Type:', contentType);
+        console.log('[ConfigLoader] Response Content-Type:', contentType);
 
         let responseText;
         try {
           responseText = await response.text();
-          console.log('[ConfigLoader] 📏 Response body length:', responseText.length, 'bytes');
+          console.log('[ConfigLoader] Response body length:', responseText.length, 'bytes');
         } catch (textError) {
-          console.error('[ConfigLoader] ❌ Failed to read response body:', textError);
+          console.error('[ConfigLoader] Failed to read response body:', textError);
           throw new Error(`Failed to read response: ${(textError as Error).message}`);
         }
 
@@ -188,7 +188,7 @@ class ConfigLoader {
           config = JSON.parse(responseText);
         } catch (parseError) {
           const pe = parseError as Error;
-          console.error('[ConfigLoader] ❌ JSON parse error:', {
+          console.error('[ConfigLoader] JSON parse error:', {
             error: pe.message,
             position: pe.message.match(/position (\d+)/)?.[1],
             preview: responseText.substring(0, 200),
@@ -202,7 +202,7 @@ class ConfigLoader {
           this._validateConfig(config);
         } catch (validationError) {
           const ve = validationError as Error;
-          console.error('[ConfigLoader] ❌ Config validation error:', {
+          console.error('[ConfigLoader] Config validation error:', {
             error: ve.message,
             configKeys: Object.keys(config)
           });
@@ -222,7 +222,7 @@ class ConfigLoader {
         this.isFallback = false;
         this.fallbackAttemptCount = 0; // Reset on success
 
-        console.log('[ConfigLoader] ✅ Runtime config loaded successfully:', {
+        console.log('[ConfigLoader] Runtime config loaded successfully:', {
           version: config.version,
           network: currentNetwork,
           timestamp: new Date(config.timestamp).toISOString(),
@@ -234,12 +234,12 @@ class ConfigLoader {
 
       // Handle 404 - treat as fallback trigger without retry spam
       if (response.status === 404) {
-        console.debug('[ConfigLoader] ℹ️ Config file not found (404), falling back to embedded config');
+        console.debug('[ConfigLoader] Config file not found (404), falling back to embedded config');
         throw new Error(`Config not found: 404`);
       }
 
       // Handle other errors
-      console.error('❌ [ConfigLoader] Config fetch failed:', {
+      console.error('[ConfigLoader] Config fetch failed:', {
         status: response.status,
         statusText: response.statusText,
         url: response.url,
@@ -257,7 +257,7 @@ class ConfigLoader {
       const err = error as Error;
       const errorMsg = typeof error === 'string' ? error : err?.message || 'Unknown error';
 
-      console.error('❌ [ConfigLoader] Config loading error:', {
+      console.error('[ConfigLoader] Config loading error:', {
         errorMessage: errorMsg,
         errorType: err?.constructor?.name,
         errorStack: err?.stack?.split('\n').slice(0, 3).join('\n'),
@@ -267,13 +267,13 @@ class ConfigLoader {
 
       // Log actionable suggestions based on error type
       if (errorMsg.includes('JSON parse')) {
-        console.warn('[ConfigLoader] 💡 Suggestion: Check if app-config.json contains valid JSON. May be serving HTML error page.');
+        console.warn('[ConfigLoader] Suggestion: Check if app-config.json contains valid JSON. May be serving HTML error page.');
       } else if (errorMsg.includes('validation')) {
-        console.warn('[ConfigLoader] 💡 Suggestion: Config structure mismatch. Check required fields: version, networks, features, ui, metadata');
+        console.warn('[ConfigLoader] Suggestion: Config structure mismatch. Check required fields: version, networks, features, ui, metadata');
       } else if (errorMsg.includes('404') || errorMsg.includes('not found')) {
-        console.warn('[ConfigLoader] 💡 Suggestion: Config file not deployed or incorrect path. Using fallback config.');
+        console.warn('[ConfigLoader] Suggestion: Config file not deployed or incorrect path. Using fallback config.');
       } else if (errorMsg.includes('Failed to fetch')) {
-        console.warn('[ConfigLoader] 💡 Suggestion: Network error or CORS issue. Using fallback config.');
+        console.warn('[ConfigLoader] Suggestion: Network error or CORS issue. Using fallback config.');
       }
 
       // Return fallback config if main config fails
@@ -286,7 +286,7 @@ class ConfigLoader {
 
       // Emit warning event for UI to display to user
       if (typeof window !== 'undefined') {
-        console.warn('[ConfigLoader] ⚠️  Using fallback config - endpoints may be stale');
+        console.warn('[ConfigLoader] Using fallback config - endpoints may be stale');
         transactionExperienceManager.emitTransactionEvent('config:fallback', {
           reason: errorMsg,
           isFallback: true,
@@ -294,7 +294,7 @@ class ConfigLoader {
         });
       }
 
-      console.log('[ConfigLoader] ℹ️  Fallback config loaded successfully');
+      console.log('[ConfigLoader] Fallback config loaded successfully');
       return fallbackConfig;
     }
   }
@@ -314,7 +314,7 @@ class ConfigLoader {
       const networkMissing = networkRequired.filter((field) => !(field in network));
 
       if (networkMissing.length > 0) {
-        console.warn(`[ConfigLoader] ⚠️ Network '${name}' missing fields: ${networkMissing.join(', ')}`);
+        console.warn(`[ConfigLoader] Network '${name}' missing fields: ${networkMissing.join(', ')}`);
       }
     });
   }
@@ -330,7 +330,7 @@ class ConfigLoader {
       const networkParam = urlParams.get('network');
 
       if (networkParam && config.networks[networkParam]) {
-        console.log(`[ConfigLoader] 🌐 Network from URL: ${networkParam}`);
+        console.log(`[ConfigLoader] Network from URL: ${networkParam}`);
         return networkParam;
       }
 
@@ -338,7 +338,7 @@ class ConfigLoader {
       // NOTE: No lock needed here - this runs during initialization before NetworkProvider starts
       const storedNetwork = localStorage.getItem('walsheetz_network');
       if (storedNetwork && config.networks[storedNetwork]) {
-        console.log(`[ConfigLoader] 💾 Network from storage: ${storedNetwork}`);
+        console.log(`[ConfigLoader] Network from storage: ${storedNetwork}`);
         return storedNetwork;
       }
 
@@ -354,13 +354,13 @@ class ConfigLoader {
       // Node.js environment: check environment variables
       const nodeEnv = process.env.SUI_NETWORK || process.env.NETWORK;
       if (nodeEnv && config.networks[nodeEnv]) {
-        console.log(`[ConfigLoader] 🖥️  Network from Node.js env: ${nodeEnv}`);
+        console.log(`[ConfigLoader] Network from Node.js env: ${nodeEnv}`);
         return nodeEnv;
       }
     }
 
     // Default to testnet
-    console.log('[ConfigLoader] 🏗️ Using default network: testnet');
+    console.log('[ConfigLoader] Using default network: testnet');
     return 'testnet';
   }
 
@@ -397,7 +397,7 @@ class ConfigLoader {
       self.abiCache.clear();
       self.networkValidationCache.clear();
 
-      console.log(`[ConfigLoader] 🔄 Switched to network: ${networkName}`);
+      console.log(`[ConfigLoader] Switched to network: ${networkName}`);
       return this.getCurrentNetwork!();
     };
 
@@ -433,7 +433,7 @@ class ConfigLoader {
       const lastPart = parts[parts.length - 1];
       current[lastPart] = value;
 
-      console.log(`[ConfigLoader] ⚙️ Feature updated: ${featurePath} = ${value}`);
+      console.log(`[ConfigLoader] Feature updated: ${featurePath} = ${value}`);
     };
 
     // Get proxy URL for development
@@ -506,7 +506,9 @@ class ConfigLoader {
         const isProxy = result.startsWith('/');
         console.log(`[ConfigLoader] getWalrusServiceBase: service=${service}, using=${isProxy ? 'PROXY' : 'ABSOLUTE'}, url=${result}`);
         if (!isProxy) {
-          console.warn(`[ConfigLoader] ⚠️ Expected proxy URL in dev but got absolute URL. This may cause CORS issues. URL: ${result}`);
+          console.warn(
+            `[ConfigLoader] Expected proxy URL in dev but got absolute URL. This may cause CORS issues. URL: ${result}`
+          );
         }
       }
 
@@ -594,7 +596,7 @@ class ConfigLoader {
 
   // Fallback config for when main config fails
   private _getFallbackConfig(): AppConfig {
-    console.log('[ConfigLoader] 🚨 Using fallback config');
+    console.log('[ConfigLoader] Using fallback config');
 
     const fallbackConfig: AppConfig = {
       version: '1.0.0-fallback',
@@ -645,7 +647,6 @@ class ConfigLoader {
         contentHashInSave: true,
         clockInSave: true,
         autoSave: { enabled: true, intervalMs: 5000 },
-        collaboration: { enabled: true },
         gasManagement: { bufferPercent: 20 },
         storage: { preferWalrus: true, fallbackToLocal: true },
         // Wallet and transaction features
@@ -691,7 +692,7 @@ class ConfigLoader {
         throw new Error(`Network ${networkName} not found in config`);
       }
 
-      console.log(`[ConfigLoader] 🔍 Validating network: ${networkName}`);
+      console.log(`[ConfigLoader] Validating network: ${networkName}`);
 
       // Check RPC connectivity
       const rpcResponse = await fetch(network.rpcUrl, {
@@ -744,7 +745,7 @@ class ConfigLoader {
         timestamp: Date.now()
       });
 
-      console.log(`[ConfigLoader] ✅ Network ${networkName} validated successfully`);
+      console.log(`[ConfigLoader] Network ${networkName} validated successfully`);
       return result;
 
     } catch (error) {
@@ -754,7 +755,7 @@ class ConfigLoader {
         error: err.message
       };
 
-      console.error(`[ConfigLoader] ❌ Network ${networkName} validation failed:`, error);
+      console.error(`[ConfigLoader] Network ${networkName} validation failed:`, error);
 
       // Cache failed validation for shorter period (30 seconds)
       this.networkValidationCache.set(cacheKey, {
@@ -779,7 +780,7 @@ class ConfigLoader {
     }
 
     try {
-      console.log(`[ConfigLoader] 🔍 Detecting ABI for package: ${packageId}`);
+      console.log(`[ConfigLoader] Detecting ABI for package: ${packageId}`);
 
       const response = await fetch(network.rpcUrl, {
         method: 'POST',
@@ -810,7 +811,7 @@ class ConfigLoader {
         timestamp: Date.now()
       });
 
-      console.log(`[ConfigLoader] ✅ ABI detected for ${packageId}:`, {
+      console.log(`[ConfigLoader] ABI detected for ${packageId}:`, {
         modules: Object.keys(abi.modules),
         functions: Object.keys(abi.functions).length
       });
@@ -819,7 +820,7 @@ class ConfigLoader {
 
     } catch (error) {
       const err = error as Error;
-      console.error(`[ConfigLoader] ❌ ABI detection failed for ${packageId}:`, err);
+      console.error(`[ConfigLoader] ABI detection failed for ${packageId}:`, err);
 
       // Return minimal ABI structure on failure
       return {
@@ -922,7 +923,7 @@ class ConfigLoader {
     this.lastFetch = null;
     this.abiCache.clear();
     this.networkValidationCache.clear();
-    console.log('[ConfigLoader] 🧹 All caches cleared');
+    console.log('[ConfigLoader] All caches cleared');
   }
 
   // Get cache status for debugging
@@ -950,7 +951,7 @@ class ConfigLoader {
       if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
         const key = `walsheetz_forced_feature_${featurePath}`;
         localStorage.setItem(key, JSON.stringify({ value, timestamp: Date.now() }));
-        console.log(`[ConfigLoader] ✅ Persisted forced feature: ${featurePath} = ${value}`);
+        console.log(`[ConfigLoader] Persisted forced feature: ${featurePath} = ${value}`);
       }
     } catch (e) {
       console.warn(`[ConfigLoader] Failed to persist forced feature ${featurePath}:`, e);
@@ -965,7 +966,7 @@ class ConfigLoader {
         const stored = localStorage.getItem(key);
         if (stored) {
           const { value } = JSON.parse(stored);
-          console.log(`[ConfigLoader] ℹ️ Retrieved forced feature from storage: ${featurePath} = ${value}`);
+          console.log(`[ConfigLoader] Retrieved forced feature from storage: ${featurePath} = ${value}`);
           return value;
         }
       }
@@ -985,7 +986,7 @@ class ConfigLoader {
             localStorage.removeItem(key);
           }
         });
-        console.log('[ConfigLoader] 🧹 Cleared all persisted forced features');
+        console.log('[ConfigLoader] Cleared all persisted forced features');
       }
     } catch (e) {
       console.warn('[ConfigLoader] Failed to clear forced features:', e);

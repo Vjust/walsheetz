@@ -24,7 +24,7 @@ class SponsorService {
     this.demoEventsEnabled = process.env.SPONSOR_DEMO_EVENTS === 'true'; // Default false
     
     if (this.demoEventsEnabled) {
-      console.warn('[SponsorService] ⚠️ Demo events enabled - using placeholder Move calls');
+      console.warn('[SponsorService] Demo events enabled - using placeholder Move calls');
     }
   }
 
@@ -183,14 +183,15 @@ class SponsorService {
       let totalBalance = 0;
 
       for (const coin of sortedCoins) {
+        const c = coin as any;
         selectedCoins.push({
-          objectId: coin.coinObjectId,
-          version: coin.version,
-          digest: coin.digest,
-          balance: parseInt(coin.balance)
+          objectId: c.coinObjectId,
+          version: c.version,
+          digest: c.digest,
+          balance: parseInt(c.balance)
         });
 
-        totalBalance += parseInt(coin.balance);
+        totalBalance += parseInt(c.balance);
 
         // Stop when we have enough
         if (totalBalance >= requiredAmount) {

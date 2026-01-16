@@ -145,7 +145,7 @@ class VersionControl {
         };
       }
 
-      // Store version data to Walrus
+      // Store version data to Walrus (force upload to ensure persistence)
       const walrusResult = await walrusService.storeBatch(
         spreadsheetId,
         version.changes,
@@ -156,15 +156,24 @@ class VersionControl {
             `spreadsheet:${spreadsheetId}`,
             `version:${version.id}`
           ],
-          force: options.force || false
+          force: true  // Always force upload for version saves
         }
       );
 
-      let suiResult = null;
-      
-      // If successfully stored to Walrus, record on Sui blockchain
       const walrusRes = walrusResult as Record<string, unknown>;
-      if (walrusRes.success && walrusRes.blobId) {
+
+      // Fail if upload didn't succeed or no blobId returned
+      if (!walrusRes.success || !walrusRes.blobId) {
+        return {
+          success: false,
+          message: (walrusRes.error as string) || 'Failed to persist version to Walrus'
+        };
+      }
+
+      let suiResult = null;
+
+      // Record on Sui blockchain
+      if (walrusRes.blobId) {
         const versionMetadata = {
           spreadsheetId,
           version: version.id,

@@ -21,15 +21,15 @@ export interface HeadBlobResult {
  * Implementations: ProxyTransport (via /api/walrus-*), DirectTransport (direct Walrus URLs)
  */
 export class Transport {
-  async putBlob(url: string, payload: Uint8Array, epochs: number): Promise<PutBlobResult> {
+  async putBlob(_url: string, _payload: Uint8Array, _epochs: number): Promise<PutBlobResult> {
     throw new Error('putBlob() must be implemented by subclass');
   }
 
-  async getBlob(url: string, blobId: string): Promise<GetBlobResult> {
+  async getBlob(_url: string, _blobId: string): Promise<GetBlobResult> {
     throw new Error('getBlob() must be implemented by subclass');
   }
 
-  async headBlob(url: string, blobId: string): Promise<HeadBlobResult> {
+  async headBlob(_url: string, _blobId: string): Promise<HeadBlobResult> {
     throw new Error('headBlob() must be implemented by subclass');
   }
 }

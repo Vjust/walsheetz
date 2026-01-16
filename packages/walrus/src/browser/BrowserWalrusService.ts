@@ -1,7 +1,6 @@
 // Browser-compatible Walrus service for WalSheetz - Refactored thin facade
 import { getCurrentConfig } from "../config/BlockchainConfig.js";
-import { configLoader } from "../shared/ConfigLoader.js";
-import RateLimiter from "../shared/RateLimiter.js";
+import { configLoader, RateLimiter } from "../shared/index.js";
 // Note: sui-graphql-service dependency removed for standalone walrus package
 // This will be available in @dreamlit/walrus-sui-core
 // For now, getBlobMetadata will return null if this service is not injected

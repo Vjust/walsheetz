@@ -8,7 +8,7 @@ export const LogLevel: Record<string, number> = {
   INFO: 1,
   WARN: 2,
   ERROR: 3,
-  CRITICAL: 4
+  CRITICAL: 4,
 };
 
 interface DebugQuery {
@@ -46,7 +46,10 @@ function parseDebugQueryParam(): DebugQuery | null {
       return { enabled: true, components: [] };
     }
 
-    const components = debugParam.split(',').map(c => c.trim()).filter(Boolean);
+    const components = debugParam
+      .split(',')
+      .map((c) => c.trim())
+      .filter(Boolean);
     return { enabled: true, components };
   } catch {
     return null;
@@ -54,9 +57,13 @@ function parseDebugQueryParam(): DebugQuery | null {
 }
 
 function getDebugComponentsFromEnv(): string[] {
-  const envComponents = (import.meta as { env?: { VITE_DEBUG_COMPONENTS?: string } }).env?.VITE_DEBUG_COMPONENTS;
+  const envComponents = (import.meta as { env?: { VITE_DEBUG_COMPONENTS?: string } }).env
+    ?.VITE_DEBUG_COMPONENTS;
   if (!envComponents) return [];
-  return envComponents.split(',').map(c => c.trim()).filter(Boolean);
+  return envComponents
+    .split(',')
+    .map((c) => c.trim())
+    .filter(Boolean);
 }
 
 class LogConfig {
@@ -67,26 +74,31 @@ class LogConfig {
   private debugAllComponents: boolean;
 
   constructor() {
-    const meta = import.meta as { env?: { MODE?: string; PROD?: boolean; VITE_LOG_LEVEL?: string } };
+    const meta = import.meta as {
+      env?: { MODE?: string; PROD?: boolean; VITE_LOG_LEVEL?: string };
+    };
     const isProduction = meta.env?.PROD === true;
 
     const defaultLevel = isProduction ? LogLevel.ERROR : LogLevel.WARN;
     const envLogLevel = meta.env?.VITE_LOG_LEVEL?.toUpperCase();
-    this.globalLogLevel = envLogLevel && LogLevel[envLogLevel] !== undefined ? LogLevel[envLogLevel] : defaultLevel;
+    this.globalLogLevel =
+      envLogLevel && LogLevel[envLogLevel] !== undefined ? LogLevel[envLogLevel] : defaultLevel;
 
     this.debugQuery = parseDebugQueryParam();
     this.envDebugComponents = getDebugComponentsFromEnv();
 
     const queryComponents = this.debugQuery?.components || [];
     this.debugComponents = new Set([...this.envDebugComponents, ...queryComponents]);
-    this.debugAllComponents = !!(this.debugQuery?.enabled && this.debugQuery.components.length === 0);
+    this.debugAllComponents = !!(
+      this.debugQuery?.enabled && this.debugQuery.components.length === 0
+    );
 
     const isDevelopment = meta.env?.MODE === 'development';
     if (isDevelopment && typeof console !== 'undefined') {
       console.log('LogConfig initialized:', {
-        globalLevel: Object.keys(LogLevel).find(k => LogLevel[k] === this.globalLogLevel),
+        globalLevel: Object.keys(LogLevel).find((k) => LogLevel[k] === this.globalLogLevel),
         debugAllComponents: this.debugAllComponents,
-        debugComponents: Array.from(this.debugComponents)
+        debugComponents: Array.from(this.debugComponents),
       });
     }
   }
@@ -105,7 +117,7 @@ class LogConfig {
   }
 
   setGlobalLogLevel(level: number): void {
-    const levelName = Object.keys(LogLevel).find(k => LogLevel[k] === level);
+    const levelName = Object.keys(LogLevel).find((k) => LogLevel[k] === level);
     if (levelName) {
       this.globalLogLevel = level;
       if (typeof console !== 'undefined') {
@@ -115,14 +127,14 @@ class LogConfig {
   }
 
   enableDebugForComponents(...components: string[]): void {
-    components.forEach(c => this.debugComponents.add(c));
+    components.forEach((c) => this.debugComponents.add(c));
     if (typeof console !== 'undefined') {
       console.log('LogConfig: Debug enabled for components', components);
     }
   }
 
   disableDebugForComponents(...components: string[]): void {
-    components.forEach(c => this.debugComponents.delete(c));
+    components.forEach((c) => this.debugComponents.delete(c));
     if (typeof console !== 'undefined') {
       console.log('LogConfig: Debug disabled for components', components);
     }
@@ -146,11 +158,11 @@ class LogConfig {
   getConfig(): LogConfigState {
     return {
       globalLogLevel: this.globalLogLevel,
-      globalLogLevelName: Object.keys(LogLevel).find(k => LogLevel[k] === this.globalLogLevel),
+      globalLogLevelName: Object.keys(LogLevel).find((k) => LogLevel[k] === this.globalLogLevel),
       debugAllComponents: this.debugAllComponents,
       debugComponents: Array.from(this.debugComponents),
       queryOverride: this.debugQuery,
-      envComponents: this.envDebugComponents
+      envComponents: this.envDebugComponents,
     };
   }
 }
@@ -158,6 +170,7 @@ class LogConfig {
 export const logConfig = new LogConfig();
 export { LogConfig };
 
-if (typeof window !== 'undefined') {
+// Expose globally for debugging (DEV only)
+if (typeof window !== 'undefined' && import.meta.env?.DEV) {
   window.walSheetzLogConfig = logConfig;
 }

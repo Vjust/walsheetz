@@ -339,7 +339,7 @@ class RateLimiter {
   }
 
   // Calculate exponential backoff with full jitter
-  private calculateBackoff(): number {
+  calculateBackoff(): number {
     const failures = Math.max(1, this.consecutiveFailures);
     const exponential = Math.min(
       this.maxBackoffMs,
@@ -350,7 +350,7 @@ class RateLimiter {
   }
 
   // Pause the limiter for specified milliseconds
-  private pause(ms: number): void {
+  pause(ms: number): void {
     const until = Date.now() + ms;
     this.isPaused = true;
     this.pauseUntil = until;

@@ -1,7 +1,7 @@
 // Health monitoring for Walrus endpoints
 // Performs periodic health checks and CORS detection
 
-import { emitHealthStatusChange } from "../utils/WalrusEventEmitter.js";
+import { emitHealthStatusChange } from '../utils/WalrusEventEmitter.js';
 
 export interface HealthStatus {
   lastCheck: number | null;
@@ -32,7 +32,11 @@ export class HealthMonitor {
   healthStatus: HealthStatus;
   interval: ReturnType<typeof setInterval> | null;
 
-  constructor(endpoints: WalrusEndpoints, transport: unknown, connectionManager: ConnectionManager | null = null) {
+  constructor(
+    endpoints: WalrusEndpoints,
+    transport: unknown,
+    connectionManager: ConnectionManager | null = null
+  ) {
     this.endpoints = endpoints;
     this.transport = transport;
     this.connectionManager = connectionManager;
@@ -42,7 +46,7 @@ export class HealthMonitor {
       publisherAvailable: false,
       aggregatorAvailable: false,
       lastError: null,
-      consecutiveFailures: 0
+      consecutiveFailures: 0,
     };
     this.interval = null;
   }
@@ -76,7 +80,7 @@ export class HealthMonitor {
    * @returns {Promise<{isHealthy: boolean, publisherAvailable: boolean, aggregatorAvailable: boolean}>}
    */
   async check() {
-    const startTime = Date.now();
+    const _startTime = Date.now();
 
     try {
       // Check publisher
@@ -108,7 +112,7 @@ export class HealthMonitor {
         lastError: null,
         consecutiveFailures: isHealthy ? 0 : this.healthStatus.consecutiveFailures + 1,
         degraded,
-        reason: degraded ? 'cors_blocked' : null
+        reason: degraded ? 'cors_blocked' : null,
       };
 
       emitHealthStatusChange(this.healthStatus);
@@ -119,7 +123,7 @@ export class HealthMonitor {
         lastCheck: Date.now(),
         isHealthy: false,
         lastError: (error as Error).message,
-        consecutiveFailures: this.healthStatus.consecutiveFailures + 1
+        consecutiveFailures: this.healthStatus.consecutiveFailures + 1,
       };
 
       emitHealthStatusChange(this.healthStatus);
@@ -135,13 +139,16 @@ export class HealthMonitor {
     try {
       const response = await fetch(`${url}/v1/api`, {
         method: 'GET',
-        headers: { Accept: 'application/json' }
+        headers: { Accept: 'application/json' },
       });
       return response.ok;
     } catch (error) {
       const err = error as Error;
       // Detect CORS errors and notify connection manager
-      if (err.message?.includes('Failed to fetch') || err.message?.includes('ERR_NAME_NOT_RESOLVED')) {
+      if (
+        err.message?.includes('Failed to fetch') ||
+        err.message?.includes('ERR_NAME_NOT_RESOLVED')
+      ) {
         console.warn('[HealthMonitor] CORS or DNS error detected:', err.message);
 
         // Notify connection manager of CORS error (enters degraded mode)

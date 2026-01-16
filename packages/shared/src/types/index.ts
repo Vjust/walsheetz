@@ -100,7 +100,7 @@ export function unwrap<T, E>(result: Result<T, E>): T {
   if (result.ok) {
     return result.value
   }
-  throw result.error
+  throw (result as { ok: false; error: E }).error
 }
 
 /**

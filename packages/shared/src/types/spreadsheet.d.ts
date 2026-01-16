@@ -1,5 +1,8 @@
 /**
  * TypeScript interfaces for spreadsheet business logic
+ *
+ * Note: For spreadsheet data schemas (cell formats, encoding), see:
+ * @dreamlit/shared/schemas (SpreadsheetInfoSchema, CellSchema, etc.)
  */
 
 export type SaveStatus = 'ready' | 'saving' | 'saved' | 'error';
@@ -16,18 +19,16 @@ export interface SyncStatus {
   error?: string | null;
 }
 
-export interface CollaborationStatus {
-  connected: boolean;
-  users: unknown[];
-  lockedCells: unknown[];
-}
-
 export interface SaveReminder {
   visible: boolean;
   lastChecked: number;
 }
 
-export interface SpreadsheetData {
+/**
+ * Spreadsheet info returned from API responses
+ * (Not to be confused with SpreadsheetInfo schema for cell encoding)
+ */
+export interface SpreadsheetInfo {
   id?: string;
   title?: string;
   data?: unknown;
@@ -47,7 +48,7 @@ export interface ConnectWalletResult {
 
 export interface LoadSpreadsheetResult {
   success: boolean;
-  spreadsheet?: SpreadsheetData;
+  spreadsheet?: SpreadsheetInfo;
   error?: string;
 }
 
@@ -59,7 +60,7 @@ export interface SaveToBlockchainResult {
 
 export interface UserSpreadsheetsResult {
   success: boolean;
-  spreadsheets: SpreadsheetData[];
+  spreadsheets: SpreadsheetInfo[];
   error?: string;
 }
 
@@ -71,9 +72,8 @@ export interface UseSpreadsheet {
   saveStatus: SaveStatus;
   loadingState: LoadingState;
   syncStatus: SyncStatus | null;
-  collaborationStatus: CollaborationStatus;
   spreadsheetCount: number;
-  spreadsheetData: SpreadsheetData | null;
+  spreadsheetData: SpreadsheetInfo | null;
   saveReminder: SaveReminder;
   autoSaveEnabled: boolean;
 
@@ -85,7 +85,7 @@ export interface UseSpreadsheet {
   connectWallet: (walletType?: string) => Promise<ConnectWalletResult>;
   loadSpreadsheetById: (id: string) => Promise<LoadSpreadsheetResult>;
   saveToBlockchain: (description?: string) => Promise<SaveToBlockchainResult>;
-  createNewSpreadsheet: (title?: string) => Promise<SpreadsheetData>;
+  createNewSpreadsheet: (title?: string) => Promise<SpreadsheetInfo>;
   getUserSpreadsheets: () => Promise<UserSpreadsheetsResult>;
   dismissSaveReminder: () => void;
   toggleAutoSave: () => void;

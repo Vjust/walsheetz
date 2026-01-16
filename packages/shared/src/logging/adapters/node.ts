@@ -3,12 +3,12 @@
  * Provides Node-specific features like TTY colors and process environment
  */
 
-import type { LogLevel } from '../../types/index.js'
+import type { LogLevel } from '../../types/index.js';
 
 export interface NodeLoggerConfig {
-  useColors?: boolean
-  useEmojis?: boolean
-  timestamps?: boolean
+  useColors?: boolean;
+  useEmojis?: boolean;
+  timestamps?: boolean;
 }
 
 /**
@@ -24,104 +24,100 @@ const COLORS = {
   BLUE: '\x1b[34m',
   CYAN: '\x1b[36m',
   WHITE: '\x1b[37m',
-} as const
+} as const;
 
 /**
- * Emoji indicators for each log level
+ * Optional markers for each log level
  */
 const EMOJI_INDICATORS: Record<string, string> = {
-  debug: '🔍',
-  info: 'ℹ️',
-  warn: '⚠️',
-  error: '❌',
-}
+  debug: '',
+  info: '',
+  warn: '',
+  error: '',
+};
 
 /**
  * Node.js-specific logging utilities
  */
 export class NodeLoggerAdapter {
-  private useColors: boolean
-  private useEmojis: boolean
-  private timestamps: boolean
+  private useColors: boolean;
+  private useEmojis: boolean;
+  private timestamps: boolean;
 
   constructor(config: NodeLoggerConfig = {}) {
     // Determine if we should use colors (default: true if stdout is a TTY)
     this.useColors =
       config.useColors !== undefined
         ? config.useColors
-        : typeof process !== 'undefined' && process.stdout?.isTTY === true
+        : typeof process !== 'undefined' && process.stdout?.isTTY === true;
 
-    this.useEmojis = config.useEmojis !== undefined ? config.useEmojis : true
-    this.timestamps = config.timestamps !== undefined ? config.timestamps : true
+    this.useEmojis = config.useEmojis !== undefined ? config.useEmojis : false;
+    this.timestamps = config.timestamps !== undefined ? config.timestamps : true;
   }
 
   /**
    * Colorize text if colors are enabled
    */
   colorize(text: string, color: string): string {
-    if (!this.useColors) return text
-    return `${color}${text}${COLORS.RESET}`
+    if (!this.useColors) return text;
+    return `${color}${text}${COLORS.RESET}`;
   }
 
   /**
    * Format a log message with colors and emojis
    */
-  formatMessage(
-    level: LogLevel,
-    message: string,
-    meta?: Record<string, unknown>
-  ): string {
-    const levelName = level.toUpperCase()
-    const emoji = this.useEmojis ? EMOJI_INDICATORS[level] || '' : ''
+  formatMessage(level: LogLevel, message: string, meta?: Record<string, unknown>): string {
+    const levelName = level.toUpperCase();
+    const _emoji = this.useEmojis ? EMOJI_INDICATORS[level] || '' : '';
 
     // Color by level
-    let levelColor = COLORS.WHITE
+    let levelColor: string = COLORS.WHITE;
     switch (level) {
       case 'debug':
-        levelColor = COLORS.DIM + COLORS.CYAN
-        break
+        levelColor = COLORS.DIM + COLORS.CYAN;
+        break;
       case 'info':
-        levelColor = COLORS.GREEN
-        break
+        levelColor = COLORS.GREEN;
+        break;
       case 'warn':
-        levelColor = COLORS.YELLOW
-        break
+        levelColor = COLORS.YELLOW;
+        break;
       case 'error':
-        levelColor = COLORS.RED
-        break
+        levelColor = COLORS.RED;
+        break;
     }
 
     // Build message parts
-    const parts: string[] = []
+    const parts: string[] = [];
 
     if (this.timestamps) {
-      parts.push(this.colorize(`[${new Date().toISOString()}]`, COLORS.DIM))
+      parts.push(this.colorize(`[${new Date().toISOString()}]`, COLORS.DIM));
     }
 
-    parts.push(this.colorize(levelName, levelColor))
-    if (emoji) {
-      parts.push(emoji)
+    parts.push(this.colorize(levelName, levelColor));
+    if (_emoji) {
+      parts.push(_emoji);
     }
-    parts.push(message)
+    parts.push(message);
 
     // Add metadata if present
     if (meta && Object.keys(meta).length > 0) {
-      parts.push(this.colorize(`| ${JSON.stringify(meta)}`, COLORS.DIM))
+      parts.push(this.colorize(`| ${JSON.stringify(meta)}`, COLORS.DIM));
     }
 
-    return parts.join(' ')
+    return parts.join(' ');
   }
 
   /**
    * Output to appropriate stream
    */
   output(level: LogLevel, message: string): void {
-    if (typeof process === 'undefined') return
+    if (typeof process === 'undefined') return;
 
     if (level === 'error') {
-      console.error(message)
+      console.error(message);
     } else {
-      console.log(message)
+      console.log(message);
     }
   }
 
@@ -130,9 +126,9 @@ export class NodeLoggerAdapter {
    */
   getEnvVar(name: string, defaultValue?: string): string | undefined {
     if (typeof process === 'undefined' || !process.env) {
-      return defaultValue
+      return defaultValue;
     }
-    return process.env[name] || defaultValue
+    return process.env[name] || defaultValue;
   }
 
   /**
@@ -140,9 +136,9 @@ export class NodeLoggerAdapter {
    */
   isTTY(): boolean {
     if (typeof process === 'undefined' || !process.stdout) {
-      return false
+      return false;
     }
-    return process.stdout.isTTY === true
+    return process.stdout.isTTY === true;
   }
 
   /**
@@ -150,14 +146,14 @@ export class NodeLoggerAdapter {
    */
   getMemoryUsage(): { rss: string; heapUsed: string; heapTotal: string } | null {
     if (typeof process === 'undefined' || !process.memoryUsage) {
-      return null
+      return null;
     }
 
-    const usage = process.memoryUsage()
+    const usage = process.memoryUsage();
     return {
       rss: `${Math.round(usage.rss / 1024 / 1024)}MB`,
       heapUsed: `${Math.round(usage.heapUsed / 1024 / 1024)}MB`,
       heapTotal: `${Math.round(usage.heapTotal / 1024 / 1024)}MB`,
-    }
+    };
   }
 }

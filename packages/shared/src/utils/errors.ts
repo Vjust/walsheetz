@@ -105,14 +105,14 @@ export class NetworkError extends WalSheetError {
     if (this.code === 'TIMEOUT') return 'Connection timed out. Please check your internet connection.';
     if (this.code === 'OFFLINE') return 'You appear to be offline. Please check your internet connection.';
     if (this.code === 'RPC_ERROR') return 'Unable to connect to blockchain network. The service may be temporarily unavailable.';
-    if (this.code === 'WEBSOCKET_ERROR') return 'Real-time connection lost. Collaboration features may be limited.';
+    if (this.code === 'WEBSOCKET_ERROR') return 'Real-time connection lost. Some live updates may be delayed.';
     return 'Network connection error. Please check your internet connection and try again.';
   }
 
   getRecoverySuggestions(): string[] {
     const suggestions = ['Check your internet connection'];
     if (this.code === 'RPC_ERROR') { suggestions.push('Try switching to a different RPC endpoint', 'Wait a moment and try again'); }
-    if (this.code === 'WEBSOCKET_ERROR') { suggestions.push('Refresh the page to restore real-time features'); }
+    if (this.code === 'WEBSOCKET_ERROR') { suggestions.push('Refresh the page to retry'); }
     if (this.code === 'TIMEOUT') { suggestions.push('Try again with a longer timeout'); }
     suggestions.push('Contact support if the problem persists');
     return suggestions;

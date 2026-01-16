@@ -1,12 +1,25 @@
 // Browser-compatible wallet manager for WalSheetz
 // This acts as a bridge between the old API and the new dapp-kit hooks
-import { getCurrentConfig, configLoader } from "../../../../walrus/src/index.js";
+import { configLoader } from '../../../../walrus/src/index.js';
+import type {
+  WalletConnection,
+  WalletInfo,
+  WalletInfoResult,
+  ConnectionStatus,
+  HealthStatus,
+  UnsignedTransactionResult,
+  ContractExecutionResult,
+  TransactionResult,
+  TransactionOptions,
+  EnhancedError,
+  TransactionPreparation,
+} from '../types/sui-types.js';
 
 class BrowserWalletManager {
   private isConnected: boolean;
   private currentAccount: { address: string; publicKey: string; balance: string } | null;
   private eventListeners: Map<string, Array<(data: unknown) => void>>;
-  private walletConnection: unknown | null;
+  private walletConnection: WalletConnection | null;
   private healthMonitor: {
     isEnabled: boolean;
     heartbeatInterval: ReturnType<typeof setInterval> | null;
@@ -14,7 +27,7 @@ class BrowserWalletManager {
     consecutiveFailures: number;
     maxFailures: number;
     heartbeatFrequency: number;
-    healthStatus: string;
+    healthStatus: 'healthy' | 'warning' | 'critical' | 'unknown';
     lastSuccessfulTransaction: number | null;
     transactionHistory: Array<{ timestamp: number; success: boolean; error: string | null }>;
     reconnectionAttempts: number;
@@ -25,35 +38,33 @@ class BrowserWalletManager {
     this.isConnected = false;
     this.currentAccount = null;
     this.eventListeners = new Map();
-    this.walletConnection = null; // Will be set from the hook
+    this.walletConnection = null;
 
-    // Connection health monitoring
     this.healthMonitor = {
       isEnabled: false,
       heartbeatInterval: null,
       lastHeartbeat: null,
       consecutiveFailures: 0,
       maxFailures: 3,
-      heartbeatFrequency: 30000, // 30 seconds
-      healthStatus: 'unknown', // 'healthy', 'warning', 'critical', 'unknown'
+      heartbeatFrequency: 30000,
+      healthStatus: 'unknown',
       lastSuccessfulTransaction: null,
-      transactionHistory: [], // Track recent transaction attempts
+      transactionHistory: [],
       reconnectionAttempts: 0,
-      maxReconnectionAttempts: 3
+      maxReconnectionAttempts: 3,
     };
 
     console.log('Browser wallet manager initialized with health monitoring');
   }
 
-  // Event handling
-  on(event: string, callback: (data: unknown) => void) {
+  on(event: string, callback: (data: unknown) => void): void {
     if (!this.eventListeners.has(event)) {
       this.eventListeners.set(event, []);
     }
     this.eventListeners.get(event)?.push(callback);
   }
 
-  off(event: string, callback: (data: unknown) => void) {
+  off(event: string, callback: (data: unknown) => void): void {
     if (this.eventListeners.has(event)) {
       const callbacks = this.eventListeners.get(event);
       const index = callbacks?.indexOf(callback) ?? -1;
@@ -63,7 +74,7 @@ class BrowserWalletManager {
     }
   }
 
-  emit(event: string, data: unknown) {
+  emit(event: string, data: unknown): void {
     if (this.eventListeners.has(event)) {
       this.eventListeners.get(event)?.forEach((callback) => {
         try {
@@ -76,151 +87,154 @@ class BrowserWalletManager {
     }
   }
 
-  // Set the wallet connection from the hook
-  setWalletConnection(walletConnection: unknown): void {
-    const wc = walletConnection as any;
-    console.log('[BrowserWalletManager] 🔗 Setting wallet connection:', {
+  setWalletConnection(walletConnection: WalletConnection | null): void {
+    console.log('[BrowserWalletManager] Setting wallet connection:', {
       hasConnection: !!walletConnection,
-      isConnected: wc?.isConnected || false,
-      address: wc?.address?.slice(0, 8) + '...' || 'none',
-      availableMethods: walletConnection ? Object.keys(walletConnection).filter((key) => typeof wc[key] === 'function') : []
+      isConnected: walletConnection?.isConnected || false,
+      address: walletConnection?.address?.slice(0, 8) + '...' || 'none',
+      availableMethods: walletConnection
+        ? Object.keys(walletConnection).filter(
+            (key) => typeof walletConnection[key as keyof WalletConnection] === 'function'
+          )
+        : [],
     });
 
     this.walletConnection = walletConnection;
 
-    // Update internal state based on connection
-    if (walletConnection && wc.isConnected) {
+    if (walletConnection && walletConnection.isConnected) {
       this.isConnected = true;
       this.currentAccount = {
-        address: wc.address,
-        publicKey: wc.currentAccount?.publicKeyBase64 || '',
-        balance: wc.balance?.mist || '0'
+        address: walletConnection.address || '',
+        publicKey: walletConnection.currentAccount?.publicKeyBase64 || '',
+        balance: walletConnection.balance?.mist || '0',
       };
-      console.log('[BrowserWalletManager] ✅ Wallet state updated - connected');
+      console.log('[BrowserWalletManager] Wallet state updated - connected');
 
-      // Start health monitoring when wallet connects
       this.startHealthMonitoring();
     } else {
       this.isConnected = false;
       this.currentAccount = null;
-      console.log('[BrowserWalletManager] ❌ Wallet state updated - disconnected');
+      console.log('[BrowserWalletManager] Wallet state updated - disconnected');
 
-      // Stop health monitoring when wallet disconnects
       this.stopHealthMonitoring();
     }
   }
 
-  // Helper to check if a wallet is Slush
-  isSlushWallet(wallet: unknown): boolean {
-    const w = wallet as { name: string };
-    const name = w.name.toLowerCase();
-    return name.includes('slush') ||
-    name.includes('sui') && name.includes('wallet');
+  isSlushWallet(wallet: WalletInfo): boolean {
+    const name = wallet.name.toLowerCase();
+    return name.includes('slush') || (name.includes('sui') && name.includes('wallet'));
   }
 
-  // Connect wallet (only supports Slush)
-  async connectWallet(walletName: string = 'Slush'): Promise<{ address: string; publicKey: string; balance: string }> {
+  async connectWallet(
+    _walletName: string = 'Slush'
+  ): Promise<{ address: string; publicKey: string; balance: string }> {
     console.log('[BrowserWalletManager] Connecting to Slush wallet...');
 
     if (!this.walletConnection) {
-      throw new Error('Wallet connection not initialized. Make sure app is wrapped with WalletProviders');
+      throw new Error(
+        'Wallet connection not initialized. Make sure app is wrapped with WalletProviders'
+      );
     }
 
     try {
-      // Get available wallets - filter for only Slush
-      const wc = this.walletConnection as any;
-      const { installed } = wc.availableWallets;
-      const slushWallets = installed.filter((w) => this.isSlushWallet(w));
-
-      console.log('[BrowserWalletManager] Available Slush wallets:', slushWallets.map((w) => w.name));
-
-      if (slushWallets.length === 0) {
-        throw new Error('Slush wallet not installed. Please install Slush wallet from the Chrome Web Store.');
+      const availableWallets = this.walletConnection.availableWallets;
+      if (!availableWallets) {
+        throw new Error('No available wallets found');
       }
 
-      // Use the first (and likely only) Slush wallet
+      const slushWallets = availableWallets.installed.filter((w) => this.isSlushWallet(w));
+
+      console.log(
+        '[BrowserWalletManager] Available Slush wallets:',
+        slushWallets.map((w) => w.name)
+      );
+
+      if (slushWallets.length === 0) {
+        throw new Error(
+          'Slush wallet not installed. Please install Slush wallet from the Chrome Web Store.'
+        );
+      }
+
       const wallet = slushWallets[0];
 
       console.log('[BrowserWalletManager] Connecting to:', wallet.name);
 
-      // Use the hook's connect method with proper Promise handling
-      await wc.connectWallet(wallet);
+      await this.walletConnection.connectWallet(wallet);
 
-      // Wait for the connection state to update
       await this.waitForConnection();
 
-      // Update internal state
       this.isConnected = true;
       this.currentAccount = {
-        address: wc.address,
-        publicKey: wc.currentAccount?.publicKeyBase64 || '',
-        balance: wc.balance?.mist || '0'
+        address: this.walletConnection.address || '',
+        publicKey: this.walletConnection.currentAccount?.publicKeyBase64 || '',
+        balance: this.walletConnection.balance?.mist || '0',
       };
 
-      console.log('[BrowserWalletManager] ✅ Slush wallet connected:', this.currentAccount.address);
+      console.log('[BrowserWalletManager] Slush wallet connected:', this.currentAccount.address);
 
       this.emit('connected', {
-        address: wc.address,
-        publicKey: this.currentAccount.publicKey
+        address: this.walletConnection.address,
+        publicKey: this.currentAccount.publicKey,
       });
 
       return this.currentAccount;
-
     } catch (error) {
       const err = error as Error;
-      console.error('[BrowserWalletManager] ❌ Slush wallet connection failed:', err);
+      console.error('[BrowserWalletManager] Slush wallet connection failed:', err);
       this.emit('error', err);
       throw err;
     }
   }
 
-  // Helper to wait for connection state
   waitForConnection(timeoutMs: number = 30000): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(new Error('Wallet connection timeout - please check if you approved the connection'));
+        reject(
+          new Error('Wallet connection timeout - please check if you approved the connection')
+        );
       }, timeoutMs);
 
       const checkConnection = setInterval(() => {
-        const wc = this.walletConnection as any;
-        if (wc?.isConnected && wc?.address) {
+        if (this.walletConnection?.isConnected && this.walletConnection?.address) {
           clearInterval(checkConnection);
           clearTimeout(timeout);
           resolve();
-        } else if (wc?.connectionError) {
+        } else if (this.walletConnection?.connectionError) {
           clearInterval(checkConnection);
           clearTimeout(timeout);
-          reject(new Error(wc.connectionError));
+          reject(new Error(this.walletConnection.connectionError || 'Connection error'));
         }
-      }, 500); // Reduced from 100ms to 500ms to reduce resource usage
+      }, 500);
     });
   }
 
-  // Wrapper method for compatibility with BlockchainAdapter
-  async connect(walletName: string): Promise<{ success: boolean; wallet?: any; address?: string; error?: string }> {
+  async connect(walletName: string): Promise<{
+    success: boolean;
+    wallet?: { address: string; publicKey: string; balance: string };
+    address?: string;
+    error?: string;
+  }> {
     try {
       const wallet = await this.connectWallet(walletName);
       return {
         success: true,
         wallet: wallet,
-        address: wallet.address
+        address: wallet.address,
       };
     } catch (error) {
       const err = error as Error;
       return {
         success: false,
-        error: err.message
+        error: err.message,
       };
     }
   }
 
-  // Disconnect wallet (delegates to hook)
   async disconnectWallet(): Promise<void> {
     console.log('Disconnecting wallet...');
 
     if (this.walletConnection) {
-      const wc = this.walletConnection as any;
-      wc.disconnectWallet();
+      this.walletConnection.disconnectWallet();
     }
 
     this.isConnected = false;
@@ -231,49 +245,41 @@ class BrowserWalletManager {
     console.log('Wallet disconnected');
   }
 
-  // Wrapper method for compatibility with BlockchainAdapter
   async disconnect(): Promise<void> {
     await this.disconnectWallet();
   }
 
-  // Auto-reconnect method for BlockchainAdapter compatibility
   async autoReconnect(): Promise<boolean> {
     console.log('[BrowserWalletManager] Attempting auto-reconnect...');
 
     try {
-      // Check if walletConnection exists and has auto-connect enabled
-      const wc = this.walletConnection as any;
-      if (this.walletConnection && wc?.currentAccount) {
-        // Already connected
+      if (this.walletConnection && this.walletConnection.currentAccount) {
         this.isConnected = true;
         this.currentAccount = {
-          address: wc.address,
-          publicKey: wc.currentAccount?.publicKeyBase64 || '',
-          balance: wc.balance?.mist || '0'
+          address: this.walletConnection.address || '',
+          publicKey: this.walletConnection.currentAccount?.publicKeyBase64 || '',
+          balance: this.walletConnection.balance?.mist || '0',
         };
-        console.log('[BrowserWalletManager] ✅ Auto-reconnect successful (already connected)');
+        console.log('[BrowserWalletManager] Auto-reconnect successful (already connected)');
         return true;
       }
 
-      // Don't auto-connect without user interaction for security
-      console.log('[BrowserWalletManager] No existing connection found - user must manually connect');
+      console.log(
+        '[BrowserWalletManager] No existing connection found - user must manually connect'
+      );
       return false;
-
     } catch (error) {
       const err = error as Error;
-      console.error('[BrowserWalletManager] ❌ Auto-reconnect failed:', err);
+      console.error('[BrowserWalletManager] Auto-reconnect failed:', err);
       return false;
     }
   }
 
-  // Get wallet info
-  getWalletInfo(): any {
-    const wc = this.walletConnection as any;
+  getWalletInfo(): WalletInfoResult {
     let network = 'testnet';
     try {
       if (typeof window !== 'undefined' && window.location?.hostname) {
-        // @ts-ignore - import.meta is ES2020+
-        network = (import.meta as any).env?.VITE_NETWORK || 'testnet';
+        network = (import.meta.env?.VITE_NETWORK as string) || 'testnet';
       } else {
         network = process.env.VITE_NETWORK || 'testnet';
       }
@@ -281,65 +287,63 @@ class BrowserWalletManager {
       network = 'testnet';
     }
 
-    const walletInfo = {
-      connected: wc?.isConnected || false,
-      address: wc?.address || null,
-      publicKey: wc?.currentAccount?.publicKeyBase64 || null,
+    const walletInfo: WalletInfoResult = {
+      connected: this.walletConnection?.isConnected || false,
+      address: this.walletConnection?.address || null,
+      publicKey: this.walletConnection?.currentAccount?.publicKeyBase64 || null,
       network,
-      balance: wc?.balance || null
+      balance: this.walletConnection?.balance || null,
     };
 
-    console.log('[BrowserWalletManager] 📊 Wallet info requested:', {
+    console.log('[BrowserWalletManager] Wallet info requested:', {
       connected: walletInfo.connected,
       hasAddress: !!walletInfo.address,
       network: walletInfo.network,
-      hasBalance: !!walletInfo.balance
+      hasBalance: !!walletInfo.balance,
     });
 
     return walletInfo;
   }
 
-  // Get current account
-  getCurrentAccount(): any {
-    const wc = this.walletConnection as any;
-    if (this.walletConnection && wc?.currentAccount) {
+  getCurrentAccount(): { address: string; publicKey: string; balance: string } | null {
+    if (this.walletConnection && this.walletConnection.currentAccount) {
       return {
-        address: wc.address,
-        publicKey: wc.currentAccount?.publicKeyBase64 || '',
-        balance: wc.balance?.mist || '0'
+        address: this.walletConnection.address || '',
+        publicKey: this.walletConnection.currentAccount?.publicKeyBase64 || '',
+        balance: this.walletConnection.balance?.mist || '0',
       };
     }
     return this.currentAccount;
   }
 
-  // Check connection status
-  getConnectionStatus(): any {
-    const wc = this.walletConnection as any;
+  getConnectionStatus(): ConnectionStatus {
     if (this.walletConnection) {
       return {
-        isConnected: wc?.isConnected,
-        address: wc?.address || null,
-        simulationMode: false
+        isConnected: this.walletConnection?.isConnected || false,
+        address: this.walletConnection?.address || null,
+        simulationMode: false,
       };
     }
 
     return {
       isConnected: this.isConnected,
       address: this.currentAccount?.address || null,
-      simulationMode: true
+      simulationMode: true,
     };
   }
 
-  // Sign a transaction
-  async signTransaction(transaction: unknown): Promise<any> {
+  async signTransaction(transaction: unknown): Promise<{ signature: string } | TransactionResult> {
     if (!this.walletConnection) {
       throw new Error('Wallet not connected');
     }
 
-    return await (this.walletConnection as any).sign(transaction);
+    if (this.walletConnection.sign && typeof this.walletConnection.sign === 'function') {
+      return await this.walletConnection.sign(transaction);
+    }
+
+    throw new Error('Wallet does not support signing');
   }
 
-  // Helper to check if error is retryable
   isRetryableError(error: unknown): boolean {
     const err = error as Error;
     const errorMessage = err.message?.toLowerCase() || '';
@@ -350,347 +354,372 @@ class BrowserWalletManager {
       'connection reset',
       'network error',
       'timeout',
-      'disconnected'
+      'disconnected',
     ];
 
     return retryablePatterns.some((pattern) => errorMessage.includes(pattern));
   }
 
-  // Preflight checks before transaction execution
   async preflightCheck(): Promise<boolean> {
-    console.log('[BrowserWalletManager] 🔍 Running preflight checks...');
+    console.log('[BrowserWalletManager] Running preflight checks...');
 
     if (!this.walletConnection) {
       throw new Error('Wallet not connected - please connect your Slush wallet');
     }
 
-    const wc = this.walletConnection as any;
-    if (!wc?.isConnected) {
+    if (!this.walletConnection?.isConnected) {
       throw new Error('Wallet connection not active - please check your wallet extension');
     }
 
-    if (!wc?.address) {
+    if (!this.walletConnection?.address) {
       throw new Error('Wallet address not available - please reconnect your wallet');
     }
 
-    // Check if wallet has sufficient balance (optional warning)
-    if (wc?.balance) {
-      // @ts-ignore - BigInt is ES2020+
-      const balanceMist = BigInt(wc.balance.mist || '0');
-      // @ts-ignore - BigInt is ES2020+
-      const minRequired = 10000000n; // 0.01 SUI in MIST
+    if (this.walletConnection?.balance) {
+      const balanceMist = BigInt(this.walletConnection.balance.mist || '0');
+      const minRequired = 10000000n;
 
       if (balanceMist < minRequired) {
-        console.warn('[BrowserWalletManager] ⚠️ Low wallet balance detected');
+        console.warn('[BrowserWalletManager] Low wallet balance detected');
       }
     }
 
-    console.log('[BrowserWalletManager] ✅ Preflight checks passed');
+    console.log('[BrowserWalletManager] Preflight checks passed');
     return true;
   }
 
-  // Attempt to reconnect wallet if connection is lost
   async reconnectWallet(): Promise<boolean> {
-    console.log('[BrowserWalletManager] 🔄 Attempting wallet reconnection...');
+    console.log('[BrowserWalletManager] Attempting wallet reconnection...');
 
     if (!this.walletConnection) {
       throw new Error('Wallet connection not available for reconnection');
     }
 
     try {
-      // Check if wallet has available wallets
-      const wc = this.walletConnection as any;
-      const { installed } = wc.availableWallets;
-      const slushWallets = installed.filter((w) => this.isSlushWallet(w));
+      const availableWallets = this.walletConnection.availableWallets;
+      if (!availableWallets) {
+        throw new Error('No available wallets found');
+      }
+
+      const slushWallets = availableWallets.installed.filter((w) => this.isSlushWallet(w));
 
       if (slushWallets.length === 0) {
         throw new Error('Slush wallet not found for reconnection');
       }
 
-      // Disconnect first if needed
-      if (wc?.isConnected) {
-        console.log('[BrowserWalletManager] 🔌 Disconnecting before reconnection...');
-        wc.disconnectWallet();
-        await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait for disconnection
+      if (this.walletConnection?.isConnected) {
+        console.log('[BrowserWalletManager] Disconnecting before reconnection...');
+        this.walletConnection.disconnectWallet();
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
 
-      // Reconnect to the wallet
-      console.log('[BrowserWalletManager] 🔗 Reconnecting to Slush wallet...');
-      await wc.connectWallet(slushWallets[0]);
+      console.log('[BrowserWalletManager] Reconnecting to Slush wallet...');
+      await this.walletConnection.connectWallet(slushWallets[0]);
 
-      // Wait for connection to be established
-      await this.waitForConnection(10000); // 10 second timeout for reconnection
+      await this.waitForConnection(10000);
 
-      console.log('[BrowserWalletManager] ✅ Wallet reconnected successfully');
+      console.log('[BrowserWalletManager] Wallet reconnected successfully');
       return true;
     } catch (error) {
       const err = error as Error;
-      console.error('[BrowserWalletManager] ❌ Wallet reconnection failed:', err.message);
+      console.error('[BrowserWalletManager] Wallet reconnection failed:', err.message);
       return false;
     }
   }
 
-  // Sign and execute a transaction with retry logic
-  async signAndExecuteTransaction(transactionInput: any): Promise<any> {
-    const maxRetries = 3; // Increased from 2 to 3
-    const baseDelay = 500; // Start with 500ms
+  async signAndExecuteTransaction(transactionInput: {
+    transactionBlock?: unknown;
+    transaction?: unknown;
+    options?: TransactionOptions;
+  }): Promise<TransactionResult> {
+    const maxRetries = 3;
+    const baseDelay = 500;
 
-    console.log('[BrowserWalletManager] 📝 Signing and executing transaction with retry logic:', {
+    console.log('[BrowserWalletManager] Signing and executing transaction with retry logic:', {
       isTransactionObject: typeof transactionInput === 'object',
       hasTransactionBlock: !!transactionInput.transactionBlock,
       hasTransaction: !!transactionInput.transaction,
       hasOptions: !!transactionInput.options,
       hasWalletConnection: !!this.walletConnection,
-      maxRetries
+      maxRetries,
     });
 
-    // Run preflight checks
     try {
       await this.preflightCheck();
     } catch (error) {
       const err = error as Error;
-      console.error('[BrowserWalletManager] ❌ Preflight check failed:', err.message);
+      console.error('[BrowserWalletManager] Preflight check failed:', err.message);
       throw err;
     }
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`[BrowserWalletManager] 🔐 Attempt ${attempt}/${maxRetries}: Requesting wallet signature...`);
+        console.log(
+          `[BrowserWalletManager] Attempt ${attempt}/${maxRetries}: Requesting wallet signature...`
+        );
 
-        // Handle both old format (direct transaction) and new format (with options)
-        let transaction: any, options: any = {};
+        let transaction: unknown;
+        let options: TransactionOptions = {};
 
         if (transactionInput.transactionBlock) {
-          // New format: { transactionBlock, options }
           transaction = transactionInput.transactionBlock;
           options = transactionInput.options || {};
-          console.log('[BrowserWalletManager] Using transactionBlock format with options:', Object.keys(options));
+          console.log(
+            '[BrowserWalletManager] Using transactionBlock format with options:',
+            Object.keys(options)
+          );
         } else if (transactionInput.transaction) {
-          // Handle {transaction: ..., options: ...} format
           transaction = transactionInput.transaction;
           options = transactionInput.options || {
-            showEffects: true,
-            showEvents: true,
-            showObjectChanges: true
+            options: {
+              showEffects: true,
+              showEvents: true,
+              showObjectChanges: true,
+            },
           };
-          console.log('[BrowserWalletManager] Using transaction format with options:', Object.keys(options));
+          console.log(
+            '[BrowserWalletManager] Using transaction format with options:',
+            Object.keys(options)
+          );
         } else {
-          // Legacy format: direct transaction object
           transaction = transactionInput;
           options = {
-            showEffects: true,
-            showEvents: true,
-            showObjectChanges: true
+            options: {
+              showEffects: true,
+              showEvents: true,
+              showObjectChanges: true,
+            },
           };
-          console.log('[BrowserWalletManager] Using legacy transaction format, adding default options');
+          console.log(
+            '[BrowserWalletManager] Using legacy transaction format, adding default options'
+          );
         }
 
-        const wc = this.walletConnection as any;
-        const hasSignAndExecuteTransactionBlock = typeof wc?.signAndExecuteTransactionBlock === 'function';
-        const hasSignAndExecuteTransaction = typeof wc?.signAndExecuteTransaction === 'function';
-        const hasSignAndExecute = typeof wc?.signAndExecute === 'function';
+        if (!this.walletConnection) {
+          throw new Error('Wallet connection lost');
+        }
 
-        if (!hasSignAndExecuteTransactionBlock && !hasSignAndExecuteTransaction && !hasSignAndExecute) {
+        const wc = this.walletConnection;
+        const hasSignAndExecuteTransactionBlock =
+          typeof wc.signAndExecuteTransactionBlock === 'function';
+        const hasSignAndExecuteTransaction = typeof wc.signAndExecuteTransaction === 'function';
+        const hasSignAndExecute = typeof wc.signAndExecute === 'function';
+
+        if (
+          !hasSignAndExecuteTransactionBlock &&
+          !hasSignAndExecuteTransaction &&
+          !hasSignAndExecute
+        ) {
           throw new Error('Wallet connection does not expose a compatible sign-and-execute method');
         }
 
-        console.log('🚀 DEBUG: About to call wallet transaction method', {
+        console.log('[BrowserWalletManager] DEBUG: About to call wallet transaction method', {
           attempt,
           hasSignAndExecuteTransactionBlock,
           hasSignAndExecuteTransaction,
           hasSignAndExecute,
-          walletType: wc?.name || 'unknown',
-          optionsKeys: Object.keys(options)
+          walletType: wc.name || 'unknown',
+          optionsKeys: Object.keys(options),
         });
 
-        let result;
-        if (hasSignAndExecuteTransactionBlock) {
+        let result: TransactionResult;
+        if (hasSignAndExecuteTransactionBlock && wc.signAndExecuteTransactionBlock) {
           console.log('[BrowserWalletManager] Using signAndExecuteTransactionBlock method');
           result = await wc.signAndExecuteTransactionBlock({
-            transactionBlock: transaction,
-            options
+            transactionBlock: transaction as import('@mysten/sui/transactions').Transaction,
+            options,
           });
-        } else if (hasSignAndExecuteTransaction) {
+        } else if (hasSignAndExecuteTransaction && wc.signAndExecuteTransaction) {
           console.log('[BrowserWalletManager] Using signAndExecuteTransaction method');
           result = await wc.signAndExecuteTransaction({
-            transaction,
-            options
+            transaction: transaction as import('@mysten/sui/transactions').Transaction,
+            options,
           });
-        } else {
+        } else if (wc.signAndExecute) {
           console.log('[BrowserWalletManager] Using signAndExecute method');
-          result = await wc.signAndExecute(transaction, options);
+          result = await wc.signAndExecute(
+            transaction as import('@mysten/sui/transactions').Transaction,
+            options
+          );
+        } else {
+          throw new Error('No compatible sign-and-execute method available');
         }
 
-        console.log('[BrowserWalletManager] ✅ Transaction signed and executed successfully:', {
+        console.log('[BrowserWalletManager] Transaction signed and executed successfully:', {
           attempt,
           digest: result.digest,
           hasEffects: !!result.effects,
           hasObjectChanges: !!result.objectChanges,
-          hasBalanceChanges: !!result.balanceChanges
+          hasBalanceChanges: !!result.balanceChanges,
         });
 
-        // Record successful transaction for health monitoring
         this.recordTransactionAttempt(true);
 
         return result;
-
       } catch (error) {
         const err = error as Error;
         const isRetryable = this.isRetryableError(err);
         const isLastAttempt = attempt === maxRetries;
 
-        console.error(`[BrowserWalletManager] ❌ Attempt ${attempt}/${maxRetries} failed:`, {
+        console.error(`[BrowserWalletManager] Attempt ${attempt}/${maxRetries} failed:`, {
           error: err.message,
           isRetryable,
           isLastAttempt,
-          transactionType: typeof transactionInput
+          transactionType: typeof transactionInput,
         });
 
         if (isLastAttempt || !isRetryable) {
-          // Record failed transaction for health monitoring
           this.recordTransactionAttempt(false, err);
 
-          // Add context to error message for user
           let userFriendlyMessage = err.message;
           if (this.isRetryableError(err)) {
             userFriendlyMessage = `Wallet communication failed after ${maxRetries} attempts. Please refresh the page and try again. Original error: ${err.message}`;
           }
 
-          const enhancedError = new Error(userFriendlyMessage);
-          (enhancedError as any).originalError = err;
-          (enhancedError as any).attempt = attempt;
-          (enhancedError as any).isRetryable = isRetryable;
+          const enhancedError = new Error(userFriendlyMessage) as EnhancedError;
+          enhancedError.originalError = err;
+          enhancedError.attempt = attempt;
+          enhancedError.isRetryable = isRetryable;
           throw enhancedError;
         }
 
-        // Calculate delay with exponential backoff
         const delay = baseDelay * Math.pow(2, attempt - 1);
-        console.log(`[BrowserWalletManager] ⏳ Retrying in ${delay}ms...`);
+        console.log(`[BrowserWalletManager] Retrying in ${delay}ms...`);
 
         await new Promise((resolve) => setTimeout(resolve, delay));
 
-        // Try to reconnect if it was a connection issue
         if (this.isRetryableError(err)) {
-          console.log('[BrowserWalletManager] 🔄 Attempting wallet reconnection due to connection error...');
+          console.log(
+            '[BrowserWalletManager] Attempting wallet reconnection due to connection error...'
+          );
           try {
             const reconnected = await this.reconnectWallet();
             if (reconnected) {
-              console.log('[BrowserWalletManager] ✅ Wallet reconnected, will retry transaction');
+              console.log('[BrowserWalletManager] Wallet reconnected, will retry transaction');
             } else {
-              console.warn('[BrowserWalletManager] ⚠️ Wallet reconnection failed, continuing with next attempt');
+              console.warn(
+                '[BrowserWalletManager] Wallet reconnection failed, continuing with next attempt'
+              );
             }
           } catch (reconnectError) {
             const reconnectErr = reconnectError as Error;
-            console.warn('[BrowserWalletManager] ⚠️ Reconnection attempt failed:', reconnectErr.message);
+            console.warn(
+              '[BrowserWalletManager] Reconnection attempt failed:',
+              reconnectErr.message
+            );
           }
         }
       }
     }
+
+    throw new Error('Max retries exceeded');
   }
 
-  // Get available wallets
-  getAvailableWallets(): any {
+  getAvailableWallets(): { installed: WalletInfo[]; notInstalled?: string[] } {
     if (!this.walletConnection) {
       return { installed: [], notInstalled: [] };
     }
 
-    const wc = this.walletConnection as any;
-    return wc?.availableWallets;
+    return this.walletConnection.availableWallets || { installed: [] };
   }
 
-  // Build unsigned transaction for WalSheetz DeFi operations
-  async buildUnsignedTransaction(request: unknown): Promise<any> {
-    const req = request as any;
-    console.log('[BrowserWalletManager] 🔨 Building unsigned transaction:', {
-      adapterId: req.adapterId,
-      method: req.method,
-      hasArgs: !!req.args
+  async buildUnsignedTransaction(request: {
+    adapterId: string;
+    method: string;
+    args?: unknown[];
+    gasCoins?: unknown;
+    gasBudget?: unknown;
+    modifiers?: Record<string, unknown>;
+  }): Promise<UnsignedTransactionResult> {
+    console.log('[BrowserWalletManager] Building unsigned transaction:', {
+      adapterId: request.adapterId,
+      method: request.method,
+      hasArgs: !!request.args,
     });
 
     try {
-      // Run preflight checks
       await this.preflightCheck();
 
-      // Import transaction runner dynamically to avoid circular dependencies
-      const { transactionRunner } = await import("../../blockchain/sui-transaction-runner.js");
+      const { transactionRunner } = await import('../../blockchain/sui-transaction-runner.js');
 
-      // Prepare the transaction
-      const wc = this.walletConnection as any;
       const txPreparation = await transactionRunner.prepareTransaction({
-        adapterId: req.adapterId,
-        method: req.method,
-        args: req.args || [],
+        adapterId: request.adapterId,
+        method: request.method,
+        args: request.args || [],
         modifiers: {
-          sender: wc?.address,
-          gasCoins: req.gasCoins || null,
-          gasBudget: req.gasBudget || null,
-          ...req.modifiers
-        }
+          sender: this.walletConnection?.address,
+          gasCoins: request.gasCoins || null,
+          gasBudget: request.gasBudget || null,
+          ...request.modifiers,
+        },
       });
 
-      console.log('[BrowserWalletManager] ✅ Transaction prepared:', {
-        method: txPreparation.method,
-        hasEstimatedGas: !!txPreparation.estimatedGas,
-        description: txPreparation.description
+      const prep = txPreparation as TransactionPreparation;
+      console.log('[BrowserWalletManager] Transaction prepared:', {
+        method: prep.method,
+        hasEstimatedGas: !!prep.estimatedGas,
+        description: prep.description,
       });
 
       return {
         success: true,
-        transaction: txPreparation.transaction,
+        transaction: prep.transaction,
         metadata: {
-          adapterId: req.adapterId,
-          method: txPreparation.method,
-          args: txPreparation.args,
-          description: txPreparation.description,
-          estimatedGas: txPreparation.estimatedGas
-        }
+          adapterId: request.adapterId,
+          method: prep.method,
+          args: prep.args,
+          description: prep.description,
+          estimatedGas: prep.estimatedGas,
+        },
       };
-
     } catch (error) {
       const err = error as Error;
-      console.error('[BrowserWalletManager] ❌ Failed to build unsigned transaction:', err.message);
+      console.error('[BrowserWalletManager] Failed to build unsigned transaction:', err.message);
       return {
         success: false,
         error: err.message,
-        details: err.stack
       };
     }
   }
 
-  // Execute a WalSheetz contract method (combines building and signing)
-  async executeContractMethod(adapterId: string, method: string, args: unknown[], options: any = {}): Promise<any> {
-    console.log(`[BrowserWalletManager] 🚀 Executing contract method: ${adapterId}.${method}`);
+  async executeContractMethod(
+    adapterId: string,
+    method: string,
+    args: unknown[],
+    options: Record<string, unknown> = {}
+  ): Promise<ContractExecutionResult> {
+    console.log(`[BrowserWalletManager] Executing contract method: ${adapterId}.${method}`);
 
     try {
-      // Build unsigned transaction
       const buildResult = await this.buildUnsignedTransaction({
         adapterId,
         method,
         args,
-        modifiers: options.modifiers || {}
+        modifiers: (options.modifiers as Record<string, unknown>) || {},
       });
 
       if (!buildResult.success) {
         throw new Error(`Failed to build transaction: ${buildResult.error}`);
       }
 
-      // Sign and execute the transaction
-      const executeOptions = {
-        showEffects: true,
-        showEvents: true,
-        showObjectChanges: true,
-        ...options.executeOptions
+      const executeOptions: TransactionOptions = {
+        options: {
+          showEffects: true,
+          showEvents: true,
+          showObjectChanges: true,
+          ...(options.executeOptions as Record<string, boolean> | undefined),
+        },
       };
 
       const result = await this.signAndExecuteTransaction({
         transaction: buildResult.transaction,
-        options: executeOptions
+        options: executeOptions,
       });
 
-      console.log('[BrowserWalletManager] ✅ Contract method executed successfully:', {
+      console.log('[BrowserWalletManager] Contract method executed successfully:', {
         digest: result.digest,
         adapterId,
-        method
+        method,
       });
 
       return {
@@ -699,67 +728,57 @@ class BrowserWalletManager {
         metadata: buildResult.metadata,
         transactionDigest: result.digest,
         effects: result.effects,
-        objectChanges: result.objectChanges
+        objectChanges: result.objectChanges,
       };
-
     } catch (error) {
       const err = error as Error;
-      console.error(`[BrowserWalletManager] ❌ Contract method execution failed:`, err.message);
+      console.error(`[BrowserWalletManager] Contract method execution failed:`, err.message);
       return {
         success: false,
         error: err.message,
         adapterId,
         method,
-        args
+        args,
       };
     }
   }
 
-  // Get gas coins for transaction execution
   async getGasCoinsForTransaction(requiredAmount: number | null = null): Promise<string[]> {
-    const wc = this.walletConnection as any;
-    if (!this.walletConnection || !wc?.address) {
+    if (!this.walletConnection || !this.walletConnection?.address) {
       throw new Error('Wallet not connected - cannot get gas coins');
     }
 
     try {
-      // Import SUI client dynamically
       const { SuiClient } = await import('@mysten/sui/client');
 
-      // Use proxy-aware RPC URL (dev: /sui-rpc, prod: /api/sui-rpc-proxy)
       const config = await configLoader.getConfig();
-      const configObj = config as any;
+      const configObj = config as { getServiceUrl: (service: string) => string };
       const rpcUrl = configObj.getServiceUrl('sui-rpc');
       const client = new SuiClient({ url: rpcUrl });
 
       const gasCoins = await client.getCoins({
-        owner: wc.address,
+        owner: this.walletConnection.address,
         coinType: '0x2::sui::SUI',
-        limit: 10
+        limit: 10,
       });
 
       if (gasCoins.data.length === 0) {
         throw new Error('No SUI coins found for gas payment');
       }
 
-      // If amount specified, find sufficient coins
       if (requiredAmount) {
-        // @ts-ignore - BigInt is ES2020+
         let totalAmount = 0n;
         const sufficientCoins: string[] = [];
 
         for (const coin of gasCoins.data) {
           sufficientCoins.push(coin.coinObjectId);
-          // @ts-ignore - BigInt is ES2020+
           totalAmount += BigInt(coin.balance);
 
-          // @ts-ignore - BigInt is ES2020+
           if (totalAmount >= BigInt(requiredAmount)) {
             break;
           }
         }
 
-        // @ts-ignore - BigInt is ES2020+
         if (totalAmount < BigInt(requiredAmount)) {
           throw new Error(`Insufficient SUI balance. Need ${requiredAmount}, have ${totalAmount}`);
         }
@@ -767,53 +786,42 @@ class BrowserWalletManager {
         return sufficientCoins;
       }
 
-      // Return all coins
       return gasCoins.data.map((coin) => coin.coinObjectId);
-
     } catch (error) {
       const err = error as Error;
-      console.error('[BrowserWalletManager] ❌ Failed to get gas coins:', err.message);
+      console.error('[BrowserWalletManager] Failed to get gas coins:', err.message);
       throw err;
     }
   }
 
-  /**
-   * Clear invalid objects cached in wallet manager
-   */
   clearInvalidObjects(): void {
-    console.warn('[BrowserWalletManager] 🧹 Clearing invalid cached objects...');
+    console.warn('[BrowserWalletManager] Clearing invalid cached objects...');
 
     try {
-      // Clear any cached gas coins, transaction objects, or other blockchain references
-      // that might be stored in this service
-
-      console.log('[BrowserWalletManager] ✅ Invalid cached objects cleared');
+      console.log('[BrowserWalletManager] Invalid cached objects cleared');
     } catch (error) {
       const err = error as Error;
       console.error('[BrowserWalletManager] Error clearing invalid objects:', err);
     }
   }
 
-  // Health monitoring methods
   startHealthMonitoring(): void {
     if (this.healthMonitor.isEnabled) {
-      console.log('[HealthMonitor] 🩺 Health monitoring already active');
+      console.log('[HealthMonitor] Health monitoring already active');
       return;
     }
 
-    console.log('[HealthMonitor] 🩺 Starting wallet connection health monitoring');
+    console.log('[HealthMonitor] Starting wallet connection health monitoring');
     this.healthMonitor.isEnabled = true;
     this.healthMonitor.healthStatus = 'unknown';
     this.healthMonitor.consecutiveFailures = 0;
     this.healthMonitor.reconnectionAttempts = 0;
 
-    // Start heartbeat
     this.healthMonitor.heartbeatInterval = setInterval(
       () => this._performHeartbeat(),
       this.healthMonitor.heartbeatFrequency
     );
 
-    // Perform initial heartbeat
     this._performHeartbeat();
   }
 
@@ -822,7 +830,7 @@ class BrowserWalletManager {
       return;
     }
 
-    console.log('[HealthMonitor] 🩺 Stopping wallet connection health monitoring');
+    console.log('[HealthMonitor] Stopping wallet connection health monitoring');
     this.healthMonitor.isEnabled = false;
 
     if (this.healthMonitor.heartbeatInterval) {
@@ -833,35 +841,29 @@ class BrowserWalletManager {
     this.healthMonitor.healthStatus = 'unknown';
   }
 
-  async _performHeartbeat(): Promise<void> {
+  private async _performHeartbeat(): Promise<void> {
     const heartbeatStart = Date.now();
 
     try {
-      console.log('[HealthMonitor] 💓 Performing wallet heartbeat check');
+      console.log('[HealthMonitor] Performing wallet heartbeat check');
 
-      // Check basic wallet connection
-      const wc = this.walletConnection as any;
-      if (!this.walletConnection || !wc?.isConnected) {
+      if (!this.walletConnection || !this.walletConnection?.isConnected) {
         throw new Error('Wallet not connected');
       }
 
-      // Check wallet account accessibility
-      if (!wc?.address) {
+      if (!this.walletConnection?.address) {
         throw new Error('Wallet address not accessible');
       }
 
-      // Try to get wallet capabilities (lightweight check)
       const walletInfo = this.getWalletInfo();
       if (!walletInfo.connected) {
         throw new Error('Wallet info indicates disconnection');
       }
 
-      // Heartbeat successful
       this.healthMonitor.lastHeartbeat = heartbeatStart;
       this.healthMonitor.consecutiveFailures = 0;
       this.healthMonitor.reconnectionAttempts = 0;
 
-      // Update health status based on recent transaction history
       const recentFailures = this._getRecentTransactionFailures();
       if (recentFailures === 0) {
         this.healthMonitor.healthStatus = 'healthy';
@@ -871,71 +873,73 @@ class BrowserWalletManager {
         this.healthMonitor.healthStatus = 'critical';
       }
 
-      console.log(`[HealthMonitor] ✅ Heartbeat successful (${Date.now() - heartbeatStart}ms) - Status: ${this.healthMonitor.healthStatus}`);
+      console.log(
+        `[HealthMonitor] Heartbeat successful (${Date.now() - heartbeatStart}ms) - Status: ${this.healthMonitor.healthStatus}`
+      );
 
-      // Emit health event
       this.emit('healthUpdate', {
         status: this.healthMonitor.healthStatus,
         lastHeartbeat: this.healthMonitor.lastHeartbeat,
         consecutiveFailures: this.healthMonitor.consecutiveFailures,
-        recentFailures
+        recentFailures,
       });
-
     } catch (error) {
       const err = error as Error;
       this.healthMonitor.consecutiveFailures++;
 
-      console.warn(`[HealthMonitor] ❌ Heartbeat failed (${this.healthMonitor.consecutiveFailures}/${this.healthMonitor.maxFailures}):`, err.message);
+      console.warn(
+        `[HealthMonitor] Heartbeat failed (${this.healthMonitor.consecutiveFailures}/${this.healthMonitor.maxFailures}):`,
+        err.message
+      );
 
       if (this.healthMonitor.consecutiveFailures >= this.healthMonitor.maxFailures) {
         this.healthMonitor.healthStatus = 'critical';
 
-        console.error('[HealthMonitor] 🚨 Critical health status - attempting reconnection');
+        console.error('[HealthMonitor] Critical health status - attempting reconnection');
 
-        // Attempt reconnection if not exceeded max attempts
         if (this.healthMonitor.reconnectionAttempts < this.healthMonitor.maxReconnectionAttempts) {
           this.healthMonitor.reconnectionAttempts++;
-          console.log(`[HealthMonitor] 🔄 Attempting wallet reconnection (${this.healthMonitor.reconnectionAttempts}/${this.healthMonitor.maxReconnectionAttempts})`);
+          console.log(
+            `[HealthMonitor] Attempting wallet reconnection (${this.healthMonitor.reconnectionAttempts}/${this.healthMonitor.maxReconnectionAttempts})`
+          );
 
           try {
             await this.reconnectWallet();
-            console.log('[HealthMonitor] ✅ Automatic reconnection successful');
+            console.log('[HealthMonitor] Automatic reconnection successful');
           } catch (reconnectError) {
             const reconnectErr = reconnectError as Error;
-            console.error('[HealthMonitor] ❌ Automatic reconnection failed:', reconnectErr.message);
+            console.error('[HealthMonitor] Automatic reconnection failed:', reconnectErr.message);
           }
         }
       } else if (this.healthMonitor.consecutiveFailures >= 2) {
         this.healthMonitor.healthStatus = 'warning';
       }
 
-      // Emit health event
       this.emit('healthUpdate', {
         status: this.healthMonitor.healthStatus,
         lastHeartbeat: this.healthMonitor.lastHeartbeat,
         consecutiveFailures: this.healthMonitor.consecutiveFailures,
-        error: err.message
+        error: err.message,
       });
     }
   }
 
-  _getRecentTransactionFailures(): number {
+  private _getRecentTransactionFailures(): number {
     const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-    return this.healthMonitor.transactionHistory.
-      filter((tx) => tx.timestamp > fiveMinutesAgo && !tx.success).
-      length;
+    return this.healthMonitor.transactionHistory.filter(
+      (tx) => tx.timestamp > fiveMinutesAgo && !tx.success
+    ).length;
   }
 
   recordTransactionAttempt(success: boolean, error: Error | null = null): void {
     const record = {
       timestamp: Date.now(),
       success,
-      error: error?.message || null
+      error: error?.message || null,
     };
 
     this.healthMonitor.transactionHistory.push(record);
 
-    // Keep only last 50 records
     if (this.healthMonitor.transactionHistory.length > 50) {
       this.healthMonitor.transactionHistory = this.healthMonitor.transactionHistory.slice(-50);
     }
@@ -944,10 +948,10 @@ class BrowserWalletManager {
       this.healthMonitor.lastSuccessfulTransaction = record.timestamp;
     }
 
-    console.log(`[HealthMonitor] 📊 Transaction recorded: ${success ? 'SUCCESS' : 'FAILURE'}`);
+    console.log(`[HealthMonitor] Transaction recorded: ${success ? 'SUCCESS' : 'FAILURE'}`);
   }
 
-  getHealthStatus(): any {
+  getHealthStatus(): HealthStatus {
     return {
       isEnabled: this.healthMonitor.isEnabled,
       status: this.healthMonitor.healthStatus,
@@ -955,20 +959,40 @@ class BrowserWalletManager {
       consecutiveFailures: this.healthMonitor.consecutiveFailures,
       lastSuccessfulTransaction: this.healthMonitor.lastSuccessfulTransaction,
       recentFailures: this._getRecentTransactionFailures(),
-      reconnectionAttempts: this.healthMonitor.reconnectionAttempts
+      reconnectionAttempts: this.healthMonitor.reconnectionAttempts,
     };
   }
 
+  // Public getters for accessing private state (used by BrowserSuiService)
+  getIsConnected(): boolean {
+    return this.isConnected;
+  }
+
+  getWalletConnectionInstance(): WalletConnection | null {
+    return this.walletConnection;
+  }
+
+  hasSignMethod(method: 'transaction' | 'transactionBlock' | 'signAndExecute'): boolean {
+    if (!this.walletConnection) return false;
+    const conn = this.walletConnection;
+    switch (method) {
+      case 'transaction':
+        return typeof conn.signAndExecuteTransaction === 'function';
+      case 'transactionBlock':
+        return typeof conn.signAndExecuteTransactionBlock === 'function';
+      case 'signAndExecute':
+        return typeof conn.signAndExecute === 'function';
+      default:
+        return false;
+    }
+  }
 }
 
-// Export class for testing and advanced usage
 export { BrowserWalletManager };
 
-// Create singleton instance
 export const browserWalletManager = new BrowserWalletManager();
 export default browserWalletManager;
 
-// Global access for error recovery
 if (typeof window !== 'undefined') {
-  (window as any).browserWalletManager = browserWalletManager;
+  window.browserWalletManager = browserWalletManager;
 }

@@ -33,7 +33,7 @@ export class RetryQueue {
     this.queue.push({
       ...operation,
       attempt: operation.attempt || 0,
-      addedAt: Date.now()
+      addedAt: Date.now(),
     });
   }
 
@@ -86,7 +86,7 @@ export class RetryQueue {
         try {
           await operation.fn(operation.data);
           processed++;
-        } catch (error) {
+        } catch (_error) {
           operation.attempt++;
           if (operation.attempt < 5) {
             this.queue.push(operation);

@@ -15,8 +15,4 @@ export { poaRenewalManager } from './services/PoARenewalManager.js';
 export { blobLineageTracker } from './services/BlobLineageTracker.js';
 
 // Interfaces
-export type {
-  IGraphQLResponse,
-  IBlobRecord,
-  IPoAStatus
-} from './interfaces/graphql/index.js';
+export { IGraphQLResponse, IBlobRecord, IPoAStatus } from './interfaces/graphql/index.js';

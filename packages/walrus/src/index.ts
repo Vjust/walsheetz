@@ -126,11 +126,19 @@ export {
 } from './config/BlockchainConfig.js';
 
 // ============================================================================
-// Shared Utilities (singletons and utilities)
+// Shared Utilities (re-exported from @dreamlit/shared)
 // ============================================================================
-export { configLoader } from './shared/ConfigLoader.js';
-export { logger, LogLevel, LogComponent, RequestThrottle, globalThrottle } from './shared/Logger.js';
 export {
+  // Logger and logging
+  logger,
+  LogLevel,
+  LogComponent,
+  RequestThrottle,
+  globalThrottle,
+  ErrorCategory,
+  logConfig,
+  LogConfig,
+  // EventBus
   EventBus,
   transactionEventBus,
   eventBus,
@@ -141,12 +149,29 @@ export {
   emitSaveStart,
   emitSaveComplete,
   emitCellEditStart,
-  emitCellEditComplete
-} from './shared/EventBus.js';
-export { default as RateLimiter } from './shared/RateLimiter.js';
-export { networkLock } from './shared/NetworkLock.js';
-export {
+  emitCellEditComplete,
+  // RateLimiter
+  RateLimiter,
+  // NetworkLock
+  networkLock,
+  // ConfigLoader
+  configLoader,
+  // StandardizedErrorHandler
   StandardizedErrorHandler,
-  standardizedErrorHandler
-} from './shared/StandardizedErrorHandler.js';
-export { logConfig } from './shared/LogConfig.js';
+  standardizedErrorHandler,
+  // Error classes
+  WalSheetError,
+  NetworkError,
+  WalletError,
+  ContractError,
+  ValidationError,
+  StorageError,
+  ErrorFactory,
+  createNetworkError,
+  createWalletError,
+  createContractError,
+  createValidationError,
+  createStorageError,
+} from './shared/index.js';
+
+export type { LogComponentType, ErrorCategoryType } from './shared/index.js';

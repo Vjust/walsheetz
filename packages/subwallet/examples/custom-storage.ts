@@ -136,24 +136,23 @@ export class IndexedDBAdapter implements StorageAdapter {
 
   async loadKeypair(walletId: string): Promise<Ed25519Keypair | null> {
     const db = await this.getDB();
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       const tx = db.transaction('keypairs', 'readonly');
       const store = tx.objectStore('keypairs');
       const request = store.get(walletId);
 
-      request.onsuccess = async () => {
+      request.onsuccess = () => {
         if (!request.result) {
           resolve(null);
           return;
         }
 
-        try {
-          const { Ed25519Keypair } = await import('@mysten/sui.js/keypairs/ed25519');
-          const secretKey = new Uint8Array(request.result);
-          resolve(Ed25519Keypair.fromSecretKey(secretKey));
-        } catch (err) {
-          reject(err);
-        }
+        import('@mysten/sui.js/keypairs/ed25519')
+          .then(({ Ed25519Keypair }) => {
+            const secretKey = new Uint8Array(request.result);
+            resolve(Ed25519Keypair.fromSecretKey(secretKey));
+          })
+          .catch(reject);
       };
       request.onerror = () => reject(request.error);
     });
@@ -199,4 +198,3 @@ const orchestrator = new SubWalletOrchestrator({
   storage: new IndexedDBAdapter(),
 });
 */
-

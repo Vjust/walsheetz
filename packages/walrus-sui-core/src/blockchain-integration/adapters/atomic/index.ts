@@ -7,3 +7,4 @@
 export { createWalrusStorageOp } from "./createWalrusStorageOp.js";
 export { createTxPrepOp } from "./createTxPrepOp.js";
 export { createBlockchainExecutionOp } from "./createBlockchainExecutionOp.js";
+export { OperationHelpers } from "./OperationHelpers.js";

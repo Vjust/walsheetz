@@ -53,6 +53,9 @@
   ],
   "author": "Dreamlit",
   "license": "MIT",
+  "dependencies": {
+    "zod": "^4.3.5"
+  },
   "devDependencies": {
     "@types/node": "^20.0.0"
   },

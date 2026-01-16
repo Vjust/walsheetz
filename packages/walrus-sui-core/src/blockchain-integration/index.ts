@@ -13,18 +13,18 @@
 // Services
 export { browserSuiService } from './services/BrowserSuiService.js';
 export { browserWalletManager } from './services/BrowserWalletManager.js';
-export { browserGrpcService } from './services/BrowserGrpcService.js';
 export { AtomicOperationManager } from './services/AtomicOperationManager.js';
 export { AtomicExecutionContext } from './services/AtomicExecutionContext.js';
 
+// Interfaces
+export { IBlockchainService } from './interfaces/IBlockchainService.js';
+
 // Adapters
-// Note: BlockchainAdapter.js is a test file only, not a real implementation
-// The actual BlockchainAdapter is in @dreamlit/spreadsheet-sdk
-// export { BlockchainAdapter } from './adapters/BlockchainAdapter.js';
 export {
   createBlockchainExecutionOp,
   createTxPrepOp,
-  createWalrusStorageOp
+  createWalrusStorageOp,
+  OperationHelpers,
 } from './adapters/atomic/index.js';
 
 // Utils
@@ -32,8 +32,8 @@ export {
   detectSaveVersionSignature,
   buildSaveVersionArgs,
   detectModuleVersion,
-  checkSpreadsheetVersionCompatibility
-} from './utils/AbiHelpers.js';
+  checkSpreadsheetVersionCompatibility,
+} from '@dreamlit/shared';
 
 export {
   getSuiExplorerUrl,
@@ -41,7 +41,7 @@ export {
   getWalrusExplorerUrl,
   getAllExplorerLinks,
   getExplorerDisplayName,
-  getExplorerIcon
-} from './utils/ExplorerLinks.js';
+  getExplorerIcon,
+} from '@dreamlit/shared';
 
 // Types are imported via TypeScript, not re-exported

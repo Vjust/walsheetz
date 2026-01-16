@@ -16,7 +16,6 @@ export const config = {
   sui: {
     testnet: {
       rpcUrl: isDevRuntime ? '/sui-rpc' : 'https://fullnode.testnet.sui.io:443',
-      grpcUrl: isDevRuntime ? 'fullnode.testnet.sui.io:443' : 'fullnode.testnet.sui.io:443',
       graphqlUrl: 'https://sui-testnet.mystenlabs.com/graphql',
       faucetUrl: 'https://faucet.testnet.sui.io/gas',
       explorerUrl: 'https://testnet.suivision.xyz',
@@ -30,10 +29,7 @@ export const config = {
         // This must be set to true as the on-chain function expects the content_hash argument.
         contentHashInSave: true,
         // Rate limiter feature flag
-        rateLimiterEnabled: ((env.RATE_LIMITER_ENABLED as string | undefined) ?? 'true') !== 'false', // Default true
-        // gRPC checkpoint streaming support - Testnet currently returns UNIMPLEMENTED (code 12)
-        // Setting to false prevents startup error spam and uses GraphQL fallback immediately
-        supportsCheckpointStream: false
+        rateLimiterEnabled: ((env.RATE_LIMITER_ENABLED as string | undefined) ?? 'true') !== 'false' // Default true
       },
       // Rate limiting configuration
       rateLimits: {
@@ -46,7 +42,6 @@ export const config = {
     },
     mainnet: {
       rpcUrl: 'https://fullnode.mainnet.sui.io:443',
-      grpcUrl: 'fullnode.mainnet.sui.io:443',
       graphqlUrl: 'https://sui-mainnet.mystenlabs.com/graphql',
       explorerUrl: 'https://suivision.xyz',
       packageId: '0x991454976a4ef8535ed3572bb1c500dcd565855d49a51f1fadc7f70a316c9631',
@@ -55,9 +50,7 @@ export const config = {
       moduleVersion: 1,
       features: {
         contentHashInSave: true,
-        rateLimiterEnabled: ((env.RATE_LIMITER_ENABLED as string | undefined) ?? 'true') !== 'false',
-        // gRPC checkpoint streaming support - enabled for mainnet (may need verification)
-        supportsCheckpointStream: true
+        rateLimiterEnabled: ((env.RATE_LIMITER_ENABLED as string | undefined) ?? 'true') !== 'false'
       },
       rateLimits: {
         sui: {
@@ -199,87 +192,9 @@ export const config = {
     }
   },
 
-  // gRPC configuration
-  grpc: {
-    // Connection settings
-    maxReceiveMessageLength: 4 * 1024 * 1024, // 4MB max message size
-    maxSendMessageLength: 4 * 1024 * 1024,    // 4MB max message size
-    keepAliveTimeMs: 30000,                   // 30 second keepalive
-    keepAliveTimeoutMs: 10000,                // 10 second keepalive timeout
-    keepAlivePermitWithoutCalls: true,        // Allow keepalive without active calls
-    
-    // Retry settings
-    enableRetry: true,
-    maxRetryAttempts: 3,
-    initialRetryDelayMs: 1000,               // 1 second initial delay
-    maxRetryDelayMs: 30000,                  // 30 second max delay
-    retryDelayMultiplier: 2.0,               // Exponential backoff multiplier
-    
-    // Streaming settings
-    streamReconnectDelayMs: 1000,            // 1 second reconnect delay
-    maxReconnectDelayMs: 30000,              // 30 second max reconnect delay
-    streamKeepaliveIntervalMs: 20000,        // 20 second stream keepalive
-    
-    // Field masks for optimization
-    defaultFieldMasks: {
-      checkpoint: [
-        'sequence_number',
-        'digest',
-        'transactions.digest',
-        'transactions.events',
-        'transactions.effects.status'
-      ],
-      transaction: [
-        'digest',
-        'effects',
-        'events',
-        'object_changes'
-      ],
-      balance: [
-        'coin_type',
-        'coin_object_count',
-        'total_balance',
-        'locked_balance'
-      ],
-      ownedObjects: [
-        'object_id',
-        'type',
-        'owner',
-        'version'
-      ]
-    }
-  },
-
-  // WebSocket bridge configuration
-  websocket: {
-    port: (typeof process !== 'undefined' && process.env && process.env.BRIDGE_PORT) ? parseInt(process.env.BRIDGE_PORT) : 8081,
-    host: (typeof process !== 'undefined' && process.env && process.env.BRIDGE_HOST) ? process.env.BRIDGE_HOST : 'localhost',
-    maxClients: (typeof process !== 'undefined' && process.env && process.env.BRIDGE_MAX_CLIENTS) ? parseInt(process.env.BRIDGE_MAX_CLIENTS) : 100,
-    pingInterval: 30000,                     // 30 second ping interval
-    logLevel: (typeof process !== 'undefined' && process.env && process.env.BRIDGE_LOG_LEVEL) ? process.env.BRIDGE_LOG_LEVEL : 'INFO',
-    enableMetrics: (typeof process !== 'undefined' && process.env && process.env.ENABLE_METRICS === 'true') || false,
-    healthCheck: {
-      enabled: true,
-      path: '/health',
-      interval: 10000                        // 10 second health check interval
-    }
-  },
-
   // UI settings
   ui: {
     showRateLimiterStatus: ((env.SHOW_RATE_LIMITER_STATUS as string | undefined) ?? 'false') === 'true'
-  },
-  
-  // Collaboration settings - DISABLED for single-user MVP
-  // Collaboration features are not used in the single-user build
-  collaboration: {
-    enabled: false,  // Collaboration disabled
-    // Kept for reference but not used:
-    // userTimeoutMs: 300000,
-    // cellLockTimeoutMs: 60000,
-    // maxActiveUsers: 100,
-    // eventHistorySize: 1000,
-    // presenceUpdateIntervalMs: 10000
   },
   
   // Deposit and gas management settings
@@ -394,10 +309,7 @@ export const getCurrentConfig = () => {
     walSheetz: config.walSheetz[env],
     storage: config.storage,
     deposit: config.deposit,
-    grpc: config.grpc,
-    websocket: config.websocket,
     ui: config.ui,
-    collaboration: config.collaboration,
     environment: env
   };
 };
